@@ -106,6 +106,24 @@ if [ -x "${EXE[jcodemunch]}" ]; then
         warn "jcodemunch init returned non-zero (see .install-jcm-init.log)"
 fi
 
+# --- 4b. Patch hook commands to use the full venv-binary path ---------------
+# `jcodemunch-mcp init --hooks` writes bare `jcodemunch-mcp <subcommand>`
+# into ~/.claude/settings.json. Those only resolve if the venv is on PATH,
+# which it usually isn't — so every Claude Code tool call prints
+# "command not found" for the enforcement hooks. Rewrite to the full
+# path so hooks actually fire.
+if [ -f "$STACK_ROOT/patch-jcodemunch-hook-paths.py" ]; then
+    step "Patching jcodemunch-mcp hook commands to use full binary path"
+    if "$VENV_BIN/python" "$STACK_ROOT/patch-jcodemunch-hook-paths.py"; then
+        ok "hook paths patched"
+    else
+        warn "hook path patch failed; hooks will print 'command not found' at runtime"
+        warn "Re-run manually:  $VENV_BIN/python $STACK_ROOT/patch-jcodemunch-hook-paths.py"
+    fi
+else
+    warn "patch-jcodemunch-hook-paths.py missing from stack root; hook commands may fail with 'command not found'."
+fi
+
 # --- 5. Optional auto-registration with Claude Code -------------------------
 if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     step "Registering MCP servers with Claude Code (user scope)"
