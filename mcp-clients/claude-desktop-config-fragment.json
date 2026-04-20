@@ -1,0 +1,48 @@
+{
+  "_comment": "Paste the `mcpServers` entries below into your Claude Desktop config at:",
+  "_comment_windows": "  %APPDATA%\\Claude\\claude_desktop_config.json",
+  "_comment_macos":   "  ~/Library/Application Support/Claude/claude_desktop_config.json",
+  "_comment_linux":   "  ~/.config/Claude/claude_desktop_config.json",
+  "_comment_paths":   "All jMunch/MemPalace commands point at the venv under _stack_setup\\.venv\\Scripts\\. Update the drive/username if you moved the folder.",
+  "_comment_context7": "Context7 API key is optional; remove --api-key arg to use the free anonymous tier.",
+
+  "mcpServers": {
+    "jcodemunch": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jcodemunch-mcp.exe"
+    },
+    "jdatamunch": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdatamunch-mcp.exe"
+    },
+    "jdocmunch": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdocmunch-mcp.exe"
+    },
+    "mempalace": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "mempalace.mcp_server"]
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "desktop-app"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": ""
+      }
+    },
+    "duckdb": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-motherduck",
+        "--db-path", ":memory:",
+        "--read-write",
+        "--allow-switch-databases"
+      ]
+    }
+  }
+}

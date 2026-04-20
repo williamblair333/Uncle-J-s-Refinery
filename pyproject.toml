@@ -1,0 +1,40 @@
+[project]
+name = "claude-stack"
+version = "0.1.0"
+description = "jMunch (code/data/docs) + MemPalace retrieval stack for AI agents"
+readme = "README.md"
+requires-python = ">=3.11"
+
+# Core stack. All four are Python packages on PyPI.
+# jcodemunch-mcp[local-embed] pulls in the bundled ONNX encoder so semantic
+# search works offline without API keys. Drop the extra if you want a
+# lighter install.
+dependencies = [
+    "jcodemunch-mcp[local-embed] >=1.56.0",
+    "jdatamunch-mcp",
+    "jdocmunch-mcp",
+    "mempalace",
+    # uv is not a dep of the stack itself but we pin a recent version so
+    # `uv run` resolves consistently for ad-hoc scripts.
+    "uv >=0.5",
+]
+
+[project.optional-dependencies]
+# Add AI-summary providers for jCodeMunch only if you plan to use them.
+# Leave out of the default install to keep the venv small.
+anthropic = ["jcodemunch-mcp[anthropic]"]
+openai    = ["jcodemunch-mcp[openai]"]
+gemini    = ["jcodemunch-mcp[gemini]"]
+groq      = ["jcodemunch-mcp[groq]"]
+
+# Notes on non-PyPI components (installed by install.ps1 / install.sh, not here):
+#   - Serena   : run via `uvx --from git+https://github.com/oraios/serena ...`
+#                uvx keeps it in its own ephemeral env -- do NOT add it here.
+#   - Context7 : Node package `@upstash/context7-mcp`, run via `npx -y`.
+#                Requires Node.js 18+ on PATH.
+#   - MotherDuck / DuckDB MCP : run via `uvx mcp-server-motherduck ...`
+#                Kept out of this venv for the same reason as Serena.
+
+[tool.uv]
+# Keep the lockfile deterministic.
+managed = true

@@ -1,0 +1,40 @@
+{
+  "_comment": "Drop this into ~/.cursor/mcp.json (global) or .cursor/mcp.json (project). Cursor uses the same `mcpServers` schema as Claude Desktop.",
+
+  "mcpServers": {
+    "jcodemunch": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jcodemunch-mcp.exe"
+    },
+    "jdatamunch": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdatamunch-mcp.exe"
+    },
+    "jdocmunch": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdocmunch-mcp.exe"
+    },
+    "mempalace": {
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "mempalace.mcp_server"]
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "ide-assistant"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "duckdb": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-motherduck",
+        "--db-path", ":memory:",
+        "--read-write",
+        "--allow-switch-databases"
+      ]
+    }
+  }
+}

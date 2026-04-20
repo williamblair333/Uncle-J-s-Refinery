@@ -1,0 +1,47 @@
+# Uncle J's Refinery — line-ending policy
+#
+# Default: let git autodetect text vs binary, normalize text to LF in the
+# repo, check out with native line endings in the working tree.
+
+* text=auto
+
+# ── Shell scripts MUST be LF (Bash won't execute CRLF scripts) ──────────
+*.sh text eol=lf
+
+# ── PowerShell / batch — native Windows tools, prefer CRLF ──────────────
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# ── Python — LF everywhere (avoids tooling quirks on Windows Python) ────
+*.py text eol=lf
+*.pyi text eol=lf
+
+# ── Docs / config — LF ──────────────────────────────────────────────────
+*.md text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.txt text eol=lf
+
+# ── Lock files — LF ─────────────────────────────────────────────────────
+uv.lock text eol=lf
+
+# ── Binary (don't try to munge line endings) ────────────────────────────
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary

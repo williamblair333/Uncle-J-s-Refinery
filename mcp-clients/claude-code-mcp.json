@@ -1,0 +1,51 @@
+{
+  "_comment": "Drop this as .mcp.json at your project root, OR run install.ps1 -AutoRegister to register user-scope with `claude mcp add`.",
+  "_comment_serena_context": "Serena's context defaults to 'ide-assistant' for Claude Code. Use 'desktop-app' for Claude Desktop instead.",
+
+  "mcpServers": {
+    "jcodemunch": {
+      "type": "stdio",
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jcodemunch-mcp.exe"
+    },
+    "jdatamunch": {
+      "type": "stdio",
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdatamunch-mcp.exe"
+    },
+    "jdocmunch": {
+      "type": "stdio",
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdocmunch-mcp.exe"
+    },
+    "mempalace": {
+      "type": "stdio",
+      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "mempalace.mcp_server"]
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "ide-assistant"
+      ]
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": ""
+      }
+    },
+    "duckdb": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-motherduck",
+        "--db-path", ":memory:",
+        "--read-write",
+        "--allow-switch-databases"
+      ]
+    }
+  }
+}
