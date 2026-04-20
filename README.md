@@ -650,6 +650,49 @@ Each component retains its own upstream license. This integration
 (install scripts, merged CLAUDE.md, custom skills, Ralph harness) is
 provided as-is.
 
+### Commercial use — read before you ship
+
+Most of this stack is MIT and safe for commercial use. Three pieces
+are **not** straight MIT and need your attention if you're deploying
+this anywhere that makes money — a company, paid client work, or
+revenue-generating product.
+
+**1. Uncle J's tools (jCodeMunch, jDataMunch, jDocMunch, jOutputMunch)**
+
+Free for personal use. If you use them to make money, Uncle J. gets a
+taste. Fair enough?
+
+- [Free for personal use](https://github.com/jgravelle/jcodemunch-mcp#free-for-personal-use)
+- [Commercial licenses](https://github.com/jgravelle/jcodemunch-mcp#commercial-licenses)
+
+Square up with Uncle J. directly via the commercial-licenses link
+before shipping a commercial deployment.
+
+**2. Claude Code + Ralph Wiggum plugin (Anthropic)**
+
+Claude Code itself isn't open-source. Its `LICENSE.md` reads:
+"© Anthropic PBC. All rights reserved. Use is subject to Anthropic's
+Commercial Terms of Service." The Ralph Wiggum plugin ships from the
+same `anthropics/claude-code` repo and inherits those terms.
+
+Commercial use is governed by [Anthropic's Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms).
+Redistribution and modification are not granted by default.
+
+**3. Langfuse (self-hosted)**
+
+Everything outside the `/ee` folders is MIT — free for commercial use
+with no usage limits. The `/ee` folder contains enterprise-only
+features (SCIM, audit logs, data retention policies) that require a
+commercial license if you want to enable them in a self-hosted
+deployment. See [Langfuse open-source FAQ](https://langfuse.com/docs/open-source).
+
+**Everything else** — MemPalace, Serena, DuckDB MCP, Context7,
+Superpowers, dwarvesf/claude-guardrails, and the Langfuse template —
+is MIT-licensed. No commercial restrictions. Attribution per the MIT
+terms is the only requirement. (Serena's core MCP is MIT; their
+separate JetBrains IDE plugin is a paid product, not used by this
+stack.)
+
 ### Primary credit — the namesake
 
 **J. Gravelle ([@jgravelle](https://github.com/jgravelle))** built the
