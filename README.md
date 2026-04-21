@@ -282,33 +282,41 @@ sudo usermod -aG docker "$USER"
 Then:
 
 1. Clones `doneyli/claude-code-langfuse-template` into `claude-code-langfuse-template/`
-2. Generates `.env` with random secure credentials via `scripts/generate-env.sh`
-3. Runs `docker compose up -d` (pulls ~5 GB of images; first boot takes 90-120s)
-4. Installs the Stop hook via `scripts/install-hook.sh`
-5. Applies the v3-pin and env-patch for the hook
+2. Pins ClickHouse to `24.8` and injects a `/sys/fs/cgroup/cpu.max`
+   bind-mount for the container (works around a `std::stof("")` crash seen
+   when the host's cgroup-v2 `cpu.max` is 0-byte — Linux 6.18 Liquorix
+   reproduces it reliably; harmless on other hosts)
+3. Generates `.env` with random secure credentials via `scripts/generate-env.sh`
+4. Runs `docker compose up -d` with a 3-attempt retry loop (pulls ~5 GB
+   of images; first boot takes 90-120s)
+5. Copies `hooks/langfuse_hook.py` into `~/.claude/hooks/` directly —
+   bypasses upstream `scripts/install-hook.sh` whose naked
+   `pip install langfuse` trips PEP 668 on Debian 13
+6. Installs `langfuse>=3.0,<4` into the stack venv (not system Python)
+7. Patches `~/.claude/settings.json` with a Stop hook pointing at the
+   venv interpreter plus the `LANGFUSE_*` / `TRACE_TO_LANGFUSE` env block
 
 **Langfuse UI:** http://localhost:3050. Login with `admin@localhost.local`
 and the password in `claude-code-langfuse-template/.env`
 (`LANGFUSE_INIT_USER_PASSWORD`).
 
-### 9. MCP performance tuning
+### 9. MCP performance tuning (optional)
+
+`install.{sh,ps1}` already writes `MCP_TIMEOUT=60000` into
+`~/.claude/settings.json`'s `env` block, so Claude Code has a 60s budget
+for MCP server cold-starts out of the box (default is 30s, which Serena
+and MotherDuck can blow past on first `uvx` fetch).
 
 Three MCP servers default to `uvx` / `npx` invocations that re-resolve
-their packages on every Claude Code launch, which can blow past Claude
-Code's default 30s startup timeout. Fix, once, persistently:
+packages on every launch. If you want faster cold-starts (14–24s → 7–18s)
+you can install them as real binaries and re-register:
 
 **Linux/macOS:**
 ```bash
-# Raise the startup budget
-echo 'export MCP_TIMEOUT=60000' >> ~/.bashrc
-source ~/.bashrc
-
-# Install as real binaries
 uv tool install --from git+https://github.com/oraios/serena serena-agent
 uv tool install mcp-server-motherduck
 npm install -g @upstash/context7-mcp
 
-# Re-register at installed-binary paths
 claude mcp remove serena
 claude mcp add -s user serena -- "$HOME/.local/bin/serena" start-mcp-server --context ide-assistant
 
@@ -323,7 +331,6 @@ claude mcp list
 
 **Windows:**
 ```powershell
-setx MCP_TIMEOUT 60000
 uv tool install --from git+https://github.com/oraios/serena serena-agent
 uv tool install mcp-server-motherduck
 npm install -g @upstash/context7-mcp
@@ -337,8 +344,6 @@ claude mcp add -s user duckdb -- "$env:USERPROFILE\.local\bin\mcp-server-motherd
 claude mcp remove context7
 claude mcp add -s user context7 -- "$env:APPDATA\npm\context7-mcp.cmd"
 ```
-
-Cold-start drops from 14-24s → 7-18s per server.
 
 ### 10. (Optional) Bootstrap MemPalace
 
@@ -420,21 +425,47 @@ propagate PATH changes from MSI installers.
 
 ### MCP servers show ✗ Failed to connect
 
-Either they hit the 30s startup timeout or they're actually broken:
+Either they hit the startup timeout or they're actually broken. Check
+the timeout inside Claude's config, not the shell env — that's where
+`install.{sh,ps1}` writes it:
 
 ```bash
-echo $MCP_TIMEOUT   # Linux — should be 60000
-claude mcp list
+python3 -c "import json; d=json.loads(open(f\"{__import__('os').path.expanduser('~')}/.claude/settings.json\").read()); print(d.get('env',{}).get('MCP_TIMEOUT','<unset>'))"
+# expect: 60000
 ```
 
-```powershell
-$env:MCP_TIMEOUT    # Windows — same expectation
-claude mcp list
+If it's `<unset>` or below 60000, re-run `install.sh --auto-register`
+(or `install.ps1 -AutoRegister`). If it's set and servers still fail,
+follow step 9 to install them as real binaries and re-register.
+
+### jcodemunch registered as `uvx jcodemunch-mcp` instead of the venv path
+
+`jcodemunch-mcp init` self-registers as `uvx jcodemunch-mcp` in Claude
+Code during step 2. `install.{sh,ps1}` removes + re-adds with the venv
+path so re-runs always converge. If you see this on an older install:
+
+```bash
+claude mcp remove jcodemunch
+claude mcp add -s user jcodemunch /opt/proj/Uncle-J-s-Refinery/.venv/bin/jcodemunch-mcp
+# or just re-run:
+./install.sh --auto-register
 ```
 
-If the timeout is empty or below 60000, see step 9. If set and servers
-still fail, follow step 9 to install them as real binaries and
-re-register.
+### Langfuse ClickHouse crashes with `std::stof: no conversion`
+
+Seen on Linux 6.18 Liquorix; may affect other kernels where the
+container's `/sys/fs/cgroup/cpu.max` is a 0-byte file. ClickHouse's
+startup tries to parse it with `std::stof` and dies during global-static
+init. `install-langfuse.sh` injects a bind-mount of a `max 100000` file
+over that path. If you see the crash on a host where the installer
+didn't apply the workaround (older tag, custom docker-compose), add:
+
+```yaml
+# under the clickhouse service's volumes:
+- ./clickhouse/cpu.max.override:/sys/fs/cgroup/cpu.max:ro
+```
+
+with `./clickhouse/cpu.max.override` containing the line `max 100000`.
 
 ### Langfuse UI is up but traces don't appear
 
@@ -592,11 +623,15 @@ _stack_setup/
 │   └── RELIABILITY.md                  ← reliability-layer deep dive
 │
 ├── mcp-clients/
-│   ├── claude-code-mcp.json            ← templates for various MCP-speaking clients
-│   ├── claude-desktop-config-fragment.json
-│   ├── cursor-mcp.json
-│   └── windsurf-mcp.json
+│   ├── claude-code-mcp.json.tmpl       ← templates rendered at install time
+│   ├── claude-desktop-config-fragment.json.tmpl
+│   ├── cursor-mcp.json.tmpl
+│   ├── windsurf-mcp.json.tmpl
+│   └── *.json                          ← rendered outputs (gitignored)
 │
+├── LICENSE                             ← MIT for the glue; upstream licenses apply to each dep
+├── HANDOFF.md                          ← overnight-handoff brief + work log
+├── PRD.md                              ← Ralph-driven maintenance PRD
 ├── claude-guardrails/                  ← cloned dwarvesf/claude-guardrails (gitignored)
 └── claude-code-langfuse-template/      ← cloned doneyli/claude-code-langfuse-template (gitignored)
 ```
@@ -692,9 +727,9 @@ and adjust paths (`$env:USERPROFILE\.claude` etc.).
 
 ## License & credits
 
-Each component retains its own upstream license. This integration
-(install scripts, merged CLAUDE.md, custom skills, Ralph harness) is
-provided as-is.
+The glue in this repo — install scripts, merged CLAUDE.md, custom skills,
+Ralph harness, templates — is MIT (see `LICENSE`). Each upstream
+component retains its own license.
 
 ### Commercial use
 
