@@ -64,11 +64,10 @@ step "Running dwarvesf install.sh (variant: $VARIANT)"
 cd "$GUARDRAILS_DIR"
 if [ -f "./install.sh" ]; then
     chmod +x ./install.sh
-    if [ "$VARIANT" = "lite" ]; then
-        ./install.sh --lite
-    else
-        ./install.sh
-    fi
+    # Upstream install.sh takes the variant as a POSITIONAL argument
+    # ("lite" or "full"), not a --flag. Default (no arg) is lite, which
+    # skips the prompt-injection-defender we want. Always pass explicitly.
+    ./install.sh "$VARIANT"
 elif [ -d "./$VARIANT" ]; then
     # Fallback: no top-level install.sh, copy hooks manually
     warn "upstream install.sh missing; falling back to manual copy from ./$VARIANT"
