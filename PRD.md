@@ -136,6 +136,11 @@ Otherwise prepend a one-line status for the latest iteration.
 
 (iteration log — newest on top)
 
+- 2026-04-21 — Parity fix: `verify.sh` now prepends `~/.local/bin` to PATH
+  (idempotently, via `case` guard) to mirror `verify.ps1`'s PATH
+  augmentation. Fixes the one-shot-install goal for fresh shells where
+  `uv`/`claude` are installed to `~/.local/bin` but the login PATH hasn't
+  refreshed. Ran `verify.sh`: all 13 checks PASS.
 - 2026-04-21 — Parity fix: added `git --version` check to `verify.sh` to
   mirror `verify.ps1`. Git is required by `install-reliability.sh` and
   `install-langfuse.sh` (both clone upstream). Ran `verify.sh`: all PASS
