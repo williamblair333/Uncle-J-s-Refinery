@@ -37,6 +37,11 @@ claude-code-langfuse-template/.env
 # install-langfuse.ps1 clones claude-code-langfuse-template
 claude-guardrails/
 claude-code-langfuse-template/
+claude-code-langfuse-template.skeleton.*/
+
+# ── Rendered MCP client configs (install.{sh,ps1} regenerates from .tmpl) ─
+mcp-clients/*.json
+!mcp-clients/*.json.tmpl
 
 # ── Runtime state (not source) ──────────────────────────────────────────
 state/

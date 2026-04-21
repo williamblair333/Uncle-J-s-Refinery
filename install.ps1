@@ -144,6 +144,30 @@ if (Test-Path $patchScript) {
     Write-Warn2 "patch-jcodemunch-hook-paths.py missing from stack root; hook commands may fail with 'command not found'."
 }
 
+# --- 4c. Render mcp-clients/*.json from *.json.tmpl --------------------------
+# The committed templates use {{STACK_VENV_BIN}} and {{EXE}} placeholders so
+# the same files work on Linux and Windows. Install-time rendering produces
+# platform-specific .json files (gitignored) that users can paste into
+# their MCP client configs.
+Write-Step "Rendering mcp-clients/*.json from templates"
+$McpDir = Join-Path $StackRoot 'mcp-clients'
+# JSON parsers accept forward slashes in Windows paths; using them here keeps
+# sed-style substitution simple and avoids JSON escaping of backslashes.
+$VenvBinFwd = $VenvScripts -replace '\\','/'
+$tmpls = Get-ChildItem -Path $McpDir -Filter '*.json.tmpl' -ErrorAction SilentlyContinue
+if ($tmpls) {
+    foreach ($t in $tmpls) {
+        $out = $t.FullName -replace '\.tmpl$',''
+        (Get-Content $t.FullName -Raw) `
+            -replace '\{\{STACK_VENV_BIN\}\}', $VenvBinFwd `
+            -replace '\{\{EXE\}\}', '.exe' `
+            | Set-Content -Path $out -Encoding UTF8
+        Write-OK "rendered $([System.IO.Path]::GetFileName($out))"
+    }
+} else {
+    Write-Warn2 "no *.json.tmpl files in $McpDir; skipping render"
+}
+
 # --- 5. Optional auto-registration with Claude Code --------------------------
 if ($AutoRegister -and -not $skipClaudeCli) {
     Write-Step "Registering MCP servers with Claude Code (user scope)"

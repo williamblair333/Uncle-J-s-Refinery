@@ -1,18 +1,19 @@
 {
-  "_comment": "Drop this into ~/.codeium/windsurf/mcp_config.json (Windsurf uses the same `mcpServers` schema).",
+  "_comment": "Generated from windsurf-mcp.json.tmpl by install.{sh,ps1}. Drop the rendered mcp-clients/windsurf-mcp.json into ~/.codeium/windsurf/mcp_config.json (Windsurf uses the same `mcpServers` schema).",
+  "_comment_placeholders": "{{STACK_VENV_BIN}} -> absolute path to the venv binary dir. {{EXE}} -> '.exe' on Windows, empty on Linux.",
 
   "mcpServers": {
     "jcodemunch": {
-      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jcodemunch-mcp.exe"
+      "command": "{{STACK_VENV_BIN}}/jcodemunch-mcp{{EXE}}"
     },
     "jdatamunch": {
-      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdatamunch-mcp.exe"
+      "command": "{{STACK_VENV_BIN}}/jdatamunch-mcp{{EXE}}"
     },
     "jdocmunch": {
-      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\jdocmunch-mcp.exe"
+      "command": "{{STACK_VENV_BIN}}/jdocmunch-mcp{{EXE}}"
     },
     "mempalace": {
-      "command": "C:\\Users\\wblair\\Downloads\\claude\\_stack_setup\\.venv\\Scripts\\python.exe",
+      "command": "{{STACK_VENV_BIN}}/python{{EXE}}",
       "args": ["-m", "mempalace.mcp_server"]
     },
     "serena": {
