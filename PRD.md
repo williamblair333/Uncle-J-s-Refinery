@@ -136,6 +136,11 @@ Otherwise prepend a one-line status for the latest iteration.
 
 (iteration log — newest on top)
 
+- 2026-04-21 — Fix ralph-harness `--cwd` (unsupported by `claude` CLI) →
+  subshell `cd` / `Push-Location`; route `step`/`ok` to stderr so harness
+  chrome doesn't pollute parsed gate JSON. Also ignore per-project
+  `mempalace.yaml`/`entities.json` (issue #185). `git grep` for secrets
+  returns zero matches on the tree.
 - 2026-04-21 — Added `*-installer.txt` to `.gitignore` so installer
   transcripts (which embed generated Langfuse secrets + admin password)
   can't be accidentally committed. Verified with `git check-ignore -v
