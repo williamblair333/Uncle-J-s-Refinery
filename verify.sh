@@ -44,6 +44,10 @@ echo "uvx-managed servers (may download on first run):"
 check "serena --help (via uvx)"          uvx --from git+https://github.com/oraios/serena serena --help
 check "mcp-server-motherduck --help"     uvx mcp-server-motherduck --help
 
+# Installer sets web_dashboard_open_on_launch: false in ~/.serena/serena_config.yml
+# so Serena doesn't spawn a new browser tab on every Claude Code session start.
+check "serena dashboard auto-open disabled" bash -c 'grep -qE "^[[:space:]]*web_dashboard_open_on_launch:[[:space:]]*false" "$HOME/.serena/serena_config.yml"'
+
 echo
 echo "Node server (Context7):"
 check "@upstash/context7-mcp resolvable" npx --yes "@upstash/context7-mcp" --help

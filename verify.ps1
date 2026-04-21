@@ -115,6 +115,16 @@ Write-Host "`nuvx-managed servers (first run may download):"
 Check-Cmd "serena (via uvx)"  { uvx --from git+https://github.com/oraios/serena serena --help 2>&1 }
 Check-Cmd "mcp-server-motherduck (via uvx)" { uvx mcp-server-motherduck --help 2>&1 }
 
+# Installer sets web_dashboard_open_on_launch: false so Serena doesn't spawn
+# a new browser tab on every Claude Code session start.
+$serenaCfg = Join-Path $env:USERPROFILE '.serena\serena_config.yml'
+if ((Test-Path $serenaCfg) -and
+    (Select-String -Path $serenaCfg -Pattern '^\s*web_dashboard_open_on_launch:\s*false' -Quiet)) {
+    Pass "serena dashboard auto-open disabled"
+} else {
+    Fail "serena dashboard auto-open disabled" "web_dashboard_open_on_launch: false not set in $serenaCfg"
+}
+
 # --- Context7 (only if node+npx) ------------------------------------------
 Write-Host "`nNode server (Context7):"
 if (Get-Command npx -ErrorAction SilentlyContinue) {

@@ -117,6 +117,52 @@ if (-not $SkipOptional) {
     }
 }
 
+# --- 3b. Configure Serena: disable dashboard browser auto-open --------------
+# Serena's default is to open a new browser tab every time its MCP server
+# starts -- once per Claude Code session. With multiple sessions or orphan
+# Serena processes, tabs pile up. The dashboard stays reachable manually at
+# http://localhost:24282/dashboard/ (port increments if multiple instances).
+Write-Step "Configuring Serena: disable dashboard browser auto-open"
+$SerenaCfg = Join-Path $env:USERPROFILE '.serena\serena_config.yml'
+$SerenaDir = Split-Path $SerenaCfg -Parent
+if (-not (Test-Path $SerenaDir)) {
+    New-Item -ItemType Directory -Path $SerenaDir -Force | Out-Null
+}
+
+# Nudge Serena to write its default config if it hasn't yet. `--help` exits
+# before config load, so briefly start the MCP server as a background job
+# and reap it after 10 s -- long enough for config creation, short enough
+# to not block the installer.
+if (-not (Test-Path $SerenaCfg)) {
+    $job = Start-Job -ScriptBlock {
+        & uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant *>&1 | Out-Null
+    }
+    Wait-Job  $job -Timeout 10 | Out-Null
+    Stop-Job  $job -ErrorAction SilentlyContinue
+    Remove-Job $job -Force -ErrorAction SilentlyContinue
+}
+
+if (Test-Path $SerenaCfg) {
+    $content = Get-Content $SerenaCfg -Raw
+    if ($content -match '(?m)^\s*web_dashboard_open_on_launch:') {
+        $content = [regex]::Replace($content, '(?m)^(\s*web_dashboard_open_on_launch:).*$', '$1 false')
+        Set-Content -Path $SerenaCfg -Value $content -NoNewline
+    } else {
+        Add-Content -Path $SerenaCfg -Value "`nweb_dashboard_open_on_launch: false"
+    }
+    Write-OK "Serena dashboard auto-open disabled"
+} else {
+    $stub = @'
+# Managed by Uncle J's Refinery install.ps1.
+# Prevents Serena from auto-opening a browser tab on each MCP session
+# start. Dashboard still reachable at http://localhost:24282/dashboard/
+# (port increments if multiple Serena instances run concurrently).
+web_dashboard_open_on_launch: false
+'@
+    Set-Content -Path $SerenaCfg -Value $stub
+    Write-OK "Serena config stub written"
+}
+
 # --- 4. Configure jCodeMunch's prompt policy + hooks -------------------------
 # `jcodemunch-mcp init` writes CLAUDE.md prompt policy + optional PreToolUse /
 # PostToolUse / PreCompact hooks. Our CLAUDE.md replaces the generic one it

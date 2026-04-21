@@ -103,6 +103,44 @@ if [ "$SKIP_OPTIONAL" -eq 0 ]; then
     fi
 fi
 
+# --- 3b. Configure Serena: disable dashboard browser auto-open --------------
+# Serena's default is to open a new browser tab every time its MCP server
+# starts -- that's once per Claude Code session. With multiple sessions or
+# orphaned Serena processes, the tabs pile up. The dashboard is still
+# reachable at http://localhost:24282/dashboard/ (port increments if
+# multiple Serena instances are running).
+step "Configuring Serena: disable dashboard browser auto-open"
+SERENA_CFG="$HOME/.serena/serena_config.yml"
+mkdir -p "$(dirname "$SERENA_CFG")"
+
+# Nudge Serena to write its default config if it hasn't yet. `--help`
+# exits before config load, so we briefly start the MCP server (stdin
+# closed so it exits fast) and let timeout reap it.
+if [ ! -f "$SERENA_CFG" ]; then
+    timeout 8 uvx --from git+https://github.com/oraios/serena \
+        serena start-mcp-server --context ide-assistant \
+        </dev/null >/dev/null 2>&1 || true
+fi
+
+if [ -f "$SERENA_CFG" ]; then
+    if grep -qE '^[[:space:]]*web_dashboard_open_on_launch:' "$SERENA_CFG"; then
+        sed -i.bak -E 's/^([[:space:]]*web_dashboard_open_on_launch:).*/\1 false/' "$SERENA_CFG"
+        rm -f "$SERENA_CFG.bak"
+    else
+        printf '\nweb_dashboard_open_on_launch: false\n' >> "$SERENA_CFG"
+    fi
+    ok "Serena dashboard auto-open disabled"
+else
+    cat > "$SERENA_CFG" <<'YML'
+# Managed by Uncle J's Refinery install.sh.
+# Prevents Serena from auto-opening a browser tab on each MCP session
+# start. Dashboard still reachable at http://localhost:24282/dashboard/
+# (port increments if multiple Serena instances run concurrently).
+web_dashboard_open_on_launch: false
+YML
+    ok "Serena config stub written"
+fi
+
 # --- 4. jcodemunch init (hooks + audit) -------------------------------------
 step "Running jcodemunch-mcp init --yes --hooks --audit"
 if [ -x "${EXE[jcodemunch]}" ]; then
