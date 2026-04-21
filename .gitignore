@@ -104,3 +104,8 @@ htmlcov/
 cowork-history.txt
 *-history.txt
 session-history.*
+*-installer.txt
+
+# MemPalace per-project files (issue #185)
+mempalace.yaml
+entities.json

@@ -136,6 +136,10 @@ Otherwise prepend a one-line status for the latest iteration.
 
 (iteration log — newest on top)
 
+- 2026-04-21 — Added `*-installer.txt` to `.gitignore` so installer
+  transcripts (which embed generated Langfuse secrets + admin password)
+  can't be accidentally committed. Verified with `git check-ignore -v
+  ujr-linux-installer.txt` → matched at `.gitignore:107`.
 - 2026-04-21 — Initial PRD created from HANDOFF.md work through that
   session. Baseline acceptance criteria checked on the live box at
   session end: all 7 MCP connected, MCP_TIMEOUT=60000, Langfuse healthy,

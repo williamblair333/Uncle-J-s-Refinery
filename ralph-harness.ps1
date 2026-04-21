@@ -125,7 +125,12 @@ Decide 'done' only if: risk < $Threshold AND untested_count == 0 AND the
 PRD's first-progress-line starts with 'DONE'.
 "@
     Write-Step "Gate: asking Claude to inspect change + risk"
-    $gateOutput = & claude -p $gatePrompt --cwd $RepoPath 2>&1 | Out-String
+    Push-Location $RepoPath
+    try {
+        $gateOutput = & claude -p $gatePrompt 2>&1 | Out-String
+    } finally {
+        Pop-Location
+    }
 
     # Try to parse the last JSON object in the output
     $line = ($gateOutput -split "`n" | Where-Object { $_ -match '^\s*\{' } | Select-Object -Last 1)
@@ -148,17 +153,19 @@ while ($iter -lt $MaxIterations) {
     Write-Step "Iteration $iter / $MaxIterations"
 
     if ($DryRun) {
-        Write-OK "[dry-run] would call: claude -p <innerPrompt> --cwd $RepoPath --dangerously-skip-permissions"
+        Write-OK "[dry-run] would call: (cd $RepoPath; claude -p <innerPrompt> --dangerously-skip-permissions)"
     } else {
         # Write prompt to temp so we're not shell-escape-fighting
         $tmp = [System.IO.Path]::GetTempFileName() + '.md'
         Set-Content -Path $tmp -Value $innerPrompt -Encoding UTF8
+        Push-Location $RepoPath
         try {
-            & claude -p "@$tmp" --cwd $RepoPath --dangerously-skip-permissions
+            & claude -p "@$tmp" --dangerously-skip-permissions
             if ($LASTEXITCODE -ne 0) {
                 Write-Warn2 "claude exited $LASTEXITCODE on iter $iter; continuing."
             }
         } finally {
+            Pop-Location
             Remove-Item -Path $tmp -ErrorAction SilentlyContinue
         }
     }

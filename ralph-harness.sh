@@ -49,8 +49,8 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-step() { printf '\n==> %s\n' "$*"; }
-ok()   { printf '    OK  %s\n' "$*"; }
+step() { printf '\n==> %s\n' "$*" >&2; }
+ok()   { printf '    OK  %s\n' "$*" >&2; }
 warn() { printf '    !!  %s\n' "$*" >&2; }
 stop() { printf '    X   %s\n' "$*" >&2; }
 
@@ -95,7 +95,7 @@ Decide 'done' only if: risk < $threshold AND untested_count == 0 AND the
 PRD's first-progress-line starts with 'DONE'."
 
     step "Gate: asking Claude to inspect change + risk"
-    gate_output="$(claude -p "$gate_prompt" --cwd "$repo" 2>&1 || true)"
+    gate_output="$(cd "$repo" && claude -p "$gate_prompt" 2>&1 || true)"
     line="$(printf '%s\n' "$gate_output" | awk '/^[[:space:]]*\{/' | tail -1)"
     if [ -z "$line" ]; then
         warn "Gate did not return parseable JSON; assuming continue."
@@ -118,12 +118,12 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
     step "Iteration $iter / $MAX_ITERATIONS"
 
     if [ "$DRY_RUN" -eq 1 ]; then
-        ok "[dry-run] would call: claude -p @<tmp> --cwd $REPO_PATH --dangerously-skip-permissions"
+        ok "[dry-run] would call: (cd $REPO_PATH && claude -p @<tmp> --dangerously-skip-permissions)"
     else
         tmp="$(mktemp --suffix=.md)"
         printf '%s\n' "$INNER_PROMPT" > "$tmp"
         set +e
-        claude -p "@$tmp" --cwd "$REPO_PATH" --dangerously-skip-permissions
+        (cd "$REPO_PATH" && claude -p "@$tmp" --dangerously-skip-permissions)
         rc=$?
         set -e
         rm -f "$tmp"
