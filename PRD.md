@@ -136,6 +136,12 @@ Otherwise prepend a one-line status for the latest iteration.
 
 (iteration log — newest on top)
 
+- 2026-04-21 — Parity fix: `prerequisites.ps1` now has an informational
+  Docker check mirroring `prerequisites.sh`'s step 4. Docker is required
+  downstream by `install-langfuse.ps1`; warning early matches the Linux
+  side and keeps the bash/PowerShell contract the PRD mandates. Cannot
+  execute `.ps1` on this Linux host; verified by diffing structure
+  against the bash equivalent.
 - 2026-04-21 — Parity fix: `verify.sh` now prepends `~/.local/bin` to PATH
   (idempotently, via `case` guard) to mirror `verify.ps1`'s PATH
   augmentation. Fixes the one-shot-install goal for fresh shells where

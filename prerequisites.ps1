@@ -90,6 +90,22 @@ if ($SkipClaude) {
     } else { Write-OK "Claude Code CLI installed" }
 }
 
+# --- Docker check (informational only) -------------------------------------
+# Mirrors the docker check in prerequisites.sh. Docker Desktop is required
+# downstream by install-langfuse.ps1 (six-container Langfuse stack). We
+# only warn here; install-langfuse handles the hard requirement.
+if (Has-Cmd 'docker') {
+    docker info *> $null
+    if ($LASTEXITCODE -eq 0) {
+        $dockerVer = (docker --version) -replace ',', ''
+        Write-OK "$dockerVer -- daemon running"
+    } else {
+        Write-Warn2 "docker binary present but daemon not reachable -- start Docker Desktop"
+    }
+} else {
+    Write-Warn2 "docker not installed. Langfuse (install-langfuse.ps1) will prompt you to install Docker Desktop."
+}
+
 Write-Step "Prerequisites phase complete"
 Write-Host @"
 
