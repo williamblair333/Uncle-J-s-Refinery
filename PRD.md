@@ -71,6 +71,13 @@ install-guardrails → install-langfuse` in order and end up with:
 The done-gate exits when **all** of these pass. Copy this block into
 the Progress section and tick off as you verify.
 
+- [ ] `./healthcheck.sh --full` exits 0 (final line `HEALTHCHECK: ok`).
+      This single command covers criteria #3–#9 below end-to-end: MCP
+      connectivity + correct scopes, `MCP_TIMEOUT`, Langfuse compose
+      health, Langfuse API, Langfuse SDK in venv, tree secret scan, Stop
+      hook firing, and Langfuse trace emission. If it fails, the final
+      line names the first failing check; each `X` line above has a
+      `fix:` hint.
 - [ ] The specific task asked of this iteration has a concrete, verified
       outcome (not "should work", but "I ran X and got Y")
 - [ ] `./prerequisites.sh` and `./install.sh --auto-register` run

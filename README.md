@@ -409,9 +409,55 @@ DONE) as exit criteria — solves Ralph's classic failure mode of
 declaring victory on a broken change. Starting template at
 `prd-template.md`.
 
+### Runtime health check
+
+`verify.sh` confirms binaries exist. `healthcheck.sh` confirms the stack
+is actually wired up and responding. Use it to catch silent regressions
+that install-time checks miss (MCP server registered at wrong scope,
+`langfuse` wiped from the venv by a `uv sync`, Langfuse container died
+overnight, etc.).
+
+```bash
+./healthcheck.sh            # --quick (default, ~6s)
+./healthcheck.sh --full     # + nested claude -p smoke + Langfuse trace API (~60s)
+```
+
+Windows: `.\healthcheck.ps1` / `.\healthcheck.ps1 -Full`.
+
+The script is **read-only** — failures include the remediation command
+in the `fix:` line; they do not auto-heal. Final stdout line is
+machine-parseable: `HEALTHCHECK: ok` or
+`HEALTHCHECK: fail (<n>) -- <first failing check>`.
+
+Automated invocation:
+
+- **SessionStart hook** — `healthcheck.sh --quick` runs at the start
+  of every Claude Code session (configured in
+  `~/.claude/settings.json`). Banner prints as a system-reminder at
+  session open; no-ops silently when you open a session outside this
+  repo.
+- **`/health` slash command** — runs `healthcheck.sh --full` on
+  demand mid-session. Lives at `~/.claude/commands/health.md`.
+
 ---
 
 ## Troubleshooting
+
+### `HEALTHCHECK: fail` in the SessionStart banner
+
+The banner's `fix:` line tells you what to run. The most common causes,
+mapped to their fixes:
+
+| Banner says | Fix |
+|---|---|
+| `mcp-servers-down(jcodemunch)` etc | `./install.sh --auto-register` |
+| `jcodemunch-wrong-scope` | `claude mcp remove jcodemunch -s local ; claude mcp remove jcodemunch -s project` |
+| `mcp-timeout` | Re-run `./install.sh` — step 5b rewrites `MCP_TIMEOUT=60000` |
+| `docker-down` / `langfuse-unhealthy` | `docker compose -f claude-code-langfuse-template/docker-compose.yml up -d` |
+| `langfuse-sdk-missing` | `uv pip install --python .venv/bin/python --upgrade 'langfuse>=3.0,<4'` (or re-run `./install-langfuse.sh`) |
+| `secrets` | Review the grep hits; add to `.gitignore` or redact |
+| `hook-no-fire` / `trace-api` (full mode only) | Check `tail -5 ~/.claude/state/langfuse_hook.log`, then verify `from langfuse import Langfuse` works from the stack venv |
+
 
 ### `verify.sh` / `verify.ps1` reports FAIL after fresh install
 
