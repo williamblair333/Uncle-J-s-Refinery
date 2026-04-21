@@ -142,17 +142,50 @@ else
 fi
 
 # --- 5. Optional auto-registration with Claude Code -------------------------
+# Note: `claude mcp add -s user <name>` silently skips when the name is
+# already registered. `jcodemunch-mcp init` registers itself as
+# `uvx jcodemunch-mcp`, which works but uses a separate uvx-cached copy
+# instead of the stack venv. Remove first, then add, so the re-run always
+# converges on the venv-pinned binary.
+mcp_add() {
+    local name="$1"; shift
+    claude mcp remove -s user "$name" >/dev/null 2>&1 || true
+    claude mcp add -s user "$name" "$@"
+}
 if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     step "Registering MCP servers with Claude Code (user scope)"
-    claude mcp add -s user jcodemunch "${EXE[jcodemunch]}"
-    claude mcp add -s user jdatamunch "${EXE[jdatamunch]}"
-    claude mcp add -s user jdocmunch  "${EXE[jdocmunch]}"
-    claude mcp add -s user mempalace -- "$VENV_BIN/python" -m mempalace.mcp_server
-    claude mcp add -s user serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant
-    [ "$SKIP_CONTEXT7" -eq 0 ] && claude mcp add -s user context7 -- npx -y "@upstash/context7-mcp"
-    [ "$SKIP_OPTIONAL" -eq 0 ] && claude mcp add -s user duckdb -- uvx mcp-server-motherduck --db-path :memory: --read-write --allow-switch-databases
+    mcp_add jcodemunch "${EXE[jcodemunch]}"
+    mcp_add jdatamunch "${EXE[jdatamunch]}"
+    mcp_add jdocmunch  "${EXE[jdocmunch]}"
+    mcp_add mempalace -- "$VENV_BIN/python" -m mempalace.mcp_server
+    mcp_add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant
+    [ "$SKIP_CONTEXT7" -eq 0 ] && mcp_add context7 -- npx -y "@upstash/context7-mcp"
+    [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add duckdb -- uvx mcp-server-motherduck --db-path :memory: --read-write --allow-switch-databases
     ok "Registered. Verify with: claude mcp list"
 fi
+
+# --- 5b. MCP server startup timeout ----------------------------------------
+# Claude Code honors MCP_TIMEOUT from its settings.json env block. Set it
+# here so first-run cold starts (uvx fetches, npx resolves) don't race the
+# default 30s timeout — especially relevant for Serena and MotherDuck which
+# can take 40-50s on their first invocation.
+step "Setting MCP_TIMEOUT in ~/.claude/settings.json"
+CLAUDE_DIR="${CLAUDE_HOME:-$HOME/.claude}"
+mkdir -p "$CLAUDE_DIR"
+[ -f "$CLAUDE_DIR/settings.json" ] || echo '{}' > "$CLAUDE_DIR/settings.json"
+python3 - <<'PY'
+import json, os
+from pathlib import Path
+p = Path(os.path.expanduser(os.environ.get("CLAUDE_HOME") or "~/.claude")) / "settings.json"
+d = json.loads(p.read_text())
+env = d.setdefault("env", {})
+if env.get("MCP_TIMEOUT") != "60000":
+    env["MCP_TIMEOUT"] = "60000"
+    p.write_text(json.dumps(d, indent=2))
+    print("    OK  MCP_TIMEOUT=60000 set in settings.json env block")
+else:
+    print("    OK  MCP_TIMEOUT already 60000 in settings.json env block")
+PY
 
 # --- 6. Next-step guidance --------------------------------------------------
 step "Next steps"

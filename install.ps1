@@ -169,20 +169,52 @@ if ($tmpls) {
 }
 
 # --- 5. Optional auto-registration with Claude Code --------------------------
+# `claude mcp add -s user <name>` silently skips when the name is already
+# registered (e.g. as `uvx jcodemunch-mcp` after `jcodemunch-mcp init`).
+# Remove first so the re-run always converges on the venv-pinned binary.
+function Invoke-McpAdd {
+    param([string]$Name, [string[]]$AddArgs)
+    & claude mcp remove -s user $Name 2>$null | Out-Null
+    & claude mcp add -s user $Name @AddArgs
+}
 if ($AutoRegister -and -not $skipClaudeCli) {
     Write-Step "Registering MCP servers with Claude Code (user scope)"
-    & claude mcp add -s user jcodemunch $exe.jcodemunch
-    & claude mcp add -s user jdatamunch $exe.jdatamunch
-    & claude mcp add -s user jdocmunch  $exe.jdocmunch
-    & claude mcp add -s user mempalace -- (Join-Path $VenvScripts 'python.exe') -m mempalace.mcp_server
-    & claude mcp add -s user serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant
+    Invoke-McpAdd jcodemunch @($exe.jcodemunch)
+    Invoke-McpAdd jdatamunch @($exe.jdatamunch)
+    Invoke-McpAdd jdocmunch  @($exe.jdocmunch)
+    Invoke-McpAdd mempalace  @('--', (Join-Path $VenvScripts 'python.exe'), '-m', 'mempalace.mcp_server')
+    Invoke-McpAdd serena     @('--', 'uvx', '--from', 'git+https://github.com/oraios/serena', 'serena', 'start-mcp-server', '--context', 'ide-assistant')
     if (-not $skipContext7) {
-        & claude mcp add -s user context7 -- npx -y "@upstash/context7-mcp"
+        Invoke-McpAdd context7 @('--', 'npx', '-y', '@upstash/context7-mcp')
     }
     if (-not $SkipOptional) {
-        & claude mcp add -s user duckdb -- uvx mcp-server-motherduck --db-path :memory: --read-write --allow-switch-databases
+        Invoke-McpAdd duckdb @('--', 'uvx', 'mcp-server-motherduck', '--db-path', ':memory:', '--read-write', '--allow-switch-databases')
     }
     Write-OK "Registered with Claude Code. Verify with:  claude mcp list"
+}
+
+# --- 5b. MCP server startup timeout ------------------------------------------
+# Claude Code honors MCP_TIMEOUT from its settings.json env block. Set it
+# here so first-run cold starts (uvx fetches, npx resolves) don't race the
+# default 30s timeout — especially relevant for Serena and MotherDuck which
+# can take 40-50s on their first invocation.
+Write-Step "Setting MCP_TIMEOUT in settings.json"
+$claudeDir = if ($env:CLAUDE_HOME) { $env:CLAUDE_HOME } else { Join-Path $env:USERPROFILE ".claude" }
+if (-not (Test-Path $claudeDir)) { New-Item -Path $claudeDir -ItemType Directory | Out-Null }
+$settingsPath = Join-Path $claudeDir "settings.json"
+if (-not (Test-Path $settingsPath)) { '{}' | Set-Content -Path $settingsPath -Encoding UTF8 }
+$settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
+if (-not $settings.env) { $settings | Add-Member -NotePropertyName env -NotePropertyValue ([pscustomobject]@{}) -Force }
+if ($settings.env.MCP_TIMEOUT -ne "60000") {
+    if ($settings.env.PSObject.Properties['MCP_TIMEOUT']) {
+        $settings.env.MCP_TIMEOUT = "60000"
+    } else {
+        $settings.env | Add-Member -NotePropertyName MCP_TIMEOUT -NotePropertyValue "60000" -Force
+    }
+    $settings | ConvertTo-Json -Depth 99 | Set-Content -Path $settingsPath -Encoding UTF8
+    Write-OK "MCP_TIMEOUT=60000 set in settings.json env block"
+} else {
+    Write-OK "MCP_TIMEOUT already 60000 in settings.json env block"
 }
 
 # --- 6. Next-step guidance ---------------------------------------------------
