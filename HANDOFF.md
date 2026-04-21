@@ -335,3 +335,143 @@ Document any surprises in this file. Fix and re-test.
 ## Overnight work log
 
 *(append below)*
+
+## Overnight work log — 2026-04-21
+
+**Author:** Claude (Opus 4.7, 1M context), executing the priority list above.
+
+### Priority 1 — Langfuse on the live Linux box (DONE, end-to-end)
+- ClickHouse now runs on `:24.8` with a bind-mount of a literal `max 100000`
+  file over `/sys/fs/cgroup/cpu.max`. All six containers come up healthy;
+  `docker compose ps` clean.
+- `langfuse>=3.0,<4` installed into `/opt/proj/Uncle-J-s-Refinery/.venv`
+  via `uv pip install --python`.
+- `langfuse_hook.py` placed at `~/.claude/hooks/`; Stop hook registered in
+  `~/.claude/settings.json` with the venv interpreter (`<venv>/bin/python
+  "<hook>"`); `LANGFUSE_HOST`/`PUBLIC_KEY`/`SECRET_KEY`/`TRACE_TO_LANGFUSE`
+  merged into the `env` block.
+- Verified: `claude -p "what's 2+2"` triggered
+  `Processed 5 turns from 2 sessions (drained 0 from queue) in 0.2s` in the
+  hook log, and the Langfuse public-API returned 3 traces immediately.
+
+> **Correction to the original brief.** The handoff prescribed pinning
+> ClickHouse to `:24.12` on the theory that the crash was a Liquorix-only
+> CPU-topology issue. That is not what this host is doing. Inside *any*
+> ClickHouse container on this box (24.8, 24.12, and 25.x all fail the same
+> way), `/sys/fs/cgroup/cpu.max` is a 0-byte file. ClickHouse's startup
+> `SettingsTraits::Data::Data()` reads it and calls `std::stof("")`, which
+> throws `std::invalid_argument: stof: no conversion`. The version pin does
+> nothing on its own — I confirmed both 24.12 and 24.8 crash identically
+> before finding the cgroup anomaly. The fix that actually works is the
+> cpu.max bind-mount; the `:24.8` pin is retained only because it's the
+> Langfuse-tested LTS. Reasoning is documented inline in the
+> `install-langfuse.sh` header comments for the 2b section.
+
+### Priority 2 — Harden `install-langfuse.sh` (commit 96d238c)
+- 2a: ClickHouse pin to `:24.8` (idempotent sed, rejected when image line
+  is already tagged).
+- 2a+: write `$TEMPLATE_DIR/clickhouse/cpu.max.override` and inject
+  `- ./clickhouse/cpu.max.override:/sys/fs/cgroup/cpu.max:ro` after the
+  `langfuse_clickhouse_logs` volume line.
+- 2b: `docker compose up -d` retry loop, 3 attempts, 30s backoff.
+- 2c: replaced the system `pip install langfuse` with
+  `uv pip install --python $STACK_VENV/bin/python` (with a
+  `<venv>/bin/python -m pip` fallback if `uv` isn't on PATH).
+- 2d: skip upstream `scripts/install-hook.sh`; copy
+  `$TEMPLATE_DIR/hooks/langfuse_hook.py` directly.
+- 2e: `export PYTHON_BIN=$VENV_PY` before the settings.json patch block
+  (the existing `os.environ.get("PYTHON_BIN") or "python3"` already honors
+  this, so no further Python edit needed).
+- Robustness: template presence check keys on
+  `$TEMPLATE_DIR/docker-compose.yml`, not just the directory — avoids
+  skipping the clone when a stale empty skeleton exists.
+- 2f: verified by
+    ```
+    docker compose -f claude-code-langfuse-template/docker-compose.yml down -v
+    mv claude-code-langfuse-template /tmp/...
+    printf '\n\n\n\n' | bash install-langfuse.sh
+    ```
+  which cloned fresh, pinned, injected the bind-mount, brought the whole
+  stack up healthy on attempt 1, installed the SDK into the venv, placed
+  the hook, patched settings.json, and passed a `claude -p` smoke test
+  that produced a new trace via the Langfuse API.
+
+### Priority 3 — Port `ralph-harness.ps1` to bash (commit 3e319eb)
+- New `ralph-harness.sh` mirrors the PS1 flags (`--prd`, `--repo`,
+  `--max-iterations`, `--risk-threshold`, `--skip-judge`, `--dry-run`) and
+  the same verification-gated done-check: per-iteration, ask Claude to run
+  `get_changed_symbols` / `get_untested_symbols` / `get_pr_risk_profile`
+  and emit a one-line JSON verdict. Exit only when risk < threshold,
+  untested_count == 0, and the PRD Progress section begins with `DONE`.
+  Same exit-2 semantics as the PS1 when the iteration cap is hit without
+  a 'done' verdict.
+- Sanity-checked with `bash -n` and `--dry-run --skip-judge`.
+
+### Priority 4a — MIT LICENSE (commit 3e42626)
+- Added at repo root. Trailer note points to the upstream commercial-use
+  terms at the top of README.md for the tools the installers invoke.
+
+### Priority 4b — Templatize `mcp-clients/*.json` (commit 315e233)
+- The four files hardcoded one Windows user's venv path, so they were
+  useless elsewhere. Replaced with `*.json.tmpl` using `{{STACK_VENV_BIN}}`
+  and `{{EXE}}` placeholders; `install.sh` and `install.ps1` now render to
+  platform-specific `*.json` at install time (gitignored). Forward slashes
+  in the rendered paths work on both platforms and avoid JSON-escape
+  headaches for Windows backslashes.
+- Verified: rendered `claude-code-mcp.json` parses as JSON and points at
+  `/opt/proj/Uncle-J-s-Refinery/.venv/bin/jcodemunch-mcp`.
+
+### Priority 4c — Ubuntu container smoke test (DEFERRED)
+- Not run this session. The Priority 1 fresh-install test of
+  `install-langfuse.sh` gave me strong confidence the script is
+  reproducible on this host, but it did NOT exercise
+  `prerequisites.sh → install.sh → verify.sh` inside a clean
+  `ubuntu:24.04` container. That should still happen before declaring
+  the whole glue layer "Linux-ready"; it's the only end-to-end check that
+  catches assumptions about the host's preinstalled tooling.
+- **To run later:**
+    ```
+    docker run -it --rm -v /opt/proj/Uncle-J-s-Refinery:/work ubuntu:24.04 bash
+    apt-get update && apt-get install -y curl sudo git
+    cd /work && ./prerequisites.sh && ./install.sh --auto-register && ./verify.sh
+    ```
+
+### Outstanding — push access
+Five local commits (130d5f5, 96d238c, 3e319eb, 3e42626, 315e233) are on
+`main` but have not been pushed. This host has no GitHub credential helper
+configured (no `gh`, no GitHub SSH key in `~/.ssh/`, no `credential.helper`
+set). I did not touch git config per the "Never update the git config"
+security rule.
+
+**To push:** set up auth (one of the below), then:
+```
+git -C /opt/proj/Uncle-J-s-Refinery push origin main
+```
+Options:
+- `gh auth login` (installs a credential helper).
+- Generate an SSH key, add to GitHub, and flip `origin` to the SSH URL.
+- Use a fine-scoped Personal Access Token as the password on first HTTPS push.
+
+### Files touched this session
+
+Repo (all committed locally):
+- `HANDOFF.md` — this brief.
+- `install-langfuse.sh` — hardened for cgroup-v2 hosts and PEP-668 Python.
+- `ralph-harness.sh` — bash port of the PS1 harness.
+- `LICENSE` — MIT.
+- `install.sh` / `install.ps1` — render `mcp-clients/*.json.tmpl` at install.
+- `mcp-clients/*.json.tmpl` — four new template files.
+- `.gitignore` — ignore rendered `mcp-clients/*.json` and
+  `claude-code-langfuse-template.skeleton.*`.
+
+Live box (not tracked in repo; configured per P1):
+- `/opt/proj/Uncle-J-s-Refinery/.venv/` — added langfuse 3.x.
+- `~/.claude/hooks/langfuse_hook.py` — placed.
+- `~/.claude/settings.json` — Stop hook + Langfuse env merged.
+- `claude-code-langfuse-template/` — local patches applied (pinned image,
+  cpu.max bind-mount, cpu.max.override file). These live on the upstream
+  clone intentionally; the reproducible logic lives in `install-langfuse.sh`.
+
+A stale directory `claude-code-langfuse-template.skeleton.1776776929/`
+from the fresh-install test is gitignored; safe to `mv` aside or delete.
+
