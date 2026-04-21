@@ -60,15 +60,49 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 # ── 2. Clone template ────────────────────────────────────────────────────
-if [ ! -d "$TEMPLATE_DIR" ]; then
+# Presence check keys on docker-compose.yml, not just the directory — a
+# stale empty skeleton can exist from other tooling (e.g. a dropped shell
+# cwd) and would otherwise skip the clone.
+if [ ! -f "$TEMPLATE_DIR/docker-compose.yml" ]; then
     step "Cloning doneyli/claude-code-langfuse-template"
     if ! has git; then
         warn "git not found; run ./prerequisites.sh first"
         exit 1
     fi
+    if [ -d "$TEMPLATE_DIR" ]; then
+        mv "$TEMPLATE_DIR" "${TEMPLATE_DIR}.skeleton.$(date +%s)"
+    fi
     git clone --depth 1 https://github.com/doneyli/claude-code-langfuse-template.git "$TEMPLATE_DIR"
 fi
 ok "template present at $TEMPLATE_DIR"
+
+# ── 2b. Pin ClickHouse and patch for Liquorix/cgroup-v2 hosts ────────────
+# On some cgroup-v2 hosts (observed on Linux 6.18 Liquorix) the container's
+# /sys/fs/cgroup/cpu.max is a 0-byte file. ClickHouse's startup parser calls
+# std::stof("") and aborts. Pinning the version alone doesn't help (24.12
+# and 24.8 both crash the same way). Two coordinated fixes:
+#   1. Pin to 24.8 (LTS, matches Langfuse's tested set).
+#   2. Bind-mount a file containing the cgroup-v2 "unlimited" default over
+#      /sys/fs/cgroup/cpu.max so the parse succeeds.
+step "Pinning ClickHouse image in docker-compose.yml"
+if grep -qE 'clickhouse/clickhouse-server(:latest)?$' "$TEMPLATE_DIR/docker-compose.yml"; then
+    sed -i.bak 's|clickhouse/clickhouse-server\(:latest\)\?$|clickhouse/clickhouse-server:24.8|' "$TEMPLATE_DIR/docker-compose.yml"
+    ok "ClickHouse pinned to 24.8"
+else
+    ok "ClickHouse already pinned (image line not matched for :latest)"
+fi
+
+step "Writing cpu.max.override and wiring bind-mount for ClickHouse"
+mkdir -p "$TEMPLATE_DIR/clickhouse"
+printf 'max 100000\n' > "$TEMPLATE_DIR/clickhouse/cpu.max.override"
+if ! grep -q 'clickhouse/cpu.max.override:/sys/fs/cgroup/cpu.max' "$TEMPLATE_DIR/docker-compose.yml"; then
+    # Inject the bind-mount right after the langfuse_clickhouse_logs volume
+    # line (stable anchor inside the clickhouse service's volumes block).
+    sed -i '/langfuse_clickhouse_logs:\/var\/log\/clickhouse-server/a\      - ./clickhouse/cpu.max.override:/sys/fs/cgroup/cpu.max:ro' "$TEMPLATE_DIR/docker-compose.yml"
+    ok "cpu.max bind-mount injected"
+else
+    ok "cpu.max bind-mount already present"
+fi
 
 # ── 3. Generate .env ─────────────────────────────────────────────────────
 cd "$TEMPLATE_DIR"
@@ -85,7 +119,18 @@ ok ".env present"
 
 # ── 4. docker compose up ─────────────────────────────────────────────────
 step "Starting Langfuse stack (docker compose up -d)"
-docker compose up -d
+for attempt in 1 2 3; do
+    if docker compose up -d; then
+        ok "Stack up on attempt $attempt"
+        break
+    fi
+    if [ "$attempt" -eq 3 ]; then
+        warn "docker compose up -d failed after 3 attempts"
+        exit 1
+    fi
+    warn "compose up failed on attempt $attempt; waiting 30s for slow containers..."
+    sleep 30
+done
 
 # ── 5. Wait for Langfuse web ─────────────────────────────────────────────
 step "Waiting for Langfuse web to become ready"
@@ -102,23 +147,40 @@ for i in $(seq 1 120); do
 done
 
 # ── 6. Install the Python hook script ────────────────────────────────────
-step "Running upstream install-hook.sh"
-if [ -x "./scripts/install-hook.sh" ]; then
-    ./scripts/install-hook.sh || warn "install-hook.sh exited non-zero (we'll patch settings.json manually next)"
-fi
-ok "hook script installed to $CLAUDE_DIR/hooks/langfuse_hook.py"
-
-# ── 7. Pin langfuse SDK to v3 (the hook API target) ──────────────────────
-step "Pinning langfuse SDK to v3"
-PY="$(command -v python3 || command -v python)"
-if [ -z "$PY" ]; then
-    warn "No python/python3 on PATH; skipping SDK pin. Install manually:"
-    warn "  python3 -m pip install --upgrade 'langfuse>=3.0,<4'"
+# We deliberately skip the upstream scripts/install-hook.sh: its naked
+# `pip install langfuse` trips PEP 668 on Debian 13 (externally-managed
+# system Python). Copy the script directly and install the SDK into the
+# stack venv below.
+step "Installing langfuse_hook.py"
+mkdir -p "$CLAUDE_DIR/hooks" "$CLAUDE_DIR/state"
+if [ -f "$TEMPLATE_DIR/hooks/langfuse_hook.py" ]; then
+    cp "$TEMPLATE_DIR/hooks/langfuse_hook.py" "$CLAUDE_DIR/hooks/"
+    ok "hook script placed at $CLAUDE_DIR/hooks/langfuse_hook.py"
 else
-    "$PY" -m pip install --quiet --upgrade "langfuse>=3.0,<4" || \
-        "$PY" -m pip install --user --quiet --upgrade "langfuse>=3.0,<4"
-    ok "langfuse pinned to v3.x"
+    warn "langfuse_hook.py not found in template; check template layout"
+    exit 1
 fi
+
+# ── 7. Install langfuse SDK into the stack venv ──────────────────────────
+# System python is PEP-668-locked on Debian 13; install into the stack's
+# own venv (managed by uv) and register the hook command with that venv's
+# python interpreter.
+step "Installing langfuse SDK into stack venv"
+STACK_VENV="$STACK_ROOT/.venv"
+VENV_PY="$STACK_VENV/bin/python"
+if [ ! -x "$VENV_PY" ]; then
+    warn "Stack venv not found at $STACK_VENV — run ./install.sh first"
+    exit 1
+fi
+if has uv; then
+    uv pip install --python "$VENV_PY" --quiet --upgrade "langfuse>=3.0,<4"
+else
+    warn "uv not on PATH; trying '$VENV_PY -m pip' as fallback"
+    "$VENV_PY" -m pip install --quiet --upgrade "langfuse>=3.0,<4"
+fi
+ok "langfuse pinned to v3.x in stack venv"
+PY="$VENV_PY"
+export PYTHON_BIN="$VENV_PY"
 
 # ── 8. Patch settings.json ───────────────────────────────────────────────
 step "Patching ~/.claude/settings.json with Stop hook and Langfuse env vars"
