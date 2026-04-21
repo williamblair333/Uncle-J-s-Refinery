@@ -27,6 +27,7 @@ check "uv available"     uv  --version
 check "uvx available"    uvx --version
 check "node available"   node --version
 check "npx available"    npx  --version
+check "git available"    git  --version
 check "claude CLI"       claude --version
 
 echo

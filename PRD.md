@@ -136,6 +136,10 @@ Otherwise prepend a one-line status for the latest iteration.
 
 (iteration log — newest on top)
 
+- 2026-04-21 — Parity fix: added `git --version` check to `verify.sh` to
+  mirror `verify.ps1`. Git is required by `install-reliability.sh` and
+  `install-langfuse.sh` (both clone upstream). Ran `verify.sh`: all PASS
+  including new `git available`.
 - 2026-04-21 — Fix ralph-harness `--cwd` (unsupported by `claude` CLI) →
   subshell `cd` / `Push-Location`; route `step`/`ok` to stderr so harness
   chrome doesn't pollute parsed gate JSON. Also ignore per-project
