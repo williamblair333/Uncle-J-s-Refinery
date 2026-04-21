@@ -75,7 +75,11 @@ Write-OK ".venv ready at $StackRoot\.venv"
 
 Write-Step "Installing Python stack (jCodeMunch, jDataMunch, jDocMunch, MemPalace)"
 # uv sync reads pyproject.toml and installs exactly what's declared.
-uv sync
+# --inexact: don't remove extraneous packages (e.g. langfuse installed by
+# install-langfuse.ps1). Without this, re-running install.ps1 after
+# install-langfuse.ps1 silently deletes the Langfuse SDK and breaks the
+# Stop hook.
+uv sync --inexact
 Write-OK "Python stack installed"
 
 # Resolve full paths of the installed executables so MCP configs can point
@@ -171,10 +175,13 @@ if ($tmpls) {
 # --- 5. Optional auto-registration with Claude Code --------------------------
 # `claude mcp add -s user <name>` silently skips when the name is already
 # registered (e.g. as `uvx jcodemunch-mcp` after `jcodemunch-mcp init`).
-# Remove first so the re-run always converges on the venv-pinned binary.
+# `jcodemunch-mcp init` writes at *local* scope, which wins over user scope,
+# so we must clear all three scopes before re-adding at user scope.
 function Invoke-McpAdd {
     param([string]$Name, [string[]]$AddArgs)
-    & claude mcp remove -s user $Name 2>$null | Out-Null
+    & claude mcp remove -s local   $Name 2>$null | Out-Null
+    & claude mcp remove -s project $Name 2>$null | Out-Null
+    & claude mcp remove -s user    $Name 2>$null | Out-Null
     & claude mcp add -s user $Name @AddArgs
 }
 if ($AutoRegister -and -not $skipClaudeCli) {

@@ -66,7 +66,11 @@ step "Creating .venv with uv"
 ok ".venv ready at $STACK_ROOT/.venv"
 
 step "Installing Python stack (jCodeMunch, jDataMunch, jDocMunch, MemPalace)"
-uv sync
+# --inexact: don't remove extraneous packages (e.g. langfuse installed by
+# install-langfuse.sh). Without this, re-running install.sh after
+# install-langfuse.sh silently deletes the Langfuse SDK and breaks the
+# Stop hook.
+uv sync --inexact
 ok "Python stack installed"
 
 VENV_BIN="$STACK_ROOT/.venv/bin"
@@ -144,12 +148,14 @@ fi
 # --- 5. Optional auto-registration with Claude Code -------------------------
 # Note: `claude mcp add -s user <name>` silently skips when the name is
 # already registered. `jcodemunch-mcp init` registers itself as
-# `uvx jcodemunch-mcp`, which works but uses a separate uvx-cached copy
-# instead of the stack venv. Remove first, then add, so the re-run always
-# converges on the venv-pinned binary.
+# `uvx jcodemunch-mcp` at *local* scope, which wins over user scope —
+# so we must clear all three scopes before re-adding at user scope.
+# Otherwise the uvx version keeps overriding the venv-pinned binary.
 mcp_add() {
     local name="$1"; shift
-    claude mcp remove -s user "$name" >/dev/null 2>&1 || true
+    claude mcp remove -s local   "$name" >/dev/null 2>&1 || true
+    claude mcp remove -s project "$name" >/dev/null 2>&1 || true
+    claude mcp remove -s user    "$name" >/dev/null 2>&1 || true
     claude mcp add -s user "$name" "$@"
 }
 if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
