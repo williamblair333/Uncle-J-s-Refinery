@@ -127,7 +127,7 @@ PRD's first-progress-line starts with 'DONE'.
     Write-Step "Gate: asking Claude to inspect change + risk"
     Push-Location $RepoPath
     try {
-        $gateOutput = & claude -p $gatePrompt 2>&1 | Out-String
+        $gateOutput = & claude -p $gatePrompt --dangerously-skip-permissions 2>&1 | Out-String
     } finally {
         Pop-Location
     }

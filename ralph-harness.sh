@@ -95,7 +95,7 @@ Decide 'done' only if: risk < $threshold AND untested_count == 0 AND the
 PRD's first-progress-line starts with 'DONE'."
 
     step "Gate: asking Claude to inspect change + risk"
-    gate_output="$(cd "$repo" && claude -p "$gate_prompt" 2>&1 || true)"
+    gate_output="$(cd "$repo" && claude -p "$gate_prompt" --dangerously-skip-permissions 2>&1 || true)"
     line="$(printf '%s\n' "$gate_output" | awk '/^[[:space:]]*\{/' | tail -1)"
     if [ -z "$line" ]; then
         warn "Gate did not return parseable JSON; assuming continue."
