@@ -199,21 +199,33 @@ check_secrets() {
 }
 
 # ===== full-mode extras =====================================================
-# ----- 9. Stop hook fires end-to-end on a smoke session --------------------
+# ----- 9. Stop hook wiring: direct invocation writes a log line ------------
 check_smoke_hook() {
-    step "9. smoke: claude -p writes a new line to langfuse_hook.log"
+    step "9. smoke: Stop hook writes a new line to langfuse_hook.log"
     local log="$HOME/.claude/state/langfuse_hook.log"
+    local hook="$HOME/.claude/hooks/langfuse_hook.py"
+    local py="$REPO_ROOT/.venv/bin/python"
+    local settings="$HOME/.claude/settings.json"
     local before after delta
+    # We invoke the hook directly rather than via `claude -p`: the CLI's
+    # print mode does not fire Stop hooks, so a nested session produces no
+    # log line regardless of wait time. Direct invocation exercises the same
+    # wiring the harness uses: venv python, hook script, env from settings,
+    # Langfuse SDK, log write.
     before="$(wc -l < "$log" 2>/dev/null || echo 0)"
-    timeout 60 claude -p "healthcheck-smoke" --dangerously-skip-permissions </dev/null >/dev/null 2>&1 || true
-    sleep 5
+    env \
+        LANGFUSE_PUBLIC_KEY="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("LANGFUSE_PUBLIC_KEY",""))' 2>/dev/null)" \
+        LANGFUSE_SECRET_KEY="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("LANGFUSE_SECRET_KEY",""))' 2>/dev/null)" \
+        LANGFUSE_HOST="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("LANGFUSE_HOST",""))' 2>/dev/null)" \
+        TRACE_TO_LANGFUSE=true \
+        "$py" "$hook" </dev/null >/dev/null 2>&1 || true
     after="$(wc -l < "$log" 2>/dev/null || echo 0)"
     delta=$((after - before))
     if [ "$delta" -ge 1 ]; then
         ok "log delta = $delta (hook fired)"
     else
         bad "log delta = 0 — hook did not fire"
-        hint "check: tail -5 $log ; and: $REPO_ROOT/.venv/bin/python -c 'from langfuse import Langfuse'"
+        hint "check: tail -5 $log ; and: $py -c 'from langfuse import Langfuse' ; and: test -r $hook ; and: grep LANGFUSE_ $settings"
         record_fail "hook-no-fire"
     fi
 }
