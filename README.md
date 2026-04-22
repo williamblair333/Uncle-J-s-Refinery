@@ -349,7 +349,31 @@ claude mcp remove context7
 claude mcp add -s user context7 -- "$env:APPDATA\npm\context7-mcp.cmd"
 ```
 
-### 10. (Optional) Bootstrap MemPalace
+### 10. (Optional) Stack update alerts
+
+`install.sh` offers this as a yes/no prompt at the end. To enable it separately:
+
+```bash
+bash features/stack-alerts/install.sh
+```
+
+**Windows:**
+```powershell
+.\features\stack-alerts\install.ps1
+```
+
+Requires a Telegram bot token and your chat ID (see `features/stack-alerts/README.md`).
+Once installed, a daily cron job (or Task Scheduler task on Windows) checks for new releases,
+invokes Claude to assess relevance, and sends you an inline-button Telegram pitch. Tap ✅ and
+Claude upgrades the package; tap ❌ and it's silently dropped.
+
+To run the freshness check manually at any time:
+
+```bash
+bash scripts/check-stack-freshness.sh
+```
+
+### 11. (Optional) Bootstrap MemPalace
 
 MemPalace is installed but empty. To get value:
 
