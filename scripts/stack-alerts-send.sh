@@ -64,7 +64,7 @@ if [[ "$relevant" != "true" ]]; then
   exit 0
 fi
 
-message=$(echo "$analysis" | python3 -c \
+message=$(printf '%s\n' "$analysis" | python3 -c \
   "import sys,json; print(json.loads(sys.stdin.read())['message'])" 2>/dev/null)
 packages=$(echo "$analysis" | python3 -c \
   "import sys,json; print(json.dumps(json.loads(sys.stdin.read())['packages']))" 2>/dev/null)
