@@ -65,8 +65,9 @@ Run exactly: cd $PROJ_ROOT && uv pip install --upgrade $pkg_list
 Then check if the release notes for these packages require any changes to CLAUDE.md.
 Respond with one sentence: what was upgraded and whether CLAUDE.md needed changes."
 
-    result=$("$CLAUDE_BIN" --allowed-tools 'Bash' -p "$upgrade_prompt" 2>/dev/null) || \
+    if ! result=$("$CLAUDE_BIN" --allowed-tools 'Bash' -p "$upgrade_prompt" 2>/dev/null); then
       result="Upgrade command failed — check logs and run manually: uv pip install --upgrade $pkg_list"
+    fi
 
     log "Upgrade result: $result"
     notify_send_text "🔧 $result" || true
