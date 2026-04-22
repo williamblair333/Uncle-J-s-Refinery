@@ -40,7 +40,7 @@ function _Tg-PollReply {
                     -ContentType "application/json" `
                     -Body (@{ callback_query_id = $cq.id } | ConvertTo-Json) | Out-Null
             } catch {}
-            return if ($cq.data -eq "approve") { "approved" } else { "rejected" }
+            return ($cq.data -eq "approve") ? "approved" : "rejected"
         }
     }
     return "pending"
