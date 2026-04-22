@@ -27,7 +27,8 @@ with open(out_file, "w") as f:
     json.dump(payload, f)
 PYEOF
 
-  "$_TG_PY" "$tmppy" "$TELEGRAM_CHAT_ID" "$message" "$keyboard_json" "$tmppayload"
+  "$_TG_PY" "$tmppy" "$TELEGRAM_CHAT_ID" "$message" "$keyboard_json" "$tmppayload" \
+    || { rm -f "$tmppy" "$tmppayload"; return 1; }
   rm -f "$tmppy"
 
   local tmpresponse
