@@ -113,7 +113,8 @@ with open(sys.argv[2], "w") as f:
     json.dump({"chat_id": sys.argv[1], "text": sys.argv[3], "parse_mode": "HTML"}, f)
 PYEOF
 
-  "$_TG_PY" "$tmppy" "$TELEGRAM_CHAT_ID" "$tmppayload" "$message"
+  "$_TG_PY" "$tmppy" "$TELEGRAM_CHAT_ID" "$tmppayload" "$message" \
+    || { rm -f "$tmppy" "$tmppayload"; return 1; }
   rm -f "$tmppy"
 
   curl -sf -X POST "${_TG_API}/sendMessage" \
