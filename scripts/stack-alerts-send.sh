@@ -69,6 +69,11 @@ message=$(echo "$analysis" | python3 -c \
 packages=$(echo "$analysis" | python3 -c \
   "import sys,json; print(json.dumps(json.loads(sys.stdin.read())['packages']))" 2>/dev/null)
 
+if [[ -z "$message" || -z "$packages" ]]; then
+  log "ERROR: Claude response missing 'message' or 'packages'. No pitch sent."
+  exit 0
+fi
+
 keyboard='[[{"text":"✅ Upgrade","callback_data":"approve"},{"text":"❌ Skip","callback_data":"skip"}]]'
 
 log "Sending Telegram pitch..."
