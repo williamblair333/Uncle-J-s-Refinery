@@ -21,9 +21,9 @@ log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG_FI
 source "$PROJ_ROOT/lib/notify.sh"
 
 # Read state
-message_id=$(python3 -c "import sys,json; print(json.load(open('$STATE_FILE'))['message_id'])")
-sent_at=$(python3 -c "import sys,json; print(json.load(open('$STATE_FILE'))['sent_at'])")
-packages=$(python3 -c "import sys,json; print(json.dumps(json.load(open('$STATE_FILE'))['packages']))")
+message_id=$(python3 -c "import sys,json; print(json.load(open(sys.argv[1]))['message_id'])" "$STATE_FILE")
+sent_at=$(python3 -c "import sys,json; print(json.load(open(sys.argv[1]))['sent_at'])" "$STATE_FILE")
+packages=$(python3 -c "import sys,json; print(json.dumps(json.load(open(sys.argv[1]))['packages']))" "$STATE_FILE")
 
 # Check expiry
 expired=$(python3 - "$sent_at" "${ALERT_EXPIRY_MINUTES:-60}" << 'PYEOF'
