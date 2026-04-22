@@ -42,6 +42,7 @@ scripts/
   stack-alerts-poll.ps1
 state/
   stack-alerts-pending.json ← gitignored runtime state
+  stack-alerts.log          ← gitignored, appended to by both jobs
 ```
 
 ---
