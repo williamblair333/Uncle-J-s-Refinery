@@ -57,8 +57,7 @@ case "$reply" in
     log "User approved upgrade. Invoking Claude to upgrade packages..."
     rm -f "$STATE_FILE"
 
-    pkg_list=$(echo "$packages" | python3 -c \
-      "import sys,json; print(' '.join(json.loads(sys.stdin.read())))")
+    pkg_list=$(python3 -c "import sys,json; print(' '.join(json.loads(sys.argv[1])))" "$packages")
 
     upgrade_prompt="Upgrade these Python packages in the Uncle J's Refinery venv.
 Run exactly: cd $PROJ_ROOT && uv pip install --upgrade $pkg_list
