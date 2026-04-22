@@ -55,7 +55,7 @@ analysis=$("$CLAUDE_BIN" -p "$prompt" 2>/dev/null) || {
   exit 0
 }
 
-relevant=$(echo "$analysis" | python3 -c \
+relevant=$(printf '%s\n' "$analysis" | python3 -c \
   "import sys,json; d=json.loads(sys.stdin.read()); print(str(d.get('relevant',False)).lower())" \
   2>/dev/null || echo "false")
 
