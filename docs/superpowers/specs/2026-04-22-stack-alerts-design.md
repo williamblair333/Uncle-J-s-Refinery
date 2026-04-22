@@ -90,7 +90,9 @@ Send time is substituted from `ALERT_SEND_TIME` during install.
 ### Windows (Task Scheduler)
 Two tasks registered via `Register-ScheduledTask`:
 - `UncleJ-StackAlerts-Send` — daily trigger at configured time, runs `stack-alerts-send.ps1`
-- `UncleJ-StackAlerts-Poll` — repetition trigger every 2 minutes, runs `stack-alerts-poll.ps1`
+- `UncleJ-StackAlerts-Poll` — daily trigger at midnight with repetition interval 2 minutes, repetition duration 1 day (effectively runs every 2 min all day), runs `stack-alerts-poll.ps1`
+
+Both tasks use `claude` CLI (same binary as Linux — cross-platform). The installer resolves the repo path at install time and bakes it into the task Action's `WorkingDirectory`.
 
 ---
 
