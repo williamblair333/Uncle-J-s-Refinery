@@ -76,7 +76,8 @@ print("pending")
 print("")
 PYEOF
 
-  result=$("$_TG_PY" "$tmppy" "$message_id" "$tmpjson")
+  result=$("$_TG_PY" "$tmppy" "$message_id" "$tmpjson") \
+    || { rm -f "$tmpjson" "$tmppy"; echo "pending"; return 0; }
   rm -f "$tmpjson" "$tmppy"
 
   local data callback_id
