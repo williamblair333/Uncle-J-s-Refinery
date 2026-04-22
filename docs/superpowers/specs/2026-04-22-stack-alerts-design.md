@@ -85,7 +85,7 @@ Written by installer to:
 # Stack alerts — poll for user reply every 2 minutes
 */2 * * * * cd /opt/proj/Uncle-J-s-Refinery && bash scripts/stack-alerts-poll.sh >> state/stack-alerts.log 2>&1
 ```
-Send time is substituted from `ALERT_SEND_TIME` during install.
+Send time and repo path are substituted from `ALERT_SEND_TIME` and `PROJ_ROOT` during install. Cron runs as the installing user.
 
 ### Windows (Task Scheduler)
 Two tasks registered via `Register-ScheduledTask`:
