@@ -145,6 +145,9 @@ DONE
 
 (iteration log — newest on top)
 
+- 2026-04-21 — Plateau re-verify: `./healthcheck.sh --full` → all 10 OK
+  (`HEALTHCHECK: ok`); `./verify.sh` → all PASS; secret scan zero matches.
+  No open gap; DONE holds.
 - 2026-04-21 — Fix healthcheck #9 for real: previous "poll up to 30s" fix
   was based on a wrong diagnosis. `claude -p` does not fire Stop hooks at
   all (confirmed: direct test, delta=0 after 60s wait), so no amount of
