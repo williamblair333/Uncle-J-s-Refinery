@@ -38,8 +38,11 @@ PYEOF
     -d "@${tmppayload}" > "$tmpresponse" 2>/dev/null
   rm -f "$tmppayload"
 
-  "$_TG_PY" -c "import sys,json; print(json.load(open(sys.argv[1]))['result']['message_id'])" "$tmpresponse"
+  local msg_id
+  msg_id=$("$_TG_PY" -c "import sys,json; print(json.load(open(sys.argv[1]))['result']['message_id'])" "$tmpresponse") \
+    || { rm -f "$tmpresponse"; return 1; }
   rm -f "$tmpresponse"
+  echo "$msg_id"
 }
 
 # Poll for a callback query on a specific message.
