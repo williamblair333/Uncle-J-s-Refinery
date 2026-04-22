@@ -664,6 +664,23 @@ _stack_setup/
 ├── ralph-harness.sh         ralph-harness.ps1      ← verification-gated Ralph loop
 ├── prd-template.md                                 ← starting template for Ralph tasks
 │
+├── scripts/
+│   ├── check-stack-freshness.sh        ← checks installed vs latest for all MCP tools
+│   └── check-stack-freshness.ps1       ← Windows port
+│
+├── lib/
+│   ├── feature-helpers.sh  .ps1        ← shared installer utilities (prompt, write_env_var, cron)
+│   ├── notify.sh           .ps1        ← notification dispatcher (reads NOTIFY_CHANNEL)
+│   ├── notify-telegram.sh  .ps1        ← Telegram backend (send pitch, poll reply, send text)
+│
+├── features/
+│   └── stack-alerts/
+│       ├── install.sh      install.ps1 ← interactive setup: Telegram creds + cron/Task Scheduler
+│       └── README.md                   ← feature docs, prerequisites, uninstall
+│
+├── state/                              ← runtime state (gitignored except .gitkeep)
+│   └── stack-alerts-pending.json       ← written by send job, deleted by poll job on reply
+│
 ├── skills/
 │   ├── prior-art-check/SKILL.md        ← MemPalace-first skill
 │   └── judge/SKILL.md                  ← code-reviewer subagent gate
