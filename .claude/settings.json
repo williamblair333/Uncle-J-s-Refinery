@@ -4,6 +4,18 @@
     "ralph-wiggum@claude-code-plugins": true
   },
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git add -A 2>/dev/null; git diff --cached --quiet && exit 0; git commit -m \"chk: $(date +%H:%M:%S)\" -q 2>/dev/null || true",
+            "statusMessage": "Checkpointing..."
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "mcp__.*",
