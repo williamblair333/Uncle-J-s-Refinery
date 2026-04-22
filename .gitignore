@@ -45,6 +45,7 @@ mcp-clients/*.json
 
 # ── Runtime state (not source) ──────────────────────────────────────────
 state/
+state/*.log
 *.log
 langfuse_hook.log
 pending_traces.jsonl
