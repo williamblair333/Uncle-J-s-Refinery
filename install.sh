@@ -259,3 +259,11 @@ Installed. What to do now:
      https://context7.com/dashboard  -> put CONTEXT7_API_KEY=... in ~/.claude/.env
 
 EOF
+
+# --- 7. Optional features ----------------------------------------------------
+step "Optional features"
+source "$STACK_ROOT/lib/feature-helpers.sh"
+echo ""
+if prompt_yes_no "Enable automated stack update alerts (Telegram)?"; then
+  bash "$STACK_ROOT/features/stack-alerts/install.sh"
+fi
