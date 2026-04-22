@@ -10,7 +10,7 @@ _TG_PY=$(command -v python3)
 # Stdout: message_id of the sent message
 _tg_send_pitch() {
   local message=$1 keyboard_json=$2
-  local tmppy tmppayload response
+  local tmppy tmppayload
   tmppy=$(mktemp /tmp/tg_pitch_XXXXXX.py)
   tmppayload=$(mktemp /tmp/tg_payload_XXXXXX.json)
 
