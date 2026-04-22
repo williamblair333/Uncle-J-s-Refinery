@@ -44,23 +44,24 @@ gh_head() {
 show_changelog() {
   local github=$1 installed=$2
   _gh_curl "https://api.github.com/repos/$github/releases?per_page=20" \
-    | "$VENV_PY" - "$installed" <<'PYEOF'
+    | "$VENV_PY" - "$installed" <<'PYEOF' || true
 import sys, json
 from packaging.version import Version
 
 installed = Version(sys.argv[1])
+
+def newer_than_installed(tag):
+    try:
+        return Version(tag.lstrip('v')) > installed
+    except Exception:
+        return False
+
 try:
     releases = json.load(sys.stdin)
 except Exception:
     sys.exit(0)
 
-newer = [r for r in releases
-         if r.get('tag_name') and
-            _tag_ok(r['tag_name'])]
-def _tag_ok(tag):
-    try: return Version(tag.lstrip('v')) > installed
-    except: return False
-newer = [r for r in releases if _tag_ok(r.get('tag_name',''))]
+newer = [r for r in releases if newer_than_installed(r.get('tag_name', ''))]
 newer.sort(key=lambda r: Version(r['tag_name'].lstrip('v')))
 
 for r in newer:
@@ -71,13 +72,12 @@ for r in newer:
     print(f"\n    \033[1m{tag}\033[0m  ({date})")
     if body:
         lines = body.split('\n')
-        # skip blank leading lines
         while lines and not lines[0].strip():
             lines.pop(0)
         for line in lines[:25]:
             print(f"    {line}")
         if len(lines) > 25:
-            print(f"    \033[2m... {len(lines)-25} more lines — {url}\033[0m")
+            print(f"    \033[2m... {len(lines) - 25} more lines — {url}\033[0m")
     else:
         print(f"    (no release notes — {url})")
 PYEOF
