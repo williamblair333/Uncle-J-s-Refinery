@@ -1,8 +1,4 @@
 {
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
-    "ralph-wiggum@claude-code-plugins": true
-  },
   "hooks": {
     "PostToolUse": [
       {
@@ -28,5 +24,9 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "ralph-wiggum@claude-code-plugins": true
   }
 }

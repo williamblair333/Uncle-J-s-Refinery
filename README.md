@@ -315,6 +315,10 @@ you can install them as real binaries and re-register:
 ```bash
 uv tool install --from git+https://github.com/oraios/serena serena-agent
 uv tool install mcp-server-motherduck
+
+# If npm's default global prefix requires root (i.e. `npm prefix -g` returns /usr/local),
+# configure a user-local one first so no sudo is needed:
+[ "$(npm prefix -g)" = "/usr/local" ] && npm config set prefix ~/.npm-global
 npm install -g @upstash/context7-mcp
 
 claude mcp remove serena
