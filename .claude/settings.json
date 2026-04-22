@@ -2,5 +2,19 @@
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "ralph-wiggum@claude-code-plugins": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json,sys,datetime,os; d=json.load(sys.stdin); p=os.path.expanduser('~/.claude/state/mcp-tool-log.txt'); os.makedirs(os.path.dirname(p),exist_ok=True); open(p,'a').write('[{}] {}\\n'.format(datetime.datetime.now().strftime('%H:%M:%S'),d.get('tool_name','?')))\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ]
   }
 }
