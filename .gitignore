@@ -110,3 +110,6 @@ session-history.*
 # MemPalace per-project files (issue #185)
 mempalace.yaml
 entities.json
+
+# Review folder (external projects for analysis; not source)
+review/
