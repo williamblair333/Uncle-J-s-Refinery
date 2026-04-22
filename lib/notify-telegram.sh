@@ -30,12 +30,15 @@ PYEOF
   "$_TG_PY" "$tmppy" "$TELEGRAM_CHAT_ID" "$message" "$keyboard_json" "$tmppayload"
   rm -f "$tmppy"
 
-  response=$(curl -sf -X POST "${_TG_API}/sendMessage" \
+  local tmpresponse
+  tmpresponse=$(mktemp /tmp/tg_response_XXXXXX.json)
+  curl -sf -X POST "${_TG_API}/sendMessage" \
     -H "Content-Type: application/json" \
-    -d "@${tmppayload}" 2>/dev/null)
+    -d "@${tmppayload}" > "$tmpresponse" 2>/dev/null
   rm -f "$tmppayload"
 
-  echo "$response" | "$_TG_PY" -c "import sys,json; print(json.load(sys.stdin)['result']['message_id'])"
+  "$_TG_PY" -c "import sys,json; print(json.load(open(sys.argv[1]))['result']['message_id'])" "$tmpresponse"
+  rm -f "$tmpresponse"
 }
 
 # Poll for a callback query on a specific message.
