@@ -27,8 +27,7 @@ if [[ -f "$STATE_FILE" ]]; then
 fi
 
 log "Running freshness check..."
-freshness_output=$(bash "$SCRIPT_DIR/check-stack-freshness.sh" 2>&1) || true
-freshness_exit=$?
+freshness_output=$(bash "$SCRIPT_DIR/check-stack-freshness.sh" 2>&1) && freshness_exit=0 || freshness_exit=$?
 
 if [[ $freshness_exit -eq 0 ]]; then
   log "All packages current. Nothing to pitch."
