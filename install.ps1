@@ -299,3 +299,11 @@ Installed. What to do now:
      CONTEXT7_API_KEY=...
 
 "@ -ForegroundColor White
+
+# --- 7. Optional features -----------------------------------------------------
+Write-Step "Optional features"
+. "$StackRoot\lib\feature-helpers.ps1"
+Write-Host ""
+if (Prompt-YesNo "Enable automated stack update alerts (Telegram)?") {
+    & "$StackRoot\features\stack-alerts\install.ps1"
+}
