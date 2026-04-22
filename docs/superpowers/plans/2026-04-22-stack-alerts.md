@@ -1221,8 +1221,11 @@ SEND_MIN=$(echo "$ALERT_SEND_TIME"  | cut -d: -f2 | sed 's/^0//')
 [[ -z "$SEND_HOUR" ]] && SEND_HOUR=0
 [[ -z "$SEND_MIN"  ]] && SEND_MIN=0
 
-SEND_ENTRY="${SEND_MIN} ${SEND_HOUR} * * * CLAUDE_BIN=${CLAUDE_BIN} cd ${PROJ_ROOT} && bash scripts/stack-alerts-send.sh >> state/stack-alerts.log 2>&1"
-POLL_ENTRY="*/2 * * * * CLAUDE_BIN=${CLAUDE_BIN} cd ${PROJ_ROOT} && bash scripts/stack-alerts-poll.sh >> state/stack-alerts.log 2>&1"
+# PATH must be explicit in cron — its default is /usr/bin:/bin only.
+# cd must come before any VAR=val assignment (builtins don't accept env prefix).
+CRON_PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+SEND_ENTRY="${SEND_MIN} ${SEND_HOUR} * * * PATH=${CRON_PATH} cd ${PROJ_ROOT} && CLAUDE_BIN=${CLAUDE_BIN} bash scripts/stack-alerts-send.sh >> state/stack-alerts.log 2>&1"
+POLL_ENTRY="*/2 * * * * PATH=${CRON_PATH} cd ${PROJ_ROOT} && CLAUDE_BIN=${CLAUDE_BIN} bash scripts/stack-alerts-poll.sh >> state/stack-alerts.log 2>&1"
 
 install_cron "$CRON_MARKER_SEND" "$SEND_ENTRY"
 ok "Send cron: ${SEND_MIN} ${SEND_HOUR} * * *"
