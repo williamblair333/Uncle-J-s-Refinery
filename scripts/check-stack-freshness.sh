@@ -41,10 +41,13 @@ gh_head() {
 }
 
 # Fetch release notes for all versions newer than $installed and print them.
+# Uses a temp file for the Python script to avoid heredoc/pipe stdin conflict.
 show_changelog() {
   local github=$1 installed=$2
-  _gh_curl "https://api.github.com/repos/$github/releases?per_page=20" \
-    | "$VENV_PY" - "$installed" <<'PYEOF' || true
+  local tmppy
+  tmppy=$(mktemp /tmp/freshness_XXXXXX.py)
+
+  cat > "$tmppy" << 'PYEOF'
 import sys, json
 from packaging.version import Version
 
@@ -81,6 +84,11 @@ for r in newer:
     else:
         print(f"    (no release notes — {url})")
 PYEOF
+
+  _gh_curl "https://api.github.com/repos/$github/releases?per_page=20" \
+    | "$VENV_PY" "$tmppy" "$installed" || true
+
+  rm -f "$tmppy"
 }
 
 check_pypi() {
