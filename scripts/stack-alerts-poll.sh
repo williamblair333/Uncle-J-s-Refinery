@@ -29,9 +29,12 @@ packages=$(python3 -c "import sys,json; print(json.dumps(json.load(open(sys.argv
 expired=$(python3 - "$sent_at" "${ALERT_EXPIRY_MINUTES:-60}" << 'PYEOF'
 import sys, datetime
 sent_at_str, expiry_min = sys.argv[1], int(sys.argv[2])
-sent_at = datetime.datetime.strptime(sent_at_str, "%Y-%m-%dT%H:%M:%SZ")
-elapsed = (datetime.datetime.utcnow() - sent_at).total_seconds() / 60
-print("true" if elapsed > expiry_min else "false")
+try:
+    sent_at = datetime.datetime.strptime(sent_at_str, "%Y-%m-%dT%H:%M:%SZ")
+    elapsed = (datetime.datetime.utcnow() - sent_at).total_seconds() / 60
+    print("true" if elapsed > expiry_min else "false")
+except Exception:
+    print("true")
 PYEOF
 )
 
