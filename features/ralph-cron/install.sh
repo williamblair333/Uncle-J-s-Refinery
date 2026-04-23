@@ -129,17 +129,17 @@ else
 fi
 
 # Step 5 — Generate unique marker
-PRD_SLUG="$(basename "$RALPH_PRD" .md | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/-*$//')"
+PRD_SLUG="$(basename "$RALPH_PRD" .md | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-*//;s/-*$//')"
 MARKER="uncle-j-ralph-${PRD_SLUG}"
 
 # Step 6 — Build cron entry
 LOG_FILE="$PROJ_ROOT/state/ralph-cron.log"
 
-ENV_VARS="RALPH_PRD=${RALPH_PRD} RALPH_MAX_ITER=${RALPH_MAX_ITER} RALPH_RISK_THRESHOLD=${RALPH_RISK_THRESHOLD}"
+ENV_VARS="RALPH_PRD='${RALPH_PRD}' RALPH_MAX_ITER=${RALPH_MAX_ITER} RALPH_RISK_THRESHOLD=${RALPH_RISK_THRESHOLD}"
 [[ "$RALPH_SKIP_JUDGE" == "1" ]] && ENV_VARS+=" RALPH_SKIP_JUDGE=1"
 [[ "$RALPH_DRY_RUN"    == "1" ]] && ENV_VARS+=" RALPH_DRY_RUN=1"
 
-CRON_ENTRY="${CRON_SCHEDULE} ${ENV_VARS} bash ${RALPH_RUN_SCRIPT} >> ${LOG_FILE} 2>&1"
+CRON_ENTRY="${CRON_SCHEDULE} ${ENV_VARS} bash '${RALPH_RUN_SCRIPT}' >> '${LOG_FILE}' 2>&1"
 
 # Step 7 — Summary + confirm
 step "Summary"
