@@ -23,6 +23,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/bill/.config/superpowers/worktrees/Uncle-J-s-Refinery/hermes-features/scripts/session-notify.sh  # uncle-j-session-notify",
+            "async": true
+          }
+        ]
+      }
     ]
   },
   "permissions": {

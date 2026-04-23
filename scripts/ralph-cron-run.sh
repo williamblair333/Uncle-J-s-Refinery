@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Cron-safe wrapper: runs ralph-harness.sh with env-var config, logs to
 # state/ralph-cron.log, and sends Telegram notifications on start/finish.
+<<<<<<< HEAD
+=======
+#
+# Usage (cron):
+#   RALPH_PRD=/path/to/PRD.md RALPH_MAX_ITER=10 bash /path/to/scripts/ralph-cron-run.sh
+>>>>>>> feature/hermes-features
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -10,10 +16,20 @@ ENV_FILE="$PROJ_ROOT/.env"
 
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"; }
 
+<<<<<<< HEAD
 [[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
 
 [[ -f "$PROJ_ROOT/lib/notify.sh" ]] && source "$PROJ_ROOT/lib/notify.sh"
 
+=======
+# Load .env if present
+[[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
+
+# Source notify.sh (soft — skip if missing)
+[[ -f "$PROJ_ROOT/lib/notify.sh" ]] && source "$PROJ_ROOT/lib/notify.sh"
+
+# Determine whether Telegram is available
+>>>>>>> feature/hermes-features
 _tg_ok() {
   [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" ]]
 }
@@ -25,6 +41,10 @@ _notify() {
   fi
 }
 
+<<<<<<< HEAD
+=======
+# Validate RALPH_PRD
+>>>>>>> feature/hermes-features
 if [[ -z "${RALPH_PRD:-}" ]]; then
   log "ERROR: RALPH_PRD is not set — aborting."
   exit 1
@@ -34,18 +54,30 @@ if [[ ! -f "$RALPH_PRD" ]]; then
   exit 1
 fi
 
+<<<<<<< HEAD
+=======
+# Validate ralph-harness.sh exists
+>>>>>>> feature/hermes-features
 HARNESS="$PROJ_ROOT/ralph-harness.sh"
 if [[ ! -f "$HARNESS" ]]; then
   log "ERROR: ralph-harness.sh not found at $HARNESS — aborting."
   exit 1
 fi
 
+<<<<<<< HEAD
+=======
+# Resolve config with defaults
+>>>>>>> feature/hermes-features
 RALPH_REPO="${RALPH_REPO:-$PROJ_ROOT}"
 RALPH_MAX_ITER="${RALPH_MAX_ITER:-10}"
 RALPH_RISK_THRESHOLD="${RALPH_RISK_THRESHOLD:-0.65}"
 
 PRD_BASE="$(basename "$RALPH_PRD")"
 
+<<<<<<< HEAD
+=======
+# Build command array
+>>>>>>> feature/hermes-features
 CMD=(
   bash "$HARNESS"
   --prd "$RALPH_PRD"
@@ -56,11 +88,19 @@ CMD=(
 [[ "${RALPH_SKIP_JUDGE:-}" == "1" ]] && CMD+=(--skip-judge)
 [[ "${RALPH_DRY_RUN:-}"   == "1" ]] && CMD+=(--dry-run)
 
+<<<<<<< HEAD
+=======
+# Log + notify: run starting
+>>>>>>> feature/hermes-features
 log "Starting ralph run: prd=$RALPH_PRD repo=$RALPH_REPO max-iter=$RALPH_MAX_ITER risk=$RALPH_RISK_THRESHOLD"
 _notify "🔁 Ralph run starting for <code>${PRD_BASE}</code> (max ${RALPH_MAX_ITER} iter)"
 
 START_TS=$(date +%s)
 
+<<<<<<< HEAD
+=======
+# Run harness — capture exit code without aborting the wrapper
+>>>>>>> feature/hermes-features
 set +e
 "${CMD[@]}"
 rc=$?
@@ -71,6 +111,10 @@ elapsed=$(( END_TS - START_TS ))
 
 log "ralph-harness.sh finished: exit=${rc} elapsed=${elapsed}s"
 
+<<<<<<< HEAD
+=======
+# Send outcome notification
+>>>>>>> feature/hermes-features
 case "$rc" in
   0)
     _notify "✅ Ralph run <b>DONE</b> for <code>${PRD_BASE}</code> after ${elapsed}s"
