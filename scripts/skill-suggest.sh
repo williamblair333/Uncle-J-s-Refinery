@@ -145,8 +145,8 @@ printf '%s\n' "$SKILL_MARKDOWN" > "$DRAFT_FILE"
 
 # Send Telegram notification
 PREVIEW="$(printf '%s' "$SKILL_MARKDOWN" | head -c 300)"
-MSG="$(printf '📝 Skill draft auto-generated for session <code>%s</code>.\n\n<b>File:</b> <code>%s</code>\n\n<b>Preview:</b>\n<pre>%s</pre>' \
-  "$SHORT_ID" "$DRAFT_FILE" "$PREVIEW")"
+MSG="$(printf '📝 Skill draft for session <code>%s</code>.\n\n<b>File:</b> <code>%s</code>\n\n<b>Preview:</b>\n<pre>%s</pre>\n\nReply <code>promote %s</code> to install.' \
+  "$SHORT_ID" "$DRAFT_FILE" "$PREVIEW" "$SHORT_ID")"
 
 notify_send_text "$MSG" || true
 
