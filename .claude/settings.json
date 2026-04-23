@@ -29,7 +29,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /home/bill/.config/superpowers/worktrees/Uncle-J-s-Refinery/hermes-features/scripts/session-notify.sh  # uncle-j-session-notify",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/session-notify.sh  # uncle-j-session-notify",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-suggest.sh  # uncle-j-auto-skill",
             "async": true
           }
         ]

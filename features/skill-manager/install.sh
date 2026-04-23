@@ -44,7 +44,7 @@ _symlink_skills() {
     fi
     count=$((count + 1))
   done
-  [[ $count -eq 0 ]] && ok "$label/ (empty — nothing to link)"
+  [[ $count -eq 0 ]] && ok "$label/ (empty — nothing to link)" || true
 }
 
 _remove_symlinks() {
