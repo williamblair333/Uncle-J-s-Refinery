@@ -128,18 +128,13 @@ for update in updates:
 
     log(f"Received message: {text[:120]!r}")
 
-    # promote <short-id> — install a skill draft to ~/.claude/skills/
-    promote_match = re.match(r'^promote\s+([a-f0-9]{6,32})\s*$', text.strip(), re.IGNORECASE)
-    if promote_match:
-        skill_id = promote_match.group(1)
-        matches = glob.glob(os.path.join(proj_root, 'state', 'skill-drafts', f'{skill_id}*-skill-draft.md'))
-        if not matches:
-            log(f"promote: no draft found for id={skill_id}")
-            tg_send(f"❌ No draft found for <code>{skill_id}</code>.")
-            continue
-        draft_path = matches[0]
-        skill_name = None
-        with open(draft_path, encoding='utf-8') as f:
+    # ── promote helpers ────────────────────────────────────────────────────
+    def find_draft(sid):
+        m = glob.glob(os.path.join(proj_root, 'state', 'skill-drafts', f'{sid}*-skill-draft.md'))
+        return m[0] if m else None
+
+    def parse_skill_name(path):
+        with open(path, encoding='utf-8') as f:
             in_fm = False
             for line in f:
                 line = line.rstrip()
@@ -147,18 +142,80 @@ for update in updates:
                     in_fm = not in_fm
                     continue
                 if in_fm and line.startswith('name:'):
-                    skill_name = line.split(':', 1)[1].strip()
-                    break
+                    return line.split(':', 1)[1].strip()
+        return None
+
+    def install_skill(draft_path, skill_name, scope):
+        """Copy draft to global-skills/ or skills/, symlink into ~/.claude/skills/."""
+        subdir = 'global-skills' if scope == 'global' else 'skills'
+        skill_dir = os.path.join(proj_root, subdir, skill_name)
+        os.makedirs(skill_dir, exist_ok=True)
+        shutil.copy2(draft_path, os.path.join(skill_dir, 'SKILL.md'))
+        link = os.path.join(os.path.expanduser('~/.claude/skills'), skill_name)
+        if os.path.islink(link):
+            os.unlink(link)
+        elif os.path.exists(link):
+            shutil.rmtree(link)
+        os.symlink(skill_dir, link)
+        return skill_dir
+
+    # promote <id> global|project — execute promotion
+    promote_confirm = re.match(r'^promote\s+([a-f0-9]{6,32})\s+(global|project)\s*$', text.strip(), re.IGNORECASE)
+    if promote_confirm:
+        skill_id, scope = promote_confirm.group(1), promote_confirm.group(2).lower()
+        draft_path = find_draft(skill_id)
+        if not draft_path:
+            log(f"promote: no draft for {skill_id}")
+            tg_send(f"❌ No draft found for <code>{skill_id}</code>.")
+            continue
+        skill_name = parse_skill_name(draft_path)
         if not skill_name:
             log(f"promote: could not parse name from {draft_path}")
             tg_send(f"❌ Could not parse <code>name:</code> from draft <code>{skill_id}</code>.")
             continue
-        skill_dir = os.path.join(os.path.expanduser('~/.claude/skills'), skill_name)
-        os.makedirs(skill_dir, exist_ok=True)
-        dest = os.path.join(skill_dir, 'SKILL.md')
-        shutil.copy2(draft_path, dest)
-        log(f"promote: '{skill_name}' → {dest} — sending Telegram confirmation")
-        tg_send(f"✅ Skill <b>{skill_name}</b> promoted.")
+        skill_dir = install_skill(draft_path, skill_name, scope)
+        log(f"promote: '{skill_name}' → {skill_dir}")
+        tg_send(f"✅ Skill <b>{skill_name}</b> promoted to <b>{scope}</b>.")
+        continue
+
+    # promote <id> — classify and ask for scope
+    promote_match = re.match(r'^promote\s+([a-f0-9]{6,32})\s*$', text.strip(), re.IGNORECASE)
+    if promote_match:
+        skill_id = promote_match.group(1)
+        draft_path = find_draft(skill_id)
+        if not draft_path:
+            log(f"promote: no draft for {skill_id}")
+            tg_send(f"❌ No draft found for <code>{skill_id}</code>.")
+            continue
+        skill_content = open(draft_path, encoding='utf-8').read()
+        classify_prompt = (
+            "Classify this Claude Code skill as GLOBAL or PROJECT.\n\n"
+            "GLOBAL: useful across any software project (debugging, code review, TDD, etc.)\n"
+            "PROJECT: specific to Uncle J's Refinery (references its scripts, paths, or tools)\n\n"
+            "Respond with exactly:\n"
+            "SCOPE: GLOBAL  or  SCOPE: PROJECT\n"
+            "REASON: one sentence\n\n"
+            f"--- SKILL ---\n{skill_content[:2000]}"
+        )
+        try:
+            result = subprocess.run(
+                [claude_bin, '--dangerously-skip-permissions', '--print', '-p', classify_prompt],
+                cwd=proj_root, capture_output=True, text=True, timeout=60,
+            )
+            out = result.stdout.strip()
+        except Exception as e:
+            out = ''
+            log(f"promote: classify error: {e}")
+        scope_line   = next((l for l in out.splitlines() if l.startswith('SCOPE:')),  '')
+        reason_line  = next((l for l in out.splitlines() if l.startswith('REASON:')), '')
+        suggested    = 'global' if 'GLOBAL' in scope_line.upper() else 'project'
+        reason       = reason_line.replace('REASON:', '').strip() or '(no reason)'
+        log(f"promote: classified {skill_id} as {suggested}")
+        tg_send(
+            f"📝 <code>{skill_id}</code> — suggested: <b>{suggested}</b>\n"
+            f"{reason}\n\n"
+            f"Reply <code>promote {skill_id} global</code> or <code>promote {skill_id} project</code>"
+        )
         continue
 
     # Acknowledge receipt
