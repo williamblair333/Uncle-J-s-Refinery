@@ -158,7 +158,7 @@ for update in updates:
         dest = os.path.join(skills_dir, f'{skill_name}.md')
         shutil.copy2(draft_path, dest)
         log(f"promote: '{skill_name}' → {dest} — sending Telegram confirmation")
-        tg_send(f"✅ Skill <b>{skill_name}</b> promoted to <code>{dest}</code>.")
+        tg_send(f"✅ Skill <b>{skill_name}</b> promoted.")
         continue
 
     # Acknowledge receipt
