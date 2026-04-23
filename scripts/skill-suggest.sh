@@ -71,9 +71,10 @@ try:
                 obj = json.loads(raw)
             except json.JSONDecodeError:
                 continue
-            if obj.get('role') != 'assistant':
+            # Transcripts use type='assistant' at top level; text is under message.content
+            if obj.get('type') != 'assistant':
                 continue
-            content = obj.get('content', '')
+            content = obj.get('message', {}).get('content', obj.get('content', ''))
             text = ''
             if isinstance(content, str):
                 text = content
