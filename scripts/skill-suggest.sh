@@ -126,14 +126,15 @@ printf '\n--- END TRANSCRIPT ---\n' >> "$TMPFILE"
 # Call claude --print to analyze the transcript
 CLAUDE_OUTPUT="$(claude --dangerously-skip-permissions -p "@$TMPFILE" 2>/dev/null)" || true
 
-# Parse: check first line for SKILL_DRAFT: YES
-FIRST_LINE="$(printf '%s' "$CLAUDE_OUTPUT" | head -n1)"
+# Parse: strip markdown fences, find SKILL_DRAFT line
+CLEAN_OUTPUT="$(printf '%s' "$CLAUDE_OUTPUT" | grep -v '^```')"
+FIRST_LINE="$(printf '%s' "$CLEAN_OUTPUT" | grep -m1 '^SKILL_DRAFT:' || true)"
 if [[ "$FIRST_LINE" != "SKILL_DRAFT: YES" ]]; then
   exit 0
 fi
 
-# Extract skill markdown — everything after line 1
-SKILL_MARKDOWN="$(printf '%s' "$CLAUDE_OUTPUT" | tail -n +2)"
+# Extract skill markdown — everything after the SKILL_DRAFT line
+SKILL_MARKDOWN="$(printf '%s' "$CLEAN_OUTPUT" | awk '/^SKILL_DRAFT:/{found=1; next} found{print}')"
 [[ -z "$SKILL_MARKDOWN" ]] && exit 0
 
 # Write draft to ~/.claude/skills/drafts/
