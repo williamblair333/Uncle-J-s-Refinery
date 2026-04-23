@@ -153,9 +153,9 @@ for update in updates:
             log(f"promote: could not parse name from {draft_path}")
             tg_send(f"❌ Could not parse <code>name:</code> from draft <code>{skill_id}</code>.")
             continue
-        skills_dir = os.path.expanduser('~/.claude/skills')
-        os.makedirs(skills_dir, exist_ok=True)
-        dest = os.path.join(skills_dir, f'{skill_name}.md')
+        skill_dir = os.path.join(os.path.expanduser('~/.claude/skills'), skill_name)
+        os.makedirs(skill_dir, exist_ok=True)
+        dest = os.path.join(skill_dir, 'SKILL.md')
         shutil.copy2(draft_path, dest)
         log(f"promote: '{skill_name}' → {dest} — sending Telegram confirmation")
         tg_send(f"✅ Skill <b>{skill_name}</b> promoted.")
