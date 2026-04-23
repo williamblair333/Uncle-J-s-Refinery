@@ -128,6 +128,37 @@ for update in updates:
 
     log(f"Received message: {text[:120]!r}")
 
+    # promote <short-id> — install a skill draft to ~/.claude/skills/
+    promote_match = re.match(r'^promote\s+([a-f0-9]{6,32})\s*$', text.strip(), re.IGNORECASE)
+    if promote_match:
+        skill_id = promote_match.group(1)
+        matches = glob.glob(os.path.join(proj_root, 'state', 'skill-drafts', f'{skill_id}*-skill-draft.md'))
+        if not matches:
+            tg_send(f"❌ No draft found for <code>{skill_id}</code>.")
+            continue
+        draft_path = matches[0]
+        skill_name = None
+        with open(draft_path, encoding='utf-8') as f:
+            in_fm = False
+            for line in f:
+                line = line.rstrip()
+                if line == '---':
+                    in_fm = not in_fm
+                    continue
+                if in_fm and line.startswith('name:'):
+                    skill_name = line.split(':', 1)[1].strip()
+                    break
+        if not skill_name:
+            tg_send(f"❌ Could not parse <code>name:</code> from draft <code>{skill_id}</code>.")
+            continue
+        skills_dir = os.path.expanduser('~/.claude/skills')
+        os.makedirs(skills_dir, exist_ok=True)
+        dest = os.path.join(skills_dir, f'{skill_name}.md')
+        shutil.copy2(draft_path, dest)
+        log(f"Promoted skill '{skill_name}' → {dest}")
+        tg_send(f"✅ Skill <b>{skill_name}</b> promoted to <code>{dest}</code>.")
+        continue
+
     # Acknowledge receipt
     tg_send("⏳ Running…")
 
