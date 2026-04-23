@@ -108,7 +108,8 @@ Analyze the assistant messages below and decide:
 - NO if the session was routine Q&A, trivial edits, one-off lookups, or contained nothing generalizable.
 
 Rules for your response:
-1. First line MUST be exactly one of: `SKILL_DRAFT: YES` or `SKILL_DRAFT: NO`
+1. First line MUST be exactly one of: SKILL_DRAFT: YES   or   SKILL_DRAFT: NO
+   (No backticks, no code fences, no markdown formatting on this line — plain text only.)
 2. If YES, lines 2 onwards are the complete Markdown skill file content (including YAML frontmatter).
 3. If NO, output nothing after the first line.
 4. The skill draft must be under 200 lines total.
