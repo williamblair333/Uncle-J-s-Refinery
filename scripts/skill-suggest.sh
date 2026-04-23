@@ -137,8 +137,8 @@ fi
 SKILL_MARKDOWN="$(printf '%s' "$CLEAN_OUTPUT" | awk '/^SKILL_DRAFT:/{found=1; next} found{print}')"
 [[ -z "$SKILL_MARKDOWN" ]] && exit 0
 
-# Write draft to ~/.claude/skills/drafts/
-DRAFTS_DIR="$HOME/.claude/skills/drafts"
+# Write draft to state/skill-drafts/ in the repo
+DRAFTS_DIR="$REPO_ROOT/state/skill-drafts"
 mkdir -p "$DRAFTS_DIR"
 DRAFT_FILE="$DRAFTS_DIR/${SHORT_ID}-skill-draft.md"
 printf '%s\n' "$SKILL_MARKDOWN" > "$DRAFT_FILE"
