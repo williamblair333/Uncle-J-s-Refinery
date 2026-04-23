@@ -134,6 +134,7 @@ for update in updates:
         skill_id = promote_match.group(1)
         matches = glob.glob(os.path.join(proj_root, 'state', 'skill-drafts', f'{skill_id}*-skill-draft.md'))
         if not matches:
+            log(f"promote: no draft found for id={skill_id}")
             tg_send(f"❌ No draft found for <code>{skill_id}</code>.")
             continue
         draft_path = matches[0]
@@ -149,13 +150,14 @@ for update in updates:
                     skill_name = line.split(':', 1)[1].strip()
                     break
         if not skill_name:
+            log(f"promote: could not parse name from {draft_path}")
             tg_send(f"❌ Could not parse <code>name:</code> from draft <code>{skill_id}</code>.")
             continue
         skills_dir = os.path.expanduser('~/.claude/skills')
         os.makedirs(skills_dir, exist_ok=True)
         dest = os.path.join(skills_dir, f'{skill_name}.md')
         shutil.copy2(draft_path, dest)
-        log(f"Promoted skill '{skill_name}' → {dest}")
+        log(f"promote: '{skill_name}' → {dest} — sending Telegram confirmation")
         tg_send(f"✅ Skill <b>{skill_name}</b> promoted to <code>{dest}</code>.")
         continue
 
