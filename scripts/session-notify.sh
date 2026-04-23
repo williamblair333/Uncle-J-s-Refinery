@@ -23,13 +23,14 @@ fi
 
 # Source the notification dispatcher
 # shellcheck source=lib/notify.sh
+[[ -f "$REPO_ROOT/lib/notify.sh" ]] || exit 0
 source "$REPO_ROOT/lib/notify.sh"
 
 # Read stdin once
 PAYLOAD=$(cat)
 
 # Extract session_id and transcript_path from JSON payload
-_py_out="$(python3 -c "
+_py_out="$(printf '%s' "$PAYLOAD" | python3 -c "
 import sys, json
 try:
     data = json.loads(sys.stdin.read())
@@ -38,11 +39,12 @@ try:
     print(sid + '\t' + tp)
 except Exception:
     print('\t')
-" <<< "$PAYLOAD")"
+")"
 SESSION_ID="$(cut -f1 <<< "$_py_out")"
 TRANSCRIPT_PATH="$(cut -f2 <<< "$_py_out")"
 
 SHORT_ID="${SESSION_ID:0:8}"
+[[ -z "$SHORT_ID" ]] && SHORT_ID="unknown"
 
 # Extract last assistant message text from transcript JSONL
 LAST_TEXT=""
