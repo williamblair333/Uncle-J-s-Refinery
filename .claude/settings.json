@@ -25,6 +25,17 @@
       }
     ]
   },
+  "permissions": {
+    "allow": [
+      "mcp__jcodemunch__search_text",
+      "mcp__jcodemunch__index_file",
+      "mcp__jcodemunch__get_file_content",
+      "mcp__mempalace__mempalace_search",
+      "mcp__jcodemunch__list_repos",
+      "mcp__jcodemunch__get_symbol_source",
+      "Bash(crontab -l)"
+    ]
+  },
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "ralph-wiggum@claude-code-plugins": true
