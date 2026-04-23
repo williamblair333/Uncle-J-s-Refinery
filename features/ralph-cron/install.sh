@@ -52,6 +52,13 @@ for cmd in bash python3 crontab; do
   ok "$cmd"
 done
 
+CLAUDE_BIN=$(command -v claude 2>/dev/null || true)
+if [[ -z "$CLAUDE_BIN" ]]; then
+  warn "claude CLI not found on PATH — install Claude Code and re-run."
+  exit 1
+fi
+ok "claude at $CLAUDE_BIN"
+
 # Step 2 — Verify .env has TELEGRAM credentials (optional — warn only)
 step "Checking Telegram credentials"
 ENV_FILE="$PROJ_ROOT/.env"
@@ -139,7 +146,8 @@ ENV_VARS="RALPH_PRD='${RALPH_PRD}' RALPH_MAX_ITER='${RALPH_MAX_ITER}' RALPH_RISK
 [[ "$RALPH_SKIP_JUDGE" == "1" ]] && ENV_VARS+=" RALPH_SKIP_JUDGE=1"
 [[ "$RALPH_DRY_RUN"    == "1" ]] && ENV_VARS+=" RALPH_DRY_RUN=1"
 
-CRON_ENTRY="${CRON_SCHEDULE} ${ENV_VARS} bash '${RALPH_RUN_SCRIPT}' >> '${LOG_FILE}' 2>&1"
+CRON_PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+CRON_ENTRY="${CRON_SCHEDULE} PATH=${CRON_PATH} CLAUDE_BIN=${CLAUDE_BIN} ${ENV_VARS} bash '${RALPH_RUN_SCRIPT}' >> '${LOG_FILE}' 2>&1"
 
 # Step 7 — Summary + confirm
 step "Summary"

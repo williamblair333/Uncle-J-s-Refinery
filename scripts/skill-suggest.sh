@@ -122,7 +122,7 @@ printf '%s\n' "$TRANSCRIPT_TEXT" >> "$TMPFILE"
 printf '\n--- END TRANSCRIPT ---\n' >> "$TMPFILE"
 
 # Call claude --print to analyze the transcript
-CLAUDE_OUTPUT="$(claude --dangerously-skip-permissions -p "@$TMPFILE" --print 2>/dev/null)" || true
+CLAUDE_OUTPUT="$(claude --dangerously-skip-permissions -p "@$TMPFILE" 2>/dev/null)" || true
 
 # Parse: check first line for SKILL_DRAFT: YES
 FIRST_LINE="$(printf '%s' "$CLAUDE_OUTPUT" | head -n1)"
