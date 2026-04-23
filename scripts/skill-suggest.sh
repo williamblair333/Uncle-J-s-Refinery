@@ -6,6 +6,7 @@
 # Invoked by Claude Code with a JSON payload on stdin.
 
 set -euo pipefail
+trap 'exit 0' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -121,7 +122,6 @@ printf '%s\n' "$TRANSCRIPT_TEXT" >> "$TMPFILE"
 printf '\n--- END TRANSCRIPT ---\n' >> "$TMPFILE"
 
 # Call claude --print to analyze the transcript
-CLAUDE_OUTPUT=""
 CLAUDE_OUTPUT="$(claude --dangerously-skip-permissions -p "@$TMPFILE" --print 2>/dev/null)" || true
 
 # Parse: check first line for SKILL_DRAFT: YES
