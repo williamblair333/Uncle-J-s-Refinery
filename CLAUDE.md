@@ -42,6 +42,10 @@ tools can answer structurally.
   the turn budget and selects the right tool for you.
 - Use `winnow_symbols` when you have multiple constraints (kind + complexity
   + decorator + churn + importance). One call instead of five.
+- Results carry `_meta.confidence` — prefer high-confidence hits; re-query
+  or fall back to serena when confidence is low.
+- Run `check_embedding_drift` (or via `/health`) to catch index staleness
+  before it silently degrades retrieval quality.
 
 ### 2. Data work — jDataMunch for CSVs, DuckDB for real SQL
 - For any CSV / TSV: `describe_dataset` first, `get_rows` with filters next,
@@ -51,10 +55,16 @@ tools can answer structurally.
   SQL in-process.
 - For correlations: `get_correlations`. For cross-dataset work:
   `join_datasets`.
+- For ad-hoc SQL within a single indexed dataset: `plan_query` then
+  `run_sql` — lighter than DuckDB for single-file queries.
+- Before deep analysis: `get_dataset_health` to catch schema issues early.
 
 ### 3. Docs work — jDocMunch (mine), Context7 (theirs)
 - For project docs, runbooks, and internal markdown: **jdocmunch**. Ask for
   sections by heading, not whole files.
+- For doc maintenance: `get_doc_coverage`, `get_backlinks`, `get_broken_links`,
+  `get_stale_pages`, `get_wiki_stats` — run before major doc updates or
+  when doc quality is in question.
 - For third-party library docs (FastAPI, React, Django, etc.), **context7**
   is authoritative and version-pinned. Call it whenever the question
   references a named library.
@@ -65,6 +75,8 @@ tools can answer structurally.
 - On session close (or before compaction), snapshot the session into
   MemPalace so the next session starts with context.
 - Organize mines by wing (person/project) so scopes stay tight.
+- Use `mempalace_diary_write` for per-session notes — entries are now
+  scoped per-project automatically (mempalace 3.3.3+).
 
 ### 5. Verification step
 - Before finalizing code changes, run a verification pass using
