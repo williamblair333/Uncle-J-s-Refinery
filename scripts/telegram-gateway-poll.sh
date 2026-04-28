@@ -128,6 +128,10 @@ for update in updates:
 
     log(f"Received message: {text[:120]!r}")
 
+    # Normalize for command matching: strip leading formatting chars (backtick,
+    # slash) that Telegram may prepend. Original `text` is still passed to Claude.
+    cmd_text = re.sub(r'^[`/]+', '', text).strip()
+
     # ── promote helpers ────────────────────────────────────────────────────
     def find_draft(sid):
         m = glob.glob(os.path.join(proj_root, 'state', 'skill-drafts', f'{sid}*-skill-draft.md'))
