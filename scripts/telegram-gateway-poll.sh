@@ -202,11 +202,16 @@ for update in updates:
             f"--- SKILL ---\n{skill_content[:2000]}"
         )
         try:
-            result = subprocess.run(
-                [claude_bin, '--dangerously-skip-permissions', '--print', '-p', classify_prompt],
-                cwd=proj_root, capture_output=True, text=True, timeout=60,
+            # Use the Anthropic API directly — avoids spawning a Claude session
+            # that would trigger Stop hooks and generate spurious draft notifications.
+            import anthropic as _anthropic
+            _client = _anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY', ''))
+            _msg = _client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=128,
+                messages=[{"role": "user", "content": classify_prompt}],
             )
-            out = result.stdout.strip()
+            out = _msg.content[0].text.strip()
         except Exception as e:
             out = ''
             log(f"promote: classify error: {e}")
