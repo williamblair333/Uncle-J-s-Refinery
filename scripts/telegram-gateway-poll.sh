@@ -183,7 +183,7 @@ for update in updates:
         continue
 
     # promote <id> — classify and ask for scope
-    promote_match = re.match(r'^promote\s+([a-f0-9]{6,32})\s*$', text.strip(), re.IGNORECASE)
+    promote_match = re.match(r'^promote\s+([a-f0-9]{6,32})\s*$', cmd_text, re.IGNORECASE)
     if promote_match:
         skill_id = promote_match.group(1)
         draft_path = find_draft(skill_id)
