@@ -62,9 +62,32 @@ tools can answer structurally.
 ### 3. Docs work — jDocMunch (mine), Context7 (theirs)
 - For project docs, runbooks, and internal markdown: **jdocmunch**. Ask for
   sections by heading, not whole files.
-- For doc maintenance: `get_doc_coverage`, `get_backlinks`, `get_broken_links`,
-  `get_stale_pages`, `get_wiki_stats` — run before major doc updates or
-  when doc quality is in question.
+- **Retrieval flow:** `search_sections` for content search; `search_titles` for fast
+  heading-text navigation (no embeddings); `get_section_excerpt(s)` to peek before
+  full reads; `get_section_summary(ies)` for metadata without content reads.
+- **Section navigation:** `describe_section` (v1.54+ — metadata + breadcrumb + neighbors
+  in one call, saves three round-trips); `get_section_path` for breadcrumb chain;
+  `section_neighbors` for prev/next/parent/first_child; `get_section_descendants` for
+  full subtree BFS; `get_related_sections` for structural + semantic neighbors;
+  `get_tutorial_path` for ordered tutorial chains; `get_section_diff` for
+  snapshot-vs-disk comparison.
+- **Doc quality checks:** `get_doc_health` (one-shot index diagnostics — run first);
+  `get_index_overview` (repo snapshot: counts, formats, top tags/roles); `get_orphan_sections`
+  (zero inbound links); `get_recent_changes` (disk-drifted sections — pre-flight before
+  re-index); `get_doc_coverage`, `get_backlinks`, `get_broken_links`, `get_stale_pages`,
+  `get_wiki_stats` — run before major doc updates or when doc quality is in question.
+- **Code ↔ doc bridges:** `get_undocumented_symbols` (code symbols absent from docs);
+  `link_code_to_symbols` (doc code blocks → jcodemunch symbols); `find_code_examples`
+  (search fenced code blocks by BM25).
+- **OpenAPI / schema:** `find_endpoint` (by path glob/method/tag); `list_endpoints_by_tag`;
+  `find_operations_using_schema`; `get_schema_graph` (BFS walk of schema refs).
+- **Tagging & glossary:** call `get_all_tags` / `get_all_roles` to discover namespaces
+  before building tag-filtered `search_sections` queries; `list_terms` / `lookup_term`
+  for glossary entries.
+- **Index management:** `define_repo_group` / `list_repo_groups` for fan-out search
+  across multiple repos; `check_embedding_drift` + `verify_index` for integrity;
+  `tune_weights` for ranking; `analyze_perf` / `get_session_stats` for perf;
+  `list_docs` for flat per-doc inventory.
 - For third-party library docs (FastAPI, React, Django, etc.), **context7**
   is authoritative and version-pinned. Call it whenever the question
   references a named library.
