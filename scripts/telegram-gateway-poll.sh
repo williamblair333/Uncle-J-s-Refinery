@@ -178,6 +178,7 @@ for update in updates:
             tg_send(f"❌ Could not parse <code>name:</code> from draft <code>{skill_id}</code>.")
             continue
         skill_dir = install_skill(draft_path, skill_name, scope)
+        os.remove(draft_path)
         log(f"promote: '{skill_name}' → {skill_dir}")
         tg_send(f"✅ Skill <b>{skill_name}</b> promoted to <b>{scope}</b>.")
         continue
