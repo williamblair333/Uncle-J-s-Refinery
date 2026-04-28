@@ -30,6 +30,7 @@ MAX_ITERATIONS=30
 RISK_THRESHOLD="0.65"
 SKIP_JUDGE=0
 DRY_RUN=0
+PRE_SCRIPT=""
 
 usage() {
     sed -n '1,20p' "$0" | sed 's/^# \{0,1\}//'
@@ -42,6 +43,7 @@ while [ $# -gt 0 ]; do
         --repo)            REPO_PATH="${2:?}"; shift 2 ;;
         --max-iterations)  MAX_ITERATIONS="${2:?}"; shift 2 ;;
         --risk-threshold)  RISK_THRESHOLD="${2:?}"; shift 2 ;;
+        --pre-script)      PRE_SCRIPT="${2:?}"; shift 2 ;;
         --skip-judge)      SKIP_JUDGE=1; shift ;;
         --dry-run)         DRY_RUN=1; shift ;;
         -h|--help)         usage ;;
@@ -69,6 +71,27 @@ ok "MaxIter    : $MAX_ITERATIONS"
 ok "RiskCap    : $RISK_THRESHOLD"
 ok "Judge      : $([ "$SKIP_JUDGE" -eq 1 ] && echo OFF || echo ON)"
 ok "DryRun     : $([ "$DRY_RUN"    -eq 1 ] && echo YES || echo NO)"
+ok "PreScript  : ${PRE_SCRIPT:-(none)}"
+
+# Validate pre-script if set
+if [ -n "$PRE_SCRIPT" ] && [ ! -f "$PRE_SCRIPT" ]; then
+    warn "Pre-script not found: $PRE_SCRIPT"; exit 1
+fi
+
+# Helper: run the pre-script, return its stdout.
+# Supports: executable (any shebang), .py (python3), .sh (bash).
+# Prints [SILENT] detection to stderr, actual output to stdout.
+run_pre_script() {
+    local script="$1" output
+    if [ -x "$script" ]; then
+        output="$("$script" 2>/dev/null)"
+    elif printf '%s' "$script" | grep -q '\.py$'; then
+        output="$(python3 "$script" 2>/dev/null)"
+    else
+        output="$(bash "$script" 2>/dev/null)"
+    fi
+    printf '%s' "$output"
+}
 
 INNER_PROMPT="Follow the PRD at \"$PRD_PATH\".
 
@@ -117,11 +140,28 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
     iter=$((iter + 1))
     step "Iteration $iter / $MAX_ITERATIONS"
 
+    # Pre-script injection: run script, capture stdout, check for [SILENT]
+    PRE_OUTPUT=""
+    if [ -n "$PRE_SCRIPT" ]; then
+        ok "Running pre-script: $PRE_SCRIPT"
+        PRE_OUTPUT="$(run_pre_script "$PRE_SCRIPT")"
+        if [ "$PRE_OUTPUT" = "[SILENT]" ]; then
+            ok "Pre-script returned [SILENT] — skipping iteration (nothing to act on)"
+            continue
+        fi
+        [ -n "$PRE_OUTPUT" ] && ok "Pre-script output: ${#PRE_OUTPUT} chars injected"
+    fi
+
     if [ "$DRY_RUN" -eq 1 ]; then
         ok "[dry-run] would call: (cd $REPO_PATH && claude -p @<tmp> --dangerously-skip-permissions)"
+        [ -n "$PRE_OUTPUT" ] && ok "[dry-run] pre-script context would be prepended to prompt"
     else
         tmp="$(mktemp --suffix=.md)"
-        printf '%s\n' "$INNER_PROMPT" > "$tmp"
+        if [ -n "$PRE_OUTPUT" ]; then
+            printf 'Pre-script context:\n\n%s\n\n---\n\n%s\n' "$PRE_OUTPUT" "$INNER_PROMPT" > "$tmp"
+        else
+            printf '%s\n' "$INNER_PROMPT" > "$tmp"
+        fi
         set +e
         (cd "$REPO_PATH" && claude -p "@$tmp" --dangerously-skip-permissions)
         rc=$?

@@ -10,7 +10,7 @@ LOG_FILE="$PROJ_ROOT/state/stack-alerts.log"
 ENV_FILE="$PROJ_ROOT/.env"
 CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || echo "claude")}"
 
-log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG_FILE"; }
+log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"; }
 
 # No pending state — nothing to do
 [[ -f "$STATE_FILE" ]] || exit 0
@@ -25,8 +25,12 @@ message_id=$(python3 -c "import sys,json; print(json.load(open(sys.argv[1]))['me
 sent_at=$(python3 -c "import sys,json; print(json.load(open(sys.argv[1]))['sent_at'])" "$STATE_FILE")
 packages=$(python3 -c "import sys,json; print(json.dumps(json.load(open(sys.argv[1]))['packages']))" "$STATE_FILE")
 
-# Check expiry
-expired=$(python3 - "$sent_at" "${ALERT_EXPIRY_MINUTES:-60}" << 'PYEOF'
+# Check for reply FIRST — so a click right at the expiry boundary isn't lost
+reply=$(notify_poll_reply "$message_id")
+
+# Only check expiry when there's no actionable reply
+if [[ "$reply" == "pending" ]]; then
+  expired=$(python3 - "$sent_at" "${ALERT_EXPIRY_MINUTES:-60}" << 'PYEOF'
 import sys, datetime
 sent_at_str, expiry_min = sys.argv[1], int(sys.argv[2])
 try:
@@ -36,15 +40,13 @@ try:
 except Exception:
     print("true")
 PYEOF
-)
-
-if [[ "$expired" == "true" ]]; then
-  log "Alert window expired (>${ALERT_EXPIRY_MINUTES:-60} min). Cleaning up state."
-  rm -f "$STATE_FILE"
-  exit 0
+  )
+  if [[ "$expired" == "true" ]]; then
+    log "Alert window expired (>${ALERT_EXPIRY_MINUTES:-60} min). Cleaning up state."
+    rm -f "$STATE_FILE"
+    exit 0
+  fi
 fi
-
-reply=$(notify_poll_reply "$message_id")
 
 case "$reply" in
   pending)

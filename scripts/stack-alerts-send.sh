@@ -12,7 +12,7 @@ CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || echo "claude")}"
 
 mkdir -p "$PROJ_ROOT/state"
 
-log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG_FILE"; }
+log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE"; }
 
 # Load config
 [[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a

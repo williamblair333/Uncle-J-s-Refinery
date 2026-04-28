@@ -63,8 +63,9 @@ CMD=(
   --max-iterations "$RALPH_MAX_ITER"
   --risk-threshold "$RALPH_RISK_THRESHOLD"
 )
-[[ "${RALPH_SKIP_JUDGE:-}" == "1" ]] && CMD+=(--skip-judge)
-[[ "${RALPH_DRY_RUN:-}"   == "1" ]] && CMD+=(--dry-run)
+[[ "${RALPH_SKIP_JUDGE:-}"  == "1"  ]] && CMD+=(--skip-judge)
+[[ "${RALPH_DRY_RUN:-}"    == "1"  ]] && CMD+=(--dry-run)
+[[ -n "${RALPH_PRE_SCRIPT:-}"      ]] && CMD+=(--pre-script "$RALPH_PRE_SCRIPT")
 
 # Log + notify: run starting
 log "Starting ralph run: prd=$RALPH_PRD repo=$RALPH_REPO max-iter=$RALPH_MAX_ITER risk=$RALPH_RISK_THRESHOLD"

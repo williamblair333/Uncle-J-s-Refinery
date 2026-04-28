@@ -373,7 +373,26 @@ To run the freshness check manually at any time:
 bash scripts/check-stack-freshness.sh
 ```
 
-### 11. (Optional) Bootstrap MemPalace
+### 11. (Optional) GitHub Webhook Server
+
+Receives GitHub events and acts on them automatically — no polling, instant response.
+
+| Event | Action |
+|---|---|
+| `push` | Runs `verify.sh`, sends health check result to Telegram |
+| `pull_request` opened/updated | Fetches the diff, Claude auto-reviews, posts GitHub comment |
+
+**Requires** a public URL pointing at this machine — [ngrok](https://ngrok.com), [Tailscale Funnel](https://tailscale.com/kb/1223/funnel), or a VPS. The machine must be always on.
+
+```bash
+bash features/github-webhook/install.sh
+```
+
+The installer checks dependencies, prompts for your public URL, generates a webhook secret, installs a systemd user service, and registers the webhook on GitHub automatically.
+
+Full setup guide: [`features/github-webhook/README.md`](features/github-webhook/README.md)
+
+### 12. (Optional) Bootstrap MemPalace
 
 MemPalace is installed but empty. To get value:
 
