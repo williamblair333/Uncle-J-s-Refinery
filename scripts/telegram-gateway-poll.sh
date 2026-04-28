@@ -164,7 +164,7 @@ for update in updates:
         return skill_dir
 
     # promote <id> global|project — execute promotion
-    promote_confirm = re.match(r'^promote\s+([a-f0-9]{6,32})\s+(global|project)\s*$', text.strip(), re.IGNORECASE)
+    promote_confirm = re.match(r'^promote\s+([a-f0-9]{6,32})\s+(global|project)\s*$', cmd_text, re.IGNORECASE)
     if promote_confirm:
         skill_id, scope = promote_confirm.group(1), promote_confirm.group(2).lower()
         draft_path = find_draft(skill_id)
