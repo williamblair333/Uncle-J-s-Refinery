@@ -730,9 +730,6 @@ cd ..
 rm -rf _stack_setup
 ```
 
-Windows equivalent: substitute PowerShell `Remove-Item -Recurse -Force`
-and adjust paths (`$env:USERPROFILE\.claude` etc.).
-
 ---
 
 ## License & credits
