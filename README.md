@@ -108,7 +108,7 @@ stack.)
 
 ## Prerequisites
 
-- Bash 4+ (Linux/macOS) — PowerShell 5.1+ on Windows
+- Bash 4+
 - Python 3.11+ (auto-installed via `uv` if missing)
 - Node.js 18+ (for Context7)
 - Git 2.30+
