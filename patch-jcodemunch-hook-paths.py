@@ -31,12 +31,7 @@ shutil.copy(str(SETTINGS_PATH), str(BACKUP))
 
 d = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
 
-# Rewrite any "command" that starts with 'jcodemunch-mcp '
-# Quoting: single-quote the path so bash on Linux treats it literally; on
-# Windows, Claude Code invokes via bash.exe from Git, which also handles
-# single quotes correctly. Full Windows path with backslashes works in
-# single quotes because bash doesn't try to interpret them.
-jcm_quoted = f"'{JCM_PATH.as_posix()}'" if os.name != "nt" else f'"{JCM_PATH}"'
+jcm_quoted = f"'{JCM_PATH.as_posix()}'"
 
 changed = 0
 for event_name, entries in d.get("hooks", {}).items():
