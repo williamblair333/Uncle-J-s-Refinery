@@ -27,31 +27,19 @@ does the rest.
 
 ## Install
 
-**Linux/Mac:**
 ```bash
 bash features/stack-alerts/install.sh
 ```
 
-**Windows:**
-```powershell
-.\features\stack-alerts\install.ps1
-```
-
-The main `install.sh` / `install.ps1` also offers this as an opt-in prompt.
+`install.sh` also offers this as an opt-in prompt.
 
 ## Uninstall
 
-**Linux/Mac:**
 ```bash
 bash features/stack-alerts/install.sh --uninstall
 ```
 
-**Windows:**
-```powershell
-.\features\stack-alerts\install.ps1 -Uninstall
-```
-
-Then remove the five config keys from `.env` (Linux) or Windows user env vars.
+Then remove the five config keys from `.env`.
 
 ## Logs
 
