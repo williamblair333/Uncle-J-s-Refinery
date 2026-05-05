@@ -407,8 +407,6 @@ Never do this globally or in a folder containing credentials.
 ./ralph-harness.sh --prd ./PRD.md --repo /path/to/repo
 ```
 
-(Windows: `.\ralph-harness.ps1 -PrdPath .\PRD.md -RepoPath C:\path\to\repo`)
-
 Our harness uses the retrieval stack's verification tools
 (`get_pr_risk_profile < 0.65`, `get_untested_symbols == 0`, PRD marked
 DONE) as exit criteria — solves Ralph's classic failure mode of
