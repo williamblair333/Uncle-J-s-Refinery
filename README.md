@@ -586,53 +586,6 @@ Re-run from step 2.
 
 ---
 
-## Windows-specific notes
-
-Windows is fully supported but has some extra gotchas that don't affect
-Linux/macOS. Recording them here so Windows users aren't surprised.
-
-**PATH propagation.** winget modifies PATH via the registry, but the
-current shell reads PATH only at start. After `prerequisites.ps1` you
-must open a fresh PowerShell window — or in a pinch, reboot.
-
-**Store Python vs system Python.** If you install Python via the
-Microsoft Store, `python3.13.exe` lives under `%LOCALAPPDATA%\Microsoft\WindowsApps\`
-as an app-execution-alias stub. Packages install to a user-scoped
-site-packages directory that the stub knows about. Works fine, but means
-you can't `pip install --system` and expect it to land anywhere useful.
-
-**Windows Python default encoding is cp1252.** The Langfuse hook reads
-session transcripts that contain UTF-8 emoji. Without `PYTHONUTF8=1`
-the hook dies on the first non-cp1252 byte. `install-langfuse.ps1`
-sets this in `settings.json`.
-
-**`npx` MCP servers need the `.cmd` shim.** Claude Code on Windows can't
-invoke `.cmd` files from a spawned subprocess, so `claude mcp add -s user
-context7 -- npx -y @upstash/context7-mcp` works but trips `/doctor`.
-Either wrap with `cmd /c` or install the tool as a real binary via
-`npm install -g` and point the registration at the resulting `.cmd`
-directly (step 9 handles this).
-
-**MCP 30s startup timeout.** `uvx`/`npx` MCP entries re-resolve packages
-on every launch. `setx MCP_TIMEOUT 60000` + pre-installing the binaries.
-Step 9.
-
-**`permissions.deny` blocks editing `settings.json`.** Claude Code can't
-edit its own settings file because it's in the deny list. Edit from
-PowerShell — that's by design, prevents a session from escalating its
-own permissions.
-
-**`jq` winget package rename.** `stedolan.jq` became `jqlang.jq`.
-`install-guardrails.ps1` tries both, falls back to a direct download
-from the jqlang GitHub releases into `~/.local/bin`.
-
-**Ralph marketplace name.** Ralph Wiggum is in the
-`anthropics-claude-code` marketplace (from `/plugin marketplace add
-anthropics/claude-code`), **not** `claude-plugins-official`. The latter
-only has Superpowers.
-
----
-
 ## File map
 
 ```
