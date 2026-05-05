@@ -6,10 +6,10 @@
 
 ## Goal
 
-Keep the Uncle J's Refinery glue repo in a reproducible, cross-platform,
+Keep the Uncle J's Refinery glue repo in a reproducible,
 one-shot-install state. Every change that lands on `main` MUST leave the
-repo such that, on a fresh Debian 13 / Ubuntu 24.04 / Windows 11 machine,
-a user can run `prerequisites → install → verify → install-reliability →
+repo such that, on a fresh Debian 13 / Ubuntu 24.04 machine, a user can
+run `prerequisites → install → verify → install-reliability →
 install-guardrails → install-langfuse` in order and end up with:
 
 - All seven MCP servers connected at user scope, pointing at the stack
