@@ -57,8 +57,7 @@
 - Healthcheck: fixed check #9 flake by invoking Stop hook directly
 - MCP regressions: force-rebind, set `MCP_TIMEOUT`, mark scripts `+x`
 - Install scripts: clear all MCP scopes on re-run, preserve venv extras
-- `verify.sh`: prepend `~/.local/bin` to PATH; add `git --version` check (parity with `verify.ps1`)
-- `prerequisites.ps1`: add Docker check (parity with `prerequisites.sh`)
+- `verify.sh`: prepend `~/.local/bin` to PATH; add `git --version` check
 - `install-guardrails.sh`: pass variant as positional argument
 - Disabled Serena dashboard browser auto-open by default
 
