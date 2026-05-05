@@ -598,14 +598,14 @@ _stack_setup/
 ├── uv.lock
 ├── .venv/                              ← real Python venv created by install.sh (gitignored)
 │
-├── prerequisites.sh         prerequisites.ps1      ← step 1: git/node/claude
-├── install.sh               install.ps1            ← step 2: Python stack + MCP registration
-├── finish-install.sh        finish-install.ps1     ← re-attempt after shell refresh
-├── verify.sh                verify.ps1             ← step 3: all-pass sanity check
-├── install-reliability.sh   install-reliability.ps1 ← step 6: custom skills + guardrails clone
-├── install-guardrails.sh    install-guardrails.ps1  ← step 7: dwarvesf guardrails via upstream install.sh
-├── install-langfuse.sh      install-langfuse.ps1    ← step 8: Docker + Langfuse + Stop hook
-├── ralph-harness.sh         ralph-harness.ps1      ← verification-gated Ralph loop
+├── prerequisites.sh                               ← step 1: git/node/claude
+├── install.sh                                     ← step 2: Python stack + MCP registration
+├── finish-install.sh                              ← re-attempt after shell refresh
+├── verify.sh                                      ← step 3: all-pass sanity check
+├── install-reliability.sh                         ← step 6: custom skills + guardrails clone
+├── install-guardrails.sh                          ← step 7: dwarvesf guardrails via upstream install.sh
+├── install-langfuse.sh                            ← step 8: Docker + Langfuse + Stop hook
+├── ralph-harness.sh                               ← verification-gated Ralph loop
 ├── prd-template.md                                 ← starting template for Ralph tasks
 │
 ├── scripts/
