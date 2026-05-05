@@ -478,9 +478,9 @@ python3 -c "import json; d=json.loads(open(f\"{__import__('os').path.expanduser(
 # expect: 60000
 ```
 
-If it's `<unset>` or below 60000, re-run `install.sh --auto-register`
-(or `install.ps1 -AutoRegister`). If it's set and servers still fail,
-follow step 9 to install them as real binaries and re-register.
+If it's `<unset>` or below 60000, re-run `install.sh --auto-register`.
+If it's set and servers still fail, follow step 9 to install them as
+real binaries and re-register.
 
 ### jcodemunch registered as `uvx jcodemunch-mcp` instead of the venv path
 
