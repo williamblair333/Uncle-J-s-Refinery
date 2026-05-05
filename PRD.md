@@ -50,11 +50,11 @@ install-guardrails → install-langfuse` in order and end up with:
     SDK is resolvable when the hook fires.
   - **`jcodemunch-mcp init` regression**: it self-registers as
     `uvx jcodemunch-mcp` in Claude Code, and `claude mcp add` silently
-    skips pre-existing entries. `install.{sh,ps1}` now wraps add in a
+    skips pre-existing entries. `install.sh` now wraps add in a
     `remove`→`add` helper to force convergence on the venv binary.
   - **`MCP_TIMEOUT`**: previously only in the README as a manual
     `.bashrc` edit. Now written into `~/.claude/settings.json` env block
-    by `install.{sh,ps1}`.
+    by `install.sh`.
   - **`mcp-clients/*.json`** used to hardcode one Windows user's venv
     path. They're now `*.json.tmpl` templates with `{{STACK_VENV_BIN}}`
     and `{{EXE}}` placeholders, rendered at install time to gitignored
