@@ -426,8 +426,6 @@ overnight, etc.).
 ./healthcheck.sh --full     # + nested claude -p smoke + Langfuse trace API (~60s)
 ```
 
-Windows: `.\healthcheck.ps1` / `.\healthcheck.ps1 -Full`.
-
 The script is **read-only** — failures include the remediation command
 in the `fix:` line; they do not auto-heal. Final stdout line is
 machine-parseable: `HEALTHCHECK: ok` or
