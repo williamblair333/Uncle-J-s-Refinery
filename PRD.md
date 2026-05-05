@@ -55,10 +55,10 @@ install-guardrails → install-langfuse` in order and end up with:
   - **`MCP_TIMEOUT`**: previously only in the README as a manual
     `.bashrc` edit. Now written into `~/.claude/settings.json` env block
     by `install.sh`.
-  - **`mcp-clients/*.json`** used to hardcode one Windows user's venv
-    path. They're now `*.json.tmpl` templates with `{{STACK_VENV_BIN}}`
+  - **`mcp-clients/*.json`** used to hardcode a hardcoded venv path.
+    They're now `*.json.tmpl` templates with `{{STACK_VENV_BIN}}`
     and `{{EXE}}` placeholders, rendered at install time to gitignored
-    `*.json` outputs. Both installers know how to render.
+    `*.json` outputs.
   - **File modes**: five scripts were tracked as `100644` and threw
     "Permission denied". Now all `*.sh` are `100755` via
     `git update-index --chmod=+x`.
