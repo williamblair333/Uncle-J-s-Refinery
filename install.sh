@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # One-shot installer for the Claude retrieval stack on Linux / macOS.
-# Mirrors install.ps1 for non-Windows environments.
 #
 # Usage:
 #   ./install.sh                 # install stack, print next-step guidance
