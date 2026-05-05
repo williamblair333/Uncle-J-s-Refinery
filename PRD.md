@@ -161,21 +161,13 @@ DONE
   10 checks OK (`HEALTHCHECK: ok`); `./verify.sh` → all 13 PASS; working
   tree clean (no diff → PR risk N/A); secret scan zero matches; Langfuse
   trace roundtrip confirmed. Marking DONE.
-- 2026-04-21 — Parity fix: `prerequisites.ps1` now has an informational
-  Docker check mirroring `prerequisites.sh`'s step 4. Docker is required
-  downstream by `install-langfuse.ps1`; warning early matches the Linux
-  side and keeps the bash/PowerShell contract the PRD mandates. Cannot
-  execute `.ps1` on this Linux host; verified by diffing structure
-  against the bash equivalent.
-- 2026-04-21 — Parity fix: `verify.sh` now prepends `~/.local/bin` to PATH
-  (idempotently, via `case` guard) to mirror `verify.ps1`'s PATH
-  augmentation. Fixes the one-shot-install goal for fresh shells where
-  `uv`/`claude` are installed to `~/.local/bin` but the login PATH hasn't
-  refreshed. Ran `verify.sh`: all 13 checks PASS.
-- 2026-04-21 — Parity fix: added `git --version` check to `verify.sh` to
-  mirror `verify.ps1`. Git is required by `install-reliability.sh` and
-  `install-langfuse.sh` (both clone upstream). Ran `verify.sh`: all PASS
-  including new `git available`.
+- 2026-04-21 — Fix: `verify.sh` now prepends `~/.local/bin` to PATH
+  (idempotently, via `case` guard). Fixes the one-shot-install goal for
+  fresh shells where `uv`/`claude` are installed to `~/.local/bin` but
+  the login PATH hasn't refreshed. Ran `verify.sh`: all 13 checks PASS.
+- 2026-04-21 — Fix: added `git --version` check to `verify.sh`. Git is
+  required by `install-reliability.sh` and `install-langfuse.sh` (both
+  clone upstream). Ran `verify.sh`: all PASS including new `git available`.
 - 2026-04-21 — Fix ralph-harness `--cwd` (unsupported by `claude` CLI) →
   subshell `cd` / `Push-Location`; route `step`/`ok` to stderr so harness
   chrome doesn't pollute parsed gate JSON. Also ignore per-project
