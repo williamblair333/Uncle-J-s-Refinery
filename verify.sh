@@ -6,7 +6,7 @@ STACK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_BIN="$STACK_ROOT/.venv/bin"
 
 # Ensure ~/.local/bin (where uv, uvx, and the Claude CLI typically land) is
-# visible in this process, mirroring verify.ps1's PATH augmentation. Without
+# visible in this process. Without
 # this, a just-installed stack fails verification until the user opens a new
 # shell — which contradicts the one-shot-install goal in the PRD.
 case ":$PATH:" in

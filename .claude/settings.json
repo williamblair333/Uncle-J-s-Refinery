@@ -22,6 +22,67 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json,sys,datetime,os; d=json.load(sys.stdin); p=os.path.expanduser('~/.claude/state/mcp-tool-log.txt'); os.makedirs(os.path.dirname(p),exist_ok=True); open(p,'a').write('[{}] {}\\n'.format(datetime.datetime.now().strftime('%H:%M:%S'),d.get('tool_name','?')))\" 2>/dev/null || true",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/session-notify.sh  # uncle-j-session-notify",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-suggest.sh  # uncle-j-auto-skill",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh unlink  # uncle-j-skill-manager-stop",
+            "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace mine /home/bill/.claude/projects --mode convos < /dev/null  # uncle-j-mempalace-convos",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh link  # uncle-j-skill-manager-session",
+            "async": true
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
