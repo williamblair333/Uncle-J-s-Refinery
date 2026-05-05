@@ -471,7 +471,7 @@ and the installed MCP binaries live). Add to your shell RC if not:
 
 Either they hit the startup timeout or they're actually broken. Check
 the timeout inside Claude's config, not the shell env — that's where
-`install.{sh,ps1}` writes it:
+`install.sh` writes it:
 
 ```bash
 python3 -c "import json; d=json.loads(open(f\"{__import__('os').path.expanduser('~')}/.claude/settings.json\").read()); print(d.get('env',{}).get('MCP_TIMEOUT','<unset>'))"
