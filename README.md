@@ -461,15 +461,11 @@ mapped to their fixes:
 | `hook-no-fire` / `trace-api` (full mode only) | Check `tail -5 ~/.claude/state/langfuse_hook.log`, then verify `from langfuse import Langfuse` works from the stack venv |
 
 
-### `verify.sh` / `verify.ps1` reports FAIL after fresh install
+### `verify.sh` reports FAIL after fresh install
 
-**Linux/macOS:** check `echo $PATH` and make sure `~/.local/bin` is on
-it (where `uv` and the installed MCP binaries live). Add to your shell
-RC if not: `export PATH="$HOME/.local/bin:$PATH"`.
-
-**Windows:** PowerShell PATH is stale. Open a fresh window. If that
-doesn't fix it, reboot — winget sometimes needs a full login to
-propagate PATH changes from MSI installers.
+Check `echo $PATH` and make sure `~/.local/bin` is on it (where `uv`
+and the installed MCP binaries live). Add to your shell RC if not:
+`export PATH="$HOME/.local/bin:$PATH"`.
 
 ### MCP servers show ✗ Failed to connect
 
