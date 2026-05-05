@@ -30,8 +30,7 @@ install-guardrails → install-langfuse` in order and end up with:
 - Rewriting upstream code. We do not fork `claude-code-langfuse-template`
   or `claude-guardrails`; we patch their clones from our installer side
   only.
-- Making the install work on Windows XP, Python 3.10, or other
-  unsupported baselines.
+- Making the install work on Python 3.10 or other unsupported baselines.
 - Moving `main` via force-push. Recovery from mistakes uses `git revert`.
 
 ## Context and prior work
