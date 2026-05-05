@@ -153,11 +153,7 @@ manager. Idempotent — skips anything already present.
 ```
 
 On **Debian/Ubuntu** it uses `apt-get`. On **Fedora/RHEL** it uses `dnf`.
-On **Arch** it uses `pacman`. On **macOS** it uses `brew`. On **Windows**
-(`.ps1` version) it uses `winget`.
-
-**Windows note:** after winget runs, close this shell and open a fresh one.
-PATH changes from MSI installers don't propagate to the running process.
+On **Arch** it uses `pacman`. On **macOS** it uses `brew`.
 
 ### 2. Python stack + MCP server registration
 
