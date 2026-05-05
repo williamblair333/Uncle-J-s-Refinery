@@ -140,14 +140,13 @@ If you want more later, these are the next things worth adding:
 
 ## Disable / uninstall
 
-```powershell
+```bash
 # Remove our skills
-Remove-Item -Recurse -Force $env:USERPROFILE\.claude\skills\prior-art-check
-Remove-Item -Recurse -Force $env:USERPROFILE\.claude\skills\judge
+rm -rf ~/.claude/skills/prior-art-check ~/.claude/skills/judge
 
 # Remove dwarvesf guardrails (hooks get merged into settings.json; you
 # need to edit that manually if you want to revert)
-Remove-Item -Recurse -Force $env:USERPROFILE\Downloads\claude\_stack_setup\claude-guardrails
+rm -rf /opt/proj/Uncle-J-s-Refinery/claude-guardrails
 
 # Remove Superpowers / Ralph
 # Inside claude: /plugin uninstall superpowers
