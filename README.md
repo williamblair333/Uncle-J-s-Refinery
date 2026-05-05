@@ -124,8 +124,6 @@ and bail cleanly.
 
 ## Quick install
 
-### Linux / macOS
-
 ```bash
 ./prerequisites.sh          # git, node, claude via your distro's package manager
 ./install.sh --auto-register
@@ -134,19 +132,6 @@ cp CLAUDE.md.merged ~/.claude/CLAUDE.md
 ./install-reliability.sh
 ./install-guardrails.sh
 ./install-langfuse.sh
-```
-
-### Windows
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\prerequisites.ps1
-# Close this PowerShell, open a fresh one (winget PATH propagation)
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -AutoRegister
-.\verify.ps1
-Copy-Item .\CLAUDE.md.merged "$env:USERPROFILE\.claude\CLAUDE.md" -Force
-.\install-reliability.ps1
-.\install-guardrails.ps1
-.\install-langfuse.ps1
 ```
 
 Details on each step are below.
