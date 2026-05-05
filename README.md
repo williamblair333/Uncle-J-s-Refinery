@@ -609,8 +609,7 @@ _stack_setup/
 ├── prd-template.md                                 ← starting template for Ralph tasks
 │
 ├── scripts/
-│   ├── check-stack-freshness.sh        ← checks installed vs latest for all MCP tools
-│   └── check-stack-freshness.ps1       ← Windows port
+│   └── check-stack-freshness.sh        ← checks installed vs latest for all MCP tools
 │
 ├── lib/
 │   ├── feature-helpers.sh  .ps1        ← shared installer utilities (prompt, write_env_var, cron)
