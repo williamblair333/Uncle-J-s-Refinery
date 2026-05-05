@@ -612,9 +612,9 @@ _stack_setup/
 │   └── check-stack-freshness.sh        ← checks installed vs latest for all MCP tools
 │
 ├── lib/
-│   ├── feature-helpers.sh  .ps1        ← shared installer utilities (prompt, write_env_var, cron)
-│   ├── notify.sh           .ps1        ← notification dispatcher (reads NOTIFY_CHANNEL)
-│   ├── notify-telegram.sh  .ps1        ← Telegram backend (send pitch, poll reply, send text)
+│   ├── feature-helpers.sh              ← shared installer utilities (prompt, write_env_var, cron)
+│   ├── notify.sh                       ← notification dispatcher (reads NOTIFY_CHANNEL)
+│   ├── notify-telegram.sh              ← Telegram backend (send pitch, poll reply, send text)
 │
 ├── features/
 │   └── stack-alerts/
