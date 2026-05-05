@@ -618,7 +618,7 @@ _stack_setup/
 │
 ├── features/
 │   └── stack-alerts/
-│       ├── install.sh      install.ps1 ← interactive setup: Telegram creds + cron/Task Scheduler
+│       ├── install.sh                  ← interactive setup: Telegram creds + cron
 │       └── README.md                   ← feature docs, prerequisites, uninstall
 │
 ├── state/                              ← runtime state (gitignored except .gitkeep)
