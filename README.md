@@ -117,7 +117,7 @@ stack.)
 - Internet connection (first run pulls ~2 GB of Python/Node/Docker packages)
 
 The installers detect missing prerequisites and either auto-install them
-(where safe — e.g., `uv`) or tell you what to `apt`/`dnf`/`brew`/`winget`
+(where safe — e.g., `uv`) or tell you what to `apt`/`dnf`/`brew`
 and bail cleanly.
 
 ---
