@@ -76,7 +76,7 @@ open models). This is the production-ready equivalent for Claude.
 Anthropic's Ralph plugin (`/ralph`) is the standard Huntley pattern:
 loop the agent on a prompt file until it says done.
 
-Our harness (`ralph-harness.ps1`) adds structural done-gates:
+Our harness (`ralph-harness.sh`) adds structural done-gates:
 
 - `get_changed_symbols` — confirms something actually moved
 - `get_untested_symbols(changed_only=true)` — blocks if new code has
