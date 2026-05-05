@@ -166,10 +166,9 @@ else
 fi
 
 # --- 4c. Render mcp-clients/*.json from *.json.tmpl -------------------------
-# The committed templates use {{STACK_VENV_BIN}} and {{EXE}} placeholders so
-# the same files work on Linux and Windows. Install-time rendering produces
-# platform-specific .json files (gitignored) that users can paste into
-# their MCP client configs.
+# The committed templates use {{STACK_VENV_BIN}} and {{EXE}} placeholders.
+# Install-time rendering produces .json files (gitignored) that users can
+# paste into their MCP client configs.
 step "Rendering mcp-clients/*.json from templates"
 MCP_DIR="$STACK_ROOT/mcp-clients"
 if ls "$MCP_DIR"/*.json.tmpl >/dev/null 2>&1; then
