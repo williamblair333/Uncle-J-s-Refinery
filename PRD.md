@@ -114,7 +114,7 @@ the Progress section and tick off as you verify.
   there". A bug fix is a bug fix.
 - **Don't edit files inside `claude-code-langfuse-template/` or
   `claude-guardrails/`**. Those are upstream clones. Patches that need
-  to survive a re-clone live in `install-*.sh` / `install-*.ps1`.
+  to survive a re-clone live in `install-*.sh`.
 - **Don't disable the PreToolUse hooks** in `~/.claude/settings.json`.
   They are the enforcement layer.
 - **Never commit secrets.** Before every push:
