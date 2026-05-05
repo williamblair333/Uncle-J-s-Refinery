@@ -57,10 +57,10 @@ Then remove the five config keys from `.env`.
 
 ## Adding a New Notification Channel (e.g. Discord)
 
-1. Create `lib/notify-discord.sh` (and `.ps1`) implementing `_discord_send_pitch`,
+1. Create `lib/notify-discord.sh` implementing `_discord_send_pitch`,
    `_discord_poll_reply`, `_discord_send_text` with the same signatures as the
    Telegram equivalents.
-2. Add a `discord)` case to `lib/notify.sh` (and `notify.ps1`).
+2. Add a `discord)` case to `lib/notify.sh`.
 3. Set `NOTIFY_CHANNEL=discord` in `.env`.
 
 The alert scripts require no changes.
