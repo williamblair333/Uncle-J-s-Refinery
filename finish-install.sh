@@ -79,8 +79,8 @@ if [ "$SKIP_AUTO_REGISTER" -eq 0 ] && has claude; then
     done
 
     claude mcp remove mempalace 2>/dev/null || true
-    claude mcp add -s user mempalace -- "$VENV_BIN/python" -m mempalace.mcp_server
-    ok "registered: mempalace"
+    claude mcp add -s user mempalace -- bash "$STACK_ROOT/scripts/mempalace-mcp-start.sh"
+    ok "registered: mempalace (via health-check wrapper)"
 
     claude mcp remove serena 2>/dev/null || true
     claude mcp add -s user serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant
@@ -99,6 +99,23 @@ if [ "$SKIP_AUTO_REGISTER" -eq 0 ] && has claude; then
     step "Listing registered MCP servers"
     claude mcp list
 fi
+
+# ── MemPalace health monitoring (cron) ──────────────────────────────────────
+step "Setting up MemPalace backup + health-check cron jobs"
+mkdir -p "$STACK_ROOT/state"
+for entry in \
+    "uncle-j-mempalace-backup|0 */6 * * * bash $STACK_ROOT/mempalace-backup.sh >> $STACK_ROOT/state/mempalace-backup.log 2>&1" \
+    "uncle-j-mempalace-health|0 8 * * * $STACK_ROOT/.venv/bin/python $STACK_ROOT/mempalace-health.py >> $STACK_ROOT/state/mempalace-health.log 2>&1"
+do
+    tag="${entry%%|*}"
+    line="${entry#*|}"
+    if crontab -l 2>/dev/null | grep -q "$tag"; then
+        ok "cron already registered: $tag"
+    else
+        ( crontab -l 2>/dev/null; printf '# %s\n%s\n' "$tag" "$line" ) | crontab -
+        ok "cron registered: $tag"
+    fi
+done
 
 step "Done"
 cat <<EOF
