@@ -18,16 +18,12 @@ CLAUDE_DIR    = Path(os.path.expanduser(os.environ.get("CLAUDE_HOME", "~/.claude
 SETTINGS_PATH = CLAUDE_DIR / "settings.json"
 STACK_ROOT    = Path(__file__).resolve().parent
 
-# Platform-aware venv layout
-if os.name == "nt":
-    JCM_PATH = STACK_ROOT / ".venv" / "Scripts" / "jcodemunch-mcp.exe"
-else:
-    JCM_PATH = STACK_ROOT / ".venv" / "bin" / "jcodemunch-mcp"
+JCM_PATH = STACK_ROOT / ".venv" / "bin" / "jcodemunch-mcp"
 
 if not SETTINGS_PATH.exists():
-    sys.exit(f"ERROR: {SETTINGS_PATH} does not exist. Run install.ps1/install.sh first.")
+    sys.exit(f"ERROR: {SETTINGS_PATH} does not exist. Run install.sh first.")
 if not JCM_PATH.exists():
-    sys.exit(f"ERROR: {JCM_PATH} does not exist. Run install.ps1/install.sh to create the venv.")
+    sys.exit(f"ERROR: {JCM_PATH} does not exist. Run install.sh to create the venv.")
 
 # Backup
 BACKUP = SETTINGS_PATH.with_suffix(".json.bak.jcm-path")
