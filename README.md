@@ -520,8 +520,6 @@ tail -30 ~/.claude/state/langfuse_hook.log
 ```
 
 Common failures:
-- `UnicodeDecodeError ... cp1252` (Windows only) → `PYTHONUTF8=1` missing from
-  `settings.json` env block. `install-langfuse.sh` handles this; re-run it.
 - `'Langfuse' object has no attribute 'start_as_current_span'` → langfuse
   SDK is v4+. Downgrade: `python3 -m pip install "langfuse>=3.0,<4"`
 - `Langfuse API keys not set` → env block missing the keys. Re-run
