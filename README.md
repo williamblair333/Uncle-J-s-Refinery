@@ -9,9 +9,8 @@ docs, memory. Output tokens down ~25-40% via prompt-level discipline.
 Every turn traced to a local Langfuse. Every destructive command gated.
 Every edit verified before it lands. Twelve components, one install.
 
-**Linux-first.** Built and tested on Debian/Ubuntu. macOS works without
-modification (same `.sh` scripts). Windows is supported via parallel
-`.ps1` scripts, with caveats documented in [§ Windows-specific notes](#windows-specific-notes).
+**Linux/macOS.** Built and tested on Debian/Ubuntu. macOS works without
+modification.
 
 ## The "Uncle J" is J. Gravelle
 
