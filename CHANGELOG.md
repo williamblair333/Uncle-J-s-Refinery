@@ -45,7 +45,7 @@
 
 ### Features
 
-- **`ralph-harness.sh`** — Bash port of `ralph-harness.ps1`. Autonomous verification-gated loop: runs `claude` iterations against a PRD, calls `get_changed_symbols` / `get_untested_symbols` / `get_pr_risk_profile` between iterations via a done-gate, exits only when risk < threshold, untested = 0, and PRD is marked DONE. Hard iteration cap.
+- **`ralph-harness.sh`** — Autonomous verification-gated loop: runs `claude` iterations against a PRD, calls `get_changed_symbols` / `get_untested_symbols` / `get_pr_risk_profile` between iterations via a done-gate, exits only when risk < threshold, untested = 0, and PRD is marked DONE. Hard iteration cap.
 - **`healthcheck.sh`** — Runtime healthcheck with SessionStart trigger and `/health` slash command automation. Verifies stack components are live.
 - Auto-checkpoint hook on Write/Edit (commits with `chk: HH:MM:SS` on every file change)
 - MCP tool call logger hook
