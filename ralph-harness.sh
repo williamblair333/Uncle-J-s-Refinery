@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ralph-harness.sh — verification-gated autonomous loop for Uncle J's Refinery.
 #
-# Bash port of ralph-harness.ps1. Same Ralph loop pattern (Geoffrey Huntley)
+# Ralph loop pattern (Geoffrey Huntley)
 # with three upgrades:
 #   1. A PRD markdown file is the stable memory between iterations.
 #   2. Between iterations, a done-gate asks Claude to run jcodemunch's
