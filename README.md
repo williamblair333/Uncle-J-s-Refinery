@@ -550,8 +550,7 @@ The `-v` drops half-initialized volumes so they recreate cleanly.
 
 Per-folder: see "Skipping permission prompts" above.
 
-Per-session (fast escape hatch): `claude --dangerously-skip-permissions`
-(Linux/macOS/Windows, identical flag).
+Per-session (fast escape hatch): `claude --dangerously-skip-permissions`.
 
 Inside a running session: `/permissions` opens the interactive editor.
 
