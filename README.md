@@ -313,22 +313,6 @@ claude mcp add -s user context7 -- "$(npm prefix -g)/bin/context7-mcp"
 claude mcp list
 ```
 
-**Windows:**
-```powershell
-uv tool install --from git+https://github.com/oraios/serena serena-agent
-uv tool install mcp-server-motherduck
-npm install -g @upstash/context7-mcp
-
-claude mcp remove serena
-claude mcp add -s user serena -- "$env:USERPROFILE\.local\bin\serena.exe" start-mcp-server --context ide-assistant
-
-claude mcp remove duckdb
-claude mcp add -s user duckdb -- "$env:USERPROFILE\.local\bin\mcp-server-motherduck.exe" --db-path :memory: --read-write --allow-switch-databases
-
-claude mcp remove context7
-claude mcp add -s user context7 -- "$env:APPDATA\npm\context7-mcp.cmd"
-```
-
 ### 10. (Optional) Stack update alerts
 
 `install.sh` offers this as a yes/no prompt at the end. To enable it separately:
