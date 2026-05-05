@@ -6,7 +6,6 @@ Rewrites every 'jcodemunch-mcp <subcommand>' hook entry in
 ~/.claude/settings.json to use the full path to the venv binary, so the
 hooks actually fire instead of dying with "command not found".
 
-Cross-platform: picks .venv/bin/ on Linux/macOS, .venv/Scripts/ on Windows.
 Idempotent: safe to re-run. Backs up settings.json first.
 """
 import json
