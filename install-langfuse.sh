@@ -224,8 +224,6 @@ d.setdefault("env", {}).update({
     "LANGFUSE_PUBLIC_KEY": creds.get("LANGFUSE_INIT_PROJECT_PUBLIC_KEY", ""),
     "LANGFUSE_SECRET_KEY": creds.get("LANGFUSE_INIT_PROJECT_SECRET_KEY", ""),
     "TRACE_TO_LANGFUSE":   "true",
-    # PYTHONUTF8 is harmless on Linux (already UTF-8) but saves a lot of
-    # pain for anyone copying this config to Windows.
     "PYTHONUTF8":          "1",
 })
 settings_path.write_text(json.dumps(d, indent=2))
