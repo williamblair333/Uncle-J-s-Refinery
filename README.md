@@ -178,8 +178,8 @@ On **Arch** it uses `pacman`. On **macOS** it uses `brew`.
 ```
 
 Expect **all PASS**. See [§ Troubleshooting](#troubleshooting) if anything
-fails — the usual culprit on Windows is stale PATH; on Linux it's
-usually a missing prereq that prerequisites.sh couldn't cover (rare).
+fails — the usual culprit is a missing prereq that prerequisites.sh
+couldn't cover (rare).
 
 ### 4. Confirm MCP servers
 
