@@ -122,10 +122,6 @@ the Progress section and tick off as you verify.
   Expect zero matches.
 - **Don't touch `git config`.** Use `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL`
   env vars per commit if identity isn't set.
-- Preserve the PowerShell/bash parity. Every fix that lands in
-  `install.sh` has a mirror in `install.ps1`, and vice versa. If one
-  platform's fix doesn't apply (e.g. cgroup), document why in a
-  comment.
 - Match existing style: `step`/`ok`/`warn` helpers, `step` headings as
   `==> ...`, no emoji in scripts.
 - Commit messages: imperative, under 72 chars for the summary, optional
