@@ -282,7 +282,7 @@ and the password in `claude-code-langfuse-template/.env`
 
 ### 9. MCP performance tuning (optional)
 
-`install.{sh,ps1}` already writes `MCP_TIMEOUT=60000` into
+`install.sh` already writes `MCP_TIMEOUT=60000` into
 `~/.claude/settings.json`'s `env` block, so Claude Code has a 60s budget
 for MCP server cold-starts out of the box (default is 30s, which Serena
 and MotherDuck can blow past on first `uvx` fetch).
