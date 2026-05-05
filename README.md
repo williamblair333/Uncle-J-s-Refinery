@@ -321,14 +321,9 @@ claude mcp list
 bash features/stack-alerts/install.sh
 ```
 
-**Windows:**
-```powershell
-.\features\stack-alerts\install.ps1
-```
-
 Requires a Telegram bot token and your chat ID (see `features/stack-alerts/README.md`).
-Once installed, a daily cron job (or Task Scheduler task on Windows) checks for new releases,
-invokes Claude to assess relevance, and sends you an inline-button Telegram pitch. Tap ✅ and
+Once installed, a daily cron job checks for new releases, invokes Claude to assess relevance,
+and sends you an inline-button Telegram pitch. Tap ✅ and
 Claude upgrades the package; tap ❌ and it's silently dropped.
 
 To run the freshness check manually at any time:
