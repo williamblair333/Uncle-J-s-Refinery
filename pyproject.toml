@@ -27,7 +27,7 @@ openai    = ["jcodemunch-mcp[openai]"]
 gemini    = ["jcodemunch-mcp[gemini]"]
 groq      = ["jcodemunch-mcp[groq]"]
 
-# Notes on non-PyPI components (installed by install.ps1 / install.sh, not here):
+# Notes on non-PyPI components (installed by install.sh, not here):
 #   - Serena   : run via `uvx --from git+https://github.com/oraios/serena ...`
 #                uvx keeps it in its own ephemeral env -- do NOT add it here.
 #   - Context7 : Node package `@upstash/context7-mcp`, run via `npx -y`.
