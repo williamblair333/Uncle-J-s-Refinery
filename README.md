@@ -485,8 +485,8 @@ real binaries and re-register.
 ### jcodemunch registered as `uvx jcodemunch-mcp` instead of the venv path
 
 `jcodemunch-mcp init` self-registers as `uvx jcodemunch-mcp` in Claude
-Code during step 2. `install.{sh,ps1}` removes + re-adds with the venv
-path so re-runs always converge. If you see this on an older install:
+Code during step 2. `install.sh` removes + re-adds with the venv path
+so re-runs always converge. If you see this on an older install:
 
 ```bash
 claude mcp remove jcodemunch
