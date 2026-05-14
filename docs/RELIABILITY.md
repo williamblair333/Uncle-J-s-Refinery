@@ -91,6 +91,27 @@ the model confidently declares victory on a broken change.
 Pick the plugin for exploratory runs; pick the harness for anything
 you plan to commit.
 
+### Outcomes grader
+
+The `outcomes` skill runs in a **fresh context window** — it has not seen
+the working agent's accumulated reasoning. This is the point: a long thread
+develops blind spots; a fresh context catches them.
+
+Invoked automatically when `ralph-harness.sh --rubric <path>` is used.
+After each iteration:
+
+1. Reads the rubric file (criteria with pass/fail conditions and weights)
+2. Evaluates each criterion against the PRD Progress section and repo state
+3. Returns a JSON verdict: `pass` or `fail` with specific remediation steps
+4. If `fail`, injects the gap report as context for the next iteration
+
+Loop exits only when BOTH the structural done-gate (risk + untested) AND
+the rubric grader agree the work is complete. Cap: `OUTCOMES_MAX_ITERATIONS`
+(default 5, configurable via env var).
+
+The rubric format lives at `global-skills/outcomes/RUBRIC.md.template`.
+Project rubrics go at `.claude/outcomes/rubric.md` within the project repo.
+
 ### Superpowers
 
 The single biggest agent-reliability upgrade available in 2026.
