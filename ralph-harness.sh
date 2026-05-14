@@ -254,6 +254,28 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
     why="$(printf '%s' "$gate_json" | python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('why',''))")"
     printf '    gate: risk=%s untested=%s verdict=%s why=%s\n' "$risk" "$untested" "$verdict" "$why"
 
+    # Outcomes check (--rubric mode only)
+    if [ -n "$RUBRIC_PATH" ] && [ "$SKIP_JUDGE" -eq 0 ]; then
+        OUTCOMES_ITER=$((OUTCOMES_ITER + 1))
+        if [ "$OUTCOMES_ITER" -gt "$OUTCOMES_MAX" ]; then
+            warn "Outcomes max iterations ($OUTCOMES_MAX) reached; proceeding without rubric gate"
+        else
+            outcomes_json="$(invoke_outcomes_check "$REPO_PATH" "$RUBRIC_PATH")"
+            outcomes_verdict="$(printf '%s' "$outcomes_json" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('verdict','skip'))")"
+            outcomes_why="$(printf '%s' "$outcomes_json" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('why',''))")"
+            outcomes_remediation="$(printf '%s' "$outcomes_json" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('remediation',''))")"
+            printf '    outcomes: verdict=%s why=%s\n' "$outcomes_verdict" "$outcomes_why"
+            if [ "$outcomes_verdict" = "fail" ]; then
+                # Override done-gate: inject gap report as next-iteration context
+                verdict="continue"
+                OUTCOMES_CONTEXT="Outcomes grader gap report (iteration $iter):
+$outcomes_remediation
+
+Address all items above before the next iteration."
+            fi
+        fi
+    fi
+
     if [ "$verdict" = "done" ]; then
         ok "Done-gate approved. Exiting loop cleanly at iter $iter."
         break
