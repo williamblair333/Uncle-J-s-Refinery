@@ -82,6 +82,7 @@ ok "DryRun     : $([ "$DRY_RUN"    -eq 1 ] && echo YES || echo NO)"
 ok "PreScript  : ${PRE_SCRIPT:-(none)}"
 ok "Rubric     : ${RUBRIC_PATH:-(none)}"
 ok "OutcomesMax: $OUTCOMES_MAX"
+ok "Decompose  : $([ "$DECOMPOSE" -eq 1 ] && echo ON || echo OFF)"
 
 # Validate pre-script if set
 if [ -n "$PRE_SCRIPT" ] && [ ! -f "$PRE_SCRIPT" ]; then
