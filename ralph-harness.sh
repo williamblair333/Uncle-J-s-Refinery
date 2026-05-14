@@ -77,6 +77,8 @@ ok "RiskCap    : $RISK_THRESHOLD"
 ok "Judge      : $([ "$SKIP_JUDGE" -eq 1 ] && echo OFF || echo ON)"
 ok "DryRun     : $([ "$DRY_RUN"    -eq 1 ] && echo YES || echo NO)"
 ok "PreScript  : ${PRE_SCRIPT:-(none)}"
+ok "Rubric     : ${RUBRIC_PATH:-(none)}"
+ok "OutcomesMax: $OUTCOMES_MAX"
 
 # Validate pre-script if set
 if [ -n "$PRE_SCRIPT" ] && [ ! -f "$PRE_SCRIPT" ]; then
