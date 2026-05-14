@@ -26,7 +26,7 @@ mkdir -p "$CLAUDE_DIR/skills"
 if [ ! -d "$STACK_ROOT/global-skills" ]; then
     warn "global-skills/ directory not found — no skills will be installed"
 fi
-for skill in prior-art-check judge outcomes orchestrator; do
+for skill in prior-art-check judge outcomes orchestrator per-task-review-cycle post-upgrade-mcp-integration; do
     src="$STACK_ROOT/global-skills/$skill"
     dst="$CLAUDE_DIR/skills/$skill"
     if [ ! -d "$src" ]; then
