@@ -66,9 +66,10 @@ else
 fi
 
 echo
-echo "Outcomes skill:"
-check "outcomes skill installed" test -d "$HOME/.claude/skills/outcomes"
-check "outcomes SKILL.md present" test -f "$HOME/.claude/skills/outcomes/SKILL.md"
+echo "Global skills (installed by install-reliability.sh):"
+for _skill in outcomes orchestrator per-task-review-cycle post-upgrade-mcp-integration; do
+    check "skill: $_skill" test -f "$HOME/.claude/skills/$_skill/SKILL.md"
+done
 
 echo
 echo "Session stats feature:"
