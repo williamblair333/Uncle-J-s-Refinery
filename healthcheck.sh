@@ -182,9 +182,32 @@ check_langfuse_sdk() {
     fi
 }
 
-# ----- 8. no leaked secrets in tree ----------------------------------------
+# ----- 8. skills installed --------------------------------------------------
+check_skills() {
+    step "8. skills: dreaming, outcomes, orchestrator installed"
+    local missing=0
+    for skill in dream-synthesizer outcomes orchestrator; do
+        if [ -f "$HOME/.claude/skills/$skill/SKILL.md" ]; then
+            ok "skill: $skill"
+        else
+            bad "skill missing: $skill"
+            hint "run: bash $REPO_ROOT/install-reliability.sh  (or for dream-synthesizer: bash $REPO_ROOT/features/dreaming/install.sh)"
+            record_fail "skill-$skill"
+            missing=$((missing+1))
+        fi
+    done
+    if [ -f "$HOME/.claude/commands/dream.md" ]; then
+        ok "/dream slash command installed"
+    else
+        bad "/dream command missing"
+        hint "run: bash $REPO_ROOT/features/dreaming/install.sh"
+        record_fail "dream-command"
+    fi
+}
+
+# ----- 9. no leaked secrets in tree ----------------------------------------
 check_secrets() {
-    step "8. working tree: no leaked secrets"
+    step "9. working tree: no leaked secrets"
     local pattern='sk-lf-[a-f0-9]{16,}|PASSWORD=[a-zA-Z0-9]{8,}'
     local hits
     hits="$(cd "$REPO_ROOT" && git grep -iE "$pattern" 2>/dev/null || true)"
