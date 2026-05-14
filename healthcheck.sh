@@ -255,7 +255,7 @@ check_smoke_hook() {
 
 # ----- 10. Langfuse trace API has a recent trace ---------------------------
 check_trace_api() {
-    step "10. Langfuse traces API: recent trace exists"
+    step "12. Langfuse traces API: recent trace exists"
     local pk sk host
     pk="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("LANGFUSE_PUBLIC_KEY",""))' 2>/dev/null)"
     sk="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("LANGFUSE_SECRET_KEY",""))' 2>/dev/null)"
