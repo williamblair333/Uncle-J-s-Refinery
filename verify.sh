@@ -63,6 +63,11 @@ else
 fi
 
 echo
+echo "Outcomes skill:"
+check "outcomes skill installed" test -d "$HOME/.claude/skills/outcomes"
+check "outcomes SKILL.md present" test -f "$HOME/.claude/skills/outcomes/SKILL.md"
+
+echo
 if [ "$fails" -eq 0 ]; then
     printf '\033[32mAll checks passed.\033[0m\n'
     exit 0
