@@ -155,6 +155,51 @@ PRD's first-progress-line starts with 'DONE'."
     printf '%s' "$line"
 }
 
+invoke_outcomes_check() {
+    local repo="$1" rubric_path="$2"
+    local orch_skill="$HOME/.claude/skills/outcomes/SKILL.md"
+
+    if [ ! -f "$orch_skill" ]; then
+        warn "outcomes skill not found at $orch_skill; skipping outcomes check"
+        printf '{"verdict":"skip","why":"outcomes skill not installed"}'
+        return
+    fi
+
+    local skill_content rubric_content prd_progress prompt output line tmp
+    skill_content="$(cat "$orch_skill")"
+    rubric_content="$(cat "$rubric_path")"
+    prd_progress="$(awk '/^## Progress/{found=1} found{print}' "$PRD_PATH" | head -25)"
+
+    prompt="<skill>
+$skill_content
+</skill>
+
+<rubric>
+$rubric_content
+</rubric>
+
+<current-state>
+PRD Progress section:
+$prd_progress
+</current-state>
+
+Evaluate the current state against the rubric. Output EXACTLY one JSON line."
+
+    tmp="$(mktemp --suffix=.md)"
+    printf '%s\n' "$prompt" > "$tmp"
+    step "Outcomes: asking grader to evaluate rubric"
+    output="$(cd "$repo" && claude -p "@$tmp" --dangerously-skip-permissions 2>&1 || true)"
+    rm -f "$tmp"
+
+    line="$(printf '%s\n' "$output" | awk '/^[[:space:]]*\{/' | tail -1)"
+    if [ -z "$line" ]; then
+        warn "Outcomes grader returned no JSON; assuming skip"
+        printf '{"verdict":"skip","why":"no JSON from grader"}'
+        return
+    fi
+    printf '%s' "$line"
+}
+
 iter=0
 start_epoch=$(date +%s)
 exit_code=0
