@@ -53,6 +53,9 @@ echo "Node server (Context7):"
 check "@upstash/context7-mcp resolvable" npx --yes "@upstash/context7-mcp" --help
 
 echo
+# Source dreaming env if present (set by features/dreaming/install.sh)
+[ -f "$STACK_ROOT/state/dreaming.env" ] && source "$STACK_ROOT/state/dreaming.env"
+
 echo "Dreaming feature (when DREAMING_ENABLED=1):"
 if [ "${DREAMING_ENABLED:-0}" = "1" ]; then
     check "dreaming cron installed" bash -c 'crontab -l 2>/dev/null | grep -q uncle-j-dreaming'
