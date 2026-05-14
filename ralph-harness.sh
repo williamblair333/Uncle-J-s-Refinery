@@ -208,6 +208,104 @@ Evaluate the current state against the rubric. Output EXACTLY one JSON line."
     printf '%s' "$line"
 }
 
+invoke_orchestrator() {
+    local repo="$1" prd_path="$2"
+    local skill_content prd_content prompt tmp output manifest
+
+    skill_content="$(cat "$HOME/.claude/skills/orchestrator/SKILL.md")"
+    prd_content="$(cat "$prd_path")"
+
+    prompt="<skill>
+$skill_content
+</skill>
+
+<prd>
+$prd_content
+</prd>
+
+Produce the task manifest JSON array and nothing else."
+
+    tmp="$(mktemp --suffix=.md)"
+    printf '%s\n' "$prompt" > "$tmp"
+    step "Decompose: invoking orchestrator"
+    output="$(cd "$repo" && claude -p "@$tmp" --dangerously-skip-permissions 2>&1 || true)"
+    rm -f "$tmp"
+
+    # Extract JSON array from output
+    manifest="$(printf '%s\n' "$output" | python3 -c "
+import sys, json, re
+text = sys.stdin.read()
+m = re.search(r'\[.*?\]', text, re.DOTALL)
+if m:
+    try:
+        tasks = json.loads(m.group())
+        print(json.dumps(tasks))
+        sys.exit(0)
+    except Exception:
+        pass
+print('[]')
+" 2>/dev/null || printf '[]')"
+
+    printf '%s' "$manifest"
+}
+
+run_decomposed() {
+    local repo="$1" manifest="$2"
+    local task_count decompose_dir i role task output_file
+    local pids=()
+
+    task_count="$(printf '%s' "$manifest" \
+        | python3 -c "import sys,json; print(len(json.loads(sys.stdin.read())))" 2>/dev/null || echo 0)"
+
+    if [ "$task_count" -eq 0 ]; then
+        warn "Orchestrator returned empty manifest; falling back to single-agent mode"
+        return 1
+    fi
+
+    step "Decompose: spawning $task_count sub-agent(s)"
+    decompose_dir="$(mktemp -d --suffix=.decompose)"
+
+    for i in $(seq 0 $((task_count-1))); do
+        role="$(printf '%s' "$manifest" | python3 -c \
+            "import sys,json; t=json.loads(sys.stdin.read()); print(t[$i].get('role','agent'))")"
+        task="$(printf '%s' "$manifest" | python3 -c \
+            "import sys,json; t=json.loads(sys.stdin.read()); print(t[$i].get('task',''))")"
+        output_file="$decompose_dir/output_$i.md"
+
+        ok "Sub-agent $i (role=$role)"
+        (cd "$repo" && AGENT_ROLE="$role" MCP_TIMEOUT="${MCP_TIMEOUT:-60000}" \
+            claude -p "$task" --dangerously-skip-permissions > "$output_file" 2>&1) &
+        pids+=($!)
+    done
+
+    # Wait for all sub-agents
+    local failed=0
+    for pid in "${pids[@]}"; do
+        wait "$pid" || { warn "sub-agent pid=$pid exited non-zero"; failed=$((failed+1)); }
+    done
+    [ "$failed" -gt 0 ] && warn "$failed sub-agent(s) failed (outputs still available for synthesis)"
+
+    # Synthesis
+    step "Decompose: synthesis agent merging $task_count outputs"
+    local synth_parts="" f
+    for f in "$decompose_dir"/output_*.md; do
+        synth_parts+="=== $(basename "$f") ===
+$(cat "$f")
+
+"
+    done
+
+    local synth_tmp synth_output
+    synth_tmp="$(mktemp --suffix=.md)"
+    printf 'You are the synthesis agent. Merge the following sub-agent outputs into a single coherent deliverable. Preserve all findings; resolve any conflicts by noting them.\n\n%s\n\nProduce the merged result.\n' \
+        "$synth_parts" > "$synth_tmp"
+    synth_output="$(cd "$repo" && claude -p "@$synth_tmp" --dangerously-skip-permissions 2>&1 || true)"
+    rm -f "$synth_tmp"
+    rm -rf "$decompose_dir"
+
+    printf '%s' "$synth_output"
+}
+
 iter=0
 start_epoch=$(date +%s)
 exit_code=0
