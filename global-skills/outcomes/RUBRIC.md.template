@@ -1,0 +1,40 @@
+# Success Rubric — [feature name]
+
+Each criterion needs a pass condition that is observable and checkable —
+not "looks good" but "this command exits 0" or "this file exists".
+
+Weight: `required` = blocks completion; `preferred` = reported but non-blocking.
+
+---
+
+### 1. Tests pass
+- **Pass**: test suite exits 0 with no skips (`pytest` / `bash tests/...` / etc.)
+- **Fail**: any test failure, error, or skip
+- **Weight**: required
+
+### 2. No untested symbols
+- **Pass**: `get_untested_symbols(changed_only=true)` returns empty list
+- **Fail**: new code exists without test coverage
+- **Weight**: required
+
+### 3. Risk profile acceptable
+- **Pass**: `get_pr_risk_profile()` returns composite score < 0.65
+- **Fail**: score >= 0.65
+- **Weight**: required
+
+### 4. PRD marked DONE
+- **Pass**: first non-empty line of PRD `## Progress` section starts with `DONE`
+- **Fail**: progress shows any other status
+- **Weight**: required
+
+### 5. No secrets in working tree
+- **Pass**: `git grep -iE "sk-lf-[a-f0-9]{16,}|PASSWORD=[a-zA-Z0-9]{8,}"` returns nothing
+- **Fail**: any match found
+- **Weight**: required
+
+### 6. Documentation updated
+- **Pass**: relevant docs section updated to reflect the change
+- **Fail**: new feature with no corresponding doc update
+- **Weight**: preferred
+
+<!-- Add project-specific criteria below this line -->
