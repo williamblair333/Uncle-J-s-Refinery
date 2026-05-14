@@ -250,7 +250,7 @@ print('[]')
 }
 
 run_decomposed() {
-    local repo="$1" manifest="$2"
+    local repo="$1" manifest="$2" prd_path="$3"
     local task_count decompose_dir i role task output_file
     local pids=()
 
