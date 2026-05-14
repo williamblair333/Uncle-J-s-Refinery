@@ -38,6 +38,22 @@ for skill in prior-art-check judge outcomes orchestrator; do
     ok "skill installed: $skill"
 done
 
+# ── Write OUTCOMES_MAX_ITERATIONS to settings.json ───────────────────────────
+step "Ensuring OUTCOMES_MAX_ITERATIONS in $CLAUDE_DIR/settings.json"
+python3 - "$CLAUDE_DIR/settings.json" << 'PYPATCH'
+import sys, json, pathlib
+p = pathlib.Path(sys.argv[1])
+d = json.loads(p.read_text()) if p.exists() else {}
+env = d.setdefault("env", {})
+if "OUTCOMES_MAX_ITERATIONS" not in env:
+    env["OUTCOMES_MAX_ITERATIONS"] = "5"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(d, indent=2))
+    print("  OK  OUTCOMES_MAX_ITERATIONS=5 written to settings.json")
+else:
+    print(f"  OK  OUTCOMES_MAX_ITERATIONS already set ({env['OUTCOMES_MAX_ITERATIONS']})")
+PYPATCH
+
 # ── Clone dwarvesf/claude-guardrails ─────────────────────────────────────
 step "Installing dwarvesf/claude-guardrails"
 if [ -d "$STACK_ROOT/claude-guardrails" ]; then
