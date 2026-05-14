@@ -198,3 +198,41 @@ Notes` section in `CLAUDE.md` informs every session directly.
 
 **Key env vars.** `DREAMING_CRON_SCHEDULE` (default: `0 2 * * *`),
 `DREAMING_ENABLED` (default: `1`). Set in `state/dreaming.env`.
+
+---
+
+## Orchestrator + Multi-agent (--decompose mode)
+
+**What it does.** When `ralph-harness.sh --decompose` is set, the orchestrator
+skill decomposes the PRD into a JSON task manifest, bash spawns one
+`claude -p` subprocess per task (in parallel where safe), and a synthesis
+agent merges the outputs. Traces are tagged by `role:` in Langfuse.
+
+**Roles and tool mapping:**
+
+| Role | Designated tools |
+|---|---|
+| `code` | jCodeMunch, Serena |
+| `data` | jDataMunch, DuckDB |
+| `docs` | jDocMunch, Context7 |
+| `memory` | MemPalace |
+| `general` | all tools |
+
+**AGENT_ROLE env var.** Set by ralph-harness.sh on each sub-agent subprocess.
+Langfuse traces carry `role:<value>` tags so multi-agent runs appear as a
+role-tagged tree rather than an undifferentiated stream.
+
+**Usage.**
+```bash
+./ralph-harness.sh --prd ./PRD.md --decompose --rubric ./.claude/outcomes/rubric.md
+```
+
+**Composition with Outcomes.** When both `--decompose` and `--rubric` are
+set, the synthesized output is evaluated by the outcomes grader after each
+iteration. The grader runs in a fresh context and checks the rubric. Loop
+exits only when synthesis + rubric both pass.
+
+**Guardrail invariants.** Sub-agents inherit `MCP_TIMEOUT=60000` via env.
+jCodeMunch PreToolUse/PostToolUse hooks fire per sub-agent (they are global
+settings, not session-local). The bash-matcher destructive-command blocks
+apply to every subprocess — `--decompose` does not bypass them.
