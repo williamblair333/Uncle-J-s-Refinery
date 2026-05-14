@@ -286,6 +286,7 @@ check_mcp_timeout
 check_langfuse_compose
 check_langfuse_api
 check_langfuse_sdk
+check_skills
 check_secrets
 if [ "$MODE" = "full" ]; then
     check_verify
