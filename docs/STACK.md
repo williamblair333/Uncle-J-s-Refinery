@@ -173,3 +173,28 @@ express.
                                    Native Read/Grep/Bash ◄───────┘
                                    (last resort only)
 ```
+
+---
+
+## Dreaming (scheduled session synthesis)
+
+**What it does.** Runs on a schedule (default: 2 AM daily). Queries Langfuse
+for traces since the last run, invokes the `dream-synthesizer` skill to
+extract recurring mistakes and proven playbooks, and writes the results to
+MemPalace (wing: `dreaming`) and `~/.claude/CLAUDE.md`.
+
+**Entry point.** `features/dreaming/dream.sh` (also available as `/dream`
+slash command for on-demand runs inside Claude Code).
+
+**Install.**
+```bash
+bash features/dreaming/install.sh
+```
+
+**When to use.** After a project has accumulated 10+ Langfuse traces. The
+`prior-art-check` skill will automatically surface dreaming output on the
+next non-trivial task because it queries MemPalace, and the `## Dreaming
+Notes` section in `CLAUDE.md` informs every session directly.
+
+**Key env vars.** `DREAMING_CRON_SCHEDULE` (default: `0 2 * * *`),
+`DREAMING_ENABLED` (default: `1`). Set in `state/dreaming.env`.
