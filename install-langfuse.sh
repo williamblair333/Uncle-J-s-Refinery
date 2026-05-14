@@ -212,13 +212,19 @@ for line in env_path.read_text().splitlines():
 # merge settings
 d = json.loads(settings_path.read_text())
 python_cmd = os.environ.get("PYTHON_BIN") or "python3"
-d.setdefault("hooks", {})["Stop"] = [{
-    "matcher": "",
-    "hooks": [{
-        "type": "command",
-        "command": f'{python_cmd} "{hook_path}"'
-    }]
-}]
+new_hook_cmd = f'{python_cmd} "{hook_path}"'
+marker = "langfuse_hook.py"
+stop_blocks = d.setdefault("hooks", {}).setdefault("Stop", [])
+# Remove any existing langfuse hook block idempotently
+stop_blocks = [
+    blk for blk in stop_blocks
+    if not any(marker in h.get("command", "") for h in blk.get("hooks", []))
+]
+# Prepend langfuse hook (first in Stop chain so traces capture everything)
+stop_blocks.insert(0, {
+    "hooks": [{"type": "command", "command": new_hook_cmd}]
+})
+d["hooks"]["Stop"] = stop_blocks
 d.setdefault("env", {}).update({
     "LANGFUSE_HOST":       "${LANGFUSE_URL}",
     "LANGFUSE_PUBLIC_KEY": creds.get("LANGFUSE_INIT_PROJECT_PUBLIC_KEY", ""),
