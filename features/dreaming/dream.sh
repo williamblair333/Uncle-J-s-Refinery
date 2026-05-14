@@ -79,7 +79,11 @@ NOW_TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # ── Query Langfuse ────────────────────────────────────────────────────────────
 step "Querying Langfuse traces since $FROM_TS"
-FROM_ENC="$("$VENV_PY" -c "import urllib.parse; print(urllib.parse.quote('$FROM_TS'))")"
+FROM_ENC="$("$VENV_PY" - "$FROM_TS" <<'PYEOF'
+import urllib.parse, sys
+print(urllib.parse.quote(sys.argv[1]))
+PYEOF
+)"
 TRACES_JSON="$(curl -s --max-time 15 \
     -u "$LANGFUSE_PUBLIC_KEY:$LANGFUSE_SECRET_KEY" \
     "${LANGFUSE_HOST%/}/api/public/traces?limit=100&fromTimestamp=$FROM_ENC" 2>&1)"
