@@ -22,11 +22,11 @@ has()  { command -v "$1" >/dev/null 2>&1; }
 # ── Custom skills ────────────────────────────────────────────────────────
 step "Installing custom skills to $CLAUDE_DIR/skills"
 mkdir -p "$CLAUDE_DIR/skills"
-for skill in prior-art-check judge; do
-    src="$STACK_ROOT/skills/$skill"
+for skill in prior-art-check judge outcomes orchestrator; do
+    src="$STACK_ROOT/global-skills/$skill"
     dst="$CLAUDE_DIR/skills/$skill"
     if [ ! -d "$src" ]; then
-        warn "skill source missing: $src"
+        warn "skill source missing (will install when created): $src"
         continue
     fi
     mkdir -p "$dst"
