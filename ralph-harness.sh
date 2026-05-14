@@ -93,6 +93,10 @@ if [ -n "$RUBRIC_PATH" ] && [ ! -f "$RUBRIC_PATH" ]; then
     stop "Rubric file not found: $RUBRIC_PATH"; exit 1
 fi
 
+if [ "$DECOMPOSE" -eq 1 ] && [ ! -f "$HOME/.claude/skills/orchestrator/SKILL.md" ]; then
+    stop "orchestrator skill not found — run install-reliability.sh first"; exit 1
+fi
+
 # Helper: run the pre-script, return its stdout.
 # Supports: executable (any shebang), .py (python3), .sh (bash).
 # Prints [SILENT] detection to stderr, actual output to stdout.
