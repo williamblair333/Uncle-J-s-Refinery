@@ -111,5 +111,5 @@ session-history.*
 mempalace.yaml
 entities.json
 
-# Review folder (external projects for analysis; not source)
-review/
+# Review folders (_review = active queue, _reviewed = processed/done)
+_reviewed/
