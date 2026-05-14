@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # install-reliability.sh — installs the reliability layer on Linux/macOS.
 #
-# Copies our two custom skills (prior-art-check, judge) into
-# ~/.claude/skills/, and clones dwarvesf/claude-guardrails ready for
+# Copies our four custom skills (prior-art-check, judge, outcomes,
+# orchestrator) into ~/.claude/skills/ as they become available, and
+# clones dwarvesf/claude-guardrails ready for
 # install-guardrails.sh to consume.
 #
 # Superpowers and Ralph are installed separately from within Claude Code
