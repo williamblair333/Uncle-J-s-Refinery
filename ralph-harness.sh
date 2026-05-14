@@ -338,7 +338,7 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
         [ -n "$PRE_OUTPUT" ] && ok "[dry-run] pre-script context would be prepended to prompt"
     elif [ "$DECOMPOSE" -eq 1 ]; then
         manifest="$(invoke_orchestrator "$REPO_PATH" "$PRD_PATH")"
-        if ! decompose_output="$(run_decomposed "$REPO_PATH" "$manifest")"; then
+        if ! decompose_output="$(run_decomposed "$REPO_PATH" "$manifest" "$PRD_PATH")"; then
             # Fallback to single-agent if manifest was empty
             tmp="$(mktemp --suffix=.md)"
             INNER_PROMPT="$(build_inner_prompt)"
