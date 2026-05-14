@@ -2,6 +2,48 @@
 
 ---
 
+## 2026-05-14 — Dreaming, Outcomes, Multi-agent & Session Stats
+
+### Features
+
+- **`features/dreaming/dream.sh`** — Scheduled batch (2 AM daily) that queries Langfuse traces, invokes the `dream-synthesizer` skill, and writes recurring-mistake patterns and proven playbooks to MemPalace (`wing: dreaming`) and `~/.claude/CLAUDE.md`. `/dream` slash command for on-demand runs.
+- **`features/dreaming/skills/dream-synthesizer/SKILL.md`** — Skill that structures Langfuse traces into `## Recurring Mistakes` / `## Proven Playbooks` output.
+- **`features/dreaming/install.sh`** — Registers 2 AM daily cron (`DREAMING_CRON_SCHEDULE`), installs `/dream` command.
+- **`global-skills/outcomes/SKILL.md`** — Rubric-aware grader that runs in a fresh context window; returns a JSON verdict (`pass`/`fail`) with per-criterion remediation steps.
+- **`global-skills/outcomes/RUBRIC.md.template`** — Six-criterion starter rubric for new projects.
+- **`global-skills/orchestrator/SKILL.md`** — Decomposes a PRD into a JSON task manifest (`role`, `task` pairs) for parallel sub-agent execution.
+- **`ralph-harness.sh --rubric`** — Invokes outcomes grader after each done-gate; injects gap report as next-iteration context; exits only when both structural gate and rubric pass. Cap: `OUTCOMES_MAX_ITERATIONS` (default 5).
+- **`ralph-harness.sh --decompose`** — Orchestrator decomposes PRD → parallel `claude -p` sub-agents with `AGENT_ROLE` env → synthesis agent merges outputs and updates PRD `## Progress` section → outcomes grader.
+- **`features/session-stats/stats.sh`** — Weekly efficiency reporter: queries Langfuse last N days, groups by date + project, renders markdown table with token-use flag (`⚠ high` > 40k). `/stats` slash command. `--cron` writes to `~/.claude/dreaming-output/stats-YYYY-MM-DD.md` (picked up by dreaming) and `state/stats-weekly.md`.
+- **`features/session-stats/install.sh`** — Registers Sunday 8 AM cron (`STATS_CRON_SCHEDULE`), installs `/stats` command.
+- **`~/.claude/hooks/langfuse_hook.py`** — AGENT_ROLE tag added to Langfuse traces (both `tags` list and `update_current_trace` metadata) so multi-agent runs appear as a role-tagged tree.
+- **`prd-template.md`** — Added `## Success Rubric` and `## Agent Decomposition` sections.
+
+### Fixes
+
+- **`install-reliability.sh`**: skill loop read `skills/` not `global-skills/` — skills never installed on fresh runs. Fixed path; expanded loop to include `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`.
+- **`install-reliability.sh`**: now writes `OUTCOMES_MAX_ITERATIONS=5` to `~/.claude/settings.json` env block on install so fresh installs don't require manual intervention.
+- **`install-langfuse.sh`**: Stop hook registration used `d["hooks"]["Stop"] = [...]` assignment, destroying all other Stop hooks on re-install. Fixed to idempotent prepend using `"langfuse_hook.py"` as marker.
+- **`install-langfuse.sh`**: AGENT_ROLE patch extended to also convert the inline `metadata={}` dict in `update_current_trace` to a `trace_metadata` variable with conditional `agent_role` key (previously only the tags list was patched).
+- **`ralph-harness.sh`**: `OUTCOMES_CONTEXT` not cleared after `build_inner_prompt()` subshell call — stale gap context leaked into the wrong iteration. Explicit clear added in parent after call.
+- **`ralph-harness.sh`**: `OUTCOMES_CONTEXT` not cleared on successful `--decompose` path. Fixed.
+- **`ralph-harness.sh`**: `decompose_dir` had no trap on RETURN — temp dir leaked on error exit. `trap 'rm -rf "$decompose_dir"' RETURN` added.
+- **`ralph-harness.sh`**: `--decompose` fallback path (empty manifest) did not inject `$PRE_OUTPUT` into the prompt. Fixed to match the normal single-agent branch.
+- **`ralph-harness.sh`**: `decompose_output` (synthesis agent result) was captured but silently discarded. Now printed to stdout.
+- **`ralph-harness.sh`**: Synthesis agent now receives PRD path and task manifest; instructed to update `## Progress` and write `DONE` when all tasks complete — so `invoke_done_gate` and `invoke_outcomes_check` get accurate PRD state after each decompose iteration.
+- **`features/session-stats/stats.sh`**: `printf '%s' "$TRACES_JSON" | python <<'PYEOF'` — heredoc wins over pipe for subprocess stdin, data silently dropped, report always empty. Fixed with `TRACES_JSON="$var" python <<'PYEOF'` + `os.environ["TRACES_JSON"]`.
+- **`verify.sh`**: sources `state/dreaming.env` before dreaming checks so `DREAMING_ENABLED` is read from the installed env file without requiring manual export. Added session-stats cron check. Global-skills check now covers all four `install-reliability.sh`-managed skills.
+- **`healthcheck.sh`**: added session-stats cron registration check and `per-task-review-cycle` / `post-upgrade-mcp-integration` to skills loop.
+
+### Docs
+
+- `docs/STACK.md`: added Dreaming, Orchestrator + Multi-agent, and Session Stats sections.
+- `docs/RELIABILITY.md`: added outcomes grader row to component table; documented `OUTCOMES_MAX_ITERATIONS` configuration.
+- `features/dreaming/README.md`: created.
+- `features/session-stats/README.md`: created.
+
+---
+
 ## 2026-04-23 — Hermes: Autonomous Loop & Skill Automation
 
 ### Features
