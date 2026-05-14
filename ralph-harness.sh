@@ -51,6 +51,7 @@ while [ $# -gt 0 ]; do
         --risk-threshold)  RISK_THRESHOLD="${2:?}"; shift 2 ;;
         --pre-script)      PRE_SCRIPT="${2:?}"; shift 2 ;;
         --rubric)          RUBRIC_PATH="${2:?}"; shift 2 ;;
+        --decompose)       DECOMPOSE=1; shift ;;
         --skip-judge)      SKIP_JUDGE=1; shift ;;
         --dry-run)         DRY_RUN=1; shift ;;
         -h|--help)         usage ;;
