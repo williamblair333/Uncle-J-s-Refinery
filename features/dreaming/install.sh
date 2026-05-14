@@ -52,7 +52,7 @@ ok "env file: $ENV_FILE"
 
 # Register cron
 step "Registering cron entry (schedule: $SCHEDULE)"
-CRON_CMD="$SCHEDULE bash $DREAM_SCRIPT >> $STATE_DIR/dreaming.log 2>&1"
+CRON_CMD="$SCHEDULE bash \"$DREAM_SCRIPT\" >> \"$STATE_DIR/dreaming.log\" 2>&1"
 install_cron "$MARKER" "$CRON_CMD"
 ok "cron registered"
 
