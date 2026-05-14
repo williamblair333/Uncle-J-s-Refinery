@@ -224,6 +224,7 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
         [ -n "$PRE_OUTPUT" ] && ok "[dry-run] pre-script context would be prepended to prompt"
     else
         tmp="$(mktemp --suffix=.md)"
+        INNER_PROMPT="$(build_inner_prompt)"
         if [ -n "$PRE_OUTPUT" ]; then
             printf 'Pre-script context:\n\n%s\n\n---\n\n%s\n' "$PRE_OUTPUT" "$INNER_PROMPT" > "$tmp"
         else
