@@ -107,7 +107,9 @@ After each iteration:
 
 Loop exits only when BOTH the structural done-gate (risk + untested) AND
 the rubric grader agree the work is complete. Cap: `OUTCOMES_MAX_ITERATIONS`
-(default 5, configurable via env var).
+(default 5). Set in `~/.claude/settings.json`'s `env` block — written
+automatically by `install-reliability.sh` on fresh installs. Override per
+run with `export OUTCOMES_MAX_ITERATIONS=N` before calling the harness.
 
 The rubric format lives at `global-skills/outcomes/RUBRIC.md.template`.
 Project rubrics go at `.claude/outcomes/rubric.md` within the project repo.
