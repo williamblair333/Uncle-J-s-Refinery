@@ -158,16 +158,53 @@ if [ -f "$TEMPLATE_DIR/hooks/langfuse_hook.py" ]; then
     ok "hook script placed at $CLAUDE_DIR/hooks/langfuse_hook.py"
     # Patch: add AGENT_ROLE tagging for multi-agent runs (--decompose mode)
     python3 - "$CLAUDE_DIR/hooks/langfuse_hook.py" << 'PYPATCH'
-import sys, pathlib
+import sys, re, pathlib
 p = pathlib.Path(sys.argv[1])
 content = p.read_text()
-old = '    tags = ["claude-code"]\n    if project_name:\n        tags.append(project_name)'
-new = '    tags = ["claude-code"]\n    if project_name:\n        tags.append(project_name)\n    agent_role = os.environ.get("AGENT_ROLE", "")\n    if agent_role:\n        tags.append(f"role:{agent_role}")'
-if old in content and 'AGENT_ROLE' not in content:
-    p.write_text(content.replace(old, new, 1))
-    print('  OK  AGENT_ROLE patch applied to langfuse_hook.py')
+changed = False
+
+# Patch 1: inject agent_role into the tags list
+old1 = '    tags = ["claude-code"]\n    if project_name:\n        tags.append(project_name)'
+new1 = ('    tags = ["claude-code"]\n    if project_name:\n        tags.append(project_name)\n'
+        '    agent_role = os.environ.get("AGENT_ROLE", "")\n'
+        '    if agent_role:\n        tags.append(f"role:{agent_role}")')
+if old1 in content and 'AGENT_ROLE' not in content:
+    content = content.replace(old1, new1, 1)
+    changed = True
+    print('  OK  AGENT_ROLE patch 1 (tags) applied')
 else:
-    print('  OK  AGENT_ROLE patch already present or anchor not found (no-op)')
+    print('  OK  AGENT_ROLE patch 1 (tags) already present or anchor not found (no-op)')
+
+# Patch 2: convert inline metadata dict in update_current_trace to trace_metadata variable
+# so agent_role can be conditionally included in trace metadata (not just tags).
+pat2 = (r'langfuse\.update_current_trace\(\s*\n\s*session_id=session_id,\s*\n\s*tags=tags,\s*\n'
+        r'\s*metadata=\{\s*\n[^}]+\},\s*\n\s*\)')
+new2 = ('trace_metadata = {\n'
+        '            "source": "claude-code",\n'
+        '            "turn_number": turn_num,\n'
+        '            "session_id": session_id,\n'
+        '            "project": project_name,\n'
+        '        }\n'
+        '        if agent_role:\n'
+        '            trace_metadata["agent_role"] = agent_role\n'
+        '        langfuse.update_current_trace(\n'
+        '            session_id=session_id,\n'
+        '            tags=tags,\n'
+        '            metadata=trace_metadata,\n'
+        '        )')
+if 'trace_metadata' not in content:
+    new_content = re.sub(pat2, new2, content, count=1, flags=re.DOTALL)
+    if new_content != content:
+        content = new_content
+        changed = True
+        print('  OK  AGENT_ROLE patch 2 (metadata) applied')
+    else:
+        print('  WARN  AGENT_ROLE patch 2 (metadata): anchor not matched in template (check hook layout)')
+else:
+    print('  OK  AGENT_ROLE patch 2 (metadata) already present (no-op)')
+
+if changed:
+    p.write_text(content)
 PYPATCH
 else
     warn "langfuse_hook.py not found in template; check template layout"
