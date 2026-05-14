@@ -53,6 +53,16 @@ echo "Node server (Context7):"
 check "@upstash/context7-mcp resolvable" npx --yes "@upstash/context7-mcp" --help
 
 echo
+echo "Dreaming feature (when DREAMING_ENABLED=1):"
+if [ "${DREAMING_ENABLED:-0}" = "1" ]; then
+    check "dreaming cron installed" bash -c 'crontab -l 2>/dev/null | grep -q uncle-j-dreaming'
+    check "dream.sh executable" test -x "$STACK_ROOT/features/dreaming/dream.sh"
+    check "dream-synthesizer skill installed" test -d "$HOME/.claude/skills/dream-synthesizer"
+else
+    printf '  SKIP  dreaming checks (DREAMING_ENABLED not set)\n'
+fi
+
+echo
 if [ "$fails" -eq 0 ]; then
     printf '\033[32mAll checks passed.\033[0m\n'
     exit 0
