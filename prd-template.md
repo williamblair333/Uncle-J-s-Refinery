@@ -32,6 +32,14 @@ and leave it for later iterations to reference.>
 - [ ] `get_pr_risk_profile` < 0.65
 - [ ] No new untested symbols
 
+## Success Rubric (optional — for --rubric mode)
+
+<If using ralph-harness.sh --rubric, paste the rubric here or reference
+the path. The outcomes grader reads this in a fresh context after each
+iteration. Leave blank if not using --rubric.>
+
+See: `global-skills/outcomes/RUBRIC.md.template` for the starter template.
+
 ## Constraints
 
 <Things the agent must respect.>
