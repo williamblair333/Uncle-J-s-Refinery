@@ -186,7 +186,7 @@ check_langfuse_sdk() {
 check_skills() {
     step "8. skills: dreaming, outcomes, orchestrator installed"
     local missing=0
-    for skill in dream-synthesizer outcomes orchestrator; do
+    for skill in dream-synthesizer outcomes orchestrator per-task-review-cycle post-upgrade-mcp-integration; do
         if [ -f "$HOME/.claude/skills/$skill/SKILL.md" ]; then
             ok "skill: $skill"
         else
