@@ -350,6 +350,7 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
         else
             OUTCOMES_CONTEXT=""  # clear stale gap context on successful decompose
             ok "Decompose iteration $iter complete"
+            printf '%s\n' "$decompose_output"
         fi
     else
         tmp="$(mktemp --suffix=.md)"
