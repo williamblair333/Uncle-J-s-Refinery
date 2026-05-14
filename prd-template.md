@@ -40,6 +40,19 @@ iteration. Leave blank if not using --rubric.>
 
 See: `global-skills/outcomes/RUBRIC.md.template` for the starter template.
 
+## Agent Decomposition (optional — for --decompose mode)
+
+<If using ralph-harness.sh --decompose, the orchestrator skill reads this
+PRD and decides how to split it. To guide decomposition, you can add hints
+here about which parts are parallelizable and which must run in sequence.>
+
+Example hints:
+- "Research tasks (MemPalace + docs) can run in parallel with code analysis."
+- "Implementation must follow research (serialize tasks 2 and 3)."
+- "Max 4 sub-agents — this is a focused change."
+
+Leave blank to let the orchestrator decide based on the PRD content alone.
+
 ## Constraints
 
 <Things the agent must respect.>
