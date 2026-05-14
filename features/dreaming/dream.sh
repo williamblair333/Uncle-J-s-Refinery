@@ -173,23 +173,23 @@ if [ -f "$CLAUDE_MD" ] && [ "$DRY_RUN" -eq 0 ]; then
     step "Updating ~/.claude/CLAUDE.md § Dreaming Notes"
     PLAYBOOKS="$(printf '%s' "$SYNTHESIS" | awk '/^## Proven Playbooks/{found=1} found{print}' | head -30)"
     if [ -n "$PLAYBOOKS" ]; then
-        NOW_TS_ESCAPED="$NOW_TS"
-        PLAYBOOKS_ESCAPED="$PLAYBOOKS"
-        "$VENV_PY" - <<PYEOF
-import pathlib
-p = pathlib.Path('$CLAUDE_MD')
+        PLAYBOOKS_TMP="$(mktemp --suffix=.txt)"
+        printf '%s\n' "$PLAYBOOKS" > "$PLAYBOOKS_TMP"
+        "$VENV_PY" - "$CLAUDE_MD" "$PLAYBOOKS_TMP" "$NOW_TS" <<'PYEOF'
+import pathlib, sys
+claude_md_path, playbooks_path, now_ts = sys.argv[1], sys.argv[2], sys.argv[3]
+p = pathlib.Path(claude_md_path)
 content = p.read_text()
 marker = '\n## Dreaming Notes (auto-generated)'
 if marker in content:
     content = content[:content.index(marker)]
 content = content.rstrip() + '\n\n## Dreaming Notes (auto-generated)\n\n'
-content += '<!-- Last updated: $NOW_TS_ESCAPED -->\n\n'
-import sys, os
-playbooks = os.environ.get('PLAYBOOKS_ESCAPED', '')
-content += playbooks + '\n'
+content += f'<!-- Last updated: {now_ts} -->\n\n'
+content += pathlib.Path(playbooks_path).read_text()
 p.write_text(content)
 print('  OK  CLAUDE.md updated')
 PYEOF
+        rm -f "$PLAYBOOKS_TMP"
     fi
 fi
 
