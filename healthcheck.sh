@@ -217,6 +217,13 @@ check_skills() {
         hint "check: bash $REPO_ROOT/features/session-stats/stats.sh --dry-run"
         record_fail "stats-dry-run"
     fi
+    if crontab -l 2>/dev/null | grep -q 'uncle-j-session-stats'; then
+        ok "session-stats cron registered"
+    else
+        bad "session-stats cron not registered"
+        hint "run: bash $REPO_ROOT/features/session-stats/install.sh"
+        record_fail "stats-cron"
+    fi
 }
 
 # ----- 9. no leaked secrets in tree ----------------------------------------
