@@ -336,7 +336,11 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
             tmp="$(mktemp --suffix=.md)"
             INNER_PROMPT="$(build_inner_prompt)"
             OUTCOMES_CONTEXT=""
-            printf '%s\n' "$INNER_PROMPT" > "$tmp"
+            if [ -n "$PRE_OUTPUT" ]; then
+                printf 'Pre-script context:\n\n%s\n\n---\n\n%s\n' "$PRE_OUTPUT" "$INNER_PROMPT" > "$tmp"
+            else
+                printf '%s\n' "$INNER_PROMPT" > "$tmp"
+            fi
             set +e
             (cd "$REPO_PATH" && claude -p "@$tmp" --dangerously-skip-permissions)
             rc=$?
