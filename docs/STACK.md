@@ -236,3 +236,16 @@ exits only when synthesis + rubric both pass.
 jCodeMunch PreToolUse/PostToolUse hooks fire per sub-agent (they are global
 settings, not session-local). The bash-matcher destructive-command blocks
 apply to every subprocess — `--decompose` does not bypass them.
+
+**SubagentStart hook audit (2026-05-14):** A SubagentStart hook IS configured
+in `~/.claude/settings.json`, invoking
+`jcodemunch-mcp hook-subagent-start` on every sub-agent spawn. This hook
+injects a condensed repo orientation into the sub-agent's context (per the
+jcodemunch `--help` description: "SubagentStart hook: inject condensed repo
+orientation"). Tool scoping per role is additionally enforced via the
+sub-agent's task prompt (the `task` field from the orchestrator manifest).
+The routing instructions in the task prompt remain the authoritative
+mechanism for restricting which tools a given role should use; the
+SubagentStart hook supplements orientation but does not selectively disable
+MCP servers (Claude Code's current architecture does not support
+per-session MCP server disable).
