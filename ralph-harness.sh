@@ -225,6 +225,7 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
     else
         tmp="$(mktemp --suffix=.md)"
         INNER_PROMPT="$(build_inner_prompt)"
+        OUTCOMES_CONTEXT=""  # subshell above can't clear parent; do it here
         if [ -n "$PRE_OUTPUT" ]; then
             printf 'Pre-script context:\n\n%s\n\n---\n\n%s\n' "$PRE_OUTPUT" "$INNER_PROMPT" > "$tmp"
         else
