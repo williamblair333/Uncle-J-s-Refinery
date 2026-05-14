@@ -328,6 +328,23 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
     if [ "$DRY_RUN" -eq 1 ]; then
         ok "[dry-run] would call: (cd $REPO_PATH && claude -p @<tmp> --dangerously-skip-permissions)"
         [ -n "$PRE_OUTPUT" ] && ok "[dry-run] pre-script context would be prepended to prompt"
+    elif [ "$DECOMPOSE" -eq 1 ]; then
+        manifest="$(invoke_orchestrator "$REPO_PATH" "$PRD_PATH")"
+        if ! decompose_output="$(run_decomposed "$REPO_PATH" "$manifest")"; then
+            # Fallback to single-agent if manifest was empty
+            tmp="$(mktemp --suffix=.md)"
+            INNER_PROMPT="$(build_inner_prompt)"
+            OUTCOMES_CONTEXT=""
+            printf '%s\n' "$INNER_PROMPT" > "$tmp"
+            set +e
+            (cd "$REPO_PATH" && claude -p "@$tmp" --dangerously-skip-permissions)
+            rc=$?
+            set -e
+            rm -f "$tmp"
+            [ "$rc" -ne 0 ] && warn "claude exited $rc on iter $iter; continuing."
+        else
+            ok "Decompose iteration $iter complete"
+        fi
     else
         tmp="$(mktemp --suffix=.md)"
         INNER_PROMPT="$(build_inner_prompt)"
