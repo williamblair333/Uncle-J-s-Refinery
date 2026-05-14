@@ -203,6 +203,20 @@ check_skills() {
         hint "run: bash $REPO_ROOT/features/dreaming/install.sh"
         record_fail "dream-command"
     fi
+    if [ -f "$HOME/.claude/commands/stats.md" ]; then
+        ok "/stats slash command installed"
+    else
+        bad "/stats command missing"
+        hint "run: bash $REPO_ROOT/features/session-stats/install.sh"
+        record_fail "stats-command"
+    fi
+    if bash "$REPO_ROOT/features/session-stats/stats.sh" --dry-run >/dev/null 2>&1; then
+        ok "stats.sh --dry-run exits 0"
+    else
+        bad "stats.sh --dry-run failed"
+        hint "check: bash $REPO_ROOT/features/session-stats/stats.sh --dry-run"
+        record_fail "stats-dry-run"
+    fi
 }
 
 # ----- 9. no leaked secrets in tree ----------------------------------------
