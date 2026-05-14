@@ -20,6 +20,7 @@ STACK_ROOT="$(cd "$STATS_DIR/../.." && pwd)"
 VENV_PY="$STACK_ROOT/.venv/bin/python"
 STATE_DIR="$STACK_ROOT/state"
 REPORT_FILE="$STATE_DIR/stats-weekly.md"
+DREAM_OUTPUT_DIR="${DREAMING_OUTPUT_DIR:-$HOME/.claude/dreaming-output}"
 DAYS=7
 CRON_MODE=0
 DRY_RUN=0
