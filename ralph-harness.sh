@@ -344,6 +344,7 @@ while [ "$iter" -lt "$MAX_ITERATIONS" ]; do
             rm -f "$tmp"
             [ "$rc" -ne 0 ] && warn "claude exited $rc on iter $iter; continuing."
         else
+            OUTCOMES_CONTEXT=""  # clear stale gap context on successful decompose
             ok "Decompose iteration $iter complete"
         fi
     else
