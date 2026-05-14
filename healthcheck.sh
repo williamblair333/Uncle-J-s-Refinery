@@ -207,7 +207,7 @@ check_skills() {
 
 # ----- 9. no leaked secrets in tree ----------------------------------------
 check_secrets() {
-    step "9. working tree: no leaked secrets"
+    step "10. working tree: no leaked secrets"
     local pattern='sk-lf-[a-f0-9]{16,}|PASSWORD=[a-zA-Z0-9]{8,}'
     local hits
     hits="$(cd "$REPO_ROOT" && git grep -iE "$pattern" 2>/dev/null || true)"
