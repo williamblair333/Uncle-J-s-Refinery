@@ -68,6 +68,12 @@ check "outcomes skill installed" test -d "$HOME/.claude/skills/outcomes"
 check "outcomes SKILL.md present" test -f "$HOME/.claude/skills/outcomes/SKILL.md"
 
 echo
+echo "Session stats feature:"
+check "stats.sh present and executable" test -x "$STACK_ROOT/features/session-stats/stats.sh"
+check "stats.sh --dry-run exits 0" bash "$STACK_ROOT/features/session-stats/stats.sh" --dry-run
+check "/stats command installed" test -f "$HOME/.claude/commands/stats.md"
+
+echo
 if [ "$fails" -eq 0 ]; then
     printf '\033[32mAll checks passed.\033[0m\n'
     exit 0
