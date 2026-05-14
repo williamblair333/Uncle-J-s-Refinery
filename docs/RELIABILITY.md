@@ -12,6 +12,7 @@ Claude *actually uses them correctly*. Four components:
 | dwarvesf claude-guardrails    | Block pasted secrets, scan tool output for prompt-injection       | never (low cost, high value)|
 | Superpowers plugin            | 20+ skills: brainstorm, systematic-debug, TDD, verify-before-done | if total skill count > 25   |
 | Ralph Wiggum plugin           | /ralph slash command (Anthropic official version)                 | --                          |
+| outcomes skill (--rubric) | Rubric-aware grader in fresh context after each Ralph iteration | when not using --rubric flag |
 
 ## How the pieces compose
 
