@@ -224,7 +224,7 @@ check_secrets() {
 # ===== full-mode extras =====================================================
 # ----- 9. Stop hook wiring: direct invocation writes a log line ------------
 check_smoke_hook() {
-    step "9. smoke: Stop hook writes a new line to langfuse_hook.log"
+    step "11. smoke: Stop hook writes a new line to langfuse_hook.log"
     local log="$HOME/.claude/state/langfuse_hook.log"
     local hook="$HOME/.claude/hooks/langfuse_hook.py"
     local py="$REPO_ROOT/.venv/bin/python"
