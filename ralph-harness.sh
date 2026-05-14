@@ -264,6 +264,7 @@ run_decomposed() {
 
     step "Decompose: spawning $task_count sub-agent(s)"
     decompose_dir="$(mktemp -d --suffix=.decompose)"
+    trap 'rm -rf "$decompose_dir"' RETURN
 
     for i in $(seq 0 $((task_count-1))); do
         role="$(printf '%s' "$manifest" | python3 -c \
