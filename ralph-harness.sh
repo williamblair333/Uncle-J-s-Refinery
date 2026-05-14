@@ -104,7 +104,17 @@ run_pre_script() {
     printf '%s' "$output"
 }
 
-INNER_PROMPT="Follow the PRD at \"$PRD_PATH\".
+build_inner_prompt() {
+    local outcomes_section=""
+    if [ -n "$OUTCOMES_CONTEXT" ]; then
+        outcomes_section="Outcomes gap from previous iteration (address these FIRST):
+$OUTCOMES_CONTEXT
+---
+
+"
+        OUTCOMES_CONTEXT=""  # consume it
+    fi
+    printf '%s%s' "$outcomes_section" "Follow the PRD at \"$PRD_PATH\".
 
 Rules for this iteration:
 1. Re-read the PRD from disk. Do NOT assume earlier iterations' context is in memory.
@@ -114,6 +124,7 @@ Rules for this iteration:
 5. Update the PRD's 'Progress' section at the end with one-line status.
 6. If the PRD is complete by your assessment, also write a \`DONE\` marker
    line as the FIRST line of the Progress section, then stop."
+}
 
 invoke_done_gate() {
     local repo="$1" threshold="$2" gate_prompt gate_output line
