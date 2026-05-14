@@ -48,6 +48,7 @@ while [ $# -gt 0 ]; do
         --max-iterations)  MAX_ITERATIONS="${2:?}"; shift 2 ;;
         --risk-threshold)  RISK_THRESHOLD="${2:?}"; shift 2 ;;
         --pre-script)      PRE_SCRIPT="${2:?}"; shift 2 ;;
+        --rubric)          RUBRIC_PATH="${2:?}"; shift 2 ;;
         --skip-judge)      SKIP_JUDGE=1; shift ;;
         --dry-run)         DRY_RUN=1; shift ;;
         -h|--help)         usage ;;
