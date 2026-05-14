@@ -85,6 +85,10 @@ if [ -n "$PRE_SCRIPT" ] && [ ! -f "$PRE_SCRIPT" ]; then
     warn "Pre-script not found: $PRE_SCRIPT"; exit 1
 fi
 
+if [ -n "$RUBRIC_PATH" ] && [ ! -f "$RUBRIC_PATH" ]; then
+    stop "Rubric file not found: $RUBRIC_PATH"; exit 1
+fi
+
 # Helper: run the pre-script, return its stdout.
 # Supports: executable (any shebang), .py (python3), .sh (bash).
 # Prints [SILENT] detection to stderr, actual output to stdout.
