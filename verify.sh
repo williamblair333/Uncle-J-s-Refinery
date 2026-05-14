@@ -75,6 +75,7 @@ echo "Session stats feature:"
 check "stats.sh present and executable" test -x "$STACK_ROOT/features/session-stats/stats.sh"
 check "stats.sh --dry-run exits 0" bash "$STACK_ROOT/features/session-stats/stats.sh" --dry-run
 check "/stats command installed" test -f "$HOME/.claude/commands/stats.md"
+check "session-stats cron installed" bash -c 'crontab -l 2>/dev/null | grep -q uncle-j-session-stats'
 
 echo
 if [ "$fails" -eq 0 ]; then
