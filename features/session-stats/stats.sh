@@ -130,11 +130,15 @@ PYEOF
 # ── Output ────────────────────────────────────────────────────────────────────
 mkdir -p "$STATE_DIR"
 if [ "$CRON_MODE" -eq 1 ]; then
+    mkdir -p "$DREAM_OUTPUT_DIR"
+    DREAM_FILE="$DREAM_OUTPUT_DIR/stats-$(date +%Y-%m-%d).md"
+    printf '%s\n' "$REPORT" > "$DREAM_FILE"
     printf '%s\n' "$REPORT" > "$REPORT_FILE"
-    ok "Report written to $REPORT_FILE"
+    ok "Report written to $DREAM_FILE (dreaming input)"
+    ok "Report written to $REPORT_FILE (human reference)"
     TRACE_COUNT="$(printf '%s' "$TRACES_JSON" | "$VENV_PY" -c \
         "import sys,json; print(len(json.loads(sys.stdin.read()).get('data',[])))" 2>/dev/null || echo '?')"
-    printf '%s traces processed, report at %s\n' "$TRACE_COUNT" "$REPORT_FILE"
+    printf '%s traces processed\n' "$TRACE_COUNT"
 else
     printf '%s\n' "$REPORT"
 fi
