@@ -23,6 +23,9 @@ has()  { command -v "$1" >/dev/null 2>&1; }
 # ── Custom skills ────────────────────────────────────────────────────────
 step "Installing custom skills to $CLAUDE_DIR/skills"
 mkdir -p "$CLAUDE_DIR/skills"
+if [ ! -d "$STACK_ROOT/global-skills" ]; then
+    warn "global-skills/ directory not found — no skills will be installed"
+fi
 for skill in prior-art-check judge outcomes orchestrator; do
     src="$STACK_ROOT/global-skills/$skill"
     dst="$CLAUDE_DIR/skills/$skill"
