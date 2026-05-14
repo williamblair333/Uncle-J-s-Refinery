@@ -85,11 +85,11 @@ if ! printf '%s' "$TRACES_JSON" | "$VENV_PY" -c "import sys,json; json.loads(sys
 fi
 
 # ── Build report ──────────────────────────────────────────────────────────────
-REPORT="$(printf '%s' "$TRACES_JSON" | "$VENV_PY" - "$DAYS" <<'PYEOF'
+REPORT="$(TRACES_JSON="$TRACES_JSON" "$VENV_PY" - "$DAYS" <<'PYEOF'
 import sys, json, collections, os
 
 days = sys.argv[1]
-raw = sys.stdin.read()
+raw = os.environ["TRACES_JSON"]
 traces = json.loads(raw).get("data", [])
 
 # Group by date + project
