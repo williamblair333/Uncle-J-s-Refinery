@@ -156,6 +156,19 @@ mkdir -p "$CLAUDE_DIR/hooks" "$CLAUDE_DIR/state"
 if [ -f "$TEMPLATE_DIR/hooks/langfuse_hook.py" ]; then
     cp "$TEMPLATE_DIR/hooks/langfuse_hook.py" "$CLAUDE_DIR/hooks/"
     ok "hook script placed at $CLAUDE_DIR/hooks/langfuse_hook.py"
+    # Patch: add AGENT_ROLE tagging for multi-agent runs (--decompose mode)
+    python3 - "$CLAUDE_DIR/hooks/langfuse_hook.py" << 'PYPATCH'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1])
+content = p.read_text()
+old = '    tags = ["claude-code"]\n    if project_name:\n        tags.append(project_name)'
+new = '    tags = ["claude-code"]\n    if project_name:\n        tags.append(project_name)\n    agent_role = os.environ.get("AGENT_ROLE", "")\n    if agent_role:\n        tags.append(f"role:{agent_role}")'
+if old in content and 'AGENT_ROLE' not in content:
+    p.write_text(content.replace(old, new, 1))
+    print('  OK  AGENT_ROLE patch applied to langfuse_hook.py')
+else:
+    print('  OK  AGENT_ROLE patch already present or anchor not found (no-op)')
+PYPATCH
 else
     warn "langfuse_hook.py not found in template; check template layout"
     exit 1
