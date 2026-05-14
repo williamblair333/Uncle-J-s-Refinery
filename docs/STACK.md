@@ -237,6 +237,39 @@ jCodeMunch PreToolUse/PostToolUse hooks fire per sub-agent (they are global
 settings, not session-local). The bash-matcher destructive-command blocks
 apply to every subprocess — `--decompose` does not bypass them.
 
+---
+
+## Session Stats (weekly efficiency reporter)
+
+**What it does.** Runs on a schedule (default: every Sunday 8 AM). Queries Langfuse
+for the past 7 days of traces, groups them by date + project, and renders a markdown
+table with trace count, tool calls, token usage, and a `⚠ high` flag for sessions
+exceeding 40k tokens.
+
+**Entry point.** `features/session-stats/stats.sh` (also available as `/stats`
+slash command for on-demand runs inside Claude Code).
+
+**Output (--cron mode).**
+- `~/.claude/dreaming-output/stats-YYYY-MM-DD.md` — picked up automatically
+  by the next dreaming run so weekly stats appear in MemPalace playbooks.
+- `state/stats-weekly.md` — human reference; symlink-friendly for dashboards.
+
+**Install.**
+```bash
+bash features/session-stats/install.sh
+```
+
+**Manual trigger.**
+```bash
+bash features/session-stats/stats.sh [--days N]
+```
+
+**Key env vars.** `STATS_CRON_SCHEDULE` (default: `0 8 * * 0`),
+`DREAMING_OUTPUT_DIR` (default: `~/.claude/dreaming-output`).
+Set in `state/session-stats.env` (written by install.sh).
+
+---
+
 **SubagentStart hook audit (2026-05-14):** A SubagentStart hook IS configured
 in `~/.claude/settings.json`, invoking
 `jcodemunch-mcp hook-subagent-start` on every sub-agent spawn. This hook
