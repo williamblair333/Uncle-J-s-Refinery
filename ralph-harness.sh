@@ -15,7 +15,7 @@
 # Usage:
 #   ./ralph-harness.sh --prd ./PRD.md [--repo /path/to/repo] \
 #                      [--max-iterations 30] [--risk-threshold 0.65] \
-#                      [--skip-judge] [--dry-run]
+#                      [--rubric ./rubric.md] [--skip-judge] [--dry-run]
 #
 # Exit codes:
 #   0  done-gate approved (or DONE marker when --skip-judge)
