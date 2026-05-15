@@ -6,8 +6,17 @@ set -euo pipefail
 PROJ_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MEMPALACE="$PROJ_ROOT/.venv/bin/mempalace"
 LOG="$PROJ_ROOT/state/mempalace-mine.log"
+LOCK="$PROJ_ROOT/state/mempalace-mine-project.lock"
 
 [[ -x "$MEMPALACE" ]] || exit 0
+
+# Bail if another mine-project is already running
+if ! mkdir "$LOCK" 2>/dev/null; then
+  log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
+  log "mine-project skipped: already running (lock: $LOCK)"
+  exit 0
+fi
+trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
 
