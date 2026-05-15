@@ -2,6 +2,49 @@
 
 ---
 
+## 2026-05-15 (session 3) — MemPalace upstream PR #1523 + review tracking system
+
+### What was done
+
+**MemPalace upstream bugs filed and fixed:**
+
+- **Issue #1516** — `repair --yes` leaves orphaned collections on repeat runs (SQLite `collections` table accumulates duplicates, ~100 MB bloat per extra run). Filed at https://github.com/MemPalace/mempalace/issues/1516
+- **Issue #1517** — FTS5 index corrupts after multiple `repair --yes` runs (`PRAGMA quick_check` returns `malformed inverted index for FTS5 table main.embedding_fulltext_search`). Filed at https://github.com/MemPalace/mempalace/issues/1517
+- **Issue #974 / #965** (mine concurrency) — confirmed already fixed upstream via `mine_palace_lock` / `MineAlreadyRunning` in `test_chroma_collection_lock.py`; moved to `_reviewed/`.
+
+**PR #1523 submitted** to upstream `MemPalace/mempalace` targeting `develop`:
+- Branch: `fix/repair-vacuum-fts5` on fork
+- Adds `_vacuum_and_rebuild_fts5()` helper in `mempalace/repair.py`
+- Called at end of `rebuild_index()` after `_close_chroma_handles()` (must close chroma PersistentClient before taking exclusive SQLite lock for VACUUM)
+- Uses `isolation_level=None` (autocommit) on sqlite3.connect — required for VACUUM in Python
+- Rebuilds FTS5 index before VACUUM via `INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')`
+- 4 new tests in `tests/test_repair.py`; 76/76 pass, ruff clean
+- Gemini review feedback addressed (backend lock ordering + autocommit mode)
+
+### Pending in next session
+
+**Force push still needed** — user must run from `_review/mempalace/`:
+```
+git push fork fix/repair-vacuum-fts5 --force
+```
+(Requires PAT for GitHub HTTPS auth. Password auth rejected by GitHub.)
+
+PR #1523 currently shows 4 commits (1 fix + 3 `chk:` auto-checkpoint commits). After force push it will show 1 clean commit.
+
+**PostToolUse hook** — already patched in `.claude/settings.json` to guard against `chk:` commits landing in non-Uncle-J repos:
+```
+[[ "$(git rev-parse --show-toplevel 2>/dev/null)" == "/opt/proj/Uncle-J-s-Refinery" ]] || exit 0; ...
+```
+
+### Infrastructure added
+
+- `_review/` tracking system: pending upstream items stored as YAML-frontmatter `.md` files
+- `_reviewed/` directory: items confirmed fixed upstream
+- `scripts/review-check.sh`: SessionStart hook that reports pending `_review/` items and auto-moves closed issues to `_reviewed/`
+- SessionStart hook wired into `.claude/settings.json`
+
+---
+
 ## 2026-05-15 (session 2) — HNSW root cause analysis, chromadb upgrade, security audit
 
 ### Root cause: MemPalace HNSW corruption (systemic)
