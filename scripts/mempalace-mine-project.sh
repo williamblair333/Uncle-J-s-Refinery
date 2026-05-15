@@ -18,7 +18,31 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 
+PALACE_DIR="$HOME/.mempalace/palace"
+HNSW_SIZE_LIMIT_MB=200
+
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
+
+hnsw_check() {
+  local label="$1"
+  local abort=0
+  for f in "$PALACE_DIR"/*/link_lists.bin; do
+    [[ -f "$f" ]] || continue
+    local sz
+    sz=$(du -m "$f" 2>/dev/null | cut -f1)
+    if [[ "${sz:-0}" -gt "$HNSW_SIZE_LIMIT_MB" ]]; then
+      log "HNSW CORRUPTION ($label): $f is ${sz}MB > ${HNSW_SIZE_LIMIT_MB}MB limit"
+      abort=1
+    fi
+  done
+  return "$abort"
+}
+
+# Pre-flight: abort if HNSW already corrupted
+if ! hnsw_check "pre-mine"; then
+  log "mine-project aborted: HNSW already corrupted — run HNSW repair first"
+  exit 1
+fi
 
 # Read CWD from SessionStart JSON payload (stdin)
 PAYLOAD=$(cat)
