@@ -1,8 +1,6 @@
-
 ---
 name: mempalace-hnsw-corruption-fix
 description: Diagnose and fix MemPalace HNSW index corruption where link_lists.bin grows to hundreds of GB due to chromadb-hnswlib 1.5.x type-confusion in Rust bindings. Use when link_lists.bin is abnormally large, mine crashes with OOM, or header.bin shows astronomical element counts.
-
 ---
 
 ## When to use
