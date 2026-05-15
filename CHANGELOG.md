@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-05-15 — MemPalace HNSW corruption fix + mine concurrency lockfiles
+
+### Fixes
+
+- **MemPalace HNSW index corruption** — `link_lists.bin` in the `mempalace_drawers` HNSW segment grew to 145 GB (corrupted write, root cause unknown). Every subsequent `mempalace mine` call and MCP server start crashed with SIGSEGV (exit 139). Deleted the five corrupt HNSW files individually; chromadb rebuilt the index automatically from the SQLite `embeddings` table. All 7,660 drawers intact. New index: 3.2 MB total, `link_lists.bin` 16 KB.
+- **Duplicate mine processes on session end** — Two Stop hooks fired the convos miner concurrently on every session end: a direct `mempalace mine` command in `.claude/settings.json` (project-level) and `mempalace-mine-convos.sh` in `~/.claude/settings.json` (global). This spawned 3–4 concurrent Python processes (~400 MB RSS each) and exhausted swap on a 14 GB machine.
+- **`scripts/mempalace-mine-convos.sh`** — Added `mkdir`-based lockfile (`state/mempalace-mine-convos.lock`). Concurrent invocations log "skipped: already running" and exit 0. Lock released via `trap … EXIT`.
+- **`scripts/mempalace-mine-project.sh`** — Same lockfile pattern (`state/mempalace-mine-project.lock`).
+- **`.claude/settings.json`** — Replaced direct `mempalace mine … < /dev/null` Stop hook with `bash scripts/mempalace-mine-convos.sh` so all invocations go through the lockfile-guarded wrapper.
+
+### Root cause note
+
+`mempalace mine` has no built-in concurrency guard. Lockfiles in the wrappers are the correct layer until upstream ships a fix. If MemPalace is upgraded, re-test concurrent invocation behaviour.
+
+---
+
 ## 2026-05-14 — Dreaming, Outcomes, Multi-agent & Session Stats
 
 ### Features
