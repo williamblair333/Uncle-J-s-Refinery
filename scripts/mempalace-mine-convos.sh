@@ -12,7 +12,31 @@ LOCK="$PROJ_ROOT/state/mempalace-mine-convos.lock"
 [[ -x "$MEMPALACE" ]] || exit 0
 [[ -d "$CONVOS_DIR" ]] || exit 0
 
+PALACE_DIR="$HOME/.mempalace/palace"
+HNSW_SIZE_LIMIT_MB=200
+
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
+
+hnsw_check() {
+  local label="$1"
+  local abort=0
+  for f in "$PALACE_DIR"/*/link_lists.bin; do
+    [[ -f "$f" ]] || continue
+    local sz
+    sz=$(du -m "$f" 2>/dev/null | cut -f1)
+    if [[ "${sz:-0}" -gt "$HNSW_SIZE_LIMIT_MB" ]]; then
+      log "HNSW CORRUPTION ($label): $f is ${sz}MB > ${HNSW_SIZE_LIMIT_MB}MB limit"
+      abort=1
+    fi
+  done
+  return "$abort"
+}
+
+# Pre-flight: abort if HNSW already corrupted
+if ! hnsw_check "pre-mine"; then
+  log "mine-convos aborted: HNSW already corrupted — run HNSW repair first"
+  exit 1
+fi
 
 # Bail if another mine-convos is already running
 if ! mkdir "$LOCK" 2>/dev/null; then
@@ -24,4 +48,13 @@ trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 log "mining convos: $CONVOS_DIR"
 "$MEMPALACE" mine "$CONVOS_DIR" --mode convos --wing conversations >> "$LOG" 2>&1 || \
   log "mine-convos exited non-zero (non-fatal)"
+
+# Post-mine: catch corruption before it grows further
+if ! hnsw_check "post-mine"; then
+  log "HNSW CORRUPTION DETECTED post-mine — manual repair required"
+  log "  1. rm -rf $PALACE_DIR/<uuid>/"
+  log "  2. Clear stale locks in state/"
+  log "  3. Run: mempalace mine dry-run to verify"
+fi
+
 log "done"
