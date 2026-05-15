@@ -68,4 +68,12 @@ fi
 log "new project detected: $CWD (wing: $WING) — mining"
 "$MEMPALACE" mine "$CWD" >> "$LOG" 2>&1 || \
   log "mine-project exited non-zero for $CWD (non-fatal)"
+
+# Post-mine: catch corruption before it grows further
+if ! hnsw_check "post-mine"; then
+  log "HNSW CORRUPTION DETECTED post-mine — manual repair required"
+  log "  1. rm -rf $PALACE_DIR/<uuid>/"
+  log "  2. Clear stale locks in state/"
+fi
+
 log "done: $WING"
