@@ -162,6 +162,32 @@ If you want more later, these are the next things worth adding:
   with Claude + Gemini + GPT-5.2 concurrently. Expensive per review;
   use on high-stakes PRs only.
 
+## MemPalace operational notes
+
+### HNSW index corruption
+
+The chromadb HNSW vector index (`~/.mempalace/palace/<uuid>/link_lists.bin`) can become corrupted if a mine process is aborted mid-write. Corruption manifests as a SIGSEGV on all `mempalace mine` calls and MCP server startup. Dry-run (`--dry-run`) still works because it skips writes.
+
+**Check index health:**
+```bash
+ls -lh ~/.mempalace/palace/*/link_lists.bin
+# Healthy: a few KB to low MB. Suspicious: > 50 MB for < 10k drawers.
+```
+
+**Recovery:** delete the HNSW directory files individually (the `rm -rf` hook blocks recursive deletes on home). ChromaDB rebuilds from SQLite automatically — no data loss, but re-adds take a minute.
+
+### Mine concurrency lockfiles
+
+`scripts/mempalace-mine-convos.sh` and `scripts/mempalace-mine-project.sh` both use `mkdir`-based lockfiles in `state/`. A hard-killed process (SIGKILL) may leave the lock directory behind. Clear it:
+```bash
+rmdir state/mempalace-mine-convos.lock 2>/dev/null
+rmdir state/mempalace-mine-project.lock 2>/dev/null
+```
+
+The lockfiles exist because `mempalace mine` has no built-in concurrency guard, and two Stop hooks (project + global settings) both invoke the convos miner on every session end.
+
+---
+
 ## Disable / uninstall
 
 ```bash
