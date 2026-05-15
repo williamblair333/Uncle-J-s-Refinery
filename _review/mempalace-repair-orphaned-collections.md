@@ -2,8 +2,8 @@
 repo: MemPalace/mempalace
 title: "repair --yes leaves orphaned collections on repeat runs"
 type: bug
-status: pending
-issue_url: ""
+status: filed
+issue_url: "https://github.com/MemPalace/mempalace/issues/1516"
 ---
 
 **What happened?**

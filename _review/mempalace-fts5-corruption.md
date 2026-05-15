@@ -2,8 +2,8 @@
 repo: MemPalace/mempalace
 title: "FTS5 index corrupts after multiple repair --yes runs"
 type: bug
-status: pending
-issue_url: ""
+status: filed
+issue_url: "https://github.com/MemPalace/mempalace/issues/1517"
 ---
 
 **What happened?**
