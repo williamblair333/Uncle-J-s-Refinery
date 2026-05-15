@@ -82,6 +82,16 @@
             "async": true
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/review-check.sh 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Checking _review/..."
+          }
+        ]
       }
     ]
   },
