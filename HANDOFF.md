@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-15*
+*Last updated: 2026-05-15 (session 2)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -14,117 +14,126 @@ Read this before touching anything. Work priorities are in order below.
 - Global `CLAUDE.md` with routing policy, security rules, jOutputMunch rules
 - Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer` (all live in `global-skills/`, installed to `~/.claude/skills/`)
 - Guardrails: secret scanner (UserPromptSubmit) + injection defender + commit-time scan
-- All features built and installed:
-  - `features/dreaming/` — nightly dream synthesizer (2 AM cron), `/dream` slash command
-  - `features/session-stats/` — weekly Langfuse efficiency report (Sunday 8 AM), `/stats` slash command
-  - `features/telegram-gateway/` — inbound Telegram → Claude Code commands
-  - `features/telegram-notify/` — outbound Telegram notifications
-  - `features/auto-skill/` — Stop hook that auto-drafts skills from session transcripts
-  - `features/ralph-cron/` — cron-safe Ralph loop wrapper with Telegram notifications
-  - `features/skill-manager/` — skill install/link management
-  - `features/stack-alerts/` — daily MCP version check with Telegram upgrade prompt
-  - `features/mempalace/` — mempalace feature module
+- All features built and installed (dreaming, session-stats, Telegram gateway/notify, auto-skill, ralph-cron, skill-manager, stack-alerts, mempalace)
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
-- MemPalace — fully operational; 7,660 drawers indexed; HNSW index healthy (3.2 MB)
+- **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
+- **MemPalace** — repaired and operational; 10,000+ drawers; HNSW rebuilt clean with `mempalace repair`
+  - HNSW size guard active in both mine wrappers (aborts if `link_lists.bin` > 200 MB)
+  - chromadb upgraded to 1.5.9 (fixes the Rust HNSW binding type-confusion bug)
 - Mine concurrency — lockfiles in both wrapper scripts prevent duplicate mine processes
-- Git: clean, in sync with `origin/main`
+- **ClickHouse 24.8.14.39** — patched past CVE-2025-1385. Library bridge not running. No upgrade needed.
+- Git: needs commit for this session's changes
 
-### Blocked
+### No blockers
 
-**Langfuse — not running on Linux.** Three known failures in `install-langfuse.sh` on this machine (`dtfd-xfce`, Liquorix kernel 6.18.4-1-liquorix-amd64, Debian 13):
-
-1. **ClickHouse 26.3.9.8 crashes at startup** — `stof: no conversion at getNumberOfCPUCoresToUseImpl()`. Liquorix kernel exposes empty `/sys` CPU topology. Fix: pin ClickHouse to `24.12` in `claude-code-langfuse-template/docker-compose.yml`.
-
-2. **Python path issue** — the Stop hook venv python path is hardcoded. The install script patch block needs to resolve `$STACK_ROOT` at install time, not leave a literal path.
-
-3. **Third blocker** — check the previous session in mempalace (`uncle_j_s_refinery/scripts` wing) for the third specific failure. It was noted but not resolved.
+All items from the previous HANDOFF's "Blocked" section are resolved:
+- Langfuse was already running (HANDOFF was stale)
+- ClickHouse crash fix already in docker-compose.yml
+- HNSW corruption fully resolved and guarded against recurrence
 
 ---
 
-## What happened last session (2026-05-15)
+## What happened last session (2026-05-15, session 1)
 
-### MemPalace HNSW index corruption
+See previous entries in `CHANGELOG.md` for session 1 (HNSW initial fix + mine lockfiles).
 
-**Symptom:** MemPalace stopped updating at session end. `mempalace mine` and the MCP server both crashed with SIGSEGV (exit 139). The MCP connection dropped on every session start.
+## What happened this session (2026-05-15, session 2)
 
-**Root cause:** `~/.mempalace/palace/515e53f4-4c81-4af7-b978-e46845fcfeec/link_lists.bin` — the HNSW graph file for the `mempalace_drawers` collection — grew to **145 GB**. Every attempt to load the index triggered a segfault. The corruption likely occurred during an aborted mine run.
+### MemPalace HNSW re-corruption (229 GB, root cause found)
 
-**Diagnosis path:**
-```bash
-# Confirmed mine crashes:
-/opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace mine ... 2>&1
-# Segmentation fault (exit 139)
+**Root cause confirmed:** chromadb 1.5.8 has a type-confusion bug in its Rust HNSW bindings (`chroma-hnswlib`). The `element_levels_[i]` field is written as float32 but read as int32, producing ~1 billion as link list size per node. Additionally, counter values (e.g., `cur_element_count = 1001`) were stored in the **upper 32 bits** of each uint64 header field, leaving the lower 32 bits as zero. The net effect: every save of the HNSW wrote astronomically large garbage to `link_lists.bin`.
 
-# Confirmed dry-run works (no write = no crash):
-mempalace mine --dry-run ...   # OK
+**Why session 1's fix was incomplete:** Deleting and rebuilding the HNSW worked temporarily, but the rebuild itself used the same buggy chromadb 1.5.8 code path, producing a corrupt header again on the next mine run.
 
-# Confirmed chromadb col.add() segfaults, col.count() does not exist
-# via direct Python probe
-
-# Found 145 GB file:
-ls -lh ~/.mempalace/palace/515e53f4-.../
-```
+**Multiple sequential mine runs made it worse:** From 07:55–07:58 today, 4 mine runs executed sequentially (lockfile held, released, next acquired). Each loaded the corrupted in-memory state and wrote more garbage.
 
 **Fix:**
+1. Upgraded chromadb to 1.5.9 (type-confusion fixed)
+2. Deleted corrupted HNSW segment (all 5 binary files + directory)
+3. Ran `mempalace repair --yes` — creates a fresh segment, re-embeds all stored documents, builds correct HNSW
+4. Added HNSW size guard (200 MB threshold) to both mine scripts
+
+**Verify HNSW health:**
 ```bash
-# Delete corrupt HNSW files individually (rm -rf blocked by hook)
-HNSW_DIR="$HOME/.mempalace/palace/515e53f4-4c81-4af7-b978-e46845fcfeec"
-rm "$HNSW_DIR/link_lists.bin" "$HNSW_DIR/data_level0.bin" \
-   "$HNSW_DIR/header.bin" "$HNSW_DIR/length.bin" \
-   "$HNSW_DIR/index_metadata.pickle"
-rmdir "$HNSW_DIR"
+ls -lh ~/.mempalace/palace/*/link_lists.bin
+# Should be <10 MB for 10,000 drawers
 ```
 
-ChromaDB auto-rebuilt the HNSW index from the SQLite `embeddings` table on next access. All 7,660 drawers recovered. New HNSW directory: 3.2 MB, `link_lists.bin` 16 KB.
+### Security: ClickHouse CVE-2025-1385
 
-**If this recurs:** Check `~/.mempalace/palace/*/link_lists.bin` sizes. Anything over ~50 MB for a collection of this size is suspicious. Run `mempalace mine --dry-run` first to confirm the fix path before touching files.
-
-### Duplicate mine processes + memory exhaustion
-
-**Symptom:** 3–4 concurrent `mempalace mine` Python processes on every session end (~400 MB RSS each). Swap exhausted (4 GB used, ~100 KB free). System unresponsive.
-
-**Root cause:** Two Stop hooks both fired the convos miner:
-- **Global `~/.claude/settings.json`**: `bash scripts/mempalace-mine-convos.sh`
-- **Project `.claude/settings.json`**: direct `mempalace mine … < /dev/null` (bypassed wrapper)
-
-Neither the CLI nor the wrappers had any concurrency guard.
-
-**Fix:**
-1. Added `mkdir`-based lockfile to `scripts/mempalace-mine-convos.sh` (`state/mempalace-mine-convos.lock`)
-2. Added `mkdir`-based lockfile to `scripts/mempalace-mine-project.sh` (`state/mempalace-mine-project.lock`)
-3. Replaced the direct `mine` command in `.claude/settings.json` with the wrapper script call
-
-Now both hooks resolve to the same wrapper; the second invocation sees the lock and exits immediately.
+Confirmed not vulnerable:
+- Running 24.8.14.39 (patched version = 24.8.14.27+)
+- Library bridge process not running, port 9019 not listening
+- Ports bound to 127.0.0.1 only
+- No action needed
 
 ---
 
 ## Priorities
 
-### 1. Fix Langfuse on Linux
+### 1. Commit session 2 changes
 
-Work through the three blockers above in order. The install script is at `install-langfuse.sh`. The docker-compose template is at `claude-code-langfuse-template/docker-compose.yml`.
+Files changed this session:
+- `scripts/mempalace-mine-convos.sh` — HNSW size guard added
+- `scripts/mempalace-mine-project.sh` — HNSW size guard added
+- `CHANGELOG.md` — session 2 entry
+- `HANDOFF.md` — this file
 
-After fixing, run:
-```bash
-./install-langfuse.sh
-./healthcheck.sh --full
-```
+### 2. Watch HNSW after next few mine runs
 
-Verify Langfuse is reachable at `http://localhost:3050` before marking done.
-
-### 2. Watch for HNSW re-corruption
-
-The root cause of the 145 GB `link_lists.bin` is unknown — it may have been a single bad write during a crash, or it may recur. After the next few mine runs, check:
-
+The size guard will catch any recurrence. After the next few sessions, spot-check:
 ```bash
 ls -lh ~/.mempalace/palace/*/link_lists.bin
 ```
 
-If it starts growing beyond a few MB unexpectedly, abort and investigate before it fills disk again.
+If any file exceeds 200 MB, mine will abort with a log entry — check `state/mempalace-mine.log`.
 
-### 3. Upstream mine concurrency
+### 3. Consider filing upstream: mine concurrency
 
-The lockfile workaround is stable but `mempalace mine` should handle this itself. Consider filing an issue or contributing a `--no-concurrent` flag upstream.
+`mempalace mine` has no built-in concurrency guard. The lockfile wrappers are stable but the issue should be fixed upstream. Consider opening an issue at the mempalace repo.
+
+---
+
+## Operational notes
+
+### MemPalace repair procedure (if HNSW corrupts again)
+
+```bash
+# 1. Check sizes
+ls -lh ~/.mempalace/palace/*/link_lists.bin
+
+# 2. Clear stale locks (if any mine process died)
+rmdir /opt/proj/Uncle-J-s-Refinery/state/mempalace-mine-convos.lock 2>/dev/null
+rmdir /opt/proj/Uncle-J-s-Refinery/state/mempalace-mine-project.lock 2>/dev/null
+
+# 3. Delete corrupted HNSW segment directory
+HNSW_DIR=$(ls -d ~/.mempalace/palace/*/link_lists.bin | awk '{print $1}' | xargs -I{} dirname {} | head -1)
+rm "$HNSW_DIR"/*.bin "$HNSW_DIR"/*.pickle 2>/dev/null
+rmdir "$HNSW_DIR"
+
+# 4. Rebuild with repair command
+/opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace repair --yes
+
+# 5. Verify
+ls -lh ~/.mempalace/palace/*/link_lists.bin
+```
+
+### Mine lockfile cleanup (if mine process killed hard)
+
+```bash
+rmdir /opt/proj/Uncle-J-s-Refinery/state/mempalace-mine-convos.lock 2>/dev/null
+rmdir /opt/proj/Uncle-J-s-Refinery/state/mempalace-mine-project.lock 2>/dev/null
+```
+
+### System baseline memory
+
+This machine (`dtfd-xfce`, 14 GB RAM, 4 GB swap) runs clickhouse, next-server, Grafana, Loki, Minio, KDE plasma, and multiple Node workers as persistent services. Baseline RSS is ~3.5 GB. Swap should be 0 at rest.
+
+### Push access
+
+Remote is HTTPS (`https://github.com/williamblair333/Uncle-J-s-Refinery.git`). To push:
+- Run `! gh auth login` in a Claude Code session, or
+- Use a fine-scoped PAT as password on first HTTPS push
 
 ---
 
