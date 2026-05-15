@@ -2,6 +2,49 @@
 
 ---
 
+## 2026-05-15 (session 2) — HNSW root cause analysis, chromadb upgrade, security audit
+
+### Root cause: MemPalace HNSW corruption (systemic)
+
+The 145 GB `link_lists.bin` from session 1 was NOT a one-time incident. By session-start today it had regrown to **229 GB**. Root cause confirmed via binary analysis:
+
+- `header.bin` stored garbage C++ pointer-sized values (e.g., `max_elements = 17.6 trillion`) due to a type-confusion bug in chromadb 1.5.8's Rust HNSW bindings. The actual count (e.g., 1001) was stored in the **upper 32 bits** of each uint64 field, leaving the lower 32 bits as zero.
+- `length.bin` contained IEEE 754 float32 bit patterns (`0x3F800018` ≈ 1.0f) interpreted as int32 link list byte-sizes, producing a projected 1 TB of link data per 1,001-element HNSW.
+- Once the corrupted header was loaded into memory, every subsequent `save_index` serialized the corrupted in-memory parameters, growing `link_lists.bin` by ~100 GB per mine run.
+- Multiple sequential mine runs from 07:55–07:58 (4 runs, ~1 minute each, lock released between runs) each made it worse.
+
+### Fixes
+
+- **Upgraded chromadb to 1.5.9** — resolves the Rust HNSW binding type confusion (confirmed: fresh HNSW stays proportional after mine run).
+- **Deleted corrupted HNSW segment** (`515e53f4-4c81-4af7-b978-e46845fcfeec/`) — all 5 binary files. chromadb 1.5.9 rebuilds cleanly.
+- **Ran `mempalace repair --yes`** — rebuilds the HNSW vector index from all stored documents (re-embeds from SQLite text content). Fully restores semantic search over all 10,000+ drawers.
+- **HNSW size guard added to both mine wrapper scripts** (`scripts/mempalace-mine-convos.sh`, `scripts/mempalace-mine-project.sh`):
+  - Pre-flight: aborts mine if any `link_lists.bin` > 200 MB (prevents mining into already-corrupted HNSW).
+  - Post-mine: logs warning if `link_lists.bin` > 200 MB after mine completes.
+  - Limit constant: `HNSW_SIZE_LIMIT_MB=200` at top of each script.
+- **Stale lock directories cleared** from previous stuck mine process (`state/mempalace-mine-convos.lock`, `state/mempalace-mine-project.lock`).
+
+### Security audit: ClickHouse + CVE-2025-1385
+
+The "worm attack" referenced in the HANDOFF is CVE-2025-1385: RCE via the `clickhouse-library-bridge` HTTP process (port 9019).
+
+**Status: not vulnerable.** Evidence:
+- Running **ClickHouse 24.8.14.39** — patched version is `24.8.14.27+`. We exceed it.
+- `clickhouse-library-bridge` process is **not running** on port 9019.
+- No `<library_bridge>` config present in the container.
+- All ClickHouse ports bound to `127.0.0.1` only (8124, 9002).
+
+**No upgrade needed.** The HANDOFF suggestion to pin `24.12` is unnecessary — `24.8.14.39` is already safe. Langfuse requires >= 24.3; both 24.8 and 24.12 are fully supported.
+
+### Status corrections (HANDOFF was stale)
+
+All three "Langfuse blockers" from the HANDOFF are already resolved:
+1. **ClickHouse crash** — fixed via `cpu.max.override` bind-mount in docker-compose.yml (already present). ClickHouse 24.8 running healthy.
+2. **Stop hook venv python path** — `install-langfuse.sh` already resolves `$STACK_ROOT` correctly at install time.
+3. **Third blocker** — could not confirm from MemPalace (MCP disconnected this session), but Langfuse health endpoint returns `{"status":"OK","version":"3.169.0"}`. All 6 containers healthy and up 3 weeks.
+
+---
+
 ## 2026-05-15 — MemPalace HNSW corruption fix + mine concurrency lockfiles
 
 ### Fixes
