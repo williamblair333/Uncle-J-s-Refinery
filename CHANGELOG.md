@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-19 — automation hardening, install UX, healthcheck cleanup
+
+### install.sh
+- Added `--non-interactive` flag; `prompt_yes_no` in `lib/feature-helpers.sh` now auto-takes its default when stdin is not a TTY or `NON_INTERACTIVE=1` — CI and piped installs no longer stall
+- `CLAUDE.md` routing policy is now installed to `~/.claude/CLAUDE.md` automatically (with timestamped `.bak` of any existing file); no more manual copy step
+- Post-merge hook is now **opt-in** via `prompt_yes_no` (default: no), consistent with the Telegram alert prompt below it
+
+### healthcheck.sh
+- Numbered step labels (`1.`, `9a.`, `9g.`, etc.) replaced with descriptive names — maintainable when checks are added or reordered
+- `check_memory_staleness` demoted from fail to **warning-only**; the keyword grep produces too many false-positives on legitimate user notes to belong in the fail path
+- Secret scanner narrowed to Langfuse `sk-lf-*` keys only; removed the overly broad `PASSWORD=` pattern that false-positived on docs; comment points to gitleaks for full coverage
+
+### README.md
+- Hardcoded `/opt/proj/Uncle-J-s-Refinery` paths replaced with `$STACK_ROOT`
+
+### CI
+- Added `.github/workflows/ci.yml`: three jobs — bash syntax + shellcheck, `uv sync` + binary smoke test on `ubuntu-latest`, auxiliary installer syntax check
+
+---
+
 ## 2026-05-19 — jdocmunch initial index wired into install + healthcheck
 
 ### jdocmunch doc index now standard for all installs and updates

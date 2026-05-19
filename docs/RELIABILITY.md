@@ -61,8 +61,9 @@ Step 3b (staleness filter): any MemPalace hit containing `pending`,
 `awaiting`, `needs`, `consider`, `not yet`, `TODO`, or `FIXME` must be
 verified against current source before being reported as fact. Prevents
 the failure mode where a memory entry says "PR awaiting review" long after
-the PR has merged and the fix is running. Complements healthcheck check 9g
-which surfaces the same stale entries at session start.
+the PR has merged and the fix is running. Complements the healthcheck
+staleness advisory scan which surfaces the same entries at session start
+(warning-only, not a failure).
 
 ### judge
 
