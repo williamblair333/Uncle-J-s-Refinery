@@ -2,6 +2,41 @@
 
 ---
 
+## 2026-05-18 — MemPalace portability, install-reliability symlink fix, health script portability
+
+### MemPalace remote backup (multi-machine support)
+
+- `mempalace-backup.sh`: after local snapshot, if `MEMPALACE_REMOTE` is set
+  and `rclone` is available, syncs the live palace to the configured remote
+  (S3, GCS, SFTP, Backblaze B2, Dropbox, etc.) via `rclone sync --checksum`.
+  Logs to `rclone.log` alongside local backups. Gracefully warns if rclone is
+  missing rather than erroring.
+- `README.md` section 13 added: end-to-end guide covering rclone setup,
+  env var wiring, restore on a new machine, safe multi-machine handoff, and
+  the diverged-palace merge path.
+
+### install-reliability.sh — symlink fix
+
+`cp -r` silently aborted under `set -euo pipefail` when destination was
+already a symlink into the repo (same inode as source). Replaced with
+`ln -sfn`: pre-existing correct symlinks are detected and skipped; stale
+copies or wrong symlinks are replaced. Skills are now live symlinks into
+`global-skills/`, so `git pull` propagates skill updates without re-running
+the installer.
+
+### mempalace-health.py — portable shebang + self-re-exec
+
+Replaced hardcoded `/opt/proj/Uncle-J-s-Refinery/.venv/bin/python` shebang
+with `#!/usr/bin/env python3` plus a self-re-exec guard: if `chromadb` is not
+importable in the current interpreter, the script transparently re-execs under
+`.venv/bin/python`. Works correctly with both `python3 mempalace-health.py`
+and `./mempalace-health.py` regardless of where the repo is cloned.
+
+Also replaced the hardcoded venv python call in `mempalace-backup.sh`'s
+health check step with `python3` (script now self-selects its interpreter).
+
+---
+
 ## 2026-05-15 (session 3) — MemPalace upstream PR #1523 + review tracking system
 
 ### What was done

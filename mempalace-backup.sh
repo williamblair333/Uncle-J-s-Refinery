@@ -30,8 +30,22 @@ for (( i=0; i<excess; i++ )); do
     echo "$(date -Iseconds) removed old backup ${snapshots[$i]}"
 done
 
+# Remote sync — set MEMPALACE_REMOTE=<rclone-remote>:<path> to push to S3/GCS/SFTP/etc.
+# Example: MEMPALACE_REMOTE=myremote:my-bucket/mempalace
+if [[ -n "${MEMPALACE_REMOTE:-}" ]]; then
+    if command -v rclone >/dev/null 2>&1; then
+        echo "$(date -Iseconds) syncing to remote: $MEMPALACE_REMOTE"
+        rclone sync "$PALACE/" "$MEMPALACE_REMOTE/" --transfers=8 --checksum \
+            >> "$(dirname "$DEST")/rclone.log" 2>&1 \
+            && echo "$(date -Iseconds) remote sync OK" \
+            || echo "$(date -Iseconds) WARNING: remote sync failed — check rclone.log"
+    else
+        echo "$(date -Iseconds) WARNING: MEMPALACE_REMOTE set but rclone not found — skipping remote sync"
+    fi
+fi
+
 # Run health check after backup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/mempalace-health.py" ]]; then
-    /opt/proj/Uncle-J-s-Refinery/.venv/bin/python "$SCRIPT_DIR/mempalace-health.py" || true
+    python3 "$SCRIPT_DIR/mempalace-health.py" || true
 fi

@@ -364,6 +364,94 @@ MemPalace is installed but empty. To get value:
 The last line ingests all your Claude Code sessions so `mempalace search
 "why did we switch to X"` returns hits from day one.
 
+### 13. (Recommended) MemPalace remote backup — keep memories across machines
+
+Your MemPalace palace lives at `~/.mempalace/palace` — outside the repo,
+outside any container. If you wipe the machine or switch computers, it's gone
+unless you have a remote copy.
+
+**What's stored there:** everything Claude has learned across all sessions —
+decisions, patterns, prior art, playbooks. It grows to several GB over months.
+Worth protecting.
+
+#### One-time setup
+
+1. Install rclone (once per machine):
+
+```bash
+# Linux
+sudo apt install rclone   # or: curl https://rclone.org/install.sh | sudo bash
+
+# macOS
+brew install rclone
+```
+
+2. Configure a remote backend (S3, GCS, Dropbox, Backblaze B2, SFTP, etc.):
+
+```bash
+rclone config   # follow the interactive prompts — creates ~/.config/rclone/rclone.conf
+```
+
+3. Set `MEMPALACE_REMOTE` in your Claude Code env so the backup cron picks it up:
+
+```bash
+# Add to ~/.claude/settings.json under "env":
+#   "MEMPALACE_REMOTE": "myremote:my-bucket/mempalace"
+#
+# Or for a one-liner:
+python3 - <<'PY'
+import json, pathlib
+p = pathlib.Path.home() / ".claude/settings.json"
+d = json.loads(p.read_text()) if p.exists() else {}
+d.setdefault("env", {})["MEMPALACE_REMOTE"] = "myremote:my-bucket/mempalace"
+p.write_text(json.dumps(d, indent=2))
+print("written")
+PY
+```
+
+Replace `myremote:my-bucket/mempalace` with your actual rclone remote and path.
+
+After this, the existing 6-hour backup cron (`mempalace-backup.sh`) will sync
+the live palace to your remote automatically after each local snapshot.
+
+#### Restoring on a new machine
+
+After running the full installer (`./install.sh`), pull your palace down before
+starting Claude Code:
+
+```bash
+rclone copy myremote:my-bucket/mempalace ~/.mempalace/palace
+```
+
+That's it. The palace is immediately usable — no re-mining needed.
+
+#### Working across two machines simultaneously
+
+ChromaDB does not support concurrent writers. **Do not point two active Claude
+Code instances at the same remote palace simultaneously** — you will corrupt it.
+
+Safe pattern: one machine is active at a time. When switching:
+
+1. On machine A: wait for the next backup cron to fire (or run
+   `bash mempalace-backup.sh` manually) so the remote is current.
+2. On machine B: `rclone copy myremote:my-bucket/mempalace ~/.mempalace/palace`
+   before starting Claude Code.
+
+#### Merging two diverged palaces
+
+If two machines both accumulated sessions independently (no shared remote),
+merging is not automatic. Best recovery path:
+
+```bash
+# On the receiving machine, re-mine both sets of session traces:
+./.venv/bin/mempalace mine ~/.claude/projects/ --mode convos
+# Then copy the other machine's session traces over (~/.claude/projects/) and mine again.
+```
+
+Manually-written drawers (not derived from sessions) must be migrated by hand
+via `mempalace export` / `mempalace import` if those commands are available in
+your version, or by copying drawer files directly from the palace SQLite.
+
 ---
 
 ## Daily usage
