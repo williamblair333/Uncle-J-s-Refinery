@@ -160,14 +160,15 @@ dh_next_major_exists() {
 }
 
 # Check a Docker image pinned in docker-compose.yml.
-# Pass source="github:owner/repo" or source="dockerhub:image" or source="chainguard".
-check_docker_svc() {
-  local label=$1 image_fragment=$2 source=$3
-  local pinned latest
+# source: "github:owner/repo" | "dockerhub:image" | "chainguard"
+# mode:   "actionable" (default) — counts behind as UPGRADE, shown in red
+#         "infra"                 — informational only; only upgrade if Langfuse requires it
+_check_docker_svc() {
+  local label=$1 image_fragment=$2 source=$3 mode=${4:-actionable}
+  local pinned
 
   pinned=$(compose_tag "$image_fragment")
 
-  # Chainguard images are intentionally floating — auto-patched by Chainguard.
   if [[ "$source" == "chainguard" ]]; then
     printf "  ${GREEN}·${NC}  %-22s auto-patched by Chainguard (floating latest)\n" "$label"
     return
@@ -175,23 +176,27 @@ check_docker_svc() {
 
   if [[ -z "$pinned" ]]; then
     printf "  ${YELLOW}~${NC}  %-22s no tag pinned\n" "$label"
-    UPGRADES=$((UPGRADES + 1))
+    [[ "$mode" == "actionable" ]] && UPGRADES=$((UPGRADES + 1))
     return
   fi
 
-  local pinned_major next_major
+  local pinned_major
   pinned_major=$(echo "$pinned" | cut -d. -f1)
 
   if [[ "$source" == dockerhub:* ]]; then
-    # For Docker Hub official images: check if next major tag exists
+    local next_major
     next_major=$(dh_next_major_exists "${source#dockerhub:}" "$pinned_major")
     if [[ "$next_major" == "?" ]]; then
       printf "  ${YELLOW}?${NC}  %-22s :%-12s  fetch failed\n" "$label" "$pinned"
     elif [[ -n "$next_major" ]]; then
-      printf "  ${RED}↑${NC}  %-22s :%-12s  :${next_major} now available on Docker Hub\n" "$label" "$pinned"
-      UPGRADES=$((UPGRADES + 1))
+      if [[ "$mode" == "infra" ]]; then
+        printf "  ${DIM}·${NC}  %-22s :%-12s  :${next_major} exists — update only if Langfuse requires it\n" "$label" "$pinned"
+      else
+        printf "  ${RED}↑${NC}  %-22s :%-12s  :${next_major} now available\n" "$label" "$pinned"
+        UPGRADES=$((UPGRADES + 1))
+      fi
     else
-      printf "  ${GREEN}✓${NC}  %-22s :%-12s  no newer major on Docker Hub\n" "$label" "$pinned"
+      printf "  ${GREEN}✓${NC}  %-22s :%-12s  no newer major\n" "$label" "$pinned"
     fi
   else
     local latest latest_major
@@ -203,12 +208,17 @@ check_docker_svc() {
     latest_major=$(echo "$latest" | cut -d. -f1)
     if [[ "$pinned_major" == "$latest_major" ]]; then
       printf "  ${GREEN}✓${NC}  %-22s :%-12s  latest=%s (same major)\n" "$label" "$pinned" "$latest"
+    elif [[ "$mode" == "infra" ]]; then
+      printf "  ${DIM}·${NC}  %-22s :%-12s  latest=%s — update only if Langfuse requires it\n" "$label" "$pinned" "$latest"
     else
       printf "  ${RED}↑${NC}  %-22s :%-12s  latest=%s — new major available\n" "$label" "$pinned" "$latest"
       UPGRADES=$((UPGRADES + 1))
     fi
   fi
 }
+
+check_docker_svc()      { _check_docker_svc "$1" "$2" "$3" "actionable"; }
+check_docker_infra()    { _check_docker_svc "$1" "$2" "$3" "infra"; }
 
 echo ""
 printf "${BOLD}Stack Freshness — $(date '+%Y-%m-%d %H:%M')${NC}\n"
@@ -229,13 +239,15 @@ echo "git  (fetched from HEAD via uvx on each run):"
 check_uvx_git "serena" "oraios/serena"
 
 echo ""
-echo "docker  (pinned tags in docker-compose.yml — docker compose pull to upgrade):"
+echo "docker  (Langfuse — update when new version available):"
 check_docker_svc "langfuse"        "langfuse/langfuse:"     "github:langfuse/langfuse"
 check_docker_svc "langfuse-worker" "langfuse-worker:"       "github:langfuse/langfuse"
-check_docker_svc "clickhouse"      "clickhouse-server"      "github:ClickHouse/ClickHouse"
-check_docker_svc "minio"           "chainguard/minio"       "chainguard"
-check_docker_svc "redis"           "docker.io/redis:"       "github:redis/redis"
-check_docker_svc "postgres"        "docker.io/postgres:"    "dockerhub:postgres"
+echo ""
+echo "docker  (Langfuse infrastructure — update only if Langfuse release notes require it):"
+check_docker_infra "clickhouse"    "clickhouse-server"      "github:ClickHouse/ClickHouse"
+check_docker_infra "redis"         "docker.io/redis:"       "github:redis/redis"
+check_docker_infra "postgres"      "docker.io/postgres:"    "dockerhub:postgres"
+check_docker_svc   "minio"         "chainguard/minio"       "chainguard"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -247,9 +259,10 @@ if [[ $UPGRADES -gt 0 ]]; then
   echo "    cd $PROJ_ROOT && uv lock --upgrade-package jcodemunch-mcp \\"
   echo "      --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp \\"
   echo "      --upgrade-package mempalace && uv sync --inexact"
-  echo "  Docker services (review release notes before applying):"
-  echo "    docker compose -f $PROJ_ROOT/claude-code-langfuse-template/docker-compose.yml pull"
+  echo "  Langfuse (safe to pull when new version available):"
+  echo "    docker compose -f $PROJ_ROOT/claude-code-langfuse-template/docker-compose.yml pull langfuse langfuse-worker"
   echo "    docker compose -f $PROJ_ROOT/claude-code-langfuse-template/docker-compose.yml up -d"
+  echo "  Infrastructure (postgres/redis/clickhouse) — only update if Langfuse release notes require it."
 fi
 
 echo ""
