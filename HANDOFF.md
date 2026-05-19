@@ -25,7 +25,7 @@ Read this before touching anything. Work priorities are in order below.
 - **ClickHouse 24.8.14.39** — patched past CVE-2025-1385. Library bridge not running. No upgrade needed.
 - **Git-as-golden-reference**: all 4 packages (`jcodemunch`, `jdatamunch`, `jdocmunch`, `mempalace`) installed from GitHub SHA via `uv`, not PyPI. `pyproject.toml` uses `git+https://` sources; `uv.lock` pins exact commit SHAs.
 - **Post-merge hook**: fires on `git pull`, sends Telegram alert listing new features/installers/skills needing action
-- **Healthcheck checks 9a-9g**: SQLite FTS5 integrity, stale locks, HNSW guard, cron jobs, packages at git HEAD, post-merge hook symlink, stale MEMORY.md entries
+- **Healthcheck checks 9a-9h**: SQLite FTS5 integrity, stale locks, HNSW guard, cron jobs, packages at git HEAD, post-merge hook symlink, stale MEMORY.md entries, jdocmunch index non-empty
 - **Docker freshness** (`check-stack-freshness.sh`): actionable tier (`langfuse`, `langfuse-worker`) vs informational tier (`clickhouse`, `redis`, `postgres`, `minio`)
 - Git: clean, up to date with `origin/main`
 
@@ -45,6 +45,9 @@ All items from all previous HANDOFFs are resolved.
 - **MemPalace remote backup**: `mempalace-backup.sh` syncs to rclone remote when `MEMPALACE_REMOTE` is set
 - **install-reliability.sh symlink fix**: switched from `cp -r` to `ln -sfn` — skills are now live symlinks, `git pull` propagates skill updates automatically
 - **mempalace-health.py**: portable shebang + self-re-exec (no longer hardcoded to this machine's venv path)
+
+### 2026-05-19 (session 2)
+- **jdocmunch index wired**: `install.sh` step 4d indexes docs on first install; `post-merge-hook.sh` re-indexes on any `.md` change; healthcheck 9h guards against empty index
 
 ### 2026-05-19
 - **Git-as-golden-reference**: packages installed from GitHub SHA, freshness check diffs locked SHA vs GitHub HEAD

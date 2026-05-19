@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-19 — jdocmunch initial index wired into install + healthcheck
+
+### jdocmunch doc index now standard for all installs and updates
+
+`jdocmunch-mcp index-local` was never called during install, leaving `~/.doc-index/` empty and making all section-search tools (`search_sections`, `get_section`, `doc_list_repos`, etc.) silently return empty results. Three changes close this gap:
+
+- **`install.sh` step 4d**: `jdocmunch-mcp index-local --path $STACK_ROOT` runs after the jcodemunch init block. Idempotent — safe to re-run on upgrades. Log written to `.install-jdm-index.log`.
+- **`scripts/post-merge-hook.sh`**: When a `git pull` changes any `.md` file, the hook now silently re-indexes jdocmunch docs (logged to `state/post-merge.log`). No user action needed.
+- **`healthcheck.sh` check 9h**: Fails with a clear hint if `~/.doc-index/` is empty. Catches the "installed but never indexed" state before it silently degrades retrieval quality.
+
+---
+
 ## 2026-05-19 — Git-as-golden-reference, stale lock auto-clear, post-merge alerting, healthcheck gaps, stale-memory guard
 
 ### Git is now the golden reference for all Python packages

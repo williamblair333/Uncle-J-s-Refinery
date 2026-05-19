@@ -99,6 +99,20 @@ log "post-merge actions:"
 for action in "${ACTIONS[@]}"; do log "  $action"; done
 
 # ------------------------------------------------------------------
+# Auto re-index jdocmunch when any markdown doc changed
+# (silent — no user action needed; logged to post-merge.log)
+# ------------------------------------------------------------------
+if echo "$CHANGED" | grep -qE '\.md$'; then
+    JDOCMUNCH="$PROJ_ROOT/.venv/bin/jdocmunch-mcp"
+    if [[ -x "$JDOCMUNCH" ]]; then
+        log "post-merge: markdown changed — re-indexing jdocmunch docs..."
+        "$JDOCMUNCH" index-local --path "$PROJ_ROOT" >> "$LOG" 2>&1 && \
+            log "post-merge: jdocmunch re-index complete" || \
+            log "post-merge: jdocmunch re-index failed (non-fatal)"
+    fi
+fi
+
+# ------------------------------------------------------------------
 # Deliver: Telegram if configured, terminal otherwise
 # ------------------------------------------------------------------
 if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" ]]; then

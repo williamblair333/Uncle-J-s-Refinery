@@ -363,6 +363,21 @@ check_memory_staleness() {
     fi
 }
 
+# ----- 9h. jdocmunch index not empty ----------------------------------------
+check_docmunch_indexed() {
+    step "9h. jdocmunch: doc index has repos"
+    local idx="$HOME/.doc-index"
+    if [ ! -d "$idx" ] || [ -z "$(ls -A "$idx" 2>/dev/null)" ]; then
+        bad "jdocmunch index is empty — docs not searchable via jdocmunch"
+        hint "run: $REPO_ROOT/.venv/bin/jdocmunch-mcp index-local --path $REPO_ROOT"
+        record_fail "jdocmunch-empty-index"
+    else
+        local count
+        count=$(ls "$idx" | wc -l)
+        ok "jdocmunch index: ${count} repo(s) in $idx"
+    fi
+}
+
 # ----- 10. no leaked secrets in tree ----------------------------------------
 check_secrets() {
     step "10. working tree: no leaked secrets"
@@ -450,6 +465,7 @@ check_crons
 check_stack_freshness
 check_post_merge_hook
 check_memory_staleness
+check_docmunch_indexed
 check_secrets
 if [ "$MODE" = "full" ]; then
     check_verify

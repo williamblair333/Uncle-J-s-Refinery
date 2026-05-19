@@ -181,6 +181,25 @@ else
     warn "no *.json.tmpl files in $MCP_DIR; skipping render"
 fi
 
+# --- 4d. jdocmunch index-local (initial doc index) --------------------------
+# jdocmunch stores its index in ~/.doc-index/. Without an initial indexing
+# run the MCP server starts fine but doc_list_repos returns [] and all
+# section-search tools are useless. Re-runs are idempotent — the index is
+# rebuilt in place, so this step is safe to re-run on upgrades.
+step "Indexing project docs with jdocmunch"
+if [ -x "${EXE[jdocmunch]}" ]; then
+    if "${EXE[jdocmunch]}" index-local --path "$STACK_ROOT" \
+            >"$STACK_ROOT/.install-jdm-index.log" 2>&1; then
+        ok "jdocmunch doc index created at ~/.doc-index/"
+    else
+        warn "jdocmunch index-local failed (non-fatal)"
+        warn "Re-run manually: ${EXE[jdocmunch]} index-local --path $STACK_ROOT"
+        warn "Details: cat $STACK_ROOT/.install-jdm-index.log"
+    fi
+else
+    warn "jdocmunch-mcp binary not found; skipping doc index"
+fi
+
 # --- 5. Optional auto-registration with Claude Code -------------------------
 # Note: `claude mcp add -s user <name>` silently skips when the name is
 # already registered. `jcodemunch-mcp init` registers itself as
