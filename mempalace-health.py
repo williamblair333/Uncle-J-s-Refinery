@@ -1,4 +1,14 @@
-#!/opt/proj/Uncle-J-s-Refinery/.venv/bin/python
+#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+
+# Re-exec under the project venv if chromadb is not importable from this interpreter
+_venv_py = Path(__file__).resolve().parent / ".venv" / "bin" / "python"
+if _venv_py.exists() and Path(sys.executable).resolve() != _venv_py.resolve():
+    os.execv(str(_venv_py), [str(_venv_py)] + sys.argv)
+del _venv_py
+
 """
 MemPalace health check — run before or after MCP server starts.
 Exits 0 if healthy, 1 if degraded (warnings), 2 if critical.
