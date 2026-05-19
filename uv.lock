@@ -388,14 +388,14 @@ openai = [
 
 [package.metadata]
 requires-dist = [
-    { name = "jcodemunch-mcp", extras = ["anthropic"], marker = "extra == 'anthropic'" },
-    { name = "jcodemunch-mcp", extras = ["gemini"], marker = "extra == 'gemini'" },
-    { name = "jcodemunch-mcp", extras = ["groq"], marker = "extra == 'groq'" },
-    { name = "jcodemunch-mcp", extras = ["local-embed"], specifier = ">=1.56.0" },
-    { name = "jcodemunch-mcp", extras = ["openai"], marker = "extra == 'openai'" },
-    { name = "jdatamunch-mcp" },
-    { name = "jdocmunch-mcp" },
-    { name = "mempalace" },
+    { name = "jcodemunch-mcp", extras = ["anthropic"], marker = "extra == 'anthropic'", git = "https://github.com/jgravelle/jcodemunch-mcp.git" },
+    { name = "jcodemunch-mcp", extras = ["gemini"], marker = "extra == 'gemini'", git = "https://github.com/jgravelle/jcodemunch-mcp.git" },
+    { name = "jcodemunch-mcp", extras = ["groq"], marker = "extra == 'groq'", git = "https://github.com/jgravelle/jcodemunch-mcp.git" },
+    { name = "jcodemunch-mcp", extras = ["local-embed"], git = "https://github.com/jgravelle/jcodemunch-mcp.git" },
+    { name = "jcodemunch-mcp", extras = ["openai"], marker = "extra == 'openai'", git = "https://github.com/jgravelle/jcodemunch-mcp.git" },
+    { name = "jdatamunch-mcp", git = "https://github.com/jgravelle/jdatamunch-mcp.git" },
+    { name = "jdocmunch-mcp", git = "https://github.com/jgravelle/jdocmunch-mcp.git" },
+    { name = "mempalace", git = "https://github.com/MemPalace/mempalace.git" },
     { name = "uv", specifier = ">=0.5" },
 ]
 provides-extras = ["anthropic", "openai", "gemini", "groq"]
@@ -917,18 +917,14 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.70.0"
-source = { registry = "https://pypi.org/simple" }
+version = "1.108.19"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#5dc9cbdd199e99fd4a4ba722e4c0938c6e908619" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
     { name = "pathspec" },
     { name = "pyyaml" },
     { name = "tree-sitter-language-pack" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/28/bd/740db9490b6e5e4aa790b3efc08930d9f5c0b2c3b941b7a81c4c86f76cb6/jcodemunch_mcp-1.70.0.tar.gz", hash = "sha256:1e8d13480ee1147ff8a95418d6dec3b8b4dca3f98f9f776995237036240ee99f", size = 1630855, upload-time = "2026-04-19T21:56:04.935Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/98/356189b95e1702f3162b4aef171151cbe512bf508f9bce53c8e6f12ca2fc/jcodemunch_mcp-1.70.0-py3-none-any.whl", hash = "sha256:818e1edc2ba743e8f37ebd5b04f282bdf151e80ab13b7a6d4b4e9f38f3111f05", size = 660506, upload-time = "2026-04-19T21:56:02.052Z" },
 ]
 
 [package.optional-dependencies]
@@ -950,30 +946,22 @@ openai = [
 
 [[package]]
 name = "jdatamunch-mcp"
-version = "0.8.4"
-source = { registry = "https://pypi.org/simple" }
+version = "1.13.0"
+source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#a6cc4d6232c31c5b1994acc22f82c1ccc99fe96c" }
 dependencies = [
     { name = "charset-normalizer" },
     { name = "mcp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/94/90/3e917c89bc298ed5054f3b78bef7720f7fbb019481a5c3cc828e849cdb50/jdatamunch_mcp-0.8.4.tar.gz", hash = "sha256:1a07f2df7bd505369c1d8b4d50f91ed3c99a27d8183c6700f0dcbf5a9abe59d3", size = 98958, upload-time = "2026-04-15T16:21:39.472Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/ee/3ac228f3b83b3d58cc2d77551944fc022565b98bc8fbee58ee0d7278a726/jdatamunch_mcp-0.8.4-py3-none-any.whl", hash = "sha256:cb39b3f2d7a21f6fd13739a2af492316986d8e0a3adeb40eb3529574141a5510", size = 80754, upload-time = "2026-04-15T16:21:38.53Z" },
-]
 
 [[package]]
 name = "jdocmunch-mcp"
-version = "1.9.0"
-source = { registry = "https://pypi.org/simple" }
+version = "1.66.3"
+source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#baacb446ececf2a6eb483d52d7c6a18be3e699f2" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
     { name = "pathspec" },
     { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/10/72/502e492c4d30b07ce975e06ab97af6f07e5135d9c7665f34393f999e06cf/jdocmunch_mcp-1.9.0.tar.gz", hash = "sha256:ae8be9f676d68bd5b2fd0e3c50dd7fc90d87d74bf55b20b1f548867481322cb0", size = 6128732, upload-time = "2026-04-20T01:30:05.952Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/b9/f727d6d995f69c9b73d359670f9426aa48ae81535ebcae79b3a419edeaa2/jdocmunch_mcp-1.9.0-py3-none-any.whl", hash = "sha256:89fc7a1b6dbfe27f029a4a1e6100f119ea0b932917f15dcfafc309168ac4fc5a", size = 93774, upload-time = "2026-04-20T01:30:00.311Z" },
 ]
 
 [[package]]
@@ -1161,15 +1149,11 @@ wheels = [
 
 [[package]]
 name = "mempalace"
-version = "3.3.1"
-source = { registry = "https://pypi.org/simple" }
+version = "3.3.5"
+source = { git = "https://github.com/MemPalace/mempalace.git#1b94f4efb4949765d6965936476c236df13fd108" }
 dependencies = [
     { name = "chromadb" },
     { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2d/04/ba46c5fcc9c51c2809589457702c37b73e1c1dae557c22384d9b718d57aa/mempalace-3.3.1.tar.gz", hash = "sha256:abdd98e0c4e7afa3a7c85b1f8b410ee8034c4a0f9fef14ddff1ffc30fcba620d", size = 14829640, upload-time = "2026-04-18T04:20:04.592Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9b/07/9b07c59bd997c6b45ff6fd542604e3bf99de6698248d3d2dc098e84168fb/mempalace-3.3.1-py3-none-any.whl", hash = "sha256:09ffd183bc9782e2435fbd4f50286385d0b56b374a7aaaa9f0e1509fdae806cb", size = 183686, upload-time = "2026-04-18T04:19:55.252Z" },
 ]
 
 [[package]]

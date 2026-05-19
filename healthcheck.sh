@@ -226,7 +226,121 @@ check_skills() {
     fi
 }
 
-# ----- 9. no leaked secrets in tree ----------------------------------------
+# ----- 9. MemPalace health: SQLite integrity + no stale mine locks ----------
+check_mempalace() {
+    step "9a. MemPalace: SQLite FTS5 integrity"
+    local db="$HOME/.mempalace/palace/chroma.sqlite3"
+    if [ ! -f "$db" ]; then
+        bad "palace db not found at $db — MemPalace not initialised"
+        hint "run: $REPO_ROOT/.venv/bin/mempalace mine ~/.claude/projects/ --mode convos --wing conversations"
+        record_fail "mempalace-db-missing"
+        return
+    fi
+    local result
+    result="$(sqlite3 "$db" 'PRAGMA integrity_check;' 2>&1)"
+    if [ "$result" = "ok" ]; then
+        ok "SQLite integrity_check: ok"
+    else
+        bad "SQLite integrity failure: $result"
+        hint "repair: sqlite3 $db \"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild');\""
+        record_fail "mempalace-sqlite"
+    fi
+
+    step "9b. MemPalace: no stale mine locks"
+    local stale=()
+    for lock in "$REPO_ROOT/state/mempalace-mine-convos.lock" "$REPO_ROOT/state/mempalace-mine-project.lock"; do
+        if [ -d "$lock" ]; then
+            local age=$(( $(date +%s) - $(stat -c %Y "$lock" 2>/dev/null || echo 0) ))
+            if [ "$age" -gt 1800 ]; then
+                stale+=("$(basename "$lock") (${age}s old)")
+            fi
+        fi
+    done
+    if [ ${#stale[@]} -eq 0 ]; then
+        ok "no stale mine locks"
+    else
+        bad "stale locks: ${stale[*]}"
+        hint "run: rmdir $REPO_ROOT/state/mempalace-mine-*.lock"
+        record_fail "mempalace-stale-lock"
+    fi
+
+    step "9c. MemPalace: HNSW not corrupted"
+    local corrupted=0
+    for f in "$HOME/.mempalace/palace"/*/link_lists.bin; do
+        [ -f "$f" ] || continue
+        local sz
+        sz=$(du -m "$f" 2>/dev/null | cut -f1)
+        if [ "${sz:-0}" -gt 200 ]; then
+            bad "HNSW corruption: $f is ${sz}MB (>200MB limit)"
+            record_fail "mempalace-hnsw-corruption"
+            corrupted=1
+        fi
+    done
+    [ "$corrupted" -eq 0 ] && ok "HNSW link_lists.bin sizes normal"
+}
+
+# ----- 9d. crons: all expected jobs registered -----------------------------
+check_crons() {
+    step "9d. crontab: all Uncle J cron jobs registered"
+    local tab
+    tab="$(crontab -l 2>/dev/null || true)"
+    local missing=()
+    declare -A EXPECTED=(
+        [uncle-j-stack-alerts-send]="bash $REPO_ROOT/scripts/stack-alerts-send.sh"
+        [uncle-j-stack-alerts-poll]="bash $REPO_ROOT/scripts/stack-alerts-poll.sh"
+        [uncle-j-telegram-gateway]="bash $REPO_ROOT/scripts/telegram-gateway-poll.sh"
+        [uncle-j-session-stats]="features/session-stats/stats.sh"
+        [uncle-j-dreaming]="features/dreaming/dream.sh"
+    )
+    for label in "${!EXPECTED[@]}"; do
+        if printf '%s\n' "$tab" | grep -q "$label"; then
+            ok "cron: $label"
+        else
+            missing+=("$label")
+        fi
+    done
+    if [ ${#missing[@]} -gt 0 ]; then
+        for m in "${missing[@]}"; do
+            bad "cron missing: $m"
+        done
+        hint "run: bash $REPO_ROOT/install.sh   (re-registers crons)"
+        record_fail "cron-missing(${missing[0]})"
+    fi
+}
+
+# ----- 9e. stack freshness: all git packages at HEAD -----------------------
+check_stack_freshness() {
+    step "9e. stack freshness: git packages at HEAD"
+    local freshness_exit=0
+    bash "$REPO_ROOT/scripts/check-stack-freshness.sh" >/dev/null 2>&1 || freshness_exit=$?
+    if [ "$freshness_exit" -eq 0 ]; then
+        ok "all packages at HEAD"
+    else
+        bad "one or more packages behind HEAD — run check-stack-freshness.sh for details"
+        hint "run: cd $REPO_ROOT && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact"
+        record_fail "stack-not-at-head"
+    fi
+}
+
+# ----- 9f. git post-merge hook wired ---------------------------------------
+check_post_merge_hook() {
+    step "9f. git post-merge hook wired"
+    local hook="$REPO_ROOT/.git/hooks/post-merge"
+    local expected_target="$REPO_ROOT/scripts/post-merge-hook.sh"
+    if [ -L "$hook" ] && [ "$(readlink "$hook")" = "$expected_target" ]; then
+        ok "post-merge hook -> $expected_target"
+    elif [ -x "$hook" ]; then
+        bad "post-merge hook exists but is not the expected symlink"
+        hint "run: ln -sfn $expected_target $hook"
+        record_fail "post-merge-hook-wrong"
+    else
+        bad "post-merge hook not installed"
+        hint "run: ln -sfn $expected_target $hook"
+        record_fail "post-merge-hook-missing"
+    fi
+}
+
+# ----- 10. no leaked secrets in tree ----------------------------------------
 check_secrets() {
     step "10. working tree: no leaked secrets"
     local pattern='sk-lf-[a-f0-9]{16,}|PASSWORD=[a-zA-Z0-9]{8,}'
@@ -308,6 +422,10 @@ check_langfuse_compose
 check_langfuse_api
 check_langfuse_sdk
 check_skills
+check_mempalace
+check_crons
+check_stack_freshness
+check_post_merge_hook
 check_secrets
 if [ "$MODE" = "full" ]; then
     check_verify

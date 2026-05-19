@@ -275,6 +275,18 @@ Installed. What to do now:
 
 EOF
 
+# --- 6b. Wire git post-merge hook -------------------------------------------
+step "Wiring git post-merge hook"
+_HOOK_SRC="$STACK_ROOT/scripts/post-merge-hook.sh"
+_HOOK_DEST="$STACK_ROOT/.git/hooks/post-merge"
+if [[ -d "$STACK_ROOT/.git" ]]; then
+  chmod +x "$_HOOK_SRC"
+  ln -sfn "$_HOOK_SRC" "$_HOOK_DEST"
+  ok "post-merge hook installed — git pull will now alert on new features or config changes"
+else
+  warn "Not a git repo — skipping post-merge hook (re-run install.sh after cloning)"
+fi
+
 # --- 7. Optional features ----------------------------------------------------
 step "Optional features"
 source "$STACK_ROOT/lib/feature-helpers.sh"

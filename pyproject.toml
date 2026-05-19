@@ -5,15 +5,15 @@ description = "jMunch (code/data/docs) + MemPalace retrieval stack for AI agents
 readme = "README.md"
 requires-python = ">=3.11"
 
-# Core stack. All four are Python packages on PyPI.
+# Core stack — pinned to git HEAD so we track every commit, not just PyPI releases.
 # jcodemunch-mcp[local-embed] pulls in the bundled ONNX encoder so semantic
-# search works offline without API keys. Drop the extra if you want a
-# lighter install.
+# search works offline without API keys. Drop the extra if you want a lighter install.
+# To upgrade a package to latest HEAD: uv lock --upgrade-package <name> && uv sync --inexact
 dependencies = [
-    "jcodemunch-mcp[local-embed] >=1.56.0",
-    "jdatamunch-mcp",
-    "jdocmunch-mcp",
-    "mempalace",
+    "jcodemunch-mcp[local-embed] @ git+https://github.com/jgravelle/jcodemunch-mcp.git",
+    "jdatamunch-mcp @ git+https://github.com/jgravelle/jdatamunch-mcp.git",
+    "jdocmunch-mcp @ git+https://github.com/jgravelle/jdocmunch-mcp.git",
+    "mempalace @ git+https://github.com/MemPalace/mempalace.git",
     # uv is not a dep of the stack itself but we pin a recent version so
     # `uv run` resolves consistently for ad-hoc scripts.
     "uv >=0.5",
@@ -38,3 +38,9 @@ groq      = ["jcodemunch-mcp[groq]"]
 [tool.uv]
 # Keep the lockfile deterministic.
 managed = true
+
+[tool.uv.sources]
+jcodemunch-mcp = { git = "https://github.com/jgravelle/jcodemunch-mcp.git" }
+jdatamunch-mcp = { git = "https://github.com/jgravelle/jdatamunch-mcp.git" }
+jdocmunch-mcp  = { git = "https://github.com/jgravelle/jdocmunch-mcp.git" }
+mempalace      = { git = "https://github.com/MemPalace/mempalace.git" }

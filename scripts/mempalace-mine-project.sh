@@ -10,11 +10,18 @@ LOCK="$PROJ_ROOT/state/mempalace-mine-project.lock"
 
 [[ -x "$MEMPALACE" ]] || exit 0
 
-# Bail if another mine-project is already running
+# Bail if another mine-project is already running; clear stale locks (>30 min)
 if ! mkdir "$LOCK" 2>/dev/null; then
   log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"; }
-  log "mine-project skipped: already running (lock: $LOCK)"
-  exit 0
+  LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK" 2>/dev/null || echo 0) ))
+  if [[ "$LOCK_AGE" -gt 1800 ]]; then
+    log "mine-project: stale lock (${LOCK_AGE}s) — clearing and proceeding"
+    rmdir "$LOCK" 2>/dev/null || true
+    mkdir "$LOCK" || { log "mine-project: failed to acquire lock after clearing stale"; exit 1; }
+  else
+    log "mine-project skipped: already running (lock: $LOCK, age: ${LOCK_AGE}s)"
+    exit 0
+  fi
 fi
 trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 

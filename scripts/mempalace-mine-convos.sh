@@ -38,10 +38,17 @@ if ! hnsw_check "pre-mine"; then
   exit 1
 fi
 
-# Bail if another mine-convos is already running
+# Bail if another mine-convos is already running; clear stale locks (>30 min)
 if ! mkdir "$LOCK" 2>/dev/null; then
-  log "mine-convos skipped: already running (lock: $LOCK)"
-  exit 0
+  LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK" 2>/dev/null || echo 0) ))
+  if [[ "$LOCK_AGE" -gt 1800 ]]; then
+    log "mine-convos: stale lock (${LOCK_AGE}s) — clearing and proceeding"
+    rmdir "$LOCK" 2>/dev/null || true
+    mkdir "$LOCK" || { log "mine-convos: failed to acquire lock after clearing stale"; exit 1; }
+  else
+    log "mine-convos skipped: already running (lock: $LOCK, age: ${LOCK_AGE}s)"
+    exit 0
+  fi
 fi
 trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 

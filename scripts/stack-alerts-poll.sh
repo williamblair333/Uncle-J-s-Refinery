@@ -63,14 +63,16 @@ case "$reply" in
     rm -f "$STATE_FILE"
 
     pkg_list=$(python3 -c "import sys,json; print(' '.join(json.loads(sys.argv[1])))" "$packages")
+    upgrade_flags=$(python3 -c "import sys,json; print(' '.join('--upgrade-package ' + p for p in json.loads(sys.argv[1])))" "$packages")
 
-    upgrade_prompt="Upgrade these Python packages in the Uncle J's Refinery venv.
-Run exactly: cd $PROJ_ROOT && uv pip install --upgrade $pkg_list
-Then check if the release notes for these packages require any changes to CLAUDE.md.
-Respond with one sentence: what was upgraded and whether CLAUDE.md needed changes."
+    upgrade_prompt="Upgrade these git-tracked packages in the Uncle J's Refinery venv to their latest HEAD commits.
+Run exactly: cd $PROJ_ROOT && uv lock $upgrade_flags && uv sync --inexact
+Git is the golden reference — do not use uv pip install --upgrade.
+Then check if any commit messages for these packages require changes to CLAUDE.md.
+Respond with one sentence: what was upgraded (include short SHAs) and whether CLAUDE.md needed changes."
 
     if ! result=$("$CLAUDE_BIN" --allowed-tools 'Bash' -p "$upgrade_prompt" 2>/dev/null); then
-      result="Upgrade command failed — check logs and run manually: uv pip install --upgrade $pkg_list"
+      result="Upgrade command failed — check logs and run manually: cd $PROJ_ROOT && uv lock $upgrade_flags && uv sync --inexact"
     fi
 
     log "Upgrade result: $result"
