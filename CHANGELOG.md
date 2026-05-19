@@ -2,6 +2,46 @@
 
 ---
 
+## 2026-05-19 — Git-as-golden-reference, stale lock auto-clear, post-merge alerting, healthcheck gaps
+
+### Git is now the golden reference for all Python packages
+
+All four core packages (`jcodemunch-mcp`, `jdatamunch-mcp`, `jdocmunch-mcp`, `mempalace`) are now installed from their GitHub repos via `uv` rather than from PyPI. `pyproject.toml` uses `git+https://` sources; `uv.lock` pins exact commit SHAs. The daily freshness check now compares the locked SHA against GitHub HEAD — catching merged fixes before they appear on PyPI.
+
+Upgrade command changed from `uv pip install --upgrade` to:
+```bash
+uv lock --upgrade-package <name> && uv sync --inexact
+```
+
+### MemPalace stale lock auto-clear
+
+`scripts/mempalace-mine-convos.sh` and `scripts/mempalace-mine-project.sh` now auto-clear `mkdir`-based locks older than 30 minutes instead of silently skipping. A SIGKILL'd process had left locks in place for 4 days, silently blocking all session mining. The 30-minute threshold is safe (no real mine run takes that long) and means future killed processes recover automatically on the next hook invocation.
+
+### Post-merge hook — new user and pull alerting
+
+`scripts/post-merge-hook.sh` fires on every `git pull` on this repo. It detects new feature installers, changed `install.sh`, updated `CLAUDE.md`, new global skills, and new scripts — then sends a Telegram alert (or terminal output) listing what needs action. `install.sh` wires the hook automatically (step 6b), so new users get it from the first install.
+
+### Healthcheck gaps closed (healthcheck.sh)
+
+Six new checks added, all running in `--quick` mode so failures surface at session start:
+
+- `9a` MemPalace SQLite FTS5 `PRAGMA integrity_check`
+- `9b` Stale mine locks (>30 min = fail)
+- `9c` HNSW `link_lists.bin` corruption guard (>200 MB = fail)
+- `9d` All five Uncle J cron jobs present (stack-alerts-send/poll, telegram-gateway, session-stats, dreaming)
+- `9e` All Python packages at git HEAD
+- `9f` Post-merge hook symlink wired
+
+### Docker service freshness checks (check-stack-freshness.sh)
+
+Added tracking for all six Langfuse stack images. Split into two tiers:
+
+- **Actionable** (`langfuse`, `langfuse-worker`): flagged red `↑` when behind, counted in UPGRADES
+- **Informational** (`clickhouse`, `redis`, `postgres`): shown as dimmed `·` with "update only if Langfuse requires it" — these are Langfuse infrastructure and should only change when Langfuse release notes say so
+- **MinIO** (Chainguard): auto-patched by Chainguard, shown as `·` OK by design
+
+---
+
 ## 2026-05-18 — MemPalace portability, install-reliability symlink fix, health script portability
 
 ### MemPalace remote backup (multi-machine support)

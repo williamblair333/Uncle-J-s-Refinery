@@ -323,14 +323,37 @@ bash features/stack-alerts/install.sh
 
 Requires a Telegram bot token and your chat ID (see `features/stack-alerts/README.md`).
 Once installed, a daily cron job checks for new releases, invokes Claude to assess relevance,
-and sends you an inline-button Telegram pitch. Tap ✅ and
-Claude upgrades the package; tap ❌ and it's silently dropped.
+and sends you an inline-button Telegram pitch. Tap ✅ and Claude upgrades the package; tap ❌ and it's silently dropped.
+
+**Git is the golden reference.** The four core Python packages (`jcodemunch-mcp`, `jdatamunch-mcp`, `jdocmunch-mcp`, `mempalace`) are installed from their GitHub repos via `uv`, not from PyPI. The lockfile (`uv.lock`) pins exact commit SHAs. The freshness check compares the locked SHA against `HEAD` on each repo — a PyPI release is not required for an update to be available.
 
 To run the freshness check manually at any time:
 
 ```bash
 bash scripts/check-stack-freshness.sh
 ```
+
+The check covers three tiers:
+
+| Tier | Tools | Action threshold |
+|---|---|---|
+| **git packages** | jcodemunch, jdatamunch, jdocmunch, mempalace | Behind HEAD → upgrade |
+| **Langfuse** | langfuse, langfuse-worker | New version available → pull |
+| **Langfuse infrastructure** | ClickHouse, Redis, Postgres | New major exists but shown as informational — only update if Langfuse release notes require it |
+
+MinIO uses a Chainguard image that auto-patches CVEs without changing behavior — no action needed.
+
+To upgrade Python packages to latest HEAD:
+
+```bash
+cd /opt/proj/Uncle-J-s-Refinery
+uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp \
+  --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact
+```
+
+### Post-merge hook — automatic pull alerts
+
+`install.sh` wires a `git post-merge` hook that fires every time you `git pull` on this repo. It detects new features, changed `install.sh`, updated `CLAUDE.md`, and new skills, then sends a Telegram alert (or prints to terminal if Telegram isn't configured) listing what needs action. New users get this automatically after running `install.sh`.
 
 ### 11. (Optional) GitHub Webhook Server
 
@@ -544,7 +567,13 @@ mapped to their fixes:
 | `jcodemunch-wrong-scope` | `claude mcp remove jcodemunch -s local ; claude mcp remove jcodemunch -s project` |
 | `mcp-timeout` | Re-run `./install.sh` — step 5b rewrites `MCP_TIMEOUT=60000` |
 | `docker-down` / `langfuse-unhealthy` | `docker compose -f claude-code-langfuse-template/docker-compose.yml up -d` |
-| `langfuse-sdk-missing` | `uv pip install --python .venv/bin/python --upgrade 'langfuse>=3.0,<4'` (or re-run `./install-langfuse.sh`) |
+| `langfuse-sdk-missing` | Re-run `./install-langfuse.sh` |
+| `mempalace-sqlite` | `sqlite3 ~/.mempalace/palace/chroma.sqlite3 "INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild');"` |
+| `mempalace-stale-lock` | `rmdir state/mempalace-mine-convos.lock state/mempalace-mine-project.lock 2>/dev/null` — or wait; locks now auto-clear after 30 min |
+| `mempalace-hnsw-corruption` | Run `/mempalace-hnsw-corruption-fix` skill |
+| `cron-missing(...)` | Re-run `./install.sh` — crons are registered in step 6d |
+| `stack-not-at-head` | `cd /opt/proj/Uncle-J-s-Refinery && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact` |
+| `post-merge-hook-missing` | `ln -sfn /opt/proj/Uncle-J-s-Refinery/scripts/post-merge-hook.sh /opt/proj/Uncle-J-s-Refinery/.git/hooks/post-merge` |
 | `secrets` | Review the grep hits; add to `.gitignore` or redact |
 | `hook-no-fire` / `trace-api` (full mode only) | Check `tail -5 ~/.claude/state/langfuse_hook.log`, then verify `from langfuse import Langfuse` works from the stack venv |
 

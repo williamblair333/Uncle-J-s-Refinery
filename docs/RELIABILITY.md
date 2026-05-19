@@ -178,11 +178,16 @@ ls -lh ~/.mempalace/palace/*/link_lists.bin
 
 ### Mine concurrency lockfiles
 
-`scripts/mempalace-mine-convos.sh` and `scripts/mempalace-mine-project.sh` both use `mkdir`-based lockfiles in `state/`. A hard-killed process (SIGKILL) may leave the lock directory behind. Clear it:
+`scripts/mempalace-mine-convos.sh` and `scripts/mempalace-mine-project.sh` both use `mkdir`-based lockfiles in `state/`. A hard-killed process (SIGKILL) may leave the lock directory behind.
+
+**Auto-recovery:** locks older than 30 minutes are automatically cleared by the scripts themselves on the next invocation. No manual action needed unless you want to unblock immediately:
+
 ```bash
 rmdir state/mempalace-mine-convos.lock 2>/dev/null
 rmdir state/mempalace-mine-project.lock 2>/dev/null
 ```
+
+The `healthcheck.sh` also detects stale locks (>30 min) and reports `mempalace-stale-lock` in the SessionStart banner, so silent blackouts are caught at session open rather than discovered after days of missing mines.
 
 The lockfiles exist because `mempalace mine` has no built-in concurrency guard, and two Stop hooks (project + global settings) both invoke the convos miner on every session end.
 
