@@ -33,8 +33,12 @@ for skill in prior-art-check judge outcomes orchestrator per-task-review-cycle p
         warn "skill source missing (will install when created): $src"
         continue
     fi
-    mkdir -p "$dst"
-    cp -r "$src/." "$dst/"
+    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
+        ok "skill already linked: $skill"
+        continue
+    fi
+    rm -rf "$dst"
+    ln -sfn "$src" "$dst"
     ok "skill installed: $skill"
 done
 
