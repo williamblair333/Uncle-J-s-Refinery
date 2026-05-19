@@ -56,6 +56,9 @@ langfuse_state.json
 *.bak.*
 *~
 
+# ── Generated merged CLAUDE.md (install.sh produces this at runtime) ────
+CLAUDE.md.merged
+
 # ── Docker ──────────────────────────────────────────────────────────────
 docker-compose.override.yml
 .docker/

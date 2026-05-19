@@ -346,7 +346,7 @@ MinIO uses a Chainguard image that auto-patches CVEs without changing behavior �
 To upgrade Python packages to latest HEAD:
 
 ```bash
-cd /opt/proj/Uncle-J-s-Refinery
+cd "$STACK_ROOT"   # wherever you cloned the repo
 uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp \
   --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact
 ```
@@ -572,8 +572,8 @@ mapped to their fixes:
 | `mempalace-stale-lock` | `rmdir state/mempalace-mine-convos.lock state/mempalace-mine-project.lock 2>/dev/null` — or wait; locks now auto-clear after 30 min |
 | `mempalace-hnsw-corruption` | Run `/mempalace-hnsw-corruption-fix` skill |
 | `cron-missing(...)` | Re-run `./install.sh` — crons are registered in step 6d |
-| `stack-not-at-head` | `cd /opt/proj/Uncle-J-s-Refinery && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact` |
-| `post-merge-hook-missing` | `ln -sfn /opt/proj/Uncle-J-s-Refinery/scripts/post-merge-hook.sh /opt/proj/Uncle-J-s-Refinery/.git/hooks/post-merge` |
+| `stack-not-at-head` | `cd "$STACK_ROOT" && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact` |
+| `post-merge-hook-missing` | `ln -sfn "$STACK_ROOT/scripts/post-merge-hook.sh" "$STACK_ROOT/.git/hooks/post-merge"` |
 | `secrets` | Review the grep hits; add to `.gitignore` or redact |
 | `hook-no-fire` / `trace-api` (full mode only) | Check `tail -5 ~/.claude/state/langfuse_hook.log`, then verify `from langfuse import Langfuse` works from the stack venv |
 
@@ -607,7 +607,7 @@ so re-runs always converge. If you see this on an older install:
 
 ```bash
 claude mcp remove jcodemunch
-claude mcp add -s user jcodemunch /opt/proj/Uncle-J-s-Refinery/.venv/bin/jcodemunch-mcp
+claude mcp add -s user jcodemunch "$STACK_ROOT/.venv/bin/jcodemunch-mcp"
 # or just re-run:
 ./install.sh --auto-register
 ```

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# One-shot installer for the Claude retrieval stack on Linux / macOS.
+# One-shot installer for the Claude retrieval stack on Debian/Ubuntu Linux.
 #
 # Usage:
-#   ./install.sh                 # install stack, print next-step guidance
-#   ./install.sh --auto-register # also register servers with Claude Code CLI
-#   ./install.sh --skip-optional # skip MotherDuck warm-cache
+#   ./install.sh                    # install stack, print next-step guidance
+#   ./install.sh --auto-register    # also register servers with Claude Code CLI
+#   ./install.sh --skip-optional    # skip MotherDuck warm-cache
+#   ./install.sh --non-interactive  # skip all optional-feature prompts (CI/automation)
 #
 # Re-runs are idempotent.
 
@@ -14,12 +15,15 @@ cd "$STACK_ROOT"
 
 AUTO_REGISTER=0
 SKIP_OPTIONAL=0
+NON_INTERACTIVE=0
 for arg in "$@"; do
     case "$arg" in
-        --auto-register) AUTO_REGISTER=1 ;;
-        --skip-optional) SKIP_OPTIONAL=1 ;;
+        --auto-register)   AUTO_REGISTER=1 ;;
+        --skip-optional)   SKIP_OPTIONAL=1 ;;
+        --non-interactive) NON_INTERACTIVE=1 ;;
     esac
 done
+export NON_INTERACTIVE
 
 step()  { printf '\n==> %s\n'  "$*"; }
 ok()    { printf '    OK  %s\n' "$*"; }
@@ -267,6 +271,40 @@ done
 
 # --- 6. Next-step guidance --------------------------------------------------
 step "Next steps"
+# --- 6b. Install routing policy (CLAUDE.md) ---------------------------------
+step "Installing retrieval routing policy (CLAUDE.md)"
+_CLAUDE_SRC="$STACK_ROOT/CLAUDE.md"
+_CLAUDE_DEST="$HOME/.claude/CLAUDE.md"
+mkdir -p "$HOME/.claude"
+if [ -f "$_CLAUDE_DEST" ]; then
+    _BACKUP="$_CLAUDE_DEST.bak.$(date +%Y%m%d%H%M%S)"
+    cp "$_CLAUDE_DEST" "$_BACKUP"
+    ok "backed up existing CLAUDE.md → $(basename "$_BACKUP")"
+fi
+cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"
+ok "routing policy installed → $_CLAUDE_DEST"
+ok "(copy to a project directory too if you want per-project overrides)"
+
+# --- 6c. Wire git post-merge hook (opt-in) ----------------------------------
+step "Optional features"
+source "$STACK_ROOT/lib/feature-helpers.sh"
+echo ""
+if [[ -d "$STACK_ROOT/.git" ]]; then
+    _HOOK_SRC="$STACK_ROOT/scripts/post-merge-hook.sh"
+    _HOOK_DEST="$STACK_ROOT/.git/hooks/post-merge"
+    if prompt_yes_no "Wire git post-merge hook (alerts on stack changes after git pull)?" n; then
+        chmod +x "$_HOOK_SRC"
+        ln -sfn "$_HOOK_SRC" "$_HOOK_DEST"
+        ok "post-merge hook installed"
+    else
+        ok "skipped post-merge hook"
+    fi
+fi
+
+if prompt_yes_no "Enable automated stack update alerts (Telegram)?"; then
+  bash "$STACK_ROOT/features/stack-alerts/install.sh"
+fi
+
 cat <<EOF
 
 Installed. What to do now:
@@ -277,39 +315,15 @@ Installed. What to do now:
      Cursor          -> mcp-clients/cursor-mcp.json
      Windsurf        -> mcp-clients/windsurf-mcp.json
 
-2. Install CLAUDE.md (routing policy) globally OR per-project:
-     Global : cp CLAUDE.md ~/.claude/CLAUDE.md
-     Project: cp CLAUDE.md /path/to/repo/CLAUDE.md
-
-3. Bootstrap MemPalace for a project (one-time per project):
+2. Bootstrap MemPalace for a project (one-time per project):
      $VENV_BIN/mempalace init ~/path/to/project
      $VENV_BIN/mempalace mine ~/path/to/project
      $VENV_BIN/mempalace mine ~/.claude/projects/ --mode convos
 
-4. Sanity-check:
+3. Sanity-check:
      ./verify.sh
 
-5. Get free Context7 API key (optional, higher rate limits):
+4. Get free Context7 API key (optional, higher rate limits):
      https://context7.com/dashboard  -> put CONTEXT7_API_KEY=... in ~/.claude/.env
 
 EOF
-
-# --- 6b. Wire git post-merge hook -------------------------------------------
-step "Wiring git post-merge hook"
-_HOOK_SRC="$STACK_ROOT/scripts/post-merge-hook.sh"
-_HOOK_DEST="$STACK_ROOT/.git/hooks/post-merge"
-if [[ -d "$STACK_ROOT/.git" ]]; then
-  chmod +x "$_HOOK_SRC"
-  ln -sfn "$_HOOK_SRC" "$_HOOK_DEST"
-  ok "post-merge hook installed — git pull will now alert on new features or config changes"
-else
-  warn "Not a git repo — skipping post-merge hook (re-run install.sh after cloning)"
-fi
-
-# --- 7. Optional features ----------------------------------------------------
-step "Optional features"
-source "$STACK_ROOT/lib/feature-helpers.sh"
-echo ""
-if prompt_yes_no "Enable automated stack update alerts (Telegram)?"; then
-  bash "$STACK_ROOT/features/stack-alerts/install.sh"
-fi

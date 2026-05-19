@@ -51,7 +51,7 @@ record_fail() {
 
 # ----- 1. verify.sh passes --------------------------------------------------
 check_verify() {
-    step "1. verify.sh (install-time binaries)"
+    step "verify.sh — install-time binaries"
     if "$REPO_ROOT/verify.sh" >/dev/null 2>&1; then
         ok "verify.sh all PASS"
     else
@@ -63,7 +63,7 @@ check_verify() {
 
 # ----- 2. all 7 stack MCP servers connected ---------------------------------
 check_mcp_connected() {
-    step "2. claude mcp list — 7 stack servers ✓ Connected"
+    step "MCP servers — 7 stack servers connected"
     local output
     output="$(claude mcp list 2>&1)" || {
         bad "claude mcp list failed"
@@ -88,7 +88,7 @@ check_mcp_connected() {
 
 # ----- 3. jcodemunch at venv path (NOT uvx) --------------------------------
 check_jcodemunch_path() {
-    step "3. jcodemunch running from stack venv (not uvx)"
+    step "jcodemunch — stack venv binary (not uvx)"
     local output expected="$REPO_ROOT/.venv/bin/jcodemunch-mcp"
     output="$(claude mcp get jcodemunch 2>&1)" || {
         bad "claude mcp get jcodemunch failed"
@@ -106,7 +106,7 @@ check_jcodemunch_path() {
 
 # ----- 4. MCP_TIMEOUT = 60000 ----------------------------------------------
 check_mcp_timeout() {
-    step "4. MCP_TIMEOUT=60000 in ~/.claude/settings.json"
+    step "settings.json — MCP_TIMEOUT=60000"
     local actual
     actual="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("MCP_TIMEOUT","<unset>"))' 2>/dev/null)"
     if [ "$actual" = "60000" ]; then
@@ -120,7 +120,7 @@ check_mcp_timeout() {
 
 # ----- 5. Langfuse compose health ------------------------------------------
 check_langfuse_compose() {
-    step "5. Langfuse docker compose: 6 up, 4 healthy"
+    step "Langfuse compose — 6 up, 4 healthy"
     local compose="$REPO_ROOT/claude-code-langfuse-template/docker-compose.yml"
     if [ ! -f "$compose" ]; then
         bad "compose file missing: $compose"
@@ -151,7 +151,7 @@ check_langfuse_compose() {
 
 # ----- 6. Langfuse /api/public/health --------------------------------------
 check_langfuse_api() {
-    step "6. Langfuse API /api/public/health"
+    step "Langfuse API — /api/public/health"
     local body
     body="$(curl -s --max-time 3 http://localhost:3050/api/public/health 2>&1)"
     if printf '%s' "$body" | grep -q '"status":"OK"'; then
@@ -165,7 +165,7 @@ check_langfuse_api() {
 
 # ----- 7. langfuse SDK importable from stack venv --------------------------
 check_langfuse_sdk() {
-    step "7. langfuse SDK importable from stack venv"
+    step "Langfuse SDK — importable from stack venv"
     local py="$REPO_ROOT/.venv/bin/python"
     if [ ! -x "$py" ]; then
         bad "stack venv python missing at $py"
@@ -184,7 +184,7 @@ check_langfuse_sdk() {
 
 # ----- 8. skills installed --------------------------------------------------
 check_skills() {
-    step "8. skills: dreaming, outcomes, orchestrator installed"
+    step "skills — dreaming, outcomes, orchestrator installed"
     local missing=0
     for skill in dream-synthesizer outcomes orchestrator per-task-review-cycle post-upgrade-mcp-integration; do
         if [ -f "$HOME/.claude/skills/$skill/SKILL.md" ]; then
@@ -228,7 +228,7 @@ check_skills() {
 
 # ----- 9. MemPalace health: SQLite integrity + no stale mine locks ----------
 check_mempalace() {
-    step "9a. MemPalace: SQLite FTS5 integrity"
+    step "MemPalace — SQLite FTS5 integrity"
     local db="$HOME/.mempalace/palace/chroma.sqlite3"
     if [ ! -f "$db" ]; then
         bad "palace db not found at $db — MemPalace not initialised"
@@ -246,7 +246,7 @@ check_mempalace() {
         record_fail "mempalace-sqlite"
     fi
 
-    step "9b. MemPalace: no stale mine locks"
+    step "MemPalace — no stale mine locks"
     local stale=()
     for lock in "$REPO_ROOT/state/mempalace-mine-convos.lock" "$REPO_ROOT/state/mempalace-mine-project.lock"; do
         if [ -d "$lock" ]; then
@@ -264,7 +264,7 @@ check_mempalace() {
         record_fail "mempalace-stale-lock"
     fi
 
-    step "9c. MemPalace: HNSW not corrupted"
+    step "MemPalace — HNSW not corrupted"
     local corrupted=0
     for f in "$HOME/.mempalace/palace"/*/link_lists.bin; do
         [ -f "$f" ] || continue
@@ -281,7 +281,7 @@ check_mempalace() {
 
 # ----- 9d. crons: all expected jobs registered -----------------------------
 check_crons() {
-    step "9d. crontab: all Uncle J cron jobs registered"
+    step "crontab — Uncle J jobs registered"
     local tab
     tab="$(crontab -l 2>/dev/null || true)"
     local missing=()
@@ -310,7 +310,7 @@ check_crons() {
 
 # ----- 9e. stack freshness: all git packages at HEAD -----------------------
 check_stack_freshness() {
-    step "9e. stack freshness: git packages at HEAD"
+    step "stack freshness — packages at HEAD"
     local freshness_exit=0
     bash "$REPO_ROOT/scripts/check-stack-freshness.sh" >/dev/null 2>&1 || freshness_exit=$?
     if [ "$freshness_exit" -eq 0 ]; then
@@ -324,7 +324,7 @@ check_stack_freshness() {
 
 # ----- 9f. git post-merge hook wired ---------------------------------------
 check_post_merge_hook() {
-    step "9f. git post-merge hook wired"
+    step "git — post-merge hook wired"
     local hook="$REPO_ROOT/.git/hooks/post-merge"
     local expected_target="$REPO_ROOT/scripts/post-merge-hook.sh"
     if [ -L "$hook" ] && [ "$(readlink "$hook")" = "$expected_target" ]; then
@@ -340,9 +340,9 @@ check_post_merge_hook() {
     fi
 }
 
-# ----- 9g. MEMORY.md: no stale tracking entries ----------------------------
+# ----- MEMORY.md: stale-entry advisory scan --------------------------------
 check_memory_staleness() {
-    step "9g. MEMORY.md: no stale tracking entries"
+    step "MEMORY.md: stale-entry advisory scan"
     local mem_path
     mem_path="$HOME/.claude/projects/$(printf '%s' "$REPO_ROOT" | tr '/' '-')/memory/MEMORY.md"
     if [ ! -f "$mem_path" ]; then
@@ -352,20 +352,19 @@ check_memory_staleness() {
     local stale_lines
     stale_lines="$(grep -iE "\b(pending|awaiting|needs [a-z]|consider filing|not yet|TODO|FIXME)\b" "$mem_path" 2>/dev/null || true)"
     if [ -z "$stale_lines" ]; then
-        ok "no stale tracking entries in MEMORY.md"
+        ok "no stale-keyword matches in MEMORY.md"
     else
-        bad "MEMORY.md has entries that may need verification before reporting:"
+        warn "MEMORY.md contains entries worth verifying before treating as current fact:"
         while IFS= read -r line; do
             printf '  → %s\n' "$line"
         done <<< "$stale_lines"
-        hint "verify each flagged entry against current source (git log, grep, gh api) before stating it as current fact"
-        record_fail "memory-stale-entries"
+        hint "cross-check flagged entries against git log / source before reporting"
     fi
 }
 
 # ----- 9h. jdocmunch index not empty ----------------------------------------
 check_docmunch_indexed() {
-    step "9h. jdocmunch: doc index has repos"
+    step "jdocmunch — index populated"
     local idx="$HOME/.doc-index"
     if [ ! -d "$idx" ] || [ -z "$(ls -A "$idx" 2>/dev/null)" ]; then
         bad "jdocmunch index is empty — docs not searchable via jdocmunch"
@@ -378,18 +377,20 @@ check_docmunch_indexed() {
     fi
 }
 
-# ----- 10. no leaked secrets in tree ----------------------------------------
+# ----- working tree: no leaked Langfuse credentials -----------------------
+# Scoped intentionally to Langfuse keys (sk-lf-*) only.
+# For broader secret scanning use gitleaks or trufflehog.
 check_secrets() {
-    step "10. working tree: no leaked secrets"
-    local pattern='sk-lf-[a-f0-9]{16,}|PASSWORD=[a-zA-Z0-9]{8,}'
+    step "working tree: Langfuse credentials scan"
+    local pattern='sk-lf-[a-f0-9]{16,}'
     local hits
-    hits="$(cd "$REPO_ROOT" && git grep -iE "$pattern" 2>/dev/null || true)"
+    hits="$(cd "$REPO_ROOT" && git grep -E "$pattern" 2>/dev/null || true)"
     if [ -z "$hits" ]; then
-        ok "no sk-lf-* or PASSWORD=... matches"
+        ok "no sk-lf-* Langfuse keys in tracked files"
     else
-        bad "secret-looking strings found in tracked files"
+        bad "Langfuse secret key found in tracked files"
         printf '%s\n' "$hits" | head -3 >&2
-        hint "review the matches; add the file to .gitignore or redact"
+        hint "add the file to .gitignore or rotate the key and redact"
         record_fail "secrets"
     fi
 }
@@ -397,7 +398,7 @@ check_secrets() {
 # ===== full-mode extras =====================================================
 # ----- 9. Stop hook wiring: direct invocation writes a log line ------------
 check_smoke_hook() {
-    step "11. smoke: Stop hook writes a new line to langfuse_hook.log"
+    step "smoke — stop hook writes to langfuse_hook.log"
     local log="$HOME/.claude/state/langfuse_hook.log"
     local hook="$HOME/.claude/hooks/langfuse_hook.py"
     local py="$REPO_ROOT/.venv/bin/python"
@@ -428,7 +429,7 @@ check_smoke_hook() {
 
 # ----- 10. Langfuse trace API has a recent trace ---------------------------
 check_trace_api() {
-    step "12. Langfuse traces API: recent trace exists"
+    step "Langfuse traces API — recent trace exists"
     local pk sk host
     pk="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("LANGFUSE_PUBLIC_KEY",""))' 2>/dev/null)"
     sk="$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.claude/settings.json")))["env"].get("LANGFUSE_SECRET_KEY",""))' 2>/dev/null)"

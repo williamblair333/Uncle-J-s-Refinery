@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # ── 1. Bash syntax + static analysis ───────────────────────────────────────
+  lint:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n (syntax check)
+        run: find . -name '*.sh' ! -path './.venv/*' -exec bash -n {} \;
+
+      - name: shellcheck
+        run: |
+          sudo apt-get install -y shellcheck
+          find . -name '*.sh' ! -path './.venv/*' \
+            | xargs shellcheck --severity=error --exclude=SC1091
+
+  # ── 2. Python package installation on a fresh Debian/Ubuntu image ──────────
+  install-smoke:
+    name: Package install smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add ~/.local/bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: uv sync (create venv + install all packages)
+        run: uv sync --inexact
+
+      - name: Smoke-test MCP binary versions
+        run: |
+          .venv/bin/jcodemunch-mcp  --version
+          .venv/bin/jdatamunch-mcp  --help   > /dev/null
+          .venv/bin/jdocmunch-mcp   --help   > /dev/null
+          .venv/bin/mempalace       --help   > /dev/null
+
+  # ── 3. Auxiliary installer syntax (reliability, guardrails, langfuse) ──────
+  aux-syntax:
+    name: Auxiliary installer syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n on auxiliary installers
+        run: |
+          for f in install-reliability.sh install-guardrails.sh install-langfuse.sh; do
+            [ -f "$f" ] && bash -n "$f" && echo "OK  $f" || echo "FAIL  $f"
+          done

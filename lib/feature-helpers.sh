@@ -3,8 +3,12 @@
 # Source this file; do not execute directly.
 
 # Prompt yes/no. Exits 0 for yes, 1 for no.
+# In non-interactive mode (stdin not a TTY, or NON_INTERACTIVE=1), returns the default silently.
 prompt_yes_no() {
   local question=$1 default=${2:-y} prompt answer
+  if [ ! -t 0 ] || [ "${NON_INTERACTIVE:-0}" = "1" ]; then
+    [[ "$default" == "y" ]] && return 0 || return 1
+  fi
   [[ "$default" == "y" ]] && prompt="[Y/n]" || prompt="[y/N]"
   while true; do
     read -rp "$question $prompt " answer
