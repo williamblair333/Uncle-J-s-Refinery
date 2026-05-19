@@ -2,7 +2,7 @@
 
 ---
 
-## 2026-05-19 — Git-as-golden-reference, stale lock auto-clear, post-merge alerting, healthcheck gaps
+## 2026-05-19 — Git-as-golden-reference, stale lock auto-clear, post-merge alerting, healthcheck gaps, stale-memory guard
 
 ### Git is now the golden reference for all Python packages
 
@@ -39,6 +39,15 @@ Added tracking for all six Langfuse stack images. Split into two tiers:
 - **Actionable** (`langfuse`, `langfuse-worker`): flagged red `↑` when behind, counted in UPGRADES
 - **Informational** (`clickhouse`, `redis`, `postgres`): shown as dimmed `·` with "update only if Langfuse requires it" — these are Langfuse infrastructure and should only change when Langfuse release notes say so
 - **MinIO** (Chainguard): auto-patched by Chainguard, shown as `·` OK by design
+
+### Stale-memory guard
+
+Two interlocking changes prevent Claude from reporting stale MEMORY.md tracking entries (e.g., "PR awaiting review") as current fact after the underlying issue has already resolved:
+
+- **`healthcheck.sh` check 9g** — scans `MEMORY.md` at every session start for lines containing `pending`, `awaiting`, `needs <verb>`, `consider filing`, `not yet`, `TODO`, or `FIXME`. Flags them `bad` with a hint to verify against source before reporting. Runs in `--quick` mode so it fires every session.
+- **`global-skills/prior-art-check/SKILL.md` step 3b** — new staleness filter: before reporting any MemPalace hit as current fact, scan for the same markers, run a quick source verification (grep, git log, check-stack-freshness), and report the verified state — not the historical claim.
+
+Root cause this fixes: MEMORY.md said "PR #1523 awaiting review" long after the PR had merged and the fix was running in our installed package. Check 9g would have flagged the entry at session start; step 3b would have blocked it from being reported unverified.
 
 ---
 

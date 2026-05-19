@@ -340,6 +340,29 @@ check_post_merge_hook() {
     fi
 }
 
+# ----- 9g. MEMORY.md: no stale tracking entries ----------------------------
+check_memory_staleness() {
+    step "9g. MEMORY.md: no stale tracking entries"
+    local mem_path
+    mem_path="$HOME/.claude/projects/$(printf '%s' "$REPO_ROOT" | tr '/' '-')/memory/MEMORY.md"
+    if [ ! -f "$mem_path" ]; then
+        ok "MEMORY.md not found — skipping"
+        return
+    fi
+    local stale_lines
+    stale_lines="$(grep -iE "\b(pending|awaiting|needs [a-z]|consider filing|not yet|TODO|FIXME)\b" "$mem_path" 2>/dev/null || true)"
+    if [ -z "$stale_lines" ]; then
+        ok "no stale tracking entries in MEMORY.md"
+    else
+        bad "MEMORY.md has entries that may need verification before reporting:"
+        while IFS= read -r line; do
+            printf '  → %s\n' "$line"
+        done <<< "$stale_lines"
+        hint "verify each flagged entry against current source (git log, grep, gh api) before stating it as current fact"
+        record_fail "memory-stale-entries"
+    fi
+}
+
 # ----- 10. no leaked secrets in tree ----------------------------------------
 check_secrets() {
     step "10. working tree: no leaked secrets"
@@ -426,6 +449,7 @@ check_mempalace
 check_crons
 check_stack_freshness
 check_post_merge_hook
+check_memory_staleness
 check_secrets
 if [ "$MODE" = "full" ]; then
     check_verify

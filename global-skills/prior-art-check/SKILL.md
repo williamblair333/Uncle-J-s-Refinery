@@ -45,6 +45,24 @@ Step 3. **Interpret results.**
   and proceed. This is also the signal that the palace hasn't been
   initialized for this project yet.
 
+Step 3b. **Staleness filter — verify before reporting.**
+
+Scan every hit for these markers: `pending`, `awaiting`, `needs`, `consider`,
+`not yet`, `TODO`, `FIXME`, `open issue`.
+
+If a hit contains any of them, **do not state the memory's claim as current
+fact.** Memory is a point-in-time snapshot — the world moves on. Instead:
+
+1. Name the marker ("this entry says 'awaiting review'").
+2. Run a quick verification appropriate to the claim type:
+   - PR/issue status → grep installed package for the fix function, or check `check-stack-freshness.sh`
+   - "needs commit" → `git status`
+   - "consider filing upstream" → `git log --oneline -10 | grep -i filed` or grep for the fix in upstream source
+3. Report the **verified current state**, not the historical claim.
+
+This prevents the exact failure mode where a memory entry says "PR awaiting
+review" but the PR merged weeks ago and the fix is already running.
+
 Step 4. **Continue the task.** Hand off to jcodemunch / serena / etc.
 as the CLAUDE.md routing policy dictates.
 
