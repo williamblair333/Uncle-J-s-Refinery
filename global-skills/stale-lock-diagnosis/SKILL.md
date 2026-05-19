@@ -1,62 +1,65 @@
 
 ---
 name: stale-lock-diagnosis
-description: Diagnose and clear stale atomic lock directories that cause background scripts (hooks, miners, automation) to silently skip execution, then verify recovery.
+description: Diagnose and fix stale lock directories blocking background automation scripts (mine, index, sync jobs). Use when hooks are wired but silently not firing, or when a recurring job stopped producing output without any error.
+
 ---
 
 ## When to use
 
-When a background script or hook that uses `mkdir`-based atomic locking has been silently skipping all runs — symptoms include logs full of "skipped" entries, no output since a specific date, or a lock directory whose mtime predates any running process.
+A background script uses `mkdir` as an atomic lock and a `trap` to release it on exit. If the process is killed (SIGKILL, OOM, power loss), the trap never fires and the lock directory persists indefinitely. Every subsequent invocation sees the lock and silently bails — no errors, no logs, just silence.
 
-## Key steps
+Symptoms:
+- Hooks are confirmed wired in `settings.json`
+- Log file shows no recent entries, or shows only "skipped" entries
+- The target output (MemPalace, index, etc.) has no new data since a specific date
 
-### 1. Identify the lock directories
+## Diagnostic steps
 
-ls -la ~/.claude/  # or wherever the lock dirs live
+1. **Check the log** for the last successful run and any "skipped" / "lock exists" messages.
+2. **Find lock directories** — typically `*.lock` dirs under the script's working directory or `~/.claude/`:
+   ```bash
+   find ~/.claude -name "*.lock" -type d
+   ```
+3. **Confirm staleness** — check mtime and verify no live process holds the lock:
+   ```bash
+   stat <lock-dir>
+   lsof +D <lock-dir>   # should return nothing
+   ```
+4. **Remove stale locks**:
+   ```bash
+   rm -rf <lock-dir>
+   ```
+5. **Run the job manually** to catch up on missed work:
+   ```bash
+   bash /path/to/mine-script.sh
+   ```
+6. **Tail the log** to confirm it runs (not skipped).
 
-Look for `*.lock` directories with old mtimes.
+## Permanent fix — add stale-lock auto-clear to the script
 
-### 2. Confirm no live process holds them
+Insert this block immediately after the lock-acquire attempt in each affected script. Replace `30` with your preferred timeout in minutes:
 
-# For each lock dir, check if the PID inside (if any) is still running
-stat mempalace-mine-convos.lock
-# If mtime is hours/days old and no matching PID exists, it's stale
-
-### 3. Remove the stale locks
-
-rmdir mempalace-mine-convos.lock mempalace-mine-project.lock
-
-Use `rmdir` (not `rm -rf`) — it fails safely if something wrote into the dir.
-
-### 4. Trigger a manual catch-up run
-
-# Run the miner/script directly to process everything missed
-mempalace mine  # or whatever the background script is
-
-Watch the log to confirm it actually starts (not "skipped").
-
-### 5. Patch the lock check to be stale-aware
-
-The root cause is that `trap` cleanup doesn't fire on SIGKILL. Add a staleness check to the locking script:
-
-LOCK_DIR="myprocess.lock"
-LOCK_MAX_AGE_SECONDS=300  # 5 minutes
+LOCK_DIR="/path/to/job.lock"
+LOCK_MAX_AGE_MINUTES=30
 
 if [ -d "$LOCK_DIR" ]; then
-  lock_age=$(( $(date +%s) - $(stat -c %Y "$LOCK_DIR") ))
-  if [ "$lock_age" -gt "$LOCK_MAX_AGE_SECONDS" ]; then
-    rmdir "$LOCK_DIR"  # stale — clear and proceed
+  # Auto-clear if older than threshold and no live process holds it
+  if find "$LOCK_DIR" -maxdepth 0 -mmin +$LOCK_MAX_AGE_MINUTES | grep -q .; then
+    rm -rf "$LOCK_DIR"
   else
-    echo "skipped: lock held"
+    echo "$(date '+%H:%M:%S'): skipped (locked)" >> "$LOG_FILE"
     exit 0
   fi
 fi
 
 mkdir "$LOCK_DIR"
-trap 'rmdir "$LOCK_DIR"' EXIT
+trap "rm -rf '$LOCK_DIR'" EXIT
+
+This replaces a hard "bail if locked" with "bail if locked AND fresh; clear if stale."
 
 ## Notes
 
-- `mkdir` is atomic on most filesystems — safe for single-host locking.
-- `trap ... EXIT` fires on normal exit and signals, but **not SIGKILL**. Always add a staleness check.
-- After clearing locks, check logs to confirm all missed runs are caught up, not just the most recent one.
+- `trap` cleans up on `EXIT`, `INT`, `TERM` — but not `SIGKILL`. That's the fundamental gap; the auto-clear threshold is the only reliable mitigation.
+- Choose a timeout longer than the job's normal runtime but short enough to detect a stuck run. 30 minutes is a reasonable default for a mine/index job.
+- After clearing and running manually, verify output in the target system (MemPalace drawer count, index file mtime, etc.) to confirm the catchup completed.
