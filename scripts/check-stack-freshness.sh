@@ -124,6 +124,92 @@ check_uvx_git() {
   printf "  ${GREEN}·${NC}  %-22s HEAD=%s  auto via uvx\n" "$label" "$head"
 }
 
+# Read the pinned tag for a docker image from docker-compose.yml.
+# Returns the tag portion after the last ':', or "" if no tag.
+compose_tag() {
+  local fragment=$1
+  local compose="$SCRIPT_DIR/../claude-code-langfuse-template/docker-compose.yml"
+  local line
+  line=$(grep "image:.*${fragment}" "$compose" 2>/dev/null | head -1 | xargs)
+  local img="${line#image: }"
+  if [[ "$img" == *:* ]]; then
+    echo "${img##*:}"
+  else
+    echo ""
+  fi
+}
+
+# Latest release tag from GitHub (strips leading 'v').
+gh_latest_release() {
+  _gh_curl "https://api.github.com/repos/$1/releases/latest" \
+    | jq -r '.tag_name // "?"' 2>/dev/null | sed 's/^v//' || echo "?"
+}
+
+# Check if the NEXT major version tag exists on Docker Hub (e.g. postgres:18 when pinned to :17).
+# Returns "yes", "no", or "?".
+dh_next_major_exists() {
+  local image=$1 current_major=$2
+  local next=$(( current_major + 1 ))
+  local result
+  result=$(curl -sf "https://hub.docker.com/v2/repositories/library/${image}/tags/${next}" 2>/dev/null)
+  if [[ "$result" == *'"name"'* ]]; then
+    echo "$next"
+  else
+    echo ""
+  fi
+}
+
+# Check a Docker image pinned in docker-compose.yml.
+# Pass source="github:owner/repo" or source="dockerhub:image" or source="chainguard".
+check_docker_svc() {
+  local label=$1 image_fragment=$2 source=$3
+  local pinned latest
+
+  pinned=$(compose_tag "$image_fragment")
+
+  # Chainguard images are intentionally floating — auto-patched by Chainguard.
+  if [[ "$source" == "chainguard" ]]; then
+    printf "  ${GREEN}·${NC}  %-22s auto-patched by Chainguard (floating latest)\n" "$label"
+    return
+  fi
+
+  if [[ -z "$pinned" ]]; then
+    printf "  ${YELLOW}~${NC}  %-22s no tag pinned\n" "$label"
+    UPGRADES=$((UPGRADES + 1))
+    return
+  fi
+
+  local pinned_major next_major
+  pinned_major=$(echo "$pinned" | cut -d. -f1)
+
+  if [[ "$source" == dockerhub:* ]]; then
+    # For Docker Hub official images: check if next major tag exists
+    next_major=$(dh_next_major_exists "${source#dockerhub:}" "$pinned_major")
+    if [[ "$next_major" == "?" ]]; then
+      printf "  ${YELLOW}?${NC}  %-22s :%-12s  fetch failed\n" "$label" "$pinned"
+    elif [[ -n "$next_major" ]]; then
+      printf "  ${RED}↑${NC}  %-22s :%-12s  :${next_major} now available on Docker Hub\n" "$label" "$pinned"
+      UPGRADES=$((UPGRADES + 1))
+    else
+      printf "  ${GREEN}✓${NC}  %-22s :%-12s  no newer major on Docker Hub\n" "$label" "$pinned"
+    fi
+  else
+    local latest latest_major
+    latest=$(gh_latest_release "${source#github:}")
+    if [[ "$latest" == "?" ]]; then
+      printf "  ${YELLOW}?${NC}  %-22s :%-12s  GitHub fetch failed\n" "$label" "$pinned"
+      return
+    fi
+    latest_major=$(echo "$latest" | cut -d. -f1)
+    if [[ "$pinned_major" == "$latest_major" ]]; then
+      printf "  ${GREEN}✓${NC}  %-22s :%-12s  latest=%s (same major)\n" "$label" "$pinned" "$latest"
+    else
+      printf "  ${RED}↑${NC}  %-22s :%-12s  latest=%s — new major available\n" "$label" "$pinned" "$latest"
+      UPGRADES=$((UPGRADES + 1))
+    fi
+  fi
+}
+
 echo ""
 printf "${BOLD}Stack Freshness — $(date '+%Y-%m-%d %H:%M')${NC}\n"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -143,14 +229,27 @@ echo "git  (fetched from HEAD via uvx on each run):"
 check_uvx_git "serena" "oraios/serena"
 
 echo ""
+echo "docker  (pinned tags in docker-compose.yml — docker compose pull to upgrade):"
+check_docker_svc "langfuse"        "langfuse/langfuse:"     "github:langfuse/langfuse"
+check_docker_svc "langfuse-worker" "langfuse-worker:"       "github:langfuse/langfuse"
+check_docker_svc "clickhouse"      "clickhouse-server"      "github:ClickHouse/ClickHouse"
+check_docker_svc "minio"           "chainguard/minio"       "chainguard"
+check_docker_svc "redis"           "docker.io/redis:"       "github:redis/redis"
+check_docker_svc "postgres"        "docker.io/postgres:"    "dockerhub:postgres"
+
+echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 if [[ $UPGRADES -gt 0 ]]; then
   echo ""
   printf "${BOLD}To upgrade:${NC}\n"
-  echo "  cd $PROJ_ROOT && uv lock --upgrade-package jcodemunch-mcp \\"
-  echo "    --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp \\"
-  echo "    --upgrade-package mempalace && uv sync --inexact"
+  echo "  Python packages:"
+  echo "    cd $PROJ_ROOT && uv lock --upgrade-package jcodemunch-mcp \\"
+  echo "      --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp \\"
+  echo "      --upgrade-package mempalace && uv sync --inexact"
+  echo "  Docker services (review release notes before applying):"
+  echo "    docker compose -f $PROJ_ROOT/claude-code-langfuse-template/docker-compose.yml pull"
+  echo "    docker compose -f $PROJ_ROOT/claude-code-langfuse-template/docker-compose.yml up -d"
 fi
 
 echo ""
@@ -161,6 +260,11 @@ echo "  https://github.com/jgravelle/jdocmunch-mcp"
 echo "  https://github.com/MemPalace/mempalace"
 echo "  https://github.com/oraios/serena"
 echo "  https://github.com/upstash/context7"
+echo "  https://github.com/langfuse/langfuse"
+echo "  https://github.com/ClickHouse/ClickHouse"
+echo "  https://github.com/minio/minio"
+echo "  https://github.com/redis/redis"
+echo "  https://github.com/docker-library/postgres"
 echo ""
 [[ -z "${GITHUB_TOKEN:-}" ]] && \
   printf "${YELLOW}Tip:${NC} export GITHUB_TOKEN=<pat> to raise GitHub API rate limit (60→5000 req/hr)\n"
