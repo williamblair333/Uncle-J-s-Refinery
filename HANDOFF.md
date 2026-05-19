@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-15 (session 2)*
+*Last updated: 2026-05-19*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -12,85 +12,80 @@ Read this before touching anything. Work priorities are in order below.
 
 - 7 MCP servers registered: jcodemunch, jdatamunch, jdocmunch, mempalace, serena, duckdb, context7
 - Global `CLAUDE.md` with routing policy, security rules, jOutputMunch rules
-- Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer` (all live in `global-skills/`, installed to `~/.claude/skills/`)
+- Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer`, `deep-repo-analysis`, `stale-lock-diagnosis` — all live symlinks in `global-skills/`, installed to `~/.claude/skills/` via `install-reliability.sh`
 - Guardrails: secret scanner (UserPromptSubmit) + injection defender + commit-time scan
 - All features built and installed (dreaming, session-stats, Telegram gateway/notify, auto-skill, ralph-cron, skill-manager, stack-alerts, mempalace)
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
 - **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
-- **MemPalace** — repaired and operational; 10,000+ drawers; HNSW rebuilt clean with `mempalace repair`
-  - HNSW size guard active in both mine wrappers (aborts if `link_lists.bin` > 200 MB)
-  - chromadb upgraded to 1.5.9 (fixes the Rust HNSW binding type-confusion bug)
-- Mine concurrency — lockfiles in both wrapper scripts prevent duplicate mine processes
+- **MemPalace v3.3.5** — fully operational; 10,000+ drawers; HNSW healthy (all `link_lists.bin` = 0 bytes)
+  - chromadb 1.5.9 (Rust HNSW type-confusion bug fixed)
+  - HNSW size guard active in both mine wrappers (aborts if > 200 MB)
+  - Mine stale-lock auto-clear: locks older than 30 min cleared automatically on next invocation
+  - PR #1523 (VACUUM+FTS5 fix in `repair --yes`) merged upstream and running in our installed version
 - **ClickHouse 24.8.14.39** — patched past CVE-2025-1385. Library bridge not running. No upgrade needed.
-- Git: needs commit for this session's changes
+- **Git-as-golden-reference**: all 4 packages (`jcodemunch`, `jdatamunch`, `jdocmunch`, `mempalace`) installed from GitHub SHA via `uv`, not PyPI. `pyproject.toml` uses `git+https://` sources; `uv.lock` pins exact commit SHAs.
+- **Post-merge hook**: fires on `git pull`, sends Telegram alert listing new features/installers/skills needing action
+- **Healthcheck checks 9a-9f**: SQLite FTS5 integrity, stale locks, HNSW guard, cron jobs, packages at git HEAD, post-merge hook symlink
+- **Docker freshness** (`check-stack-freshness.sh`): actionable tier (`langfuse`, `langfuse-worker`) vs informational tier (`clickhouse`, `redis`, `postgres`, `minio`)
+- Git: clean, up to date with `origin/main`
 
 ### No blockers
 
-All items from the previous HANDOFF's "Blocked" section are resolved:
-- Langfuse was already running (HANDOFF was stale)
-- ClickHouse crash fix already in docker-compose.yml
-- HNSW corruption fully resolved and guarded against recurrence
+All items from all previous HANDOFFs are resolved.
 
 ---
 
-## What happened last session (2026-05-15, session 1)
+## What happened (2026-05-15 → 2026-05-19)
 
-See previous entries in `CHANGELOG.md` for session 1 (HNSW initial fix + mine lockfiles).
+### 2026-05-15 (session 3)
+- Submitted MemPalace upstream PR #1523 (VACUUM+FTS5 fix for `repair --yes`)
+- Fixes: upstream issues filed for mine concurrency (no built-in lock guard)
 
-## What happened this session (2026-05-15, session 2)
+### 2026-05-18
+- **MemPalace remote backup**: `mempalace-backup.sh` syncs to rclone remote when `MEMPALACE_REMOTE` is set
+- **install-reliability.sh symlink fix**: switched from `cp -r` to `ln -sfn` — skills are now live symlinks, `git pull` propagates skill updates automatically
+- **mempalace-health.py**: portable shebang + self-re-exec (no longer hardcoded to this machine's venv path)
 
-### MemPalace HNSW re-corruption (229 GB, root cause found)
-
-**Root cause confirmed:** chromadb 1.5.8 has a type-confusion bug in its Rust HNSW bindings (`chroma-hnswlib`). The `element_levels_[i]` field is written as float32 but read as int32, producing ~1 billion as link list size per node. Additionally, counter values (e.g., `cur_element_count = 1001`) were stored in the **upper 32 bits** of each uint64 header field, leaving the lower 32 bits as zero. The net effect: every save of the HNSW wrote astronomically large garbage to `link_lists.bin`.
-
-**Why session 1's fix was incomplete:** Deleting and rebuilding the HNSW worked temporarily, but the rebuild itself used the same buggy chromadb 1.5.8 code path, producing a corrupt header again on the next mine run.
-
-**Multiple sequential mine runs made it worse:** From 07:55–07:58 today, 4 mine runs executed sequentially (lockfile held, released, next acquired). Each loaded the corrupted in-memory state and wrote more garbage.
-
-**Fix:**
-1. Upgraded chromadb to 1.5.9 (type-confusion fixed)
-2. Deleted corrupted HNSW segment (all 5 binary files + directory)
-3. Ran `mempalace repair --yes` — creates a fresh segment, re-embeds all stored documents, builds correct HNSW
-4. Added HNSW size guard (200 MB threshold) to both mine scripts
-
-**Verify HNSW health:**
-```bash
-ls -lh ~/.mempalace/palace/*/link_lists.bin
-# Should be <10 MB for 10,000 drawers
-```
-
-### Security: ClickHouse CVE-2025-1385
-
-Confirmed not vulnerable:
-- Running 24.8.14.39 (patched version = 24.8.14.27+)
-- Library bridge process not running, port 9019 not listening
-- Ports bound to 127.0.0.1 only
-- No action needed
+### 2026-05-19
+- **Git-as-golden-reference**: packages installed from GitHub SHA, freshness check diffs locked SHA vs GitHub HEAD
+- **Stale lock auto-clear**: mine scripts clear locks > 30 min old (fixes silent blackout from SIGKILL'd processes)
+- **Post-merge hook** (`scripts/post-merge-hook.sh`): Telegrams what changed and what needs action after `git pull`
+- **Healthcheck gaps** (checks 9a-9f): SQLite FTS5 integrity, stale locks, HNSW guard, all 5 cron jobs, packages at HEAD, post-merge hook symlink
+- **Docker freshness tiers**: split actionable vs informational services
+- **New skills**: `deep-repo-analysis` (full architectural health audit), `stale-lock-diagnosis` (refactored)
+- **PR #1523 merged**: `_vacuum_and_rebuild_fts5` confirmed in installed `repair.py`; we're at upstream HEAD (`1b94f4e`)
 
 ---
 
 ## Priorities
 
-### 1. Commit session 2 changes
+### 1. No urgent items
 
-Files changed this session:
-- `scripts/mempalace-mine-convos.sh` — HNSW size guard added
-- `scripts/mempalace-mine-project.sh` — HNSW size guard added
-- `CHANGELOG.md` — session 2 entry
-- `HANDOFF.md` — this file
+Stack is clean and operational. Monitor:
 
-### 2. Watch HNSW after next few mine runs
-
-The size guard will catch any recurrence. After the next few sessions, spot-check:
 ```bash
+# HNSW health
 ls -lh ~/.mempalace/palace/*/link_lists.bin
+# Should be near 0 bytes
+
+# Package freshness (compares locked SHA vs GitHub HEAD)
+bash scripts/check-stack-freshness.sh
+
+# Full health
+bash healthcheck.sh
 ```
 
-If any file exceeds 200 MB, mine will abort with a log entry — check `state/mempalace-mine.log`.
+### 2. Upgrade command (changed from previous sessions)
 
-### 3. Consider filing upstream: mine concurrency
+Packages are now git-sourced. Upgrade with:
+```bash
+uv lock --upgrade-package mempalace && uv sync --inexact
+# repeat for jcodemunch, jdatamunch, jdocmunch as needed
+```
 
-`mempalace mine` has no built-in concurrency guard. The lockfile wrappers are stable but the issue should be fixed upstream. Consider opening an issue at the mempalace repo.
+### 3. MemPalace remote backup
+
+Set `MEMPALACE_REMOTE` in `.env` and configure rclone if you want off-machine palace backups. See `README.md` section 13 for end-to-end setup.
 
 ---
 
