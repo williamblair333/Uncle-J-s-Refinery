@@ -57,6 +57,13 @@ MemPalace is a tool the agent *could* call but usually won't. With it,
 the agent checks prior work on every non-trivial prompt. Zero cost on
 cold palaces; 1-2 second overhead on warm ones.
 
+Step 3b (staleness filter): any MemPalace hit containing `pending`,
+`awaiting`, `needs`, `consider`, `not yet`, `TODO`, or `FIXME` must be
+verified against current source before being reported as fact. Prevents
+the failure mode where a memory entry says "PR awaiting review" long after
+the PR has merged and the fix is running. Complements healthcheck check 9g
+which surfaces the same stale entries at session start.
+
 ### judge
 
 Catches the four classic hallucination patterns on code changes:
@@ -188,6 +195,8 @@ rmdir state/mempalace-mine-project.lock 2>/dev/null
 ```
 
 The `healthcheck.sh` also detects stale locks (>30 min) and reports `mempalace-stale-lock` in the SessionStart banner, so silent blackouts are caught at session open rather than discovered after days of missing mines.
+
+Check 9g additionally scans `MEMORY.md` for stale tracking entries (`pending`, `awaiting`, `needs <verb>`, etc.) and flags them at session start so they're verified before being reported as current fact.
 
 The lockfiles exist because `mempalace mine` has no built-in concurrency guard, and two Stop hooks (project + global settings) both invoke the convos miner on every session end.
 

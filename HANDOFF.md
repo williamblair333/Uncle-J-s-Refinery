@@ -25,7 +25,7 @@ Read this before touching anything. Work priorities are in order below.
 - **ClickHouse 24.8.14.39** — patched past CVE-2025-1385. Library bridge not running. No upgrade needed.
 - **Git-as-golden-reference**: all 4 packages (`jcodemunch`, `jdatamunch`, `jdocmunch`, `mempalace`) installed from GitHub SHA via `uv`, not PyPI. `pyproject.toml` uses `git+https://` sources; `uv.lock` pins exact commit SHAs.
 - **Post-merge hook**: fires on `git pull`, sends Telegram alert listing new features/installers/skills needing action
-- **Healthcheck checks 9a-9f**: SQLite FTS5 integrity, stale locks, HNSW guard, cron jobs, packages at git HEAD, post-merge hook symlink
+- **Healthcheck checks 9a-9g**: SQLite FTS5 integrity, stale locks, HNSW guard, cron jobs, packages at git HEAD, post-merge hook symlink, stale MEMORY.md entries
 - **Docker freshness** (`check-stack-freshness.sh`): actionable tier (`langfuse`, `langfuse-worker`) vs informational tier (`clickhouse`, `redis`, `postgres`, `minio`)
 - Git: clean, up to date with `origin/main`
 
@@ -50,7 +50,7 @@ All items from all previous HANDOFFs are resolved.
 - **Git-as-golden-reference**: packages installed from GitHub SHA, freshness check diffs locked SHA vs GitHub HEAD
 - **Stale lock auto-clear**: mine scripts clear locks > 30 min old (fixes silent blackout from SIGKILL'd processes)
 - **Post-merge hook** (`scripts/post-merge-hook.sh`): Telegrams what changed and what needs action after `git pull`
-- **Healthcheck gaps** (checks 9a-9f): SQLite FTS5 integrity, stale locks, HNSW guard, all 5 cron jobs, packages at HEAD, post-merge hook symlink
+- **Healthcheck gaps** (checks 9a-9g): SQLite FTS5 integrity, stale locks, HNSW guard, all 5 cron jobs, packages at HEAD, post-merge hook symlink, stale MEMORY.md entries
 - **Docker freshness tiers**: split actionable vs informational services
 - **New skills**: `deep-repo-analysis` (full architectural health audit), `stale-lock-diagnosis` (refactored)
 - **PR #1523 merged**: `_vacuum_and_rebuild_fts5` confirmed in installed `repair.py`; we're at upstream HEAD (`1b94f4e`)
