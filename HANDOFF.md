@@ -184,3 +184,4 @@ Remote is HTTPS (`https://github.com/williamblair333/Uncle-J-s-Refinery.git`). T
 - Run `! gh auth login` in a Claude Code session, or
 - Use a fine-scoped PAT as password on first HTTPS push, or
 - Add an SSH key and flip origin to the SSH URL
+

@@ -25,6 +25,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // \"\"'); echo \"$CMD\" | grep -qE '\\bgit\\b.*\\bcommit\\b' || exit 0; echo \"$CMD\" | grep -qE '\\-m\\s+.?chk:' && exit 0; STAGED=$(git -C /opt/proj/Uncle-J-s-Refinery diff --cached --name-only 2>/dev/null || true); MISSING=\"\"; echo \"$STAGED\" | grep -qF \"CHANGELOG.md\" || MISSING=\"${MISSING}CHANGELOG.md \"; echo \"$STAGED\" | grep -qF \"HANDOFF.md\" || MISSING=\"${MISSING}HANDOFF.md \"; echo \"$STAGED\" | grep -qF \"docs/RELIABILITY.md\" || MISSING=\"${MISSING}docs/RELIABILITY.md \"; [ -z \"$MISSING\" ] && exit 0; jq -n --arg m \"Commit blocked — update first: $MISSING\" '{\"continue\":false,\"stopReason\":$m}'",
+            "statusMessage": "Checking docs are staged..."
+          }
+        ]
+      },
+      {
         "matcher": "mcp__.*",
         "hooks": [
           {

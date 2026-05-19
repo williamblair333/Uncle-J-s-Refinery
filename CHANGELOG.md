@@ -337,3 +337,4 @@ All three "Langfuse blockers" from the HANDOFF are already resolved:
 - jcodemunch-mcp hook paths auto-patched to full binary in installers
 - Commercial-use terms clarified for upstream components
 - `install-langfuse.sh` hardened for Linux / cgroup-v2 hosts
+

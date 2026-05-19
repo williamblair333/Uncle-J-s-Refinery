@@ -217,3 +217,4 @@ rm -rf /opt/proj/Uncle-J-s-Refinery/claude-guardrails
 # Inside claude: /plugin uninstall superpowers
 # Inside claude: /plugin uninstall ralph-wiggum
 ```
+
