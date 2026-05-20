@@ -338,13 +338,17 @@ for update in updates:
             text=True,
             timeout=120,
         )
-        response = result.stdout.strip() or result.stderr.strip() or "(no output)"
+        if result.returncode != 0:
+            log(f"claude exited {result.returncode}, stderr: {result.stderr[:500]!r}")
+        response = result.stdout.strip()
+        if not response:
+            response = "⚠️ No response received. Please try again."
     except subprocess.TimeoutExpired:
         response = "⚠️ Claude timed out after 120 seconds."
         log("claude timed out")
     except Exception as e:
-        response = f"⚠️ Error running Claude: {e}"
-        log(f"claude error: {e}")
+        log(f"claude subprocess error (not sent to user): {e}")
+        response = "⚠️ An internal error occurred. Please try again."
 
     # Truncate to Telegram's 4096-char limit
     if len(response) > 4096:
