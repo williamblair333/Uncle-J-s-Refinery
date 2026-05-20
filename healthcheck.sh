@@ -40,7 +40,22 @@ done
 step() { printf '\n==> %s\n' "$*" >&2; }
 ok()   { printf '    OK  %s\n' "$*" >&2; }
 bad()  { printf '    X   %s\n' "$*" >&2; }
-hint() { printf '        fix: %s\n' "$*" >&2; }
+hint() {
+    printf '        fix: %s\n' "$*" >&2
+    # When running in an interactive terminal and the hint is a runnable command,
+    # offer to execute it immediately.
+    if [[ -t 2 && "$*" == run:\ * ]]; then
+        local cmd="${*#run: }"
+        cmd="${cmd%  (*}"   # strip trailing parenthetical notes like "  (or re-run X)"
+        printf '        Fix it now? [y/N] ' >&2
+        local reply=""
+        read -r reply </dev/tty 2>/dev/null || true
+        if [[ "$reply" =~ ^[Yy]$ ]]; then
+            printf '        Running: %s\n' "$cmd" >&2
+            bash -c "$cmd" || printf '        Command exited non-zero — check output above\n' >&2
+        fi
+    fi
+}
 
 checks_failed=0
 first_fail=""
