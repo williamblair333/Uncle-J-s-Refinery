@@ -20,14 +20,15 @@ RATE_MIN_INTERVAL_SECS  = 3    # minimum gap between messages
 
 # Unicode bidirectional controls and zero-width chars used in injection attacks
 _DANGEROUS_UNICODE_RE = re.compile(
-    '[‪-‮'   # LRE, RLE, PDF, LRO, RLO
-    '⁦-⁩'    # LRI, RLI, FSI, PDI
-    '​-‏'    # zero-width space/non-joiner/joiner/LRM/RLM
-    '  '     # line/paragraph separator
-    ' -'    # C0 controls (except tab/LF/CR)
-    ''     # VT, FF
-    '-'    # more C0 controls
-    ''           # DEL
+    '['
+    '‪-‮'   # LRE, RLE, PDF, LRO, RLO
+    '⁦-⁩'   # LRI, RLI, FSI, PDI
+    '​-‏'   # zero-width space, non-joiner, joiner, LRM, RLM
+    ' - '   # line/paragraph separator
+    '-'   # C0 controls (skip NUL=\x00, TAB=\x09, LF=\x0a, CR=\x0d)
+    '-'   # VT, FF
+    '-'   # more C0 controls
+    ''          # DEL
     ']'
 )
 
