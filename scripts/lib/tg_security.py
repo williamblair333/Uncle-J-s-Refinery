@@ -2,6 +2,7 @@
 Security helpers for the Telegram gateway.
 All functions are pure (no I/O) except check_rate_limit which reads/writes a JSON state file.
 """
+import fcntl
 import html
 import json
 import os
@@ -21,14 +22,14 @@ RATE_MIN_INTERVAL_SECS  = 3    # minimum gap between messages
 # Unicode bidirectional controls and zero-width chars used in injection attacks
 _DANGEROUS_UNICODE_RE = re.compile(
     '['
-    '‪-‮'   # LRE, RLE, PDF, LRO, RLO
-    '⁦-⁩'   # LRI, RLI, FSI, PDI
-    '​-‏'   # zero-width space, non-joiner, joiner, LRM, RLM
-    ' - '   # line/paragraph separator
-    '-'   # C0 controls (skip NUL=\x00, TAB=\x09, LF=\x0a, CR=\x0d)
-    '-'   # VT, FF
-    '-'   # more C0 controls
-    ''          # DEL
+    '\u202a-\u202e'   # LRE, RLE, PDF, LRO, RLO (bidi embedding/override)
+    '\u2066-\u2069'   # LRI, RLI, FSI, PDI (isolate controls)
+    '\u200b-\u200f'   # zero-width space, non-joiner, joiner, LRM, RLM
+    '\u2028-\u2029'   # line separator, paragraph separator
+    '\x01-\x08'       # C0 controls (skip NUL=\x00, TAB=\x09, LF=\x0a)
+    '\x0b-\x0c'       # VT, FF
+    '\x0e-\x1f'       # more C0 controls (skip CR=\x0d)
+    '\x7f'            # DEL
     ']'
 )
 
@@ -51,7 +52,7 @@ _INJECTION_PATTERNS = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in [
     r'pretend\s+(you\s+have\s+)?no\s+(safety\s+)?guidelines',
     r'override\s+(all\s+)?(?:previous\s+)?(?:instructions?|restrictions?|policies?)',
     r'act\s+as\s+(if\s+)?(?:you\s+(?:have|had)\s+)?no\s+(content\s+)?(?:filter|restriction)',
-    r'(system|admin|operator)\s*:\s*',
+    r'(?:^|\n)\s*(system|admin|operator)\s*:\s*',   # fake role prefix at line start
     r'\[system\]',
     r'<system>',
 ]]
@@ -69,7 +70,7 @@ _OUTPUT_REDACTIONS = [
     # Email addresses
     (re.compile(r'\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b'), '[REDACTED-EMAIL]'),
     # Linux filesystem paths starting at known roots
-    (re.compile(r'(?:/opt|/home|/root|/etc|/var|/tmp|/usr|/proc|/sys)[/\w.\-]+'), '[REDACTED-PATH]'),
+    (re.compile(r'(?:/opt|/home|/root|/etc|/var|/tmp|/usr|/proc|/sys|/run|/mnt|/srv|/dev|/snap|/media)[/\w.\-]+'), '[REDACTED-PATH]'),
     # IPv4 addresses
     (re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '[REDACTED-IP]'),
     # SCREAMING_SNAKE env-var assignments
@@ -81,7 +82,7 @@ _SAFE_SKILL_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}$')
 
 # ── Functions ──────────────────────────────────────────────────────────────────
 
-def sanitize_input(text: str) -> tuple:
+def sanitize_input(text: str) -> 'tuple[str | None, str | None]':
     """
     Sanitize a Telegram message before it reaches Claude.
 
@@ -147,33 +148,38 @@ def check_rate_limit(chat_id: str, state_file: str) -> tuple:
     now = time.time()
     state: dict = {}
 
-    if os.path.exists(state_file):
-        try:
-            with open(state_file, 'r') as f:
-                state = json.load(f)
-        except Exception:
-            state = {}
-
-    user = state.get(str(chat_id), {'timestamps': []})
-    # Drop timestamps outside the window
-    timestamps = [t for t in user.get('timestamps', []) if now - t < RATE_LIMIT_WINDOW_SECS]
-
-    # Minimum inter-message interval
-    if timestamps and (now - timestamps[-1]) < RATE_MIN_INTERVAL_SECS:
-        return False, "⚠️ Please wait a moment before sending another message."
-
-    # Hourly cap
-    if len(timestamps) >= RATE_LIMIT_MAX_MESSAGES:
-        remaining = int(RATE_LIMIT_WINDOW_SECS - (now - timestamps[0]))
-        return False, f"⚠️ Message limit reached. Try again in {remaining // 60} minutes."
-
-    timestamps.append(now)
-    state[str(chat_id)] = {'timestamps': timestamps}
-
+    lock_path = state_file + '.lock'
+    lock_fd = open(lock_path, 'w')
     try:
-        with open(state_file, 'w') as f:
-            json.dump(state, f)
-    except Exception:
-        pass  # Non-fatal: rate limit silently passes on write failure
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
 
-    return True, None
+        if os.path.exists(state_file):
+            try:
+                with open(state_file, 'r') as f:
+                    state = json.load(f)
+            except Exception:
+                state = {}
+
+        user = state.get(str(chat_id), {'timestamps': []})
+        timestamps = [t for t in user.get('timestamps', []) if now - t < RATE_LIMIT_WINDOW_SECS]
+
+        if timestamps and (now - timestamps[-1]) < RATE_MIN_INTERVAL_SECS:
+            return False, "⚠️ Please wait a moment before sending another message."
+
+        if len(timestamps) >= RATE_LIMIT_MAX_MESSAGES:
+            remaining = max(0, int(RATE_LIMIT_WINDOW_SECS - (now - timestamps[0])))
+            return False, f"⚠️ Message limit reached. Try again in {remaining // 60} minutes."
+
+        timestamps.append(now)
+        state[str(chat_id)] = {'timestamps': timestamps}
+
+        try:
+            with open(state_file, 'w') as f:
+                json.dump(state, f)
+        except Exception:
+            pass  # Fails open — caller can still proceed; log externally if needed
+
+        return True, None
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        lock_fd.close()
