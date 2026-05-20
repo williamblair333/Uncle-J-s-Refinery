@@ -179,6 +179,8 @@ for update in updates:
 
     def install_skill(draft_path, skill_name, scope):
         """Copy draft to global-skills/ or skills/, symlink into ~/.claude/skills/."""
+        if not validate_skill_name(skill_name):
+            raise ValueError(f"Unsafe skill name rejected: {skill_name!r}")
         subdir = 'global-skills' if scope == 'global' else 'skills'
         skill_dir = os.path.join(proj_root, subdir, skill_name)
         os.makedirs(skill_dir, exist_ok=True)
@@ -205,7 +207,12 @@ for update in updates:
             log(f"promote: could not parse name from {draft_path}")
             tg_send(f"❌ Could not parse <code>name:</code> from draft <code>{skill_id}</code>.")
             continue
-        skill_dir = install_skill(draft_path, skill_name, scope)
+        try:
+            skill_dir = install_skill(draft_path, skill_name, scope)
+        except ValueError as e:
+            log(f"promote: rejected — {e}")
+            tg_send("❌ Skill name failed validation and was not installed.")
+            continue
         os.remove(draft_path)
         log(f"promote: '{skill_name}' → {skill_dir}")
         tg_send(f"✅ Skill <b>{skill_name}</b> promoted to <b>{scope}</b>.")
