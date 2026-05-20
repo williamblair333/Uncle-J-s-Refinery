@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-20 — Telegram gateway: suppress system-reminder without API key
+
+### `scripts/telegram-gateway-poll.sh`
+- **API-direct approach dropped** — OAuth `sk-ant-oat01-*` tokens rotate whenever the Claude CLI refreshes them; using them as `api_key` produces intermittent 401 "invalid x-api-key" errors with no reliable recovery.
+- **`--system-prompt` (replace) is the correct fix**: when `--system-prompt` is passed to `claude --print`, the harness does **not** layer `system-reminder` on top — OS, kernel, email, paths, git state, and MCP stack are never available to the model. The CLI handles OAuth token rotation internally; no key management needed.
+- Main message path and `classify_promote` path both switched to `subprocess.run([claude, --dangerously-skip-permissions, --print, --system-prompt, RESTRICTION, -p, text])` from `cwd=/tmp` (no project `CLAUDE.md`, no git repo).
+- Verified: disclosure prompt returns exactly `"I can't share system details over this channel."` Six-prompt adversarial stress test passed (direct request, identity claim, DAN jailbreak, implicit threat, explicit threat, compliance pivot).
+
+---
+
 ## 2026-05-20 — Telegram gateway: three runtime bug fixes
 
 ### `scripts/telegram-gateway-poll.sh`

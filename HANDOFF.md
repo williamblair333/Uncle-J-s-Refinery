@@ -74,6 +74,10 @@ All items from all previous HANDOFFs are resolved.
 - **Stack upgrade**: jcodemunch 1.108.19 → 1.108.20; index rebuilt 77 → 4,624 symbols
 - **CLAUDE.md routing expanded**: 30+ missing jcodemunch tools added (digest, get_repo_health, assemble_task_context, check_rename_safe, check_delete_safe, plan_refactoring, get_symbol_provenance, register_edit, get_tectonic_map, get_signal_chains, render_diagram, search_ast, get_dead_code_v2, audit_agent_config, + runtime trace tools); both global + project CLAUDE.md in sync
 
+### 2026-05-20 (session 5, continued)
+- **Gateway disclosure fix v2** (`3e3a9a9`): API-direct approach (OAuth token as api_key) dropped — tokens rotate unpredictably and produce 401 on rotation. `--system-prompt` (replace, not append) is the correct approach: harness does NOT inject system-reminder when --system-prompt is provided, so OS/kernel/email/paths/MCP stack are never in context. Both main message path and classify_promote now use `claude --print --system-prompt RESTRICTION` from `cwd=/tmp`. Stress-tested against 6 adversarial prompts including DAN jailbreak, authority claim, emotional pressure, and explicit threats — all refused correctly.
+- **Second machine noted**: `dma64` branch (kernel 6.19.14) has its own Telegram bot and is independently applying `git pull` + `install.sh`; will merge with `main` eventually. Saved to memory.
+
 ### 2026-05-20 (session 5)
 - **Telegram gateway runtime fixes** (3 bugs, 1 commit `8ce0833`):
   - Gateway was completely broken since 09:30 — heredoc wins pipe stdin, `sys.stdin.read()` returned `''`, all polls failed with JSON parse error. Fixed by exporting `UPDATES_JSON` env var.
