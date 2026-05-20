@@ -21,6 +21,14 @@ if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]] || [[ -z "${TELEGRAM_CHAT_ID:-}" ]]; then
   exit 0
 fi
 
+# Opt-in guard: only notify if the session explicitly set CLAUDE_NOTIFY_ON_STOP=1.
+# Default off — prevents noise from interactive sessions, health checks, and subagents.
+# To enable for a specific automated pipeline (e.g. Ralph), set CLAUDE_NOTIFY_ON_STOP=1
+# in the environment before invoking claude.
+if [[ -z "${CLAUDE_NOTIFY_ON_STOP:-}" ]]; then
+  exit 0
+fi
+
 # Source the notification dispatcher
 # shellcheck source=lib/notify.sh
 [[ -f "$REPO_ROOT/lib/notify.sh" ]] || exit 0

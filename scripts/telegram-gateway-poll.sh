@@ -45,8 +45,9 @@ UPDATES_JSON=$(curl -sf \
 
 # Hand off all processing to Python.
 # Credentials are read from the environment (already sourced from .env).
-# UPDATES_JSON is passed via stdin to keep message content out of /proc/cmdline.
-NEW_OFFSET=$(printf '%s' "$UPDATES_JSON" | python3 - \
+# UPDATES_JSON passed via env var — pipe+heredoc conflict causes sys.stdin.read() to return ''
+export UPDATES_JSON
+NEW_OFFSET=$(python3 - \
   "$PROJ_ROOT" \
   "$CLAUDE_BIN" \
   "$OFFSET" \
@@ -72,8 +73,8 @@ claude_bin     = sys.argv[2]
 current_offset = int(sys.argv[3])
 log_file       = sys.argv[4]
 
-# UPDATES_JSON arrives via stdin to keep message content out of /proc/cmdline
-updates_raw = sys.stdin.read()
+# UPDATES_JSON passed via env var (pipe+heredoc conflict: heredoc wins stdin, pipe is dropped)
+updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
 from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name
@@ -248,8 +249,11 @@ for update in updates:
         try:
             # Use the Anthropic API directly — avoids spawning a Claude session
             # that would trigger Stop hooks and generate spurious draft notifications.
-            import anthropic as _anthropic
-            _client = _anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY', ''))
+            import anthropic as _anthropic, json as _json
+            _creds_path = os.path.expanduser('~/.claude/.credentials.json')
+            with open(_creds_path) as _f:
+                _api_key = _json.load(_f)['claudeAiOauth']['accessToken']
+            _client = _anthropic.Anthropic(api_key=_api_key)
             _msg = _client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=128,
@@ -322,32 +326,45 @@ for update in updates:
         "Say nothing else. Do not explain. Do not apologize."
     )
 
-    # Run claude — message text passed as argv element, NEVER shell-interpolated
+    # Use Anthropic API directly — bypasses Claude Code harness so system-reminder
+    # context (OS, paths, email, git state, MCP stack) is never injected into the session.
+    # OAuth token read from Claude credentials file (no ANTHROPIC_API_KEY needed).
     try:
-        result = subprocess.run(
-            [
-                claude_bin,
-                "--dangerously-skip-permissions",
-                "--print",
-                "--append-system-prompt", TELEGRAM_SYSTEM_RESTRICTION,
-                "-p",
-                text,          # ← safe: subprocess arg list, not shell string
-            ],
-            cwd=proj_root,
-            capture_output=True,
-            text=True,
-            timeout=120,
+        import anthropic as _anthropic, json as _json
+        _creds_path = os.path.expanduser('~/.claude/.credentials.json')
+        with open(_creds_path) as _f:
+            _api_key = _json.load(_f)['claudeAiOauth']['accessToken']
+        _client = _anthropic.Anthropic(api_key=_api_key, timeout=120.0)
+        _msg = _client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=2048,
+            system=TELEGRAM_SYSTEM_RESTRICTION,
+            messages=[{"role": "user", "content": text}],
         )
-        if result.returncode != 0:
-            log(f"claude exited {result.returncode}, stderr: {result.stderr[:500]!r}")
-        response = result.stdout.strip()
+        response = next(
+            (block.text for block in _msg.content if block.type == "text"),
+            "",
+        ).strip()
         if not response:
             response = "⚠️ No response received. Please try again."
-    except subprocess.TimeoutExpired:
-        response = "⚠️ Claude timed out after 120 seconds."
-        log("claude timed out")
+    except _anthropic.RateLimitError:
+        log("rate limit hit on sonnet, falling back to haiku")
+        try:
+            _msg = _client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=2048,
+                system=TELEGRAM_SYSTEM_RESTRICTION,
+                messages=[{"role": "user", "content": text}],
+            )
+            response = next(
+                (block.text for block in _msg.content if block.type == "text"),
+                "",
+            ).strip() or "⚠️ No response received. Please try again."
+        except Exception as _e2:
+            log(f"haiku fallback error (not sent to user): {_e2}")
+            response = "⚠️ An internal error occurred. Please try again."
     except Exception as e:
-        log(f"claude subprocess error (not sent to user): {e}")
+        log(f"API error (not sent to user): {e}")
         response = "⚠️ An internal error occurred. Please try again."
 
     # Truncate to Telegram's 4096-char limit
