@@ -149,37 +149,35 @@ def check_rate_limit(chat_id: str, state_file: str) -> tuple:
     state: dict = {}
 
     lock_path = state_file + '.lock'
-    lock_fd = open(lock_path, 'w')
-    try:
+    with open(lock_path, 'w') as lock_fd:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
-
-        if os.path.exists(state_file):
-            try:
-                with open(state_file, 'r') as f:
-                    state = json.load(f)
-            except Exception:
-                state = {}
-
-        user = state.get(str(chat_id), {'timestamps': []})
-        timestamps = [t for t in user.get('timestamps', []) if now - t < RATE_LIMIT_WINDOW_SECS]
-
-        if timestamps and (now - timestamps[-1]) < RATE_MIN_INTERVAL_SECS:
-            return False, "⚠️ Please wait a moment before sending another message."
-
-        if len(timestamps) >= RATE_LIMIT_MAX_MESSAGES:
-            remaining = max(0, int(RATE_LIMIT_WINDOW_SECS - (now - timestamps[0])))
-            return False, f"⚠️ Message limit reached. Try again in {remaining // 60} minutes."
-
-        timestamps.append(now)
-        state[str(chat_id)] = {'timestamps': timestamps}
-
         try:
-            with open(state_file, 'w') as f:
-                json.dump(state, f)
-        except Exception:
-            pass  # Fails open — caller can still proceed; log externally if needed
+            if os.path.exists(state_file):
+                try:
+                    with open(state_file, 'r') as f:
+                        state = json.load(f)
+                except Exception:
+                    state = {}
 
-        return True, None
-    finally:
-        fcntl.flock(lock_fd, fcntl.LOCK_UN)
-        lock_fd.close()
+            user = state.get(str(chat_id), {'timestamps': []})
+            timestamps = [t for t in user.get('timestamps', []) if now - t < RATE_LIMIT_WINDOW_SECS]
+
+            if timestamps and (now - timestamps[-1]) < RATE_MIN_INTERVAL_SECS:
+                return False, "⚠️ Please wait a moment before sending another message."
+
+            if len(timestamps) >= RATE_LIMIT_MAX_MESSAGES:
+                remaining = max(0, int(RATE_LIMIT_WINDOW_SECS - (now - timestamps[0])))
+                return False, f"⚠️ Message limit reached. Try again in {remaining // 60} minutes."
+
+            timestamps.append(now)
+            state[str(chat_id)] = {'timestamps': timestamps}
+
+            try:
+                with open(state_file, 'w') as f:
+                    json.dump(state, f)
+            except Exception:
+                pass  # Fails open — caller can still proceed; log externally if needed
+
+            return True, None
+        finally:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
