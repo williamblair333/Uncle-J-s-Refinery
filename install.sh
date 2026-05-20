@@ -2,10 +2,12 @@
 # One-shot installer for the Claude retrieval stack on Debian/Ubuntu Linux.
 #
 # Usage:
-#   ./install.sh                    # install stack, print next-step guidance
-#   ./install.sh --auto-register    # also register servers with Claude Code CLI
+#   ./install.sh                    # install stack + register MCP servers + run healthcheck
 #   ./install.sh --skip-optional    # skip MotherDuck warm-cache
 #   ./install.sh --non-interactive  # skip all optional-feature prompts (CI/automation)
+#
+# MCP servers are always registered (--auto-register is now the default).
+# After install, restart Claude Code then run: bash healthcheck.sh
 #
 # Re-runs are idempotent.
 
@@ -13,7 +15,7 @@ set -euo pipefail
 STACK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$STACK_ROOT"
 
-AUTO_REGISTER=0
+AUTO_REGISTER=1
 SKIP_OPTIONAL=0
 NON_INTERACTIVE=0
 for arg in "$@"; do
@@ -326,7 +328,7 @@ Installed. What to do now:
 
 1. Paste the MCP config fragment into your client:
      Claude Desktop  -> mcp-clients/claude-desktop-config-fragment.json
-     Claude Code     -> mcp-clients/claude-code-mcp.json  (or re-run with --auto-register)
+     Claude Code     -> MCP servers already registered (restart Claude Code to connect)
      Cursor          -> mcp-clients/cursor-mcp.json
      Windsurf        -> mcp-clients/windsurf-mcp.json
 
@@ -343,6 +345,17 @@ Installed. What to do now:
 
 EOF
 
-# Run healthcheck so the user knows if anything is still broken
-step "Running healthcheck"
-bash "$STACK_ROOT/healthcheck.sh"
+# MCP servers need a Claude restart to reconnect — skip the live-session
+# connectivity check here and tell the user to run it after restart.
+cat <<'EOF'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  INSTALL COMPLETE — one step required:
+
+  MCP servers were registered. Restart Claude Code,
+  then run the healthcheck to confirm everything is OK:
+
+      bash healthcheck.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EOF
