@@ -31,10 +31,21 @@ tools can answer structurally.
 ### 1. Code work — jCodeMunch first, Serena for LSP-hard questions
 - Start with `search_symbols`, `get_file_outline`, `get_repo_outline` for
   orientation. Never `Read` a source file to "see what's in it."
+- **Session start on a familiar repo**: call `digest` first — change-oriented briefing
+  (~200 tokens) covering what changed since last session, hotspots, and dead code.
+- **First call in any analysis session**: `get_repo_health` — one-call triage snapshot
+  (symbol counts, dead code %, avg complexity, top hotspots, cycle count).
 - Before editing a function, call `get_symbol_source` for that function, not
-  `Read` on the whole file.
+  `Read` on the whole file. For multi-symbol context, use `get_context_bundle`.
+- For query-driven context assembly in one call, use `assemble_task_context` —
+  it auto-classifies intent, runs the right sub-tools, and returns a source-attributed capsule.
 - Before committing to a change, call `get_blast_radius` to see what else
   breaks. For PRs, `get_pr_risk_profile` produces a single composite score.
+- Before renaming a symbol: `check_rename_safe`. Before deleting: `check_delete_safe`.
+  For multi-file rename/move/extract: `plan_refactoring` generates edit-ready blocks.
+- Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship
+  lineage explains the "why" behind code before you change it.
+- After editing files: call `register_edit` to invalidate BM25/search caches.
 - For type resolution, interface/trait dispatch, or "find all callers across
   files," prefer **serena** — its LSP backing outperforms AST-only search on
   Python/TS/Rust/Go/C#.
@@ -46,6 +57,17 @@ tools can answer structurally.
   or fall back to serena when confidence is low.
 - Run `check_embedding_drift` (or via `/health`) to catch index staleness
   before it silently degrades retrieval quality.
+- Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files),
+  `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph
+  tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked
+  to code), `get_layer_violations` (layer boundary checks).
+- Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols`
+  for consolidation candidates; `get_dead_code_v2` for multi-signal dead code;
+  `diff_health_radar` to compare health before/after a PR.
+- For security/quality gate before merge: `search_ast(category="security")` +
+  `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
+- Periodically run `audit_agent_config` to catch stale symbol refs and dead paths in
+  CLAUDE.md itself — keeps routing rules lean.
 
 ### 2. Data work — jDataMunch for CSVs, DuckDB for real SQL
 - For any CSV / TSV: `describe_dataset` first, `get_rows` with filters next,
@@ -101,7 +123,16 @@ tools can answer structurally.
 - Use `mempalace_diary_write` for per-session notes — entries are now
   scoped per-project automatically (mempalace 3.3.3+).
 
-### 5. Verification step
+### 5. Runtime traces (when available)
+- After ingesting OTel/SQL/stack traces via `import_runtime_signal`, use:
+  - `find_hot_paths` — top-N symbols by runtime hit count; pairs with `get_blast_radius`
+    to answer "is this PR touching code that runs 4M times/day?"
+  - `find_unused_paths` — reachable code never executed (runtime blind spots)
+  - `get_runtime_coverage` — coverage histogram: symbols with vs without runtime evidence
+  - `get_redaction_log` — verify PII redaction chokepoint is firing
+- Skip these when no traces have been ingested — tools return empty results and say so.
+
+### 6. Verification step
 - Before finalizing code changes, run a verification pass using
   `get_changed_symbols` (git diff → symbols touched),
   `get_untested_symbols`, and `get_pr_risk_profile`. Report the risk score

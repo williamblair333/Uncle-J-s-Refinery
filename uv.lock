@@ -917,8 +917,8 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.108.19"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#5dc9cbdd199e99fd4a4ba722e4c0938c6e908619" }
+version = "1.108.20"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#e987d88c0e0694a5aac17dc3a90f122876c7083f" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },

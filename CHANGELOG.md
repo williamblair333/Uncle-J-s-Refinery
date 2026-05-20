@@ -2,15 +2,27 @@
 
 ---
 
-## 2026-05-20 — new global skills committed
+## 2026-05-20 — stack upgrade, reindex, CLAUDE.md routing expanded, new skills
 
-### New skills
+### Stack upgrade
+- jcodemunch upgraded 1.108.19 → 1.108.20
+- jcodemunch Uncle-J-s-Refinery index rebuilt: 77 symbols (April 21 snapshot) → 4,624 symbols at HEAD
+
+### CLAUDE.md routing (both global + project)
+- Added 30+ missing jcodemunch tools to Code work section: `digest`, `get_repo_health`,
+  `assemble_task_context`, `get_context_bundle`, `check_rename_safe`, `check_delete_safe`,
+  `plan_refactoring`, `get_symbol_provenance`, `register_edit`, `get_tectonic_map`,
+  `get_signal_chains`, `render_diagram`, `get_project_intel`, `get_layer_violations`,
+  `search_ast`, `find_similar_symbols`, `get_dead_code_v2`, `diff_health_radar`,
+  `audit_agent_config`
+- Added new Runtime traces section (§5): `import_runtime_signal`, `find_hot_paths`,
+  `find_unused_paths`, `get_runtime_coverage`, `get_redaction_log`
+
+### New skills committed
 - `fog-of-chess-engine-mode-implementation` — chess engine mode skill
 - `mcp-index-empty-diagnosis` — diagnose and fix silently empty MCP retrieval indexes
 - `stale-pending-memory-guard` — prevent stale "pending/awaiting" memory entries from being reported as current fact
 - `validate-external-audit` — structured response protocol for external audit findings
-
-All four were written and symlinked to `~/.claude/skills/` but not committed; this entry tracks the commit that adds them to the repo.
 
 ---
 
