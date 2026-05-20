@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-19*
+*Last updated: 2026-05-20*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -12,7 +12,7 @@ Read this before touching anything. Work priorities are in order below.
 
 - 7 MCP servers registered: jcodemunch, jdatamunch, jdocmunch, mempalace, serena, duckdb, context7
 - Global `CLAUDE.md` with routing policy, security rules, jOutputMunch rules
-- Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer`, `deep-repo-analysis`, `stale-lock-diagnosis` — all live symlinks in `global-skills/`, installed to `~/.claude/skills/` via `install-reliability.sh`
+- Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer`, `deep-repo-analysis`, `stale-lock-diagnosis`, `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — all live symlinks in `global-skills/`, installed to `~/.claude/skills/` via `install-reliability.sh`
 - Guardrails: secret scanner (UserPromptSubmit) + injection defender + commit-time scan
 - All features built and installed (dreaming, session-stats, Telegram gateway/notify, auto-skill, ralph-cron, skill-manager, stack-alerts, mempalace)
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
@@ -27,7 +27,7 @@ Read this before touching anything. Work priorities are in order below.
 - **Post-merge hook**: fires on `git pull`, sends Telegram alert listing new features/installers/skills needing action
 - **Healthcheck checks**: all named descriptively (no more numbered labels); staleness check is warning-only; secret scanner scoped to Langfuse `sk-lf-*` only
 - **Docker freshness** (`check-stack-freshness.sh`): actionable tier (`langfuse`, `langfuse-worker`) vs informational tier (`clickhouse`, `redis`, `postgres`, `minio`)
-- Git: clean, up to date with `origin/main`
+- Git: up to date with `origin/main`
 
 ### No blockers
 
@@ -35,7 +35,7 @@ All items from all previous HANDOFFs are resolved.
 
 ---
 
-## What happened (2026-05-15 → 2026-05-19)
+## What happened (2026-05-15 → 2026-05-20)
 
 ### 2026-05-15 (session 3)
 - Submitted MemPalace upstream PR #1523 (VACUUM+FTS5 fix for `repair --yes`)
@@ -65,6 +65,9 @@ All items from all previous HANDOFFs are resolved.
 - **Docker freshness tiers**: split actionable vs informational services
 - **New skills**: `deep-repo-analysis` (full architectural health audit), `stale-lock-diagnosis` (refactored)
 - **PR #1523 merged**: `_vacuum_and_rebuild_fts5` confirmed in installed `repair.py`; we're at upstream HEAD (`1b94f4e`)
+
+### 2026-05-20
+- **New skills committed**: `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — were on disk and symlinked but not committed
 
 ---
 

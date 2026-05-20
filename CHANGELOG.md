@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-20 — new global skills committed
+
+### New skills
+- `fog-of-chess-engine-mode-implementation` — chess engine mode skill
+- `mcp-index-empty-diagnosis` — diagnose and fix silently empty MCP retrieval indexes
+- `stale-pending-memory-guard` — prevent stale "pending/awaiting" memory entries from being reported as current fact
+- `validate-external-audit` — structured response protocol for external audit findings
+
+All four were written and symlinked to `~/.claude/skills/` but not committed; this entry tracks the commit that adds them to the repo.
+
+---
+
 ## 2026-05-19 — automation hardening, install UX, healthcheck cleanup
 
 ### install.sh
