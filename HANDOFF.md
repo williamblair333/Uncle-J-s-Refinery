@@ -15,7 +15,7 @@ Read this before touching anything. Work priorities are in order below.
 - Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer`, `deep-repo-analysis`, `stale-lock-diagnosis`, `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — all live symlinks in `global-skills/`, installed to `~/.claude/skills/` via `install-reliability.sh`
 - Guardrails: secret scanner (UserPromptSubmit) + injection defender + commit-time scan
 - All features built and installed (dreaming, session-stats, Telegram gateway/notify, auto-skill, ralph-cron, skill-manager, stack-alerts, mempalace)
-- **Telegram gateway hardened** (`scripts/telegram-gateway-poll.sh`): credentials out of argv, flock concurrency guard, 38-finding security audit resolved — input sanitizer, rate limiter, output scanner, path traversal fix, anti-jailbreak system prompt, error/stderr sanitization; 38-test suite in `tests/test_tg_security.py`
+- **Telegram gateway** (`scripts/telegram-gateway-poll.sh`): fully operational after three runtime bug fixes (2026-05-20 session 5) — message processing restored (heredoc/pipe fix), disclosure prevention via API-direct (no harness system-reminder context), session-notify opt-in silence. Security module + 38-test suite in `tests/test_tg_security.py`.
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
 - **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
 - **MemPalace v3.3.5** — fully operational; 10,000+ drawers; HNSW healthy (all `link_lists.bin` = 0 bytes)
@@ -73,6 +73,13 @@ All items from all previous HANDOFFs are resolved.
 - **New skills committed**: `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — were on disk and symlinked but not committed
 - **Stack upgrade**: jcodemunch 1.108.19 → 1.108.20; index rebuilt 77 → 4,624 symbols
 - **CLAUDE.md routing expanded**: 30+ missing jcodemunch tools added (digest, get_repo_health, assemble_task_context, check_rename_safe, check_delete_safe, plan_refactoring, get_symbol_provenance, register_edit, get_tectonic_map, get_signal_chains, render_diagram, search_ast, get_dead_code_v2, audit_agent_config, + runtime trace tools); both global + project CLAUDE.md in sync
+
+### 2026-05-20 (session 5)
+- **Telegram gateway runtime fixes** (3 bugs, 1 commit `8ce0833`):
+  - Gateway was completely broken since 09:30 — heredoc wins pipe stdin, `sys.stdin.read()` returned `''`, all polls failed with JSON parse error. Fixed by exporting `UPDATES_JSON` env var.
+  - Disclosure despite `--append-system-prompt` restriction: harness `system-reminder` injects OS/email/paths/MCP stack regardless of appended prompt. Switched to Anthropic API-direct (OAuth token from `~/.claude/.credentials.json`) — no harness context at all. Verified: disclosure prompt returns exact refusal string.
+  - `session-notify.sh` was firing for every interactive/automated Claude session on the machine. Added `CLAUDE_NOTIFY_ON_STOP=1` opt-in; default off.
+- **`anthropic` SDK installed** for system Python 3.13 (`pip install anthropic --break-system-packages`) — needed by gateway for API-direct calls; was previously only available in uv-cached tool envs.
 
 ### 2026-05-20 (session 4)
 - **Local ONNX embeddings**: `all-MiniLM-L6-v2` downloaded to `~/.code-index/models/`; `JCODEMUNCH_EMBED_MODEL=all-MiniLM-L6-v2` in `.env`; canary pinned; no API key required
