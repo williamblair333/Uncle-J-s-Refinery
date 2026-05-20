@@ -75,6 +75,11 @@ log_file       = sys.argv[4]
 # UPDATES_JSON arrives via stdin to keep message content out of /proc/cmdline
 updates_raw = sys.stdin.read()
 
+sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
+from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name
+
+RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
+
 API_BASE = f"https://api.telegram.org/bot{bot_token}"
 
 def log(msg):
@@ -137,7 +142,19 @@ for update in updates:
         log(f"Ignoring message from unauthorized chat_id={from_chat}")
         continue
 
-    log(f"Received message: {text[:120]!r}")
+    log(f"Received message ({len(text)} chars)")  # do not log message content
+
+    # Rate limit check
+    rl_allowed, rl_err = check_rate_limit(from_chat, RATE_LIMIT_STATE)
+    if not rl_allowed:
+        tg_send(rl_err)
+        continue
+
+    # Input sanitization: strip dangerous unicode, check injection patterns, cap length
+    text, san_err = sanitize_input(text)
+    if san_err:
+        tg_send(san_err)
+        continue
 
     # Normalize for command matching: strip leading formatting chars (backtick,
     # slash) that Telegram may prepend. Original `text` is still passed to Claude.
@@ -321,6 +338,8 @@ for update in updates:
     if len(response) > 4096:
         response = response[:4096]
 
+    response = scan_output(response)
+    response = escape_html_response(response)
     log(f"Sending response ({len(response)} chars)")
     tg_send(response)
 
