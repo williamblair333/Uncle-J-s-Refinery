@@ -72,6 +72,9 @@ All items from all previous HANDOFFs are resolved.
 - **Stack upgrade**: jcodemunch 1.108.19 → 1.108.20; index rebuilt 77 → 4,624 symbols
 - **CLAUDE.md routing expanded**: 30+ missing jcodemunch tools added (digest, get_repo_health, assemble_task_context, check_rename_safe, check_delete_safe, plan_refactoring, get_symbol_provenance, register_edit, get_tectonic_map, get_signal_chains, render_diagram, search_ast, get_dead_code_v2, audit_agent_config, + runtime trace tools); both global + project CLAUDE.md in sync
 
+### 2026-05-20 (session 3)
+- **install.sh hardening**: `AUTO_REGISTER=1` default (was 0 — caused jcodemunch to stay at uvx path after every install); cron loop uses `install_cron` (remove-then-re-add, handles command updates); CLAUDE.md backup skips when unchanged; healthcheck removed from end of install (always false-failed before Claude restart); `feature-helpers.sh` sourced at top
+
 ### 2026-05-20 (session 2)
 - **Auto-maintenance**: `scripts/auto-maintain.sh` + `scripts/jcodemunch-reindex.sh` created
 - **Crons**: `uncle-j-jcodemunch-reindex` (1am), `uncle-j-auto-maintain` (3am) — registered and in install.sh

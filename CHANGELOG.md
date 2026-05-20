@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-20 — install.sh hardening: idempotency and MCP registration
+
+### Fixes
+- `AUTO_REGISTER=1` default — `jcodemunch-mcp init` always clobbers registration with `uvx`; venv-path re-registration now runs unconditionally
+- Cron loop switched from grep-check-skip to `install_cron` (remove-then-re-add) — handles command updates on re-runs, not just first-time registration
+- `feature-helpers.sh` sourced at top of `install.sh` so `install_cron` and `prompt_yes_no` are available throughout (removed duplicate late `source`)
+- CLAUDE.md backup only fires when content changed — no more `.bak.TIMESTAMP` accumulation on every re-run
+- Healthcheck removed from end of `install.sh`; MCP servers require a Claude restart before they show Connected, so the check always false-failed; replaced with explicit restart instruction
+
+---
+
 ## 2026-05-20 — auto-maintenance scripts and healthcheck guards
 
 ### New scripts
