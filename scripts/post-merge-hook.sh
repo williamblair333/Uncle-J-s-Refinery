@@ -112,6 +112,18 @@ if echo "$CHANGED" | grep -qE '\.md$'; then
     fi
 fi
 
+# Auto re-index jcodemunch when source files changed
+# (silent — no user action needed; logged to post-merge.log)
+if echo "$CHANGED" | grep -qE '\.(py|sh|ts|tsx|js|json|toml)$'; then
+    REINDEX="$PROJ_ROOT/scripts/jcodemunch-reindex.sh"
+    if [[ -x "$REINDEX" ]]; then
+        log "post-merge: code files changed — re-indexing jcodemunch..."
+        bash "$REINDEX" && \
+            log "post-merge: jcodemunch re-index complete" || \
+            log "post-merge: jcodemunch re-index failed (non-fatal)"
+    fi
+fi
+
 # ------------------------------------------------------------------
 # Deliver: Telegram if configured, terminal otherwise
 # ------------------------------------------------------------------
