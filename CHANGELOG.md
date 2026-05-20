@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-20 — Healthcheck: canary pin fix + interactive "Fix it now?" prompt
+
+### `scripts/pin-canary.sh` (new)
+- Dedicated single-purpose script to pin the jcodemunch embedding canary. Calls `claude -p "Call check_embedding_drift with capture=true"` and exits non-zero if the canary file still doesn't exist after the attempt — no silent failures. The old healthcheck hint pointed to `auto-maintain.sh`, which treats canary-pin failure as non-fatal/warn, so re-running the healthcheck would still fail.
+
+### `healthcheck.sh`
+- **Interactive fix prompt**: `hint()` now detects when stderr is a terminal (`-t 2`). For any `run: ...` hint, it prints `Fix it now? [y/N]` and runs the command inline via `bash -c` on `y`. Trailing parenthetical notes (`  (re-registers crons)`) are stripped before execution. Non-interactive runs (cron, piped) are unaffected.
+- **Canary hint updated**: `check_embedding_canary` failure hint now points to `scripts/pin-canary.sh` instead of `auto-maintain.sh`.
+
+---
+
 ## 2026-05-20 — Telegram gateway: three runtime bug fixes
 
 ### `scripts/telegram-gateway-poll.sh`
