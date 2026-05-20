@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-05-20 — auto-maintenance scripts and healthcheck guards
+
+### New scripts
+- `scripts/jcodemunch-reindex.sh` — incremental reindex, stamps `state/jcodemunch-last-indexed.sha`
+- `scripts/auto-maintain.sh` — nightly: threshold-based upgrades (jcodemunch/jdatamunch/jdocmunch ≥20 commits, mempalace ≥5), post-upgrade CLAUDE.md sync via `jcodemunch-mcp claude-md --format append`, auto-commit untracked global-skills
+
+### Healthcheck additions
+- `check_jcodemunch_index_fresh` (9i) — compares stamped SHA to current HEAD
+- `check_untracked_skills` (9j) — fails when global-skills/ has uncommitted SKILL.md files
+- `check_auto_maintain_cron` (9k) — verifies both new crons are registered
+- `check_crons` expanded with `uncle-j-auto-maintain` and `uncle-j-jcodemunch-reindex`
+
+### Crons added
+- `uncle-j-jcodemunch-reindex` — 1am daily (before 2am dreaming)
+- `uncle-j-auto-maintain` — 3am daily (upgrades land while sleeping)
+
+### Post-merge hook
+- Now reindexes jcodemunch when `.py/.sh/.ts/.json/.toml` files change
+
+---
+
 ## 2026-05-20 — stack upgrade, reindex, CLAUDE.md routing expanded, new skills
 
 ### Stack upgrade

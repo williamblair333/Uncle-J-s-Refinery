@@ -24,9 +24,10 @@ Read this before touching anything. Work priorities are in order below.
   - PR #1523 (VACUUM+FTS5 fix in `repair --yes`) merged upstream and running in our installed version
 - **ClickHouse 24.8.14.39** — patched past CVE-2025-1385. Library bridge not running. No upgrade needed.
 - **Git-as-golden-reference**: all 4 packages (`jcodemunch`, `jdatamunch`, `jdocmunch`, `mempalace`) installed from GitHub SHA via `uv`, not PyPI. `pyproject.toml` uses `git+https://` sources; `uv.lock` pins exact commit SHAs.
-- **Post-merge hook**: fires on `git pull`, sends Telegram alert listing new features/installers/skills needing action
-- **Healthcheck checks**: all named descriptively (no more numbered labels); staleness check is warning-only; secret scanner scoped to Langfuse `sk-lf-*` only
+- **Post-merge hook**: fires on `git pull`, sends Telegram alert listing new features/installers/skills needing action; also reindexes jcodemunch when code files change
+- **Healthcheck checks**: all named descriptively (no more numbered labels); staleness check is warning-only; secret scanner scoped to Langfuse `sk-lf-*` only; 3 new guards (9i/9j/9k)
 - **Docker freshness** (`check-stack-freshness.sh`): actionable tier (`langfuse`, `langfuse-worker`) vs informational tier (`clickhouse`, `redis`, `postgres`, `minio`)
+- **Auto-maintenance**: `scripts/auto-maintain.sh` (3am cron) handles threshold upgrades + CLAUDE.md sync + skills autocommit; `scripts/jcodemunch-reindex.sh` (1am cron) keeps index current
 - Git: up to date with `origin/main`
 
 ### No blockers
@@ -70,6 +71,14 @@ All items from all previous HANDOFFs are resolved.
 - **New skills committed**: `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — were on disk and symlinked but not committed
 - **Stack upgrade**: jcodemunch 1.108.19 → 1.108.20; index rebuilt 77 → 4,624 symbols
 - **CLAUDE.md routing expanded**: 30+ missing jcodemunch tools added (digest, get_repo_health, assemble_task_context, check_rename_safe, check_delete_safe, plan_refactoring, get_symbol_provenance, register_edit, get_tectonic_map, get_signal_chains, render_diagram, search_ast, get_dead_code_v2, audit_agent_config, + runtime trace tools); both global + project CLAUDE.md in sync
+
+### 2026-05-20 (session 2)
+- **Auto-maintenance**: `scripts/auto-maintain.sh` + `scripts/jcodemunch-reindex.sh` created
+- **Crons**: `uncle-j-jcodemunch-reindex` (1am), `uncle-j-auto-maintain` (3am) — registered and in install.sh
+- **Post-merge hook**: now reindexes jcodemunch on `.py/.sh/.ts/.json/.toml` changes
+- **Healthcheck**: 3 new guards — `check_jcodemunch_index_fresh` (9i), `check_untracked_skills` (9j), `check_auto_maintain_cron` (9k); `check_crons` expanded
+- **Upgrade thresholds**: jcodemunch/jdatamunch/jdocmunch ≥20 commits behind HEAD, mempalace ≥5
+- **HEALTHCHECK: ok** — all checks passing at close of session
 
 ---
 
