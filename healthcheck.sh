@@ -291,6 +291,8 @@ check_crons() {
         [uncle-j-telegram-gateway]="bash $REPO_ROOT/scripts/telegram-gateway-poll.sh"
         [uncle-j-session-stats]="features/session-stats/stats.sh"
         [uncle-j-dreaming]="features/dreaming/dream.sh"
+        [uncle-j-auto-maintain]="bash $REPO_ROOT/scripts/auto-maintain.sh"
+        [uncle-j-jcodemunch-reindex]="bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
     )
     for label in "${!EXPECTED[@]}"; do
         if printf '%s\n' "$tab" | grep -q "$label"; then
@@ -395,6 +397,73 @@ check_secrets() {
     fi
 }
 
+# ----- 9i. jcodemunch index not stale --------------------------------------
+check_jcodemunch_index_fresh() {
+    step "jcodemunch — index up to date with git HEAD"
+    local stamp="$REPO_ROOT/state/jcodemunch-last-indexed.sha"
+    local current_head
+    current_head=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo "unknown")
+    if [[ ! -f "$stamp" ]]; then
+        bad "jcodemunch index has never been stamped — run: bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
+        hint "run: bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
+        record_fail "jcodemunch-not-indexed"
+        return
+    fi
+    local indexed_head
+    indexed_head=$(cat "$stamp" 2>/dev/null | tr -d '[:space:]')
+    if [[ "$indexed_head" == "$current_head" ]]; then
+        ok "jcodemunch index at HEAD ($current_head)"
+    else
+        local behind
+        behind=$(git -C "$REPO_ROOT" rev-list --count "${indexed_head}..${current_head}" 2>/dev/null || echo "?")
+        bad "jcodemunch index is ${behind} commit(s) stale (indexed=$indexed_head current=$current_head)"
+        hint "run: bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
+        record_fail "jcodemunch-index-stale"
+    fi
+}
+
+# ----- 9j. no untracked global-skills files --------------------------------
+check_untracked_skills() {
+    step "global-skills — no untracked SKILL.md files"
+    local untracked
+    untracked=$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null \
+        | grep "^?? global-skills/" || true)
+    if [[ -z "$untracked" ]]; then
+        ok "no untracked global-skills files"
+    else
+        local count
+        count=$(printf '%s\n' "$untracked" | wc -l)
+        bad "${count} untracked global-skills entry(ies) not yet committed"
+        printf '%s\n' "$untracked" | while IFS= read -r line; do
+            printf '        %s\n' "$line"
+        done >&2
+        hint "auto-maintain.sh will commit these tonight, or run it now: bash $REPO_ROOT/scripts/auto-maintain.sh"
+        record_fail "untracked-skills"
+    fi
+}
+
+# ----- 9k. auto-maintain crons registered ----------------------------------
+check_auto_maintain_cron() {
+    step "crontab — auto-maintain crons registered"
+    local tab
+    tab="$(crontab -l 2>/dev/null || true)"
+    local missing=()
+    for label in uncle-j-auto-maintain uncle-j-jcodemunch-reindex; do
+        if printf '%s\n' "$tab" | grep -q "$label"; then
+            ok "cron: $label"
+        else
+            missing+=("$label")
+        fi
+    done
+    if [[ "${#missing[@]}" -gt 0 ]]; then
+        for m in "${missing[@]}"; do
+            bad "cron missing: $m"
+        done
+        hint "run: bash $REPO_ROOT/install.sh   (re-registers crons)"
+        record_fail "cron-missing(${missing[0]})"
+    fi
+}
+
 # ===== full-mode extras =====================================================
 # ----- 9. Stop hook wiring: direct invocation writes a log line ------------
 check_smoke_hook() {
@@ -468,6 +537,9 @@ check_post_merge_hook
 check_memory_staleness
 check_docmunch_indexed
 check_secrets
+check_jcodemunch_index_fresh
+check_untracked_skills
+check_auto_maintain_cron
 if [ "$MODE" = "full" ]; then
     check_verify
     check_smoke_hook
