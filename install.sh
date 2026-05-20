@@ -271,6 +271,19 @@ do
     fi
 done
 
+# --- 5d. Skills (reliability layer) ----------------------------------------
+step "Installing global skills (reliability layer)"
+bash "$STACK_ROOT/install-reliability.sh" --non-interactive
+ok "skills installed"
+
+# --- 5e. jcodemunch index ---------------------------------------------------
+step "Indexing repo with jcodemunch"
+if bash "$STACK_ROOT/scripts/jcodemunch-reindex.sh"; then
+    ok "jcodemunch index up to date"
+else
+    warn "jcodemunch reindex failed — index may be stale (non-fatal)"
+fi
+
 # --- 6. Next-step guidance --------------------------------------------------
 step "Next steps"
 # --- 6b. Install routing policy (CLAUDE.md) ---------------------------------
@@ -329,3 +342,7 @@ Installed. What to do now:
      https://context7.com/dashboard  -> put CONTEXT7_API_KEY=... in ~/.claude/.env
 
 EOF
+
+# Run healthcheck so the user knows if anything is still broken
+step "Running healthcheck"
+bash "$STACK_ROOT/healthcheck.sh"
