@@ -23,6 +23,14 @@ if [[ -z "${TELEGRAM_BOT_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]]; then
   exit 0
 fi
 
+# Prevent concurrent cron runs from corrupting offset file or spawning duplicate Claude sessions
+LOCK_FILE="$PROJ_ROOT/state/telegram-gateway.lock"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  log "Another instance is running — exiting."
+  exit 0
+fi
+
 # Read current offset (default 0)
 OFFSET="0"
 [[ -f "$OFFSET_FILE" ]] && OFFSET="$(cat "$OFFSET_FILE")"
