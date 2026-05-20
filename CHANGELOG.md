@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-20 — Telegram gateway security hardening (38 findings)
+
+### New file
+- `scripts/lib/tg_security.py` — security module: `sanitize_input`, `scan_output`, `escape_html_response`, `validate_skill_name`, `check_rate_limit`
+- `tests/test_tg_security.py` — 38-test pytest suite for all security functions
+
+### `scripts/telegram-gateway-poll.sh` hardening
+- **Credential exposure**: bot token and chat_id moved from `/proc/cmdline` argv to `os.environ`; `UPDATES_JSON` (message content) moved to stdin
+- **Concurrency**: `flock` guard prevents duplicate cron runs from corrupting offset file or spawning parallel Claude sessions
+- **System prompt**: `TELEGRAM_SYSTEM_RESTRICTION` expanded to cover all credential types (`ANTHROPIC_API_KEY`, `LANGFUSE_*`, `TELEGRAM_*`), cron schedules, skill names, log files, Docker/SSH/network details; full anti-jailbreak clauses added (persona override, authority impersonation, fake system-message injection, self-disclosure)
+- **Input sanitization**: Unicode bidi/control chars stripped, NFC normalization, 1500-char cap, 20-pattern injection blocklist (runs before every Claude invocation)
+- **Rate limiting**: per-chat hourly cap (20 messages) and minimum interval (3 s), flock-protected state file
+- **Output scanning**: API keys, emails, paths, IPs, env-var assignments redacted from Claude's response before sending; HTML-escaped to prevent Telegram markup injection
+- **Path traversal**: `install_skill` validates `skill_name` via `validate_skill_name` before any `os.path.join` or symlink operation
+- **Prompt injection in classify**: `classify_prompt` wraps skill file content in hard `BEGIN/END SKILL CONTENT (DATA ONLY)` delimiters
+- **Error/stderr leakage**: raw Python exceptions and Claude stderr no longer sent to Telegram; generic messages returned, full detail logged internally only
+- **Log hygiene**: message content no longer written to gateway log
+
+---
+
 ## 2026-05-20 — local ONNX embeddings, canary, jcodemunch scope fix
 
 ### Embedding (no API key required)

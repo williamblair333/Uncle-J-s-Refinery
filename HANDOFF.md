@@ -15,6 +15,7 @@ Read this before touching anything. Work priorities are in order below.
 - Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer`, `deep-repo-analysis`, `stale-lock-diagnosis`, `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — all live symlinks in `global-skills/`, installed to `~/.claude/skills/` via `install-reliability.sh`
 - Guardrails: secret scanner (UserPromptSubmit) + injection defender + commit-time scan
 - All features built and installed (dreaming, session-stats, Telegram gateway/notify, auto-skill, ralph-cron, skill-manager, stack-alerts, mempalace)
+- **Telegram gateway hardened** (`scripts/telegram-gateway-poll.sh`): credentials out of argv, flock concurrency guard, 38-finding security audit resolved — input sanitizer, rate limiter, output scanner, path traversal fix, anti-jailbreak system prompt, error/stderr sanitization; 38-test suite in `tests/test_tg_security.py`
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
 - **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
 - **MemPalace v3.3.5** — fully operational; 10,000+ drawers; HNSW healthy (all `link_lists.bin` = 0 bytes)
