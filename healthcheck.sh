@@ -442,6 +442,41 @@ check_untracked_skills() {
     fi
 }
 
+# ----- 9l. embedding model downloaded + canary pinned ----------------------
+check_embedding_canary() {
+    step "jcodemunch — embedding model + canary"
+    local model_dir="$HOME/.code-index/models/all-MiniLM-L6-v2"
+    local canary="$HOME/.code-index/embed_canary.json"
+    local env_file="$REPO_ROOT/.env"
+
+    # Check model files
+    if [[ ! -f "$model_dir/model.onnx" ]]; then
+        bad "ONNX embedding model not downloaded"
+        hint "run: $REPO_ROOT/.venv/bin/jcodemunch-mcp download-model"
+        record_fail "embedding-model-missing"
+        return
+    fi
+    ok "embedding model present ($model_dir)"
+
+    # Check env var set
+    if ! grep -q "^JCODEMUNCH_EMBED_MODEL=" "$env_file" 2>/dev/null; then
+        bad "JCODEMUNCH_EMBED_MODEL not set in .env"
+        hint "add: JCODEMUNCH_EMBED_MODEL=all-MiniLM-L6-v2 to $env_file"
+        record_fail "embedding-env-not-set"
+        return
+    fi
+    ok "JCODEMUNCH_EMBED_MODEL set in .env"
+
+    # Check canary pinned
+    if [[ ! -f "$canary" ]]; then
+        bad "embedding canary not pinned — semantic drift detection inactive"
+        hint "run: bash $REPO_ROOT/scripts/auto-maintain.sh   (will pin on next run)"
+        record_fail "embedding-canary-not-pinned"
+        return
+    fi
+    ok "embedding canary pinned ($(wc -c < "$canary" | tr -d ' ') bytes)"
+}
+
 # ----- 9k. auto-maintain crons registered ----------------------------------
 check_auto_maintain_cron() {
     step "crontab — auto-maintain crons registered"
@@ -540,6 +575,7 @@ check_secrets
 check_jcodemunch_index_fresh
 check_untracked_skills
 check_auto_maintain_cron
+check_embedding_canary
 if [ "$MODE" = "full" ]; then
     check_verify
     check_smoke_hook

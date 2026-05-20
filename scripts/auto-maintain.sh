@@ -208,6 +208,37 @@ PYEOF
     fi
 fi
 
+# ── Part D: pin embedding canary (first-time or after model upgrade) ─────────
+info "=== Part D: Embedding canary ==="
+CANARY_FILE="$HOME/.code-index/embed_canary.json"
+MODEL_DIR="$HOME/.code-index/models/all-MiniLM-L6-v2"
+
+if [[ ! -d "$MODEL_DIR" ]]; then
+    info "Embedding model not downloaded — downloading now..."
+    if [[ "$DRY_RUN" -eq 0 ]]; then
+        "$PROJ_ROOT/.venv/bin/jcodemunch-mcp" download-model >> "$LOG" 2>&1 && \
+            info "Model downloaded." || warn "Model download failed (non-fatal)"
+    else
+        info "DRY RUN: would run jcodemunch-mcp download-model"
+    fi
+fi
+
+if [[ ! -f "$CANARY_FILE" ]]; then
+    info "Embedding canary not yet pinned — pinning baseline..."
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        info "DRY RUN: would pin embedding canary via claude -p"
+    else
+        PIN_PROMPT="Call the check_embedding_drift MCP tool with capture=true to pin the embedding canary baseline for the Uncle-J-s-Refinery repo. Do nothing else."
+        if "$CLAUDE_BIN" -p "$PIN_PROMPT" >> "$LOG" 2>&1; then
+            info "Embedding canary pinned."
+        else
+            warn "Canary pin failed (non-fatal — will retry on next auto-maintain run)"
+        fi
+    fi
+else
+    info "Embedding canary already pinned — skipping."
+fi
+
 # ── Telegram notification ─────────────────────────────────────────────────────
 if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" && "$DRY_RUN" -eq 0 ]]; then
     SUMMARY="auto-maintain: "

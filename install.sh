@@ -155,6 +155,11 @@ if [ -x "${EXE[jcodemunch]}" ]; then
     "${EXE[jcodemunch]}" init --yes --hooks --audit 2>&1 | tee "$STACK_ROOT/.install-jcm-init.log" || \
         warn "jcodemunch init returned non-zero (see .install-jcm-init.log)"
 fi
+# jcodemunch-mcp init always writes a local-scope `uvx jcodemunch-mcp` entry
+# which shadows the venv-pinned user-scope registration. Remove it unconditionally
+# so the correct venv binary is always what connects.
+claude mcp remove jcodemunch -s local   >/dev/null 2>&1 || true
+claude mcp remove jcodemunch -s project >/dev/null 2>&1 || true
 
 # --- 4b. Patch hook commands to use the full venv-binary path ---------------
 # `jcodemunch-mcp init --hooks` writes bare `jcodemunch-mcp <subcommand>`
@@ -207,6 +212,23 @@ if [ -x "${EXE[jdocmunch]}" ]; then
     fi
 else
     warn "jdocmunch-mcp binary not found; skipping doc index"
+fi
+
+# --- 4e. Download bundled ONNX embedding model ------------------------------
+# all-MiniLM-L6-v2 runs locally via ONNX Runtime — no API key required.
+# Enables semantic (meaning-based) search alongside BM25/AST.
+# Re-runs are idempotent: download-model skips if model already present.
+step "Downloading bundled ONNX embedding model (all-MiniLM-L6-v2)"
+if [ -x "${EXE[jcodemunch]}" ]; then
+    if "${EXE[jcodemunch]}" download-model \
+            >"$STACK_ROOT/.install-embed-model.log" 2>&1; then
+        ok "embedding model ready at ~/.code-index/models/all-MiniLM-L6-v2"
+    else
+        warn "download-model failed (non-fatal — semantic search unavailable until resolved)"
+        warn "Details: cat $STACK_ROOT/.install-embed-model.log"
+    fi
+    write_env_var "$STACK_ROOT/.env" "JCODEMUNCH_EMBED_MODEL" "all-MiniLM-L6-v2"
+    ok "JCODEMUNCH_EMBED_MODEL=all-MiniLM-L6-v2 set in .env"
 fi
 
 # --- 5. Optional auto-registration with Claude Code -------------------------

@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-05-20 — local ONNX embeddings, canary, jcodemunch scope fix
+
+### Embedding (no API key required)
+- `jcodemunch-mcp download-model` wired into install.sh step 4e — downloads `all-MiniLM-L6-v2` (86 MB ONNX, local, no network at query time)
+- `JCODEMUNCH_EMBED_MODEL=all-MiniLM-L6-v2` set in `.env`; `onnxruntime` already in venv
+- Embedding canary pinned (`~/.code-index/embed_canary.json`, 16 strings, 384-dim, `local_onnx` provider)
+- `auto-maintain.sh` Part D: downloads model if missing, pins canary if not yet pinned
+- `healthcheck.sh` check 9l: verifies model present, env var set, canary pinned
+
+### jcodemunch local-scope conflict fixed
+- `jcodemunch-mcp init` always writes `uvx jcodemunch-mcp` to local scope, shadowing the venv registration
+- Fixed: unconditional `claude mcp remove jcodemunch -s local/project` immediately after init in install.sh
+- Previously only cleared by `mcp_add` when `AUTO_REGISTER=1`; now always cleaned
+
+### New skills
+- `stack-not-at-head-remediation` — remediate HEALTHCHECK fail on stack-not-at-head
+- `telegram-gateway-security-audit` — harden Telegram→Claude gateway (deduplication + disclosure restriction)
+- `verify-handoff-claims` — rewritten/trimmed
+
+---
+
 ## 2026-05-20 — install.sh hardening: idempotency and MCP registration
 
 ### Fixes
