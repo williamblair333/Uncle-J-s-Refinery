@@ -54,6 +54,14 @@ refinery to build a plant around. Send him thanks, not me.
 | | dwarvesf guardrails | UserPromptSubmit secret scanner + PostToolUse prompt-injection defender |
 | | Bash-matcher rules | Block destructive `rm`, pipe-to-shell, direct pushes to main, exfil to webhook services, escalation flags |
 | **Observability** | Langfuse | Self-hosted (Docker) — every assistant turn traced with tool calls, timings, token counts |
+| **Optional features** | Telegram gateway | Bidirectional Claude ↔ Telegram; message Claude from your phone, get replies within 2 min |
+| | Telegram notify | Stop hook — sends a Telegram notification when each Claude session ends |
+| | Dreaming | Daily Langfuse trace mining → mistake patterns + playbooks → MemPalace + CLAUDE.md |
+| | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
+| | Auto-skill | Stop hook — suggests relevant skills based on session tool use |
+| | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start |
+| | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
+| | MemPalace automation | Stop hook (convo mining) + daily cron (project mining) — keeps palace current automatically |
 
 All 7 MCP servers register at **user scope**, so they're live in every
 Claude Code project on this machine automatically.
@@ -475,6 +483,112 @@ Manually-written drawers (not derived from sessions) must be migrated by hand
 via `mempalace export` / `mempalace import` if those commands are available in
 your version, or by copying drawer files directly from the palace SQLite.
 
+### 14. (Optional) Telegram gateway — send messages to Claude from Telegram
+
+The gateway polls your Telegram bot every 2 minutes and forwards messages to
+Claude via `claude -p`. Claude's response is sent back to the chat. Requires
+stack-alerts (step 10) to be installed first — the gateway reuses the same bot
+token and chat ID.
+
+```bash
+bash features/telegram-gateway/install.sh
+# uninstall: bash features/telegram-gateway/install.sh --uninstall
+```
+
+Security: the gateway enforces rate limits, input sanitization (injection
+patterns, dangerous Unicode, over-length inputs), output scanning (path/secret
+redaction), and an anti-disclosure system prompt so the bot never leaks OS,
+kernel, or infra details over the channel. All implemented in
+`scripts/lib/tg_security.py`.
+
+Logs: `state/telegram-gateway.log`
+
+### 15. (Optional) Telegram notify — session-end notifications
+
+A Stop hook that sends you a Telegram message when each Claude Code session
+ends, including a one-line summary of what Claude did. Requires
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env` (set by step 10).
+
+```bash
+bash features/telegram-notify/install.sh
+# uninstall: bash features/telegram-notify/install.sh --uninstall
+```
+
+### 16. (Optional) Dreaming — automatic playbook extraction
+
+Queries Langfuse for traces from the past day, synthesizes recurring mistakes
+and proven playbooks via the `dream-synthesizer` skill, writes dated output to
+`~/.claude/dreaming-output/`, ingests into MemPalace (wing: `dreaming`), and
+appends proven playbooks to `~/.claude/CLAUDE.md` idempotently.
+
+```bash
+bash features/dreaming/install.sh
+# manual trigger any time:
+bash features/dreaming/dream.sh
+# or from inside Claude Code: /dream
+```
+
+Runs daily at 2 AM by default (`DREAMING_CRON_SCHEDULE` in
+`state/dreaming.env`). See `features/dreaming/README.md` for full config.
+
+### 17. (Optional) Session stats — weekly efficiency reporter
+
+Queries Langfuse for the past 7 days of sessions, renders a markdown table
+(date, project, traces, tool calls, tokens), flags sessions exceeding 40k
+tokens, and writes output that Dreaming picks up on its next run.
+
+```bash
+bash features/session-stats/install.sh
+# manual trigger: bash features/session-stats/stats.sh
+# or from inside Claude Code: /stats
+```
+
+Runs every Sunday at 8 AM by default. See `features/session-stats/README.md`.
+
+### 18. (Optional) Auto-skill — skill suggestions after each session
+
+A Stop hook that inspects what tools were called during a session and suggests
+relevant skills you haven't used recently. Drafts go to `state/skill-drafts/`.
+
+```bash
+bash features/auto-skill/install.sh
+# uninstall: bash features/auto-skill/install.sh --uninstall
+```
+
+### 19. (Optional) Skill manager — global + per-project skill symlinks
+
+Symlinks every skill in `global-skills/` into `~/.claude/skills/` once at
+install time, and installs SessionStart / Stop hooks that symlink/remove the
+per-project `skills/` directory so project-specific skills are available only
+while you're in that project.
+
+```bash
+bash features/skill-manager/install.sh
+# uninstall: bash features/skill-manager/install.sh --uninstall
+```
+
+### 20. (Optional) Ralph cron — scheduled autonomous Ralph runs
+
+Installs a cron job that runs the verification-gated Ralph harness against a
+given PRD file on a schedule you choose interactively.
+
+```bash
+bash features/ralph-cron/install.sh
+bash features/ralph-cron/install.sh --list       # show installed ralph crons
+bash features/ralph-cron/install.sh --uninstall MARKER
+```
+
+### 21. (Optional) MemPalace automation — keep the palace current automatically
+
+Installs a Stop hook that mines `~/.claude/projects/` after every session
+(conversation mode) and a daily 3 AM cron that mines the project repo (code
+mode). Without this, you must run `mempalace mine` manually.
+
+```bash
+bash features/mempalace/install.sh
+# uninstall: bash features/mempalace/install.sh --uninstall
+```
+
 ---
 
 ## Daily usage
@@ -711,39 +825,122 @@ _stack_setup/
 ├── CLAUDE.md                           ← base routing policy
 ├── CLAUDE.md.merged                    ← full policy: routing + security + jOutputMunch (cp to ~/.claude/)
 ├── AGENTS.md                           ← agent-facing policy mirror
+├── CHANGELOG.md                        ← version history
+├── HANDOFF.md                          ← overnight-handoff brief + work log
+├── PORTING.md                          ← notes for porting to a new machine
+├── PRD.md                              ← Ralph-driven maintenance PRD
+├── prd-template.md                     ← starting template for Ralph tasks
 ├── pyproject.toml                      ← uv-managed Python deps
 ├── uv.lock
+├── mempalace.yaml                      ← MemPalace wing/room configuration
+├── mempalace-backup.sh                 ← rclone sync of ~/.mempalace/palace to remote
+├── mempalace-health.py                 ← SQLite health probe used by healthcheck.sh
+├── patch-jcodemunch-hook-paths.py      ← one-time fix for hook path mismatches after move
+├── LICENSE                             ← MIT for the glue; upstream licenses apply to each dep
 ├── .venv/                              ← real Python venv created by install.sh (gitignored)
 │
-├── prerequisites.sh                               ← step 1: git/node/claude
-├── install.sh                                     ← step 2: Python stack + MCP registration
-├── finish-install.sh                              ← re-attempt after shell refresh
-├── verify.sh                                      ← step 3: all-pass sanity check
-├── install-reliability.sh                         ← step 6: custom skills + guardrails clone
-├── install-guardrails.sh                          ← step 7: dwarvesf guardrails via upstream install.sh
-├── install-langfuse.sh                            ← step 8: Docker + Langfuse + Stop hook
-├── ralph-harness.sh                               ← verification-gated Ralph loop
-├── prd-template.md                                 ← starting template for Ralph tasks
+├── prerequisites.sh                    ← step 1: git/node/claude
+├── install.sh                          ← step 2: Python stack + MCP registration
+├── finish-install.sh                   ← re-attempt after shell refresh
+├── verify.sh                           ← step 3: all-pass sanity check
+├── healthcheck.sh                      ← runtime health check (--quick / --full)
+├── install-reliability.sh              ← step 6: custom skills + guardrails clone
+├── install-guardrails.sh               ← step 7: dwarvesf guardrails via upstream install.sh
+├── install-langfuse.sh                 ← step 8: Docker + Langfuse + Stop hook
+├── ralph-harness.sh                    ← verification-gated Ralph loop
 │
 ├── scripts/
-│   └── check-stack-freshness.sh        ← checks installed vs latest for all MCP tools
+│   ├── auto-maintain.sh                ← scheduled self-maintenance runner
+│   ├── check-stack-freshness.sh        ← checks installed vs latest for all MCP tools
+│   ├── github-webhook-server.py        ← HTTP server for GitHub push/PR events
+│   ├── jcodemunch-reindex.sh           ← triggers jcodemunch re-index after significant changes
+│   ├── mempalace-mcp-start.sh          ← wrapper that starts the mempalace MCP server
+│   ├── mempalace-mine-convos.sh        ← mines ~/.claude/projects/ (conversation mode)
+│   ├── mempalace-mine-project.sh       ← mines the project repo (code mode)
+│   ├── post-merge-hook.sh              ← git post-merge hook; alerts on new features
+│   ├── ralph-cron-run.sh               ← runs ralph-harness.sh for a given PRD (cron target)
+│   ├── review-check.sh                 ← runs the code review checklist
+│   ├── session-notify.sh               ← sends Telegram notification on session end
+│   ├── skill-link.sh                   ← symlinks a skill into ~/.claude/skills/
+│   ├── skill-suggest.sh                ← analyzes session tool use and suggests skills
+│   ├── stack-alerts-poll.sh            ← polls Telegram for replies to upgrade pitches
+│   ├── stack-alerts-send.sh            ← sends upgrade pitch to Telegram
+│   ├── telegram-gateway-poll.sh        ← polls Telegram for user messages; routes to claude -p
+│   └── lib/
+│       ├── __init__.py
+│       └── tg_security.py              ← input sanitizer, output scanner, path validator, rate limiter
 │
 ├── lib/
 │   ├── feature-helpers.sh              ← shared installer utilities (prompt, write_env_var, cron)
 │   ├── notify.sh                       ← notification dispatcher (reads NOTIFY_CHANNEL)
-│   ├── notify-telegram.sh              ← Telegram backend (send pitch, poll reply, send text)
+│   └── notify-telegram.sh              ← Telegram backend (send pitch, poll reply, send text)
 │
 ├── features/
-│   └── stack-alerts/
-│       ├── install.sh                  ← interactive setup: Telegram creds + cron
-│       └── README.md                   ← feature docs, prerequisites, uninstall
+│   ├── auto-skill/
+│   │   └── install.sh                  ← Stop hook: suggests skills based on session tool use
+│   ├── dreaming/
+│   │   ├── install.sh                  ← daily Langfuse trace mining → MemPalace + CLAUDE.md
+│   │   ├── dream.sh                    ← manual trigger
+│   │   ├── dream.md                    ← /dream slash command
+│   │   ├── README.md                   ← full feature docs
+│   │   └── skills/                     ← dream-synthesizer skill (installed to ~/.claude/skills/)
+│   ├── github-webhook/
+│   │   ├── install.sh                  ← systemd user service + GitHub webhook registration
+│   │   └── README.md                   ← setup guide, public URL requirements
+│   ├── mempalace/
+│   │   └── install.sh                  ← Stop hook (convos) + daily cron (project) mining
+│   ├── ralph-cron/
+│   │   └── install.sh                  ← per-PRD cron jobs for scheduled Ralph runs
+│   ├── session-stats/
+│   │   ├── install.sh                  ← weekly Langfuse reporter + /stats command
+│   │   ├── stats.sh                    ← manual trigger
+│   │   ├── stats.md                    ← /stats slash command
+│   │   └── README.md                   ← full feature docs
+│   ├── skill-manager/
+│   │   └── install.sh                  ← symlinks global-skills/ + project skills/ at session start
+│   ├── stack-alerts/
+│   │   ├── install.sh                  ← interactive setup: Telegram creds + cron
+│   │   └── README.md                   ← feature docs, prerequisites, uninstall
+│   ├── telegram-gateway/
+│   │   └── install.sh                  ← cron poll: Telegram → claude -p → Telegram reply
+│   └── telegram-notify/
+│       └── install.sh                  ← Stop hook: Telegram notification on session end
+│
+├── global-skills/                      ← project-agnostic skills, symlinked to ~/.claude/skills/
+│   ├── deep-repo-analysis/
+│   ├── fog-of-chess-engine-mode-implementation/
+│   ├── freecad-parametric-toolkit-build/
+│   ├── judge/
+│   ├── mcp-index-empty-diagnosis/
+│   ├── mempalace-hnsw-corruption-fix/
+│   ├── milestone-tier-implementation/
+│   ├── orchestrator/
+│   ├── outcomes/
+│   ├── per-task-review-cycle/
+│   ├── post-upgrade-mcp-integration/
+│   ├── prior-art-check/
+│   ├── stack-not-at-head-remediation/
+│   ├── stale-lock-diagnosis/
+│   ├── stale-pending-memory-guard/
+│   ├── telegram-gateway-security-audit/
+│   ├── validate-external-audit/
+│   └── verify-handoff-claims/
+│
+├── skills/                             ← per-project skills (symlinked only in this repo's sessions)
+│
+├── tests/
+│   ├── __init__.py
+│   └── test_tg_security.py             ← pytest suite for scripts/lib/tg_security.py
 │
 ├── state/                              ← runtime state (gitignored except .gitkeep)
-│   └── stack-alerts-pending.json       ← written by send job, deleted by poll job on reply
-│
-├── skills/
-│   ├── prior-art-check/SKILL.md        ← MemPalace-first skill
-│   └── judge/SKILL.md                  ← code-reviewer subagent gate
+│   ├── stack-alerts-pending.json       ← written by send job, deleted by poll job on reply
+│   ├── telegram-gateway-offset.txt     ← Telegram update_id watermark (dedup)
+│   ├── telegram-gateway.log
+│   ├── telegram-gateway-ratelimit.json
+│   ├── dreaming.env                    ← dreaming feature config (gitignored)
+│   ├── dreaming.log
+│   ├── session-stats.env               ← session-stats config (gitignored)
+│   └── skill-drafts/                   ← auto-skill draft suggestions
 │
 ├── docs/
 │   ├── STACK.md                        ← one-page-per-tool reference
@@ -756,9 +953,6 @@ _stack_setup/
 │   ├── windsurf-mcp.json.tmpl
 │   └── *.json                          ← rendered outputs (gitignored)
 │
-├── LICENSE                             ← MIT for the glue; upstream licenses apply to each dep
-├── HANDOFF.md                          ← overnight-handoff brief + work log
-├── PRD.md                              ← Ralph-driven maintenance PRD
 ├── claude-guardrails/                  ← cloned dwarvesf/claude-guardrails (gitignored)
 └── claude-code-langfuse-template/      ← cloned doneyli/claude-code-langfuse-template (gitignored)
 ```
@@ -784,13 +978,23 @@ claude/
 ├── settings.json                       ← hooks, env vars, permissions.deny
 ├── .claude.json                        ← MCP server registrations (managed by `claude mcp add`)
 ├── skills/
-│   ├── prior-art-check/                ← from step 6
-│   └── judge/                          ← from step 6
+│   ├── prior-art-check/                ← from step 6 (or skill-manager)
+│   ├── judge/                          ← from step 6 (or skill-manager)
+│   ├── dream-synthesizer/              ← from features/dreaming
+│   └── <others>/                       ← symlinked from global-skills/ by skill-manager
+├── commands/
+│   ├── dream.md                        ← /dream slash command (features/dreaming)
+│   ├── stats.md                        ← /stats slash command (features/session-stats)
+│   ├── health.md                       ← /health slash command
+│   └── ...
 ├── hooks/
 │   ├── langfuse_hook.py                ← Stop hook, step 8
 │   ├── scan-secrets/                   ← guardrail, step 7
 │   ├── scan-commit/                    ← guardrail, step 7
 │   └── prompt-injection-defender/      ← guardrail, step 7
+├── dreaming-output/                    ← dated dream + stats reports (feeds MemPalace)
+│   ├── dream-YYYY-MM-DD.md
+│   └── stats-YYYY-MM-DD.md
 ├── state/
 │   ├── langfuse_hook.log
 │   ├── langfuse_state.json
