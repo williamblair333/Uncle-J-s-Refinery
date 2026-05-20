@@ -32,6 +32,9 @@ ok()    { printf '    OK  %s\n' "$*"; }
 warn()  { printf '    !!  %s\n' "$*" >&2; }
 has()   { command -v "$1" >/dev/null 2>&1; }
 
+# Source early so install_cron / prompt_yes_no are available throughout
+source "$STACK_ROOT/lib/feature-helpers.sh"
+
 # --- 1. Prereqs --------------------------------------------------------------
 step "Checking prerequisites"
 if ! has python3; then
@@ -265,12 +268,8 @@ for entry in \
 do
     tag="${entry%%|*}"
     line="${entry#*|}"
-    if crontab -l 2>/dev/null | grep -q "$tag"; then
-        ok "cron already registered: $tag"
-    else
-        ( crontab -l 2>/dev/null; printf '# %s\n%s\n' "$tag" "$line" ) | crontab -
-        ok "cron registered: $tag"
-    fi
+    install_cron "$tag" "$line"
+    ok "cron registered: $tag"
 done
 
 # --- 5d. Skills (reliability layer) ----------------------------------------
@@ -293,18 +292,21 @@ step "Installing retrieval routing policy (CLAUDE.md)"
 _CLAUDE_SRC="$STACK_ROOT/CLAUDE.md"
 _CLAUDE_DEST="$HOME/.claude/CLAUDE.md"
 mkdir -p "$HOME/.claude"
-if [ -f "$_CLAUDE_DEST" ]; then
+if [ -f "$_CLAUDE_DEST" ] && ! diff -q "$_CLAUDE_SRC" "$_CLAUDE_DEST" >/dev/null 2>&1; then
     _BACKUP="$_CLAUDE_DEST.bak.$(date +%Y%m%d%H%M%S)"
     cp "$_CLAUDE_DEST" "$_BACKUP"
     ok "backed up existing CLAUDE.md → $(basename "$_BACKUP")"
+    cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"
+    ok "routing policy updated → $_CLAUDE_DEST"
+elif [ ! -f "$_CLAUDE_DEST" ]; then
+    cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"
+    ok "routing policy installed → $_CLAUDE_DEST"
+else
+    ok "routing policy unchanged — skipped"
 fi
-cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"
-ok "routing policy installed → $_CLAUDE_DEST"
-ok "(copy to a project directory too if you want per-project overrides)"
 
 # --- 6c. Wire git post-merge hook (opt-in) ----------------------------------
 step "Optional features"
-source "$STACK_ROOT/lib/feature-helpers.sh"
 echo ""
 if [[ -d "$STACK_ROOT/.git" ]]; then
     _HOOK_SRC="$STACK_ROOT/scripts/post-merge-hook.sh"
