@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-20*
+*Last updated: 2026-05-21*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -73,6 +73,10 @@ All items from all previous HANDOFFs are resolved.
 - **New skills committed**: `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — were on disk and symlinked but not committed
 - **Stack upgrade**: jcodemunch 1.108.19 → 1.108.20; index rebuilt 77 → 4,624 symbols
 - **CLAUDE.md routing expanded**: 30+ missing jcodemunch tools added (digest, get_repo_health, assemble_task_context, check_rename_safe, check_delete_safe, plan_refactoring, get_symbol_provenance, register_edit, get_tectonic_map, get_signal_chains, render_diagram, search_ast, get_dead_code_v2, audit_agent_config, + runtime trace tools); both global + project CLAUDE.md in sync
+
+### 2026-05-21
+- **Design spec written**: two automation gaps identified and fully specced — skill auto-install (dynamic `global-skills/` scan + symlink in auto-maintain Part C) and post-upgrade evaluation for all 4 packages with breaking-change detection and HANDOFF/CLAUDE.md auto-update. Spec at `docs/superpowers/specs/2026-05-21-skill-auto-install-and-upgrade-eval-design.md`. Implementation plan is next.
+- **`readme-sync` skill committed**: `global-skills/readme-sync/` — audits README against repo contents; three targeted edits max.
 
 ### 2026-05-20 (session 5, continued)
 - **Gateway disclosure fix v2** (`3e3a9a9`): API-direct approach (OAuth token as api_key) dropped — tokens rotate unpredictably and produce 401 on rotation. `--system-prompt` (replace, not append) is the correct approach: harness does NOT inject system-reminder when --system-prompt is provided, so OS/kernel/email/paths/MCP stack are never in context. Both main message path and classify_promote now use `claude --print --system-prompt RESTRICTION` from `cwd=/tmp`. Stress-tested against 6 adversarial prompts including DAN jailbreak, authority claim, emotional pressure, and explicit threats — all refused correctly.

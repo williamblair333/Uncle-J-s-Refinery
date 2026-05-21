@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-21 — design: skill auto-install + post-upgrade evaluation
+
+### Design spec
+- `docs/superpowers/specs/2026-05-21-skill-auto-install-and-upgrade-eval-design.md` — full design for two automation gaps:
+  1. **Skill auto-install**: `install-reliability.sh` currently has a hardcoded skill list; `auto-maintain.sh` Part C commits new skills but doesn't symlink them. Fix: dynamic `global-skills/` scan in install-reliability.sh; symlink step added to Part C immediately after commit.
+  2. **Post-upgrade evaluation**: Part B only covered jcodemunch and only detected new tools. Extended to all 4 packages (`jcodemunch-mcp`, `jdatamunch-mcp`, `jdocmunch-mcp`, `mempalace`) with pre-upgrade SHA capture, post-upgrade commit log fetch via GitHub API, breaking-change keyword detection, and a structured `claude -p` evaluation that updates CLAUDE.md routing and appends a dated HANDOFF note for any breaking changes found.
+
+### New skill
+- `global-skills/readme-sync/` — audits README against actual repo contents, identifies undocumented features, makes targeted edits to three sections max (feature table, install steps, file map); hardcoded "never rewrite accurate prose" constraint.
+
+---
+
 ## 2026-05-20 — Telegram gateway: suppress system-reminder without API key
 
 ### `scripts/telegram-gateway-poll.sh`
