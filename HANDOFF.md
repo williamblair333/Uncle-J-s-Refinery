@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-21*
+*Last updated: 2026-05-21 (integration complete)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -77,6 +77,7 @@ All items from all previous HANDOFFs are resolved.
 ### 2026-05-21
 - **Design spec written**: two automation gaps identified and fully specced — skill auto-install (dynamic `global-skills/` scan + symlink in auto-maintain Part C) and post-upgrade evaluation for all 4 packages with breaking-change detection and HANDOFF/CLAUDE.md auto-update. Spec at `docs/superpowers/specs/2026-05-21-skill-auto-install-and-upgrade-eval-design.md`. Implementation plan is next.
 - **`readme-sync` skill committed**: `global-skills/readme-sync/` — audits README against repo contents; three targeted edits max.
+- **Skill auto-install + post-upgrade evaluation implemented**: `install-reliability.sh` now scans `global-skills/` dynamically; `auto-maintain.sh` Part B extended to all 4 packages with commit-log fetch, breaking-change grep (including `feat!` notation), HANDOFF.md auto-note, Part C symlink pass, and Telegram alert.
 
 ### 2026-05-20 (session 5, continued)
 - **Gateway disclosure fix v2** (`3e3a9a9`): API-direct approach (OAuth token as api_key) dropped — tokens rotate unpredictably and produce 401 on rotation. `--system-prompt` (replace, not append) is the correct approach: harness does NOT inject system-reminder when --system-prompt is provided, so OS/kernel/email/paths/MCP stack are never in context. Both main message path and classify_promote now use `claude --print --system-prompt RESTRICTION` from `cwd=/tmp`. Stress-tested against 6 adversarial prompts including DAN jailbreak, authority claim, emotional pressure, and explicit threats — all refused correctly.

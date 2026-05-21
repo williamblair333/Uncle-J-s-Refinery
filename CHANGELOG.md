@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-05-21 — feat: skill auto-install + all-package post-upgrade evaluation
+
+### `install-reliability.sh`
+- **Dynamic skill scan**: hardcoded skill list replaced with `global-skills/*/` glob — any new skill directory is automatically symlinked to `~/.claude/skills/` without code changes.
+
+### `scripts/auto-maintain.sh`
+- **Part B extended to all 4 packages**: upgrade evaluation now runs for `jcodemunch-mcp`, `jdatamunch-mcp`, `jdocmunch-mcp`, and `mempalace` (was jcodemunch-only).
+- **Pre-upgrade SHA capture**: `OLD_SHAS` associative array captures locked SHAs before `uv lock` runs so the diff is available for evaluation.
+- **Breaking-change detection**: commit log fetched via GitHub compare API; grep pattern includes `breaking`, `BREAKING CHANGE`, `deprecated`, `removed`, `incompatible`, and conventional-commit `[a-z]+!:` notation.
+- **HANDOFF.md auto-note**: `claude -p` evaluation writes a dated breaking-change entry to HANDOFF.md when breaking commits are found.
+- **Part C symlink pass**: new skills are symlinked to `~/.claude/skills/` immediately after git commit — no manual install step needed.
+- **Telegram**: breaking-change packages surfaced in the nightly summary message.
+
+---
+
 ## 2026-05-21 — design: skill auto-install + post-upgrade evaluation
 
 ### Design spec
