@@ -79,6 +79,20 @@ except Exception:
     print(0)" 2>/dev/null || echo 0
 }
 
+fetch_commit_log() {
+    local pkg=$1 old_sha=$2 new_sha=$3
+    _gh_curl "https://api.github.com/repos/${GITHUB[$pkg]}/compare/${old_sha}...${new_sha}" \
+        | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    for c in d.get('commits', []):
+        print(c['commit']['message'].split(chr(10))[0])
+except Exception:
+    pass
+" 2>/dev/null || true
+}
+
 # ── Part A: threshold-based upgrade ──────────────────────────────────────────
 info "=== Part A: Package freshness check ==="
 PACKAGES_TO_UPGRADE=()
@@ -95,10 +109,16 @@ for pkg in jcodemunch-mcp jdatamunch-mcp jdocmunch-mcp mempalace; do
 done
 
 UPGRADED=0
+BREAKING_FLAGS=()
 if [[ "${#PACKAGES_TO_UPGRADE[@]}" -gt 0 ]]; then
     UPGRADE_FLAGS=""
     for pkg in "${PACKAGES_TO_UPGRADE[@]}"; do
         UPGRADE_FLAGS="$UPGRADE_FLAGS --upgrade-package $pkg"
+    done
+
+    declare -A OLD_SHAS
+    for pkg in "${PACKAGES_TO_UPGRADE[@]}"; do
+        OLD_SHAS[$pkg]=$(parse_lock_sha "$pkg")
     done
 
     info "Upgrading: ${PACKAGES_TO_UPGRADE[*]}"
@@ -116,29 +136,69 @@ else
     info "All packages within threshold. No upgrade needed."
 fi
 
-# ── Part B: CLAUDE.md sync after upgrade ─────────────────────────────────────
-info "=== Part B: CLAUDE.md sync ==="
+# ── Part B: post-upgrade evaluation (all packages) ───────────────────────────
+info "=== Part B: Post-upgrade evaluation ==="
 JCODEMUNCH="$PROJ_ROOT/.venv/bin/jcodemunch-mcp"
 
-if [[ "$UPGRADED" -eq 1 && -x "$JCODEMUNCH" ]]; then
-    NEW_TOOLS=$("$JCODEMUNCH" claude-md --format append 2>/dev/null || true)
-    if [[ -n "$NEW_TOOLS" && "$NEW_TOOLS" != *"No new tools"* ]]; then
-        info "New tools detected in jcodemunch. Triggering post-upgrade-mcp-integration..."
-        if [[ "$DRY_RUN" -eq 1 ]]; then
-            info "DRY RUN: would run claude -p to sync CLAUDE.md routing"
-        else
-            SYNC_PROMPT="The jcodemunch-mcp package was just upgraded in $PROJ_ROOT. Run the post-upgrade-mcp-integration skill to check for new tools and update both the project CLAUDE.md and ~/.claude/CLAUDE.md routing policy, then commit. The new tools not yet in CLAUDE.md are: $NEW_TOOLS"
-            if "$CLAUDE_BIN" -p "$SYNC_PROMPT" >> "$LOG" 2>&1; then
-                info "CLAUDE.md sync complete."
-            else
-                warn "CLAUDE.md sync claude -p invocation failed (non-fatal)"
-            fi
+if [[ "$UPGRADED" -eq 1 ]]; then
+    for pkg in "${PACKAGES_TO_UPGRADE[@]}"; do
+        old_sha="${OLD_SHAS[$pkg]:-?}"
+        new_sha=$(parse_lock_sha "$pkg")
+
+        if [[ "$old_sha" == "?" || "$old_sha" == "$new_sha" ]]; then
+            info "$pkg: SHA unchanged — skipping evaluation"
+            continue
         fi
-    else
-        info "No new tools to add to CLAUDE.md."
-    fi
-elif [[ "$UPGRADED" -eq 0 ]]; then
-    info "No upgrade performed — CLAUDE.md sync skipped."
+
+        info "$pkg: evaluating upgrade ${old_sha}→${new_sha}"
+
+        commits=$(fetch_commit_log "$pkg" "$old_sha" "$new_sha")
+        if [[ -z "$commits" ]]; then
+            warn "$pkg: could not fetch commit log (GitHub API issue) — skipping"
+            continue
+        fi
+
+        breaking=$(printf '%s\n' "$commits" | grep -iE 'breaking|BREAKING.CHANGE|deprecated|removed|incompatible' || true)
+        [[ -n "$breaking" ]] && BREAKING_FLAGS+=("$pkg")
+
+        jcm_tools=""
+        if [[ "$pkg" == "jcodemunch-mcp" && -x "$JCODEMUNCH" ]]; then
+            jcm_tools=$("$JCODEMUNCH" claude-md --format append 2>/dev/null || true)
+            [[ "$jcm_tools" == *"No new tools"* ]] && jcm_tools=""
+        fi
+
+        if [[ "$DRY_RUN" -eq 1 ]]; then
+            info "DRY RUN: would evaluate $pkg with claude -p"
+            [[ -n "$breaking" ]] && info "DRY RUN: breaking changes detected: $breaking"
+            [[ -n "$jcm_tools" ]] && info "DRY RUN: new jcodemunch tools: $jcm_tools"
+            continue
+        fi
+
+        EVAL_PROMPT="The $pkg package was just upgraded in $PROJ_ROOT (${old_sha}→${new_sha}).
+
+Commit log (one subject line per commit):
+$commits
+${breaking:+
+BREAKING CHANGES DETECTED in the commit log above:
+$breaking
+}${jcm_tools:+
+NEW JCODEMUNCH TOOLS not yet in CLAUDE.md:
+$jcm_tools
+}
+Your tasks — do all that apply, nothing else:
+1. If new tools or routing changes are needed: update $PROJ_ROOT/CLAUDE.md and ~/.claude/CLAUDE.md. Keep existing formatting and section structure.
+2. If breaking changes are present: append a brief entry under the most recent date heading in the 'What happened' section of $PROJ_ROOT/HANDOFF.md. Format exactly: '- **$pkg breaking change**: <one sentence — what changed and what callers must update>'.
+3. Commit any file changes with message 'chore: post-upgrade sync — $pkg ${old_sha}→${new_sha}'.
+4. If nothing requires a change, do nothing and exit cleanly."
+
+        if "$CLAUDE_BIN" -p "$EVAL_PROMPT" >> "$LOG" 2>&1; then
+            info "$pkg: evaluation complete."
+        else
+            warn "$pkg: claude -p evaluation failed (non-fatal)"
+        fi
+    done
+else
+    info "No upgrade performed — post-upgrade evaluation skipped."
 fi
 
 # ── Part C: auto-commit untracked global-skills files ────────────────────────
