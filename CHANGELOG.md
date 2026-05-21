@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-21 — mempalace upgrade: 95caf80f → 60d460b3
+
+### `mempalace`
+- **`feat(convo_miner)`: auto-route AI tool sessions to `wing_api`** — conversation miner now detects AI tool sessions (Claude Code, etc.) and routes them to `wing_api` automatically rather than the default wing. No new MCP tools; no CLAUDE.md routing changes required.
+
+---
+
 ## 2026-05-21 — feat: skill auto-install + all-package post-upgrade evaluation
 
 ### `install-reliability.sh`
