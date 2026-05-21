@@ -122,6 +122,7 @@ if not data.get("ok"):
 
 updates = data.get("result", [])
 new_offset = current_offset
+rate_limit_notified = False
 
 for update in updates:
     update_id = update.get("update_id", 0)
@@ -145,10 +146,13 @@ for update in updates:
 
     log(f"Received message ({len(text)} chars)")  # do not log message content
 
-    # Rate limit check
+    # Rate limit check — send at most one notification per cron run to avoid
+    # flooding when multiple queued messages all hit the same limit.
     rl_allowed, rl_err = check_rate_limit(from_chat, RATE_LIMIT_STATE)
     if not rl_allowed:
-        tg_send(rl_err)
+        if not rate_limit_notified:
+            tg_send(rl_err)
+            rate_limit_notified = True
         continue
 
     # Input sanitization: strip dangerous unicode, check injection patterns, cap length
