@@ -110,6 +110,7 @@ done
 
 UPGRADED=0
 BREAKING_FLAGS=()
+declare -A OLD_SHAS
 if [[ "${#PACKAGES_TO_UPGRADE[@]}" -gt 0 ]]; then
     UPGRADE_FLAGS=""
     for pkg in "${PACKAGES_TO_UPGRADE[@]}"; do
@@ -140,7 +141,7 @@ fi
 info "=== Part B: Post-upgrade evaluation ==="
 JCODEMUNCH="$PROJ_ROOT/.venv/bin/jcodemunch-mcp"
 
-if [[ "$UPGRADED" -eq 1 ]]; then
+if [[ "$UPGRADED" -eq 1 || ( "$DRY_RUN" -eq 1 && "${#PACKAGES_TO_UPGRADE[@]}" -gt 0 ) ]]; then
     for pkg in "${PACKAGES_TO_UPGRADE[@]}"; do
         old_sha="${OLD_SHAS[$pkg]:-?}"
         new_sha=$(parse_lock_sha "$pkg")
@@ -158,7 +159,7 @@ if [[ "$UPGRADED" -eq 1 ]]; then
             continue
         fi
 
-        breaking=$(printf '%s\n' "$commits" | grep -iE 'breaking|BREAKING.CHANGE|deprecated|removed|incompatible' || true)
+        breaking=$(printf '%s\n' "$commits" | grep -iE 'breaking|BREAKING.CHANGE|deprecated|removed|incompatible|[a-z]+!:' || true)
         [[ -n "$breaking" ]] && BREAKING_FLAGS+=("$pkg")
 
         jcm_tools=""
@@ -198,7 +199,7 @@ Your tasks — do all that apply, nothing else:
         fi
     done
 else
-    info "No upgrade performed — post-upgrade evaluation skipped."
+    info "No upgrade performed and no packages queued — post-upgrade evaluation skipped."
 fi
 
 # ── Part C: auto-commit untracked global-skills files ────────────────────────
