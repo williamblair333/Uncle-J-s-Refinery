@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-21 — skill refactor: auto-maintain-commit-and-deploy tightened
+
+### `global-skills/auto-maintain-commit-and-deploy/SKILL.md`
+- Added `metadata: type: feedback` front matter
+- Rewrote prose to be more concise — same guidance, fewer words
+- Fixed `ln -sf` → `ln -s` in code examples (idempotency guard makes `-f` redundant)
+- Clarified A+C hybrid pattern: bash fetches commit logs, Claude reasons about breaking changes
+
+---
+
 ## 2026-05-21 — dma64 merge: healthcheck interactive hints + pin-canary.sh + Telegram rate-limit fix + CLAUDE.md section 1 expansion
 
 ### `healthcheck.sh`

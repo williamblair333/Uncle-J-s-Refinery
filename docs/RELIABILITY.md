@@ -203,6 +203,14 @@ The lockfiles exist because `mempalace mine` has no built-in concurrency guard, 
 
 ---
 
+## Skills
+
+Skills live in `global-skills/` and are symlinked to `~/.claude/skills/` by `install-reliability.sh`. Any directory added to `global-skills/` is automatically picked up — no hardcoded list to maintain.
+
+The `auto-maintain-commit-and-deploy` skill documents the pattern: dynamic glob replaces hardcoded name lists, and `git commit` is coupled with an immediate symlink pass so new skills are live before the next session.
+
+---
+
 ## Disable / uninstall
 
 ```bash

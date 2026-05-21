@@ -79,6 +79,7 @@ All items from all previous HANDOFFs are resolved.
 - **`readme-sync` skill committed**: `global-skills/readme-sync/` — audits README against repo contents; three targeted edits max.
 - **Skill auto-install + post-upgrade evaluation implemented**: `install-reliability.sh` now scans `global-skills/` dynamically; `auto-maintain.sh` Part B extended to all 4 packages with commit-log fetch, breaking-change grep (including `feat!` notation), HANDOFF.md auto-note, Part C symlink pass, and Telegram alert.
 - **mempalace upgraded** `95caf80f` → `60d460b3`: `feat(convo_miner)` — AI tool sessions auto-routed to `wing_api` during mining. No breaking changes; no CLAUDE.md updates required.
+- **`auto-maintain-commit-and-deploy` skill tightened**: added metadata front matter, shorter prose, fixed `ln -sf` → `ln -s` in examples, clarified bash+Claude hybrid upgrade pattern.
 - **dma64 branch merged into main** (meaningful changes cherry-picked): interactive healthcheck `hint()` prompt, `scripts/pin-canary.sh` (dedicated canary pinner with exit-code guarantee), Telegram rate-limit flood fix (`rate_limit_notified` flag), CLAUDE.md section 1 reorganized into 8 subsections with ~43 additional jcodemunch tools, duplicate `### 6.` numbering fixed. dma64 branch is now behind main by these commits.
 - **Stale mine lock check demoted to WARN**: `healthcheck.sh` stale lock check no longer calls `record_fail` — auto-clears on next mine invocation, not a blocker.
 

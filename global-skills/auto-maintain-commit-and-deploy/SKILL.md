@@ -1,62 +1,49 @@
 ---
 name: auto-maintain-commit-and-deploy
 description: Use when a cron-based auto-maintenance script commits new skills or plugins to git but the install script still has a hardcoded list that needs manual updating, or when new artifacts are committed but not immediately deployed (symlinked, copied, activated). Covers replacing hardcoded artifact lists with dynamic directory scanning and coupling git commits with immediate deployment steps.
+metadata:
+  type: feedback
 ---
 
-# Auto-Maintain: Commit and Deploy Together
+## When to use
 
-## Overview
+- A nightly cron commits new skill/plugin directories to git but `~/.claude/skills/` (or equivalent) is not updated until the next manual install run
+- An install script has a hardcoded list of artifact names that must be maintained by hand
+- New artifacts land in a well-known directory but are not immediately live after commit
 
-When an auto-maintain cron commits new artifacts (skills, plugins, configs), it should also immediately deploy them in the same step. Hardcoded artifact lists in install scripts create a silent maintenance gap — new artifacts get committed but stay dormant until someone manually updates the list.
+## Key steps demonstrated
 
-## When to Use
+### 1. Replace hardcoded list with dynamic scan
 
-- `auto-maintain.sh` or similar cron commits new skills/plugins but the install script has a hardcoded name list
-- New artifacts appear in git but aren't live until the next manual `install-*.sh` run
-- Skill list in install script is a copy-paste artifact from a prior inventory, not a live scan
+In the install script, replace any `for skill in name1 name2 name3` loop with a glob over the source directory:
 
-## The Two-Part Fix
-
-### 1. Replace hardcoded list with directory glob
-
-**Before (install-reliability.sh):**
-for skill in prior-art-check judge outcomes orchestrator; do
-    ln -sf "$STACK_ROOT/global-skills/$skill" "$CLAUDE_DIR/skills/$skill"
-done
-
-**After:**
 for src in "$STACK_ROOT/global-skills"/*/; do
     [ -d "$src" ] || continue
     skill_name=$(basename "$src")
     dst="$CLAUDE_DIR/skills/$skill_name"
-    [ -L "$dst" ] || ln -sf "$src" "$dst"
+    [ -L "$dst" ] || ln -s "$src" "$dst"
 done
 
-Any directory under `global-skills/` is automatically picked up — no list to maintain.
+Any directory added to `global-skills/` is automatically picked up — no list maintenance.
 
-### 2. Couple commit with deploy in auto-maintain
+### 2. Couple git commit with immediate deployment
 
-After the `git commit` step that lands new artifacts, immediately run the same glob-based symlink loop. New skills are live before the next Claude session starts, not on the next manual install run.
+In the auto-maintain script, after the `git commit` that lands new artifacts, run the same symlink loop inline so artifacts are live before the next session:
 
-# Part C: commit new skills
-git add global-skills/
-git commit -m "chore: auto-add new skills"
-
-# Immediately deploy — don't wait for next install-reliability.sh run
+# after git commit of new skills...
 for src in "$STACK_ROOT/global-skills"/*/; do
     [ -d "$src" ] || continue
-    ln -sf "$src" "$CLAUDE_DIR/skills/$(basename "$src")"
+    dst="$CLAUDE_DIR/skills/$(basename "$src")"
+    [ -L "$dst" ] || ln -s "$src" "$dst"
 done
 
-## Common Mistakes
+No extra Telegram alert needed — the existing end-of-run notification covers it.
 
-| Mistake | Fix |
-|---------|-----|
-| Only fixing the install script but not auto-maintain | Fix both — they run independently |
-| Symlinking without checking `[ -d "$src" ]` | Guard against files mixed in the directory |
-| Hardcoding the target dir path | Use a variable (`$CLAUDE_DIR`) so it works across machines |
-| Forgetting to update the Telegram/notification message | The alert should list newly-symlinked skills, not just committed ones |
+### 3. Upgrade evaluation: bash + Claude hybrid
 
-## Related
+For post-upgrade change detection across multiple packages:
+- Bash fetches commit logs (`git log OLD..NEW --oneline`) and scans for breaking-change keywords (`feat!`, `BREAKING`)
+- Pass raw commits to `claude -p` for holistic reasoning about what changed and whether CLAUDE.md routing rules need updating
+- This is the A+C hybrid: bash does the mechanical fetch, Claude does the judgment
 
-- `install-script-cp-to-symlink` — covers the silent `cp` failure pattern when a symlink already exists at the destination
+**Why:** keyword-only bash scanning misses semantic breaking changes; Claude invocation adds reasoning without replacing the cheap keyword pre-filter.
