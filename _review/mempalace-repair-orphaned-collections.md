@@ -2,7 +2,7 @@
 repo: MemPalace/mempalace
 title: "repair --yes leaves orphaned collections on repeat runs"
 type: bug
-status: filed
+status: resolved
 issue_url: "https://github.com/MemPalace/mempalace/issues/1516"
 ---
 
