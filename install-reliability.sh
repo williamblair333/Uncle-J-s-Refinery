@@ -26,20 +26,17 @@ mkdir -p "$CLAUDE_DIR/skills"
 if [ ! -d "$STACK_ROOT/global-skills" ]; then
     warn "global-skills/ directory not found — no skills will be installed"
 fi
-for skill in prior-art-check judge outcomes orchestrator per-task-review-cycle post-upgrade-mcp-integration; do
-    src="$STACK_ROOT/global-skills/$skill"
-    dst="$CLAUDE_DIR/skills/$skill"
-    if [ ! -d "$src" ]; then
-        warn "skill source missing (will install when created): $src"
-        continue
-    fi
+for src in "$STACK_ROOT/global-skills"/*/; do
+    [ -d "$src" ] || continue
+    skill_name=$(basename "$src")
+    dst="$CLAUDE_DIR/skills/$skill_name"
     if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
-        ok "skill already linked: $skill"
+        ok "skill already linked: $skill_name"
         continue
     fi
     rm -rf "$dst"
     ln -sfn "$src" "$dst"
-    ok "skill installed: $skill"
+    ok "skill installed: $skill_name"
 done
 
 # ── Write OUTCOMES_MAX_ITERATIONS to settings.json ───────────────────────────
