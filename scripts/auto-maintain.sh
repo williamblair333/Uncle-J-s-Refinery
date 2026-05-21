@@ -265,6 +265,19 @@ PYEOF
                 --author="Uncle J Auto-Maintain <auto@uncle-j.local>" || \
                 info "git commit failed or nothing to commit"
             info "Skills committed."
+
+            CLAUDE_DIR="${CLAUDE_HOME:-$HOME/.claude}"
+            mkdir -p "$CLAUDE_DIR/skills"
+            for src in "$PROJ_ROOT/global-skills"/*/; do
+                [ -d "$src" ] || continue
+                skill_name=$(basename "$src")
+                dst="$CLAUDE_DIR/skills/$skill_name"
+                if [ ! -L "$dst" ] || [ "$(readlink -f "$dst")" != "$(readlink -f "$src")" ]; then
+                    rm -rf "$dst"
+                    ln -sfn "$src" "$dst"
+                    info "Symlinked skill: $skill_name"
+                fi
+            done
         fi
     fi
 fi
@@ -303,7 +316,10 @@ fi
 # ── Telegram notification ─────────────────────────────────────────────────────
 if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" && "$DRY_RUN" -eq 0 ]]; then
     SUMMARY="auto-maintain: "
-    [[ "$UPGRADED" -eq 1 ]] && SUMMARY+="upgraded ${PACKAGES_TO_UPGRADE[*]}. "
+    if [[ "$UPGRADED" -eq 1 ]]; then
+        SUMMARY+="upgraded ${PACKAGES_TO_UPGRADE[*]}. "
+        [[ "${#BREAKING_FLAGS[@]}" -gt 0 ]] && SUMMARY+="⚠️ breaking changes in ${BREAKING_FLAGS[*]} — see HANDOFF.md. "
+    fi
     [[ "${#SKILL_NAMES[@]:-0}" -gt 0 ]] && SUMMARY+="committed ${#SKILL_NAMES[@]} skill(s). "
     [[ "$UPGRADED" -eq 0 && "${#SKILL_NAMES[@]:-0}" -eq 0 ]] && SUMMARY+="nothing to do."
     source "$PROJ_ROOT/lib/notify.sh" 2>/dev/null && notify_send_text "$SUMMARY" || true
