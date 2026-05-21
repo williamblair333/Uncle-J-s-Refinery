@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-05-21 — dma64 merge: healthcheck interactive hints + pin-canary.sh + Telegram rate-limit fix + CLAUDE.md section 1 expansion
+
+### `healthcheck.sh`
+- **`warn()` function added**: stale mine locks now emit `W` (warning) instead of `X` (failure) and no longer call `record_fail` — auto-clears on next mine invocation, not a blocker.
+- **Interactive `hint()` prompt**: when running in an interactive terminal, `fix: run: ...` hints offer "Fix it now? [y/N]" — executes the command inline on `y`. Non-interactive (cron, piped) runs are unaffected.
+- **Canary hint updated**: failure hint now points to `scripts/pin-canary.sh` instead of `auto-maintain.sh` (which treats pin failure as non-fatal).
+
+### `scripts/pin-canary.sh` (new)
+- Dedicated script to pin the jcodemunch embedding canary. Calls `claude -p "Call check_embedding_drift with capture=true"` and exits non-zero if canary is still absent after the attempt — no silent failures. Sourced from dma64 branch.
+
+### `scripts/telegram-gateway-poll.sh`
+- **Rate-limit flooding fix**: added `rate_limit_notified` flag — at most one rate-limit notification sent per cron run regardless of how many queued messages exceed the limit.
+
+### `CLAUDE.md` (project + global)
+- **Section 1 expanded and reorganized** into subsections (Index & setup, Orientation & cold-start, Retrieval, References & call graph, Refactoring & safety, Quality & risk, Cross-repo & monorepos, Session & tier config) with ~43 additional jcodemunch tools documented. Sourced from dma64 branch commit `23e73d6`.
+- **Duplicate `### 6.` numbering fixed**: "Format economy" section renumbered to `### 7.`
+
+---
+
 ## 2026-05-21 — mempalace upgrade: 95caf80f → 60d460b3
 
 ### `mempalace`

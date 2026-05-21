@@ -29,45 +29,67 @@ tools can answer structurally.
 ## Operating rules
 
 ### 1. Code work — jCodeMunch first, Serena for LSP-hard questions
-- Start with `search_symbols`, `get_file_outline`, `get_repo_outline` for
-  orientation. Never `Read` a source file to "see what's in it."
-- **Session start on a familiar repo**: call `digest` first — change-oriented briefing
-  (~200 tokens) covering what changed since last session, hotspots, and dead code.
-- **First call in any analysis session**: `get_repo_health` — one-call triage snapshot
-  (symbol counts, dead code %, avg complexity, top hotspots, cycle count).
-- Before editing a function, call `get_symbol_source` for that function, not
-  `Read` on the whole file. For multi-symbol context, use `get_context_bundle`.
-- For query-driven context assembly in one call, use `assemble_task_context` —
-  it auto-classifies intent, runs the right sub-tools, and returns a source-attributed capsule.
-- Before committing to a change, call `get_blast_radius` to see what else
-  breaks. For PRs, `get_pr_risk_profile` produces a single composite score.
-- Before renaming a symbol: `check_rename_safe`. Before deleting: `check_delete_safe`.
-  For multi-file rename/move/extract: `plan_refactoring` generates edit-ready blocks.
-- Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship
-  lineage explains the "why" behind code before you change it.
+
+**Index & setup** — confirm the repo is indexed before searching:
+- Call `list_repos` before any search — confirms the project is indexed and surfaces its repo ID. If missing, run `index_folder` (local path) or `index_repo` (GitHub URL). Use `index_file` for surgical single-file updates after edits.
+- `resolve_repo` converts any filesystem path to a repo ID in one O(1) lookup — faster than scanning `list_repos`.
+- `summarize_repo` regenerates AI summaries when skipped or interrupted; `embed_repo` warms the semantic-search cache upfront; `invalidate_cache` forces a full re-index.
+- `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
+- `get_watch_status` — check daemon coverage and staleness before relying on index freshness.
+- `jcodemunch_guide` — returns the version-current CLAUDE.md policy snippet; prefer it over a static copy in any harness that auto-loads routing rules.
+
+**Orientation & cold-start**:
+- Use `plan_turn` as your opening move on an unfamiliar repo. It respects the turn budget and selects the right tool for you.
+- **Session start on a familiar repo**: call `digest` first — change-oriented briefing (~200 tokens) covering what changed since last session, hotspots, and dead code.
+- **First call in any analysis session**: `get_repo_health` — one-call triage snapshot (symbol counts, dead code %, avg complexity, top hotspots, cycle count).
+- Cold-start signature overview: `get_repo_map` (token-budgeted, PageRank-ranked signatures — "what matters here?"); `get_symbol_importance` (top symbols by import-graph centrality, `pagerank` or `degree`).
+- Start with `search_symbols`, `get_file_outline`, `get_repo_outline` for orientation. Never `Read` a source file to "see what's in it."
+- `get_file_tree` for a scoped directory listing within the index; `get_file_content` to fetch a cached file or line range (prefer over `Read` on indexed repos).
+- `get_session_context` — check files already accessed this session before re-reading. `get_session_snapshot` — ~200-token markdown summary for post-compaction continuity.
+
+**Retrieval**:
+- Before editing a function, call `get_symbol_source` for that function, not `Read` on the whole file. For multi-symbol context, use `get_context_bundle`.
+- For query-driven context assembly in one call, use `assemble_task_context` — it auto-classifies intent, runs the right sub-tools, and returns a source-attributed capsule.
+- For token-budgeted relevance-ranked context without specifying symbols: `get_ranked_context` (BM25 + PageRank, configurable strategy and scope).
+- `search_text` for full-text/regex search across file contents when symbol search misses (string literals, comments, config values) — supports `context_lines` like `grep -C N`.
+- `search_columns` for column metadata in dbt/SQLMesh repos — 77% fewer tokens than grep.
+- Use `winnow_symbols` when you have multiple constraints (kind + complexity + decorator + churn + importance). One call instead of five.
+- Results carry `_meta.confidence` — prefer high-confidence hits; re-query or fall back to serena when confidence is low.
+- Run `check_embedding_drift` (or via `/health`) to catch index staleness before it silently degrades retrieval quality.
+
+**References & call graph**:
+- `find_references` — where is an identifier imported or re-exported. `find_importers` — which files import a given file. `check_references` — quick `is_referenced` bool for dead-code detection (import + content in one call).
+- `get_dependency_graph` — file-level import graph up to 3 hops (imports / importers / both). `get_dependency_cycles` — detect circular import chains before a refactor.
+- `get_call_hierarchy` — incoming callers and outgoing callees N levels deep. `get_impact_preview` — full transitive call-graph walk showing what breaks before deleting or renaming a symbol.
+- `find_implementations` — concrete implementations of an interface/abstract class (multi-source, confidence-scored). `get_class_hierarchy` — full ancestor/descendant tree across Python, Java, TS, C#.
+- `get_related_symbols` — heuristic cluster of nearby symbols (same-file + shared importers + name tokens); useful for orientation on unfamiliar code.
+- For type resolution, interface/trait dispatch, or "find all callers across files," prefer **serena** — its LSP backing outperforms AST-only search on Python/TS/Rust/Go/C#.
+
+**Refactoring & safety**:
+- Before committing to a change, call `get_blast_radius` to see what else breaks. For PRs, `get_pr_risk_profile` produces a single composite score.
+- Before renaming a symbol: `check_rename_safe`. Before deleting: `check_delete_safe`. For multi-file rename/move/extract: `plan_refactoring` generates edit-ready blocks.
+- Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
-- For type resolution, interface/trait dispatch, or "find all callers across
-  files," prefer **serena** — its LSP backing outperforms AST-only search on
-  Python/TS/Rust/Go/C#.
-- Use `plan_turn` as your opening move on an unfamiliar repo. It respects
-  the turn budget and selects the right tool for you.
-- Use `winnow_symbols` when you have multiple constraints (kind + complexity
-  + decorator + churn + importance). One call instead of five.
-- Results carry `_meta.confidence` — prefer high-confidence hits; re-query
-  or fall back to serena when confidence is low.
-- Run `check_embedding_drift` (or via `/health`) to catch index staleness
-  before it silently degrades retrieval quality.
-- Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files),
-  `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph
-  tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked
-  to code), `get_layer_violations` (layer boundary checks).
-- Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols`
-  for consolidation candidates; `get_dead_code_v2` for multi-signal dead code;
-  `diff_health_radar` to compare health before/after a PR.
-- For security/quality gate before merge: `search_ast(category="security")` +
-  `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
-- Periodically run `audit_agent_config` to catch stale symbol refs and dead paths in
-  CLAUDE.md itself — keeps routing rules lean.
+- `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
+- `get_coupling_metrics` — afferent/efferent coupling + instability score for a module. `get_extraction_candidates` — functions worth extracting (high complexity + multi-file callers).
+
+**Quality & risk**:
+- `get_hotspots` — top-N highest-risk symbols (complexity × churn, CodeScene methodology); use before planning sprint work or targeting reviews.
+- `get_churn_rate` — git churn for a file or symbol (commit count, authors, churn/week, stable/active/volatile).
+- `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
+- `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal).
+- `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
+- Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks).
+- Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols` for consolidation candidates; `get_dead_code_v2` for multi-signal dead code; `diff_health_radar` to compare health before/after a PR.
+- For security/quality gate before merge: `search_ast(category="security")` + `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
+- Periodically run `audit_agent_config` to catch stale symbol refs and dead paths in CLAUDE.md itself — keeps routing rules lean.
+
+**Cross-repo & monorepos**:
+- `get_cross_repo_map` — which indexed repos depend on which at the package level. `get_group_contracts` — de-facto API surface across a group (de_facto_api / leaky_internal / dead_contract / version_skew tiers).
+- `list_workspaces` — enumerate monorepo workspace members (pnpm, yarn, turborepo, Go, Cargo); use returned `path` as `scope_path` in `get_project_intel`.
+
+**Session & tier config**:
+- `set_tool_tier` — explicit tier override (core/standard/full) when you hit a capability-gated failure mid-task. `announce_model` — self-report active model for automatic tier selection (idempotent; call plan_turn instead for routine per-task use).
 
 ### 2. Data work — jDataMunch for CSVs, DuckDB for real SQL
 - For any CSV / TSV: `describe_dataset` first, `get_rows` with filters next,
@@ -138,7 +160,7 @@ tools can answer structurally.
   `get_untested_symbols`, and `get_pr_risk_profile`. Report the risk score
   to the user.
 
-### 6. Format economy
+### 7. Format economy
 - Pass `format="auto"` on any jCodeMunch tool call that might return a large
   response. This triggers the MUNCH compact wire format when savings are
   ≥15%.

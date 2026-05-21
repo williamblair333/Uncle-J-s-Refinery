@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-21 (integration complete)*
+*Last updated: 2026-05-21 (dma64 merge complete)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -79,6 +79,8 @@ All items from all previous HANDOFFs are resolved.
 - **`readme-sync` skill committed**: `global-skills/readme-sync/` — audits README against repo contents; three targeted edits max.
 - **Skill auto-install + post-upgrade evaluation implemented**: `install-reliability.sh` now scans `global-skills/` dynamically; `auto-maintain.sh` Part B extended to all 4 packages with commit-log fetch, breaking-change grep (including `feat!` notation), HANDOFF.md auto-note, Part C symlink pass, and Telegram alert.
 - **mempalace upgraded** `95caf80f` → `60d460b3`: `feat(convo_miner)` — AI tool sessions auto-routed to `wing_api` during mining. No breaking changes; no CLAUDE.md updates required.
+- **dma64 branch merged into main** (meaningful changes cherry-picked): interactive healthcheck `hint()` prompt, `scripts/pin-canary.sh` (dedicated canary pinner with exit-code guarantee), Telegram rate-limit flood fix (`rate_limit_notified` flag), CLAUDE.md section 1 reorganized into 8 subsections with ~43 additional jcodemunch tools, duplicate `### 6.` numbering fixed. dma64 branch is now behind main by these commits.
+- **Stale mine lock check demoted to WARN**: `healthcheck.sh` stale lock check no longer calls `record_fail` — auto-clears on next mine invocation, not a blocker.
 
 ### 2026-05-20 (session 5, continued)
 - **Gateway disclosure fix v2** (`3e3a9a9`): API-direct approach (OAuth token as api_key) dropped — tokens rotate unpredictably and produce 401 on rotation. `--system-prompt` (replace, not append) is the correct approach: harness does NOT inject system-reminder when --system-prompt is provided, so OS/kernel/email/paths/MCP stack are never in context. Both main message path and classify_promote now use `claude --print --system-prompt RESTRICTION` from `cwd=/tmp`. Stress-tested against 6 adversarial prompts including DAN jailbreak, authority claim, emotional pressure, and explicit threats — all refused correctly.
