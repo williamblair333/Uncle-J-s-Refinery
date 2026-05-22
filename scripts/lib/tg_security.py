@@ -138,6 +138,41 @@ def validate_skill_name(name: str) -> bool:
     return bool(_SAFE_SKILL_NAME_RE.match(name))
 
 
+def scan_skill_body(path: str) -> 'tuple[bool, str | None]':
+    """
+    Scan a skill draft file for injection patterns and secrets before promotion.
+
+    Injection patterns are checked against the body only (post-frontmatter) to
+    avoid false positives from legitimate "instructions" language in descriptions.
+    Secret patterns are checked against the full file — no secret should appear
+    anywhere in a promoted skill.
+
+    Returns (True, None) if safe, (False, reason_str) if rejected.
+    """
+    try:
+        with open(path, encoding='utf-8') as f:
+            content = f.read()
+    except OSError as e:
+        return False, f"Could not read draft: {e}"
+
+    # Split on '---' to isolate frontmatter from body.
+    # Format: '---\n<frontmatter>\n---\n<body>' → split gives ['', fm, body]
+    parts = content.split('---', 2)
+    body = parts[2] if len(parts) >= 3 else content
+
+    # Body: check for prompt injection patterns
+    for pattern in _INJECTION_PATTERNS:
+        if pattern.search(body):
+            return False, "Skill body contains injection pattern."
+
+    # Full file: check for secrets (API keys, env var assignments, etc.)
+    for pattern, _ in _OUTPUT_REDACTIONS:
+        if pattern.search(content):
+            return False, "Skill file contains sensitive data pattern."
+
+    return True, None
+
+
 def check_rate_limit(chat_id: str, state_file: str) -> tuple:
     """
     Enforce per-chat rate limiting using a JSON state file.

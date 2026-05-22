@@ -79,7 +79,7 @@ offset_file    = sys.argv[5]
 updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
-from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name
+from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
 
@@ -220,6 +220,11 @@ for update in updates:
         if not skill_name:
             log(f"promote: could not parse name from {draft_path}")
             tg_send(f"❌ Could not parse <code>name:</code> from draft <code>{skill_id}</code>.")
+            continue
+        body_ok, body_err = scan_skill_body(draft_path)
+        if not body_ok:
+            log(f"promote: body scan rejected — {body_err}")
+            tg_send(f"❌ Skill draft rejected by security scan: <code>{body_err}</code>.")
             continue
         try:
             skill_dir = install_skill(draft_path, skill_name, scope)

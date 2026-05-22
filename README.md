@@ -54,11 +54,12 @@ refinery to build a plant around. Send him thanks, not me.
 | | dwarvesf guardrails | UserPromptSubmit secret scanner + PostToolUse prompt-injection defender |
 | | Bash-matcher rules | Block destructive `rm`, pipe-to-shell, direct pushes to main, exfil to webhook services, escalation flags |
 | **Observability** | Langfuse | Self-hosted (Docker) — every assistant turn traced with tool calls, timings, token counts |
-| **Optional features** | Telegram gateway | Bidirectional Claude ↔ Telegram; message Claude from your phone, get replies within 2 min |
+| **Optional features** | Stack alerts | Daily cron checks GitHub HEAD for each package; Claude assesses relevance; Telegram inline-button pitch; tap ✅ to upgrade |
+| | Telegram gateway | Approval + monitoring channel: skill promotion (`promote <id> global`), healthcheck alerts, Ralph plateau, dreaming FYI, post-merge notices |
 | | Telegram notify | Stop hook — sends a Telegram notification when each Claude session ends |
 | | Dreaming | Daily Langfuse trace mining → mistake patterns + playbooks → MemPalace + CLAUDE.md |
 | | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
-| | Auto-skill | Stop hook — suggests relevant skills based on session tool use |
+| | Auto-skill | Stop hook — analyzes session transcript with Claude; drafts `SKILL.md` to `state/skill-drafts/`; pitches via Telegram for `promote <id> global` approval |
 | | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start |
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | MemPalace automation | Stop hook (convo mining) + daily cron (project mining) — keeps palace current automatically |
@@ -483,23 +484,31 @@ Manually-written drawers (not derived from sessions) must be migrated by hand
 via `mempalace export` / `mempalace import` if those commands are available in
 your version, or by copying drawer files directly from the palace SQLite.
 
-### 14. (Optional) Telegram gateway — send messages to Claude from Telegram
+### 14. (Optional) Telegram gateway — approval channel and monitoring alerts
 
-The gateway polls your Telegram bot every 2 minutes and forwards messages to
-Claude via `claude -p`. Claude's response is sent back to the chat. Requires
-stack-alerts (step 10) to be installed first — the gateway reuses the same bot
-token and chat ID.
+The gateway polls your Telegram bot every 2 minutes. **Primary purpose: approval and monitoring**, not general-purpose chat. Each inbound message must be self-describing; the bot does not maintain conversational context across sessions.
+
+**Inbound commands:**
+- `promote <id> global` / `promote <id> project` — install a skill draft from `state/skill-drafts/`
+- `promote <id>` — classify scope first, then confirm
+
+**Outbound notification events (sent automatically):**
+- Daily healthcheck failure at 07:00 (via `healthcheck-notify.sh`)
+- New skill draft available after a session (from auto-skill Stop hook)
+- Stack upgrade pitch after `auto-maintain.sh` detects packages behind HEAD
+- Ralph iteration plateau reached
+- Dream synthesis run completed
+- Unauthorized `chat_id` access or injection attempt blocked
+- `git pull` post-merge summary (new features, install steps, skills needing action)
+
+Requires stack-alerts (step 10) first — reuses the same bot token and chat ID.
 
 ```bash
 bash features/telegram-gateway/install.sh
 # uninstall: bash features/telegram-gateway/install.sh --uninstall
 ```
 
-Security: the gateway enforces rate limits, input sanitization (injection
-patterns, dangerous Unicode, over-length inputs), output scanning (path/secret
-redaction), and an anti-disclosure system prompt so the bot never leaks OS,
-kernel, or infra details over the channel. All implemented in
-`scripts/lib/tg_security.py`.
+Security: rate limits, injection-pattern blocking, dangerous Unicode stripping, output path/secret redaction, and an anti-disclosure system prompt (`--system-prompt`) so the bot never leaks OS, kernel, paths, git details, or MCP stack. All implemented in `scripts/lib/tg_security.py` (38-test suite in `tests/test_tg_security.py`).
 
 Logs: `state/telegram-gateway.log`
 
@@ -545,10 +554,15 @@ bash features/session-stats/install.sh
 
 Runs every Sunday at 8 AM by default. See `features/session-stats/README.md`.
 
-### 18. (Optional) Auto-skill — skill suggestions after each session
+### 18. (Optional) Auto-skill — automatic skill drafting after each session
 
-A Stop hook that inspects what tools were called during a session and suggests
-relevant skills you haven't used recently. Drafts go to `state/skill-drafts/`.
+A Stop hook that reads the full session transcript, asks Claude whether the session demonstrated a reusable workflow, and — if yes — drafts a `SKILL.md` to `state/skill-drafts/<session-id>-skill-draft.md`. A Telegram notification is sent with a 300-char preview and the promotion command:
+
+```
+promote <id> global
+```
+
+The draft is not installed until you send that command. Review the preview in Telegram, then promote or ignore it.
 
 ```bash
 bash features/auto-skill/install.sh

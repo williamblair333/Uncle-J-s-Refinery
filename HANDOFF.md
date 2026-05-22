@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-22 (Telegram notification system + dedup fix)*
+*Last updated: 2026-05-22 (competitive gap closure: scan_skill_body + check_skill_compliance implemented)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -119,7 +119,19 @@ All items from all previous HANDOFFs are resolved.
 
 ## Priorities
 
-### 1. No urgent items
+### 1. Competitive gap closure plan (for consideration)
+
+Competitive analysis against Hermes Agent, OpenClaw, and the agentskills.io ecosystem identified 3 genuine gaps. Full plan with validated code at:
+
+`docs/superpowers/plans/2026-05-22-competitive-gap-closure.md`
+
+**Gaps in priority order:**
+- **Skill promotion body scanner** ✅ — `scan_skill_body()` added to `scripts/lib/tg_security.py`; wired into gateway `promote_confirm` block; 6 tests passing.
+- **agentskills.io compliance healthcheck** ✅ — `check_skill_compliance` added to `healthcheck.sh`; 22/22 global skills compliant.
+
+Note: skill auto-capture (already in `skill-suggest.sh`), Docker isolation for Ralph, and a mine cron (already a Stop hook in `settings.json` via `mempalace-mine-convos.sh`) were all evaluated and discarded — none are real gaps.
+
+### 2. No urgent items
 
 Stack is clean and operational. Monitor:
 

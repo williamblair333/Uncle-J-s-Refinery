@@ -242,6 +242,50 @@ check_skills() {
     fi
 }
 
+# ----- 9a. agentskills.io compliance: name matches folder, description present -----
+check_skill_compliance() {
+    step "skills — agentskills.io compliance (name matches folder, description present)"
+    local skills_dir="$REPO_ROOT/global-skills"
+    local failed=0
+
+    for skill_dir in "$skills_dir"/*/; do
+        [[ -d "$skill_dir" ]] || continue
+        local folder_name
+        folder_name="$(basename "$skill_dir")"
+        local skill_md="$skill_dir/SKILL.md"
+
+        if [[ ! -f "$skill_md" ]]; then
+            bad "skill: $folder_name — missing SKILL.md"
+            hint "inspect: ls $skill_dir"
+            record_fail "skill-compliance-missing-$folder_name"
+            failed=$((failed + 1))
+            continue
+        fi
+
+        local name_field
+        name_field="$(grep -m1 '^name:' "$skill_md" | sed 's/^name:[[:space:]]*//' | tr -d '\r')"
+        if [[ "$name_field" != "$folder_name" ]]; then
+            bad "skill: $folder_name — name: '$name_field' does not match folder"
+            hint "edit $skill_md: set name: $folder_name"
+            record_fail "skill-compliance-name-$folder_name"
+            failed=$((failed + 1))
+        fi
+
+        local desc_field
+        desc_field="$(grep -m1 '^description:' "$skill_md" | sed 's/^description:[[:space:]]*//' | tr -d '\r')"
+        if [[ -z "$desc_field" ]]; then
+            bad "skill: $folder_name — missing description field"
+            hint "edit $skill_md: add description: <one-line summary>"
+            record_fail "skill-compliance-desc-$folder_name"
+            failed=$((failed + 1))
+        fi
+    done
+
+    local skill_count
+    skill_count="$(ls -d "$skills_dir"/*/ 2>/dev/null | wc -l | tr -d ' ')"
+    [[ $failed -eq 0 ]] && ok "all $skill_count global skills agentskills.io compliant"
+}
+
 # ----- 9. MemPalace health: SQLite integrity + no stale mine locks ----------
 check_mempalace() {
     step "MemPalace — SQLite FTS5 integrity"
@@ -581,6 +625,7 @@ check_langfuse_compose
 check_langfuse_api
 check_langfuse_sdk
 check_skills
+check_skill_compliance
 check_mempalace
 check_crons
 check_stack_freshness

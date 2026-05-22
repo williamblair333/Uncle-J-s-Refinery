@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-05-22 — Competitive analysis + gap closure plan
+
+### Research
+- Surveyed Hermes Agent (Nous Research, ~110k stars, Feb 2026), OpenClaw, NanoClaw, ECC, Claude Managed Agents, and the agentskills.io open standard against Uncle J's feature set
+- Key finding: skill auto-capture (`skill-suggest.sh`), Ralph evaluation loop, and the retrieval stack (jCodemunch + jDataMunch + jDocMunch + MemPalace + Serena) have no equivalent in any competitor. Uncle J's approval-gated promotion is explicitly safer than Hermes's auto-commit pattern.
+
+### Plans added
+- `docs/superpowers/plans/2026-05-22-competitive-gap-closure.md` — 3 validated gaps with full TDD implementation plan: skill body scanner, agentskills.io compliance healthcheck, MemPalace mine cron
+- `docs/superpowers/plans/2026-05-22-telegram-gateway-notifications.md` — pre-existing untracked plan committed alongside
+
+### Implemented
+- `scripts/lib/tg_security.py`: added `scan_skill_body(path)` — scans skill draft body for injection patterns and full file for secrets before promotion; 6 tests added to `tests/test_tg_security.py` (44/44 passing)
+- `scripts/telegram-gateway-poll.sh`: `scan_skill_body` wired into `promote_confirm` block between `parse_skill_name` and `install_skill`; rejects with Telegram alert on failure
+- `healthcheck.sh`: added `check_skill_compliance` — verifies all 22 global skills have `name:` matching folder name and non-empty `description:`; passes clean on current repo
+
+Note: a "no mine cron" gap was initially identified but retracted after finding `mempalace-mine-convos.sh` is already wired as an async Stop hook in `.claude/settings.json`.
+
+---
+
 ## 2026-05-22 — Telegram gateway: notification system + dedup fix
 
 ### Fixed
