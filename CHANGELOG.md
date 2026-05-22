@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-05-22 — Telegram gateway: notification system + dedup fix
+
+### Fixed
+- **Dedup bug** (`scripts/telegram-gateway-poll.sh`): `update_id` offset now written atomically per-update inside Python (temp file + `os.replace`) before message processing. Prevents duplicate Claude invocations if Python crashes mid-run. Bash-side offset write removed — Python owns it entirely.
+
+### Added
+- **Security alerts** (`scripts/telegram-gateway-poll.sh`): unauthorized `chat_id` access and injection-filter blocks now send FYI notifications to Will's chat
+- **Health alerts** (`scripts/healthcheck-notify.sh`, new): daily cron at 07:00 runs `healthcheck.sh`, extracts failure lines, sends formatted Telegram alert. `install.sh` and `healthcheck.sh` updated to register and expect `uncle-j-healthcheck-notify`
+- **Skill approval flow** (`scripts/auto-maintain.sh` Part C): untracked `global-skills/` entries are now drafted to `state/skill-drafts/<id>-skill-draft.md` and pitched via Telegram with `promote <id>` instructions, instead of auto-committing
+- **Ralph plateau alert** (`ralph-harness.sh`): sends Telegram notification when max iterations reached without a done verdict
+- **Dreaming FYI** (`features/dreaming/dream.sh`): sends one-line Telegram notice after each successful synthesis run (suppressed at trace count 0 and in dry-run)
+
+---
+
 ## 2026-05-21 — skill refactor: auto-maintain-commit-and-deploy tightened
 
 ### `global-skills/auto-maintain-commit-and-deploy/SKILL.md`

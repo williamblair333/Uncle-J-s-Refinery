@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-21 (dma64 merge complete)*
+*Last updated: 2026-05-22 (Telegram notification system + dedup fix)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -15,7 +15,8 @@ Read this before touching anything. Work priorities are in order below.
 - Global skills: `prior-art-check`, `judge`, `outcomes`, `orchestrator`, `per-task-review-cycle`, `post-upgrade-mcp-integration`, `dream-synthesizer`, `deep-repo-analysis`, `stale-lock-diagnosis`, `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — all live symlinks in `global-skills/`, installed to `~/.claude/skills/` via `install-reliability.sh`
 - Guardrails: secret scanner (UserPromptSubmit) + injection defender + commit-time scan
 - All features built and installed (dreaming, session-stats, Telegram gateway/notify, auto-skill, ralph-cron, skill-manager, stack-alerts, mempalace)
-- **Telegram gateway** (`scripts/telegram-gateway-poll.sh`): fully operational after three runtime bug fixes (2026-05-20 session 5) — message processing restored (heredoc/pipe fix), disclosure prevention via API-direct (no harness system-reminder context), session-notify opt-in silence. Security module + 38-test suite in `tests/test_tg_security.py`.
+- **Telegram gateway** (`scripts/telegram-gateway-poll.sh`): fully operational. `update_id` offset now written atomically per-update (dedup fix). Security module + 38-test suite in `tests/test_tg_security.py`. **Purpose: approval channel + monitoring alerts** (not a chat assistant — each message is self-describing).
+  - **Notification events**: stack upgrades (approve/skip pitch) · new skill drafts (promote instructions) · healthcheck failures (daily 07:00 via `healthcheck-notify.sh`) · unauthorized chat access · injection attempts · Ralph plateau · dream synthesis complete
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
 - **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
 - **MemPalace v3.3.5** — fully operational; 10,000+ drawers; HNSW healthy (all `link_lists.bin` = 0 bytes)
