@@ -307,6 +307,7 @@ check_crons() {
         [uncle-j-session-stats]="features/session-stats/stats.sh"
         [uncle-j-dreaming]="features/dreaming/dream.sh"
         [uncle-j-auto-maintain]="bash $REPO_ROOT/scripts/auto-maintain.sh"
+        [uncle-j-healthcheck-notify]="bash $REPO_ROOT/scripts/healthcheck-notify.sh"
         [uncle-j-jcodemunch-reindex]="bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
     )
     for label in "${!EXPECTED[@]}"; do
