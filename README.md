@@ -107,6 +107,7 @@ Everything else in this repo — MemPalace, Serena, Context7, DuckDB, Superpower
 | | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
 | | Auto-skill | Stop hook — analyzes session transcript; drafts a SKILL.md to `state/skill-drafts/`; pitches via Telegram for approval |
 | | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start |
+| | Agent library | 6 specialist subagents in `global-agents/` — planner, code-reviewer, security-reviewer, architect, tdd-guide, silent-failure-hunter — symlinked to `~/.claude/agents/` |
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | MemPalace automation | Stop hook (convo mining) + daily cron (project mining) — keeps palace current automatically |
 
@@ -833,6 +834,14 @@ Uncle-J-s-Refinery/
 │   │   └── install.sh                  ← cron poll: Telegram → claude -p → Telegram reply
 │   └── telegram-notify/
 │       └── install.sh                  ← Stop hook: Telegram notification on session end
+│
+├── global-agents/                      ← specialist subagents, symlinked to ~/.claude/agents/
+│   ├── architect.md
+│   ├── code-reviewer.md
+│   ├── planner.md
+│   ├── security-reviewer.md
+│   ├── silent-failure-hunter.md
+│   └── tdd-guide.md
 │
 ├── global-skills/                      ← project-agnostic skills, symlinked to ~/.claude/skills/
 │   ├── deep-repo-analysis/

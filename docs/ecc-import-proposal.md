@@ -1,7 +1,8 @@
 # ECC Import Proposal
 
-**Source:** `_review/ECC/` — Everything Claude Code v2.0.0-rc.1  
+**Source:** `_reviewed/ECC/` — Everything Claude Code v2.0.0-rc.1  
 **Analysis date:** 2026-05-22  
+**Status:** Tier 1 implemented 2026-05-22 — 6 agents in `global-agents/`, symlinked to `~/.claude/agents/`  
 **Prior art:** competitive analysis saved to MemPalace (`uncle_j_s_refinery / competitive-intel`)
 
 ---

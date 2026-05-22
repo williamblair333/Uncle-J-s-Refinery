@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-05-22 — ECC agent import
+
+### Added
+- `global-agents/` — 6 specialist subagents imported from ECC v2.0.0-rc.1: `planner` (Opus), `architect` (Opus), `code-reviewer`, `security-reviewer`, `tdd-guide`, `silent-failure-hunter` (all Sonnet)
+- `install-reliability.sh`: agents install block — symlinks `global-agents/*.md` → `~/.claude/agents/` on every install, same pattern as global-skills
+- `healthcheck.sh`: `check_agents()` guard — fails if any of the 6 agents is missing from `~/.claude/agents/`
+
+### Changed
+- `global-agents/tdd-guide.md`: patched `npm test` → `pytest`, `npm run test:coverage` → `pytest --cov`
+- `README.md`: component table + file map updated to include `global-agents/`
+- `_review/ECC/` moved to `_reviewed/ECC/`
+
+### Skipped
+- `performance-optimizer` — its relevant surface (hotspot detection, DB query patterns) is already covered by jCodeMunch `get_hotspots` + `code-reviewer`
+
+---
+
 ## 2026-05-22 — README rewrite
 
 ### Changed
