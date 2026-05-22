@@ -197,6 +197,13 @@ fi
 printf '%s\n' "$NOW_TS" > "$LAST_RUN_FILE"
 log_entry "ok: $TRACE_COUNT traces processed -> $OUTPUT_FILE"
 
+# FYI notification — skip if no traces or dry-run (nothing interesting to report)
+if [[ "$DRY_RUN" -eq 0 && "${TRACE_COUNT:-0}" -gt 0 ]]; then
+    source "$STACK_ROOT/lib/notify.sh" 2>/dev/null \
+        && notify_send_text "🌙 Dream run: ${TRACE_COUNT} trace(s) processed → playbooks updated in MemPalace." \
+        || true
+fi
+
 step "Dreaming run complete"
 ok "Traces processed : $TRACE_COUNT"
 ok "Output           : $OUTPUT_FILE"
