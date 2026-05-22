@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Expert code review specialist. Proactively reviews code for quality, security, and maintainability. Use immediately after writing or modifying code. MUST BE USED for all code changes.
+description: Spawn after any Edit or Write that changes function logic, adds or removes functions/classes, modifies control flow, or touches an API or data model. SKIP for typos, whitespace/formatting-only, comment-only edits, and single-variable renames with no logic change.
 tools: ["Read", "Grep", "Glob", "Bash"]
 model: sonnet
 ---

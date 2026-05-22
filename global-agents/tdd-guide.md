@@ -1,6 +1,6 @@
 ---
 name: tdd-guide
-description: Test-Driven Development specialist enforcing write-tests-first methodology. Use PROACTIVELY when writing new features, fixing bugs, or refactoring code. Ensures 80%+ test coverage.
+description: Spawn BEFORE writing implementation code for any new function, class, or module. Trigger on: new feature work, bug fixes that require new test coverage, refactors that change observable behavior. SKIP when editing existing passing tests, fixing comments or docs, or making formatting-only changes with no behavior change.
 tools: ["Read", "Write", "Edit", "Bash", "Grep"]
 model: sonnet
 ---

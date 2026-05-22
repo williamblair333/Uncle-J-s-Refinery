@@ -1,6 +1,6 @@
 ---
 name: planner
-description: Expert planning specialist for complex features and refactoring. Use PROACTIVELY when users request feature implementation, architectural changes, or complex refactoring. Automatically activated for planning tasks.
+description: Spawn BEFORE writing any code when a request spans multiple files, introduces a new feature, or requires phased delivery. Trigger on: "add X feature", "implement Y", "refactor Z across the codebase". SKIP for single-function bug fixes, small contained patches, and requests where the implementation path is already clear.
 tools: ["Read", "Grep", "Glob"]
 model: opus
 ---

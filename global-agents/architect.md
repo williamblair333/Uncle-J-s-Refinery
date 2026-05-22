@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Software architecture specialist for system design, scalability, and technical decision-making. Use PROACTIVELY when planning new features, refactoring large systems, or making architectural decisions.
+description: Spawn when making structural decisions — new module/service boundaries, data model design, technology choices, or scalability trade-offs. Distinct from planner (which sequences steps): architect evaluates design options and documents ADRs. Trigger on: "how should we structure X", "what is the right approach for Y", any cross-service or cross-module design question. SKIP for routine feature implementation where the structure is already established.
 tools: ["Read", "Grep", "Glob"]
 model: opus
 ---

@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: Security vulnerability detection and remediation specialist. Use PROACTIVELY after writing code that handles user input, authentication, API endpoints, or sensitive data. Flags secrets, SSRF, injection, unsafe crypto, and OWASP Top 10 vulnerabilities.
+description: Spawn after any Edit or Write that touches: user input handling, auth/session/token code, API endpoints, file I/O with user-controlled paths, database queries, crypto/hashing, payment flows, or subprocess/shell execution. SKIP for pure UI layout, documentation, and config that does not touch auth, input, or data paths.
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 model: sonnet
 ---

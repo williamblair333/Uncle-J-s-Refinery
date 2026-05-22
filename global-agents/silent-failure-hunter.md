@@ -1,6 +1,6 @@
 ---
 name: silent-failure-hunter
-description: Review code for silent failures, swallowed errors, bad fallbacks, and missing error propagation.
+description: Spawn after any Edit or Write that touches exception/error handlers, async functions, network calls, file I/O, database operations, subprocess execution, or code using try/except, .catch(), || true, or default fallback values. Also spawn on any new function that interacts with an external system. SKIP for pure logic, data transformation, and UI code with no I/O or error-handling paths.
 model: sonnet
 tools: [Read, Grep, Glob, Bash]
 ---
