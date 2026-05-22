@@ -202,14 +202,17 @@ else
     info "No upgrade performed and no packages queued — post-upgrade evaluation skipped."
 fi
 
-# ── Part C: auto-commit untracked global-skills files ────────────────────────
+# ── Part C: draft untracked global-skills for Telegram approval ──────────────
 info "=== Part C: Untracked global-skills check ==="
+
+DRAFTS_DIR="$PROJ_ROOT/state/skill-drafts"
+mkdir -p "$DRAFTS_DIR"
 
 UNTRACKED=$(git -C "$PROJ_ROOT" status --porcelain 2>/dev/null \
     | grep "^?? global-skills/" | sed 's/^?? //' | sed 's|/$||' || true)
 
 SKILL_NAMES=()
-SKILL_DESCRIPTIONS=()
+SKILL_DRAFT_IDS=()
 
 if [[ -z "$UNTRACKED" ]]; then
     info "No untracked global-skills files."
@@ -217,68 +220,32 @@ else
     while IFS= read -r skill_dir; do
         skill_name=$(basename "$skill_dir")
         skill_md="$PROJ_ROOT/$skill_dir/SKILL.md"
-        if [[ ! -f "$skill_md" ]]; then
-            continue
-        fi
-        desc=$(python3 -c "
-import sys, re
-content = open('$skill_md').read()
-m = re.search(r'^description:\s*(.+)$', content, re.MULTILINE)
-print(m.group(1).strip() if m else 'no description')
-" 2>/dev/null || echo "no description")
+        [[ ! -f "$skill_md" ]] && continue
         SKILL_NAMES+=("$skill_name")
-        SKILL_DESCRIPTIONS+=("$desc")
-    done <<< "$UNTRACKED"
-
-    if [[ "${#SKILL_NAMES[@]}" -eq 0 ]]; then
-        info "No SKILL.md files found in untracked directories."
-    else
-        info "Found ${#SKILL_NAMES[@]} untracked skill(s): ${SKILL_NAMES[*]}"
 
         if [[ "$DRY_RUN" -eq 1 ]]; then
-            info "DRY RUN: would auto-commit skills: ${SKILL_NAMES[*]}"
-        else
-            TODAY=$(date '+%Y-%m-%d')
-            SKILL_LIST=""
-            for i in "${!SKILL_NAMES[@]}"; do
-                SKILL_LIST="${SKILL_LIST}"$'\n'"- \`${SKILL_NAMES[$i]}\` — ${SKILL_DESCRIPTIONS[$i]}"
-            done
-
-            python3 - "$PROJ_ROOT/CHANGELOG.md" "$TODAY" "$SKILL_LIST" << 'PYEOF'
-import sys, pathlib
-changelog, today, skill_list = sys.argv[1], sys.argv[2], sys.argv[3]
-p = pathlib.Path(changelog)
-content = p.read_text()
-insert_after = content.find('\n---\n')
-if insert_after == -1:
-    insert_after = content.find('\n\n')
-entry = f"\n## {today} — auto-maintained: new skills committed\n\n### New skills\n{skill_list}\n\n---\n"
-new_content = content[:insert_after+5] + entry + content[insert_after+5:]
-p.write_text(new_content)
-PYEOF
-
-            sed -i "s/^\*Last updated: .*\*/*Last updated: $TODAY*/" "$PROJ_ROOT/HANDOFF.md"
-
-            git -C "$PROJ_ROOT" add global-skills/ CHANGELOG.md HANDOFF.md
-            COUNT="${#SKILL_NAMES[@]}"
-            git -C "$PROJ_ROOT" commit -m "feat: auto-commit ${COUNT} new global skill(s): ${SKILL_NAMES[*]}" \
-                --author="Uncle J Auto-Maintain <auto@uncle-j.local>" || \
-                info "git commit failed or nothing to commit"
-            info "Skills committed."
-
-            CLAUDE_DIR="${CLAUDE_HOME:-$HOME/.claude}"
-            mkdir -p "$CLAUDE_DIR/skills"
-            for src in "$PROJ_ROOT/global-skills"/*/; do
-                [ -d "$src" ] || continue
-                skill_name=$(basename "$src")
-                dst="$CLAUDE_DIR/skills/$skill_name"
-                if [ ! -L "$dst" ] || [ "$(readlink -f "$dst")" != "$(readlink -f "$src")" ]; then
-                    rm -rf "$dst"
-                    ln -sfn "$src" "$dst"
-                    info "Symlinked skill: $skill_name"
-                fi
-            done
+            info "DRY RUN: would draft skill for approval: $skill_name"
+            continue
         fi
+
+        # Generate a 6-char hex ID from the skill name (stable, reproducible)
+        SKILL_ID=$(printf '%s' "$skill_name" | md5sum | cut -c1-6)
+        DRAFT_PATH="$DRAFTS_DIR/${SKILL_ID}-skill-draft.md"
+        cp "$skill_md" "$DRAFT_PATH"
+        SKILL_DRAFT_IDS+=("$SKILL_ID")
+        info "Drafted: $skill_name → $DRAFT_PATH (id=$SKILL_ID)"
+    done <<< "$UNTRACKED"
+
+    if [[ "${#SKILL_NAMES[@]}" -gt 0 && "$DRY_RUN" -eq 0 ]]; then
+        source "$PROJ_ROOT/lib/notify.sh" 2>/dev/null || true
+        DRAFT_LIST=""
+        for i in "${!SKILL_NAMES[@]}"; do
+            DRAFT_LIST="${DRAFT_LIST}"$'\n'"• <b>${SKILL_NAMES[$i]}</b> — id: <code>${SKILL_DRAFT_IDS[$i]:-?}</code>"
+        done
+        notify_send_text "📋 <b>New skill(s) ready for review:</b>${DRAFT_LIST}
+
+Reply <code>promote &lt;id&gt;</code> to classify and install." \
+            || warn "Telegram notify failed (non-fatal)"
     fi
 fi
 
@@ -320,7 +287,7 @@ if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" && "$DRY_RUN" -
         SUMMARY+="upgraded ${PACKAGES_TO_UPGRADE[*]}. "
         [[ "${#BREAKING_FLAGS[@]}" -gt 0 ]] && SUMMARY+="⚠️ breaking changes in ${BREAKING_FLAGS[*]} — see HANDOFF.md. "
     fi
-    [[ "${#SKILL_NAMES[@]:-0}" -gt 0 ]] && SUMMARY+="committed ${#SKILL_NAMES[@]} skill(s). "
+    [[ "${#SKILL_NAMES[@]:-0}" -gt 0 ]] && SUMMARY+="drafted ${#SKILL_NAMES[@]} skill(s) for approval. "
     [[ "$UPGRADED" -eq 0 && "${#SKILL_NAMES[@]:-0}" -eq 0 ]] && SUMMARY+="nothing to do."
     source "$PROJ_ROOT/lib/notify.sh" 2>/dev/null && notify_send_text "$SUMMARY" || true
 fi
