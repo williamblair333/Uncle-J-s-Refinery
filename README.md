@@ -19,6 +19,7 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
 - [What you get](#what-you-get)
 - [The namesake](#the-namesake)
 - [What's in the box](#whats-in-the-box)
+- [End-to-end workflow](#end-to-end-workflow)
 - [Commercial use — read before you ship](#commercial-use--read-before-you-ship)
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
@@ -112,6 +113,18 @@ Everything else in this repo — MemPalace, Serena, Context7, DuckDB, Superpower
 | | MemPalace automation | Stop hook (convo mining) + daily cron (project mining) — keeps palace current automatically |
 
 All 7 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically.
+
+---
+
+## End-to-end workflow
+
+Every message through Claude Code passes through the full pipeline below — hooks, routing, MCP tools, judge + specialist agents, and session-end automation. Click to open full size.
+
+<p align="center">
+  <img src="docs/uncle-js-flowchart.png" width="900" alt="Uncle J's Refinery end-to-end workflow flowchart">
+</p>
+
+See [`docs/RELIABILITY.md`](docs/RELIABILITY.md) for the agent trigger matrix and a text version of this flow.
 
 ---
 
