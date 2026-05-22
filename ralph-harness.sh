@@ -25,6 +25,8 @@
 
 set -euo pipefail
 
+PROJ_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 PRD_PATH=""
 REPO_PATH="$PWD"
 MAX_ITERATIONS=30
@@ -432,6 +434,10 @@ if [ "$iter" -ge "$MAX_ITERATIONS" ] && [ "$SKIP_JUDGE" -eq 0 ]; then
     # DONE marker is the sole signal and hitting the cap is a soft failure.
     if [ "$verdict" != "done" ]; then
         warn "Max iterations reached without a 'done' verdict. Inspect the PRD and repo diff manually."
+        PRD_NAME="$(basename "${PRD_PATH:-unknown.md}" .md)"
+        source "$PROJ_ROOT/lib/notify.sh" 2>/dev/null \
+            && notify_send_text "🔁 <b>Ralph plateau</b>: <code>${PRD_NAME}</code> hit ${MAX_ITERATIONS} iterations without a done verdict. Manual inspection needed." \
+            || true
         exit_code=2
     fi
 fi
