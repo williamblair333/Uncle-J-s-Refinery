@@ -295,7 +295,7 @@ section_tag(ax, SA_Y, "AGENTS")
 box(ax, CX, SA_Y, W + 0.06, H,
     "Judge delegates to specialist agent(s)",
     SKILL_C,
-    sublabel="risk-based — trivial diffs: none  |  code change: code-reviewer  |  security path: security-reviewer  |  new feature: silent-failure-hunter")
+    sublabel="code-reviewer: logic/API change  |  security-reviewer: input/auth/I/O  |  silent-failure-hunter: error handlers/async/external  |  planner/architect/tdd-guide: pre-impl  —  see docs/RELIABILITY.md")
 
 arrow(ax, CX, SA_Y - H/2, CX, VD_Y + DH/2)
 

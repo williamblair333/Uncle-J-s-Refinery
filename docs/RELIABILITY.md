@@ -7,45 +7,71 @@ Claude *actually uses them correctly*. Four components:
 | Component                     | What it does                                                      | When to turn off            |
 | ----------------------------- | ----------------------------------------------------------------- | --------------------------- |
 | prior-art-check skill         | MemPalace lookup BEFORE the first real tool call every session    | never; it's just a lookup   |
-| judge skill                   | Spawn code-reviewer subagent BEFORE Edit/Write lands              | for throwaway prototyping   |
+| judge skill                   | Gathers blast radius + PR risk, then delegates to specialist agents | for throwaway prototyping  |
+| Specialist agents (6)         | Code review, security, silent failures, planning, architecture, TDD — each with precise trigger conditions | individually per task type |
 | Ralph harness                 | while-true loop that only stops when risk is low + PRD is DONE    | only in live runs           |
 | dwarvesf claude-guardrails    | Block pasted secrets, scan tool output for prompt-injection       | never (low cost, high value)|
 | Superpowers plugin            | 20+ skills: brainstorm, systematic-debug, TDD, verify-before-done | if total skill count > 25   |
 | Ralph Wiggum plugin           | /ralph slash command (Anthropic official version)                 | --                          |
-| outcomes skill (--rubric) | Rubric-aware grader in fresh context after each Ralph iteration | when not using --rubric flag |
+| outcomes skill (--rubric)     | Rubric-aware grader in fresh context after each Ralph iteration   | when not using --rubric flag |
 
 ## How the pieces compose
 
 ```
+── SESSION START ──────────────────────────────────────────────────────
+SessionStart hooks
+   ├── healthcheck context injected into session banner
+   ├── skill-link: per-project skills symlinked to ~/.claude/skills/
+   └── mempalace-mine-project: project docs mined into palace
+
+── PER-MESSAGE LOOP ───────────────────────────────────────────────────
 user message
    │
    ▼
-UserPromptSubmit hook (dwarvesf)       <- blocks pasted credentials
-   │
+UserPromptSubmit: scan-secrets.sh      <- blocks pasted credentials
+   │                                      (API keys, tokens, PEM blocks)
    ▼
 prior-art-check skill                  <- "have we solved this?"
-   │   MemPalace hit? use it as context
+   │   MemPalace hit? surface prior decisions as context
    ▼
-main work                              <- jcodemunch / serena / etc.
+CLAUDE.md routing policy               <- which MCP tool fits?
    │
    ▼
-Edit or Write about to fire
+MCP tools / main work                  <- jcodemunch / serena / jdatamunch
+   │                                      jdocmunch / mempalace / context7 / duckdb
+   ▼
+PreToolUse hooks                       <- enforce-docs, scan-commit,
+   │                                      bash-guard rules, jcodemunch pre-hook
+   ▼
+[Edit or Write?]──no──────────────────────────────────────────────┐
+   │ yes                                                           │
+   ▼                                                              │
+judge skill                            <- get_blast_radius,        │
+   │                                      get_changed_symbols,     │
+   │                                      get_pr_risk_profile      │
+   ▼                                                              │
+specialist agents (risk-based)         <- see trigger matrix below │
+   │   verdict: approve / concerns / block                        │
+   ▼                                                              │
+tool executes ◄────────────────────────────────────────────────────┘
    │
    ▼
-judge skill                            <- spawn code-reviewer subagent
-   │   verdict: approve / concerns / block
-   ▼
-tool executes                          <- or blocks here
-   │
-   ▼
-PostToolUse hook (dwarvesf)            <- scan tool output for injection
+PostToolUse (Edit/Write): jCodemunch auto-reindex
+PostToolUse (Read/WebFetch/Bash/mcp): injection defender
    │
    ▼
 response to user
+
+── SESSION END ────────────────────────────────────────────────────────
+Stop hooks (in order)
+   ├── Langfuse trace submitted
+   ├── session-notify.sh  (Telegram — opt-in: CLAUDE_NOTIFY_ON_STOP=1)
+   ├── mempalace-mine-convos.sh  (transcript → palace drawers)
+   └── skill-suggest.sh + skill-link unlink
 ```
 
-All five gates can fire in under 15 seconds for a typical coding turn.
-Ralph runs this whole pipeline on every iteration.
+All gates can fire in under 15 seconds for a typical coding turn.
+Ralph runs the per-message loop on every iteration.
 
 ## What each component buys you
 
@@ -67,18 +93,32 @@ staleness advisory scan which surfaces the same entries at session start
 
 ### judge
 
-Catches the four classic hallucination patterns on code changes:
+Always fires before any non-trivial Edit or Write. Two responsibilities:
+
+1. **Gather structural evidence** — `get_blast_radius`, `get_changed_symbols`, `get_untested_symbols`, `get_pr_risk_profile` from jCodemunch
+2. **Delegate to specialist agents** based on that evidence (see trigger matrix below)
+
+Catches the four classic hallucination patterns:
 
 1. Invented functions (call `foo.bar()` where `bar` doesn't exist)
 2. Invented imports (import a module that isn't a dep)
 3. Wrong signature (skip required parameter)
 4. Missed callers (rename symbol, forget to update all sites)
 
-Evidence fed to the subagent comes from `get_blast_radius`,
-`find_references`, `get_untested_symbols`, `get_pr_risk_profile`. The
-judge is not a separate LLM watching for hallucinations at the token
-level (that's what HaluGate does, and it only works with vLLM-hosted
-open models). This is the production-ready equivalent for Claude.
+**Skip conditions:** typos, whitespace/formatting-only, comment-only edits, single-variable renames with no logic change, changes already reviewed in the same turn.
+
+### Specialist agent trigger matrix
+
+Six agents in `global-agents/`, symlinked to `~/.claude/agents/`. The judge delegates based on change type. Multiple agents can fire on the same change.
+
+| Agent | Spawn when | Skip when |
+| ----- | ---------- | --------- |
+| `code-reviewer` | Edit/Write changes function logic, adds/removes functions or classes, modifies control flow, touches API or data model | Typos, whitespace/formatting, comment-only, single-variable rename with no logic change |
+| `security-reviewer` | Edit/Write touches user input handling, auth/session/token code, API endpoints, file I/O with user-controlled paths, DB queries, crypto/hashing, payment flows, subprocess/shell execution | Pure UI layout, documentation, config that doesn't touch auth, input, or data paths |
+| `silent-failure-hunter` | Edit/Write touches exception/error handlers, async functions, network calls, file I/O, DB operations, subprocess execution, or code using try/except / .catch() / \|\| true / default fallbacks; any new function interacting with an external system | Pure logic, data transformation, UI code with no I/O or error-handling paths |
+| `planner` | Spawned BEFORE code when a request spans multiple files, introduces a new feature, or requires phased delivery ("add X feature", "implement Y", "refactor Z across the codebase") | Single-function bug fixes, small contained patches, requests where implementation path is already clear |
+| `architect` | Structural decisions — new module/service boundaries, data model design, technology choices, scalability trade-offs, any cross-service or cross-module design question | Routine feature implementation where structure is already established |
+| `tdd-guide` | Spawned BEFORE implementation of any new function, class, or module; bug fixes requiring new test coverage; refactors that change observable behavior | Editing existing passing tests, fixing comments/docs, formatting-only changes with no behavior change |
 
 ### Ralph harness (our version vs. the plugin)
 
