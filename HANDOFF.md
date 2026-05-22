@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-22 (competitive gap closure: scan_skill_body + check_skill_compliance implemented)*
+*Last updated: 2026-05-22 (README rewrite; Telegram gateway multi-line command support; 2 new global skills)*
 
 Read this before touching anything. Work priorities are in order below.
 

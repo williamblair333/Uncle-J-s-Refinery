@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-05-22 — README rewrite
+
+### Changed
+- `README.md`: complete rewrite for clarity and accessibility
+  - Added TOC with anchor links to all 21 install steps and reference sections
+  - New opening section ("What you get"): six-row problem/solution/numbers table in plain English before any jargon
+  - New hook paragraph that states the problem directly before explaining the solution
+  - "Under the hood" summary line for domain experts (Tree-sitter, LSP, DuckDB, ChromaDB, Langfuse)
+  - Commercial use section preserved and moved after the component overview (not buried after the namesake tribute)
+  - Quick start section elevated and clarified — 7 commands, then "for the full guide, keep reading"
+  - Install guide: each step now explains *what* the step does and *why*, not just the commands
+  - Optional features (steps 10–21) each have uninstall notes inline
+  - Troubleshooting: added "Nuclear reset" section header; table format preserved
+  - File map updated to include `scripts/healthcheck-notify.sh`
+  - Removed obsolete sibling-folder reference (`_stack_setup/` naming artifact)
+  - All technical depth preserved; no content removed, only reorganized and supplemented
+
+---
+
+## 2026-05-22 — Telegram gateway: multi-line command support
+
+### Fixed
+- `scripts/telegram-gateway-poll.sh`: multi-line messages (e.g. `promote id1 global\npromote id2 global`) now work correctly. Previously, `cmd_text` preserved newlines and the `^...$` regex failed to match, falling through to Claude. Fix: split message into lines, iterate each line against command patterns, skip Claude fallthrough only if at least one command was handled. Single-line behavior unchanged. 44/44 tests passing.
+
+---
+
 ## 2026-05-22 — Competitive analysis + gap closure plan
 
 ### Research
