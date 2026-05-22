@@ -59,11 +59,12 @@ gh_compare_ahead() {
 # Print the commit messages between base_sha and HEAD (up to 15).
 show_commits_since() {
   local repo=$1 base=$2
-  _gh_curl "https://api.github.com/repos/$repo/compare/${base}...HEAD" \
-    | python3 - << 'PYEOF' 2>/dev/null || true
-import sys, json
+  _GH_COMPARE=$(_gh_curl "https://api.github.com/repos/$repo/compare/${base}...HEAD" 2>/dev/null || true)
+  export _GH_COMPARE
+  python3 - << 'PYEOF' 2>/dev/null || true
+import sys, json, os
 try:
-    data = json.load(sys.stdin)
+    data = json.loads(os.environ.get('_GH_COMPARE', '{}'))
     commits = data.get('commits', [])
     for c in commits[-15:]:
         sha  = c['sha'][:7]

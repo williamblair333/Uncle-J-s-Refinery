@@ -101,9 +101,10 @@ fi
 
 # ── Format traces for synthesizer ────────────────────────────────────────────
 step "Formatting $TRACE_COUNT trace(s) for synthesis"
-FORMATTED="$(printf '%s' "$TRACES_JSON" | "$VENV_PY" - <<'PYEOF'
-import sys, json
-data = json.loads(sys.stdin.read()).get("data", [])
+export TRACES_JSON
+FORMATTED="$("$VENV_PY" - <<'PYEOF'
+import sys, json, os
+data = json.loads(os.environ.get('TRACES_JSON', '{}')).get("data", [])
 lines = []
 for t in data[:30]:
     session  = t.get("sessionId", "?")

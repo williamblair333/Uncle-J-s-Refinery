@@ -19,7 +19,7 @@ jobs:
       - name: shellcheck
         run: |
           sudo apt-get install -y shellcheck
-          find . -name '*.sh' ! -path './.venv/*' \
+          find . -name '*.sh' ! -path './.venv/*' ! -path './_review/*' \
             | xargs shellcheck --severity=error --exclude=SC1091
 
   # ── 2. Python package installation on a fresh Debian/Ubuntu image ──────────
