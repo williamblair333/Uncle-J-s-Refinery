@@ -52,6 +52,7 @@ NEW_OFFSET=$(python3 - \
   "$CLAUDE_BIN" \
   "$OFFSET" \
   "$LOG_FILE" \
+  "$OFFSET_FILE" \
   << 'PYEOF'
 import sys
 import json
@@ -72,6 +73,7 @@ proj_root      = sys.argv[1]
 claude_bin     = sys.argv[2]
 current_offset = int(sys.argv[3])
 log_file       = sys.argv[4]
+offset_file    = sys.argv[5]
 
 # UPDATES_JSON passed via env var (pipe+heredoc conflict: heredoc wins stdin, pipe is dropped)
 updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
@@ -129,6 +131,11 @@ for update in updates:
     # Track highest update_id+1 regardless of whether we process it
     if update_id + 1 > new_offset:
         new_offset = update_id + 1
+        # Advance offset before processing — prevents duplicate actions on crash
+        _tmp = offset_file + ".tmp"
+        with open(_tmp, "w") as _f:
+            _f.write(str(new_offset))
+        os.replace(_tmp, offset_file)
 
     msg = update.get("message")
     if not msg:
@@ -142,6 +149,7 @@ for update in updates:
     from_chat = str(msg.get("chat", {}).get("id", ""))
     if from_chat != str(chat_id):
         log(f"Ignoring message from unauthorized chat_id={from_chat}")
+        tg_send(f"⚠️ <b>Security alert</b>: message received from unauthorized chat_id <code>{from_chat[:8]}…</code>. If unexpected, rotate your bot token.")
         continue
 
     log(f"Received message ({len(text)} chars)")  # do not log message content
@@ -159,6 +167,7 @@ for update in updates:
     text, san_err = sanitize_input(text)
     if san_err:
         tg_send(san_err)
+        tg_send("ℹ️ <b>Security notice</b>: a message from your chat was blocked by the injection filter. Check your Telegram account if unexpected.")
         continue
 
     # Normalize for command matching: strip leading formatting chars (backtick,
@@ -372,6 +381,4 @@ print(new_offset)
 PYEOF
 )
 
-# Write updated offset back
-printf '%s' "$NEW_OFFSET" > "$OFFSET_FILE"
 log "Offset updated to ${NEW_OFFSET}"
