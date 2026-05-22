@@ -1,14 +1,17 @@
 # Uncle J's Refinery
 
-*A self-hosted stack that makes Claude Code faster, cheaper, and harder to fool.*
+*A self-hosted personal AI operating system for Claude Code — retrieval stack, memory, observability, and a nightly self-improvement loop.*
 
-Claude Code is capable but expensive when it works naively. It reads entire source files to find one function. It has no memory between sessions. It wraps every answer in preamble. It can run destructive commands without verification. The Refinery fixes all four.
+Uncle J's Refinery is not a library of prompts or a plugin pack. It is a complete harness built for a single operator on a single Linux machine:
 
-It wires Claude Code to seven MCP servers (structural code/data/doc retrieval, semantic memory, SQL, and third-party docs), enforces a routing policy that tells the model which tool to reach for first, adds four layers of runtime guardrails, and traces every turn to a local Langfuse instance. Install once; benefits apply to every project on the machine automatically.
+- **Retrieval stack** — six MCP servers, each routed by modality (source code, tabular data, project docs, semantic memory, SQL, third-party library docs). Claude queries a symbol index instead of reading whole files; a ChromaDB palace with semantic search replaces re-explaining prior decisions each session.
+- **Observability** — every Claude turn traced to a self-hosted Langfuse instance: tool calls, timings, token counts, full session replay in a local web UI.
+- **Self-improvement loop** — a nightly cron replays Langfuse traces, extracts recurring mistakes and proven playbooks via the `dream-synthesizer` skill, writes them to MemPalace, and patches the model's operating instructions automatically.
+- **Autonomous operation** — a Telegram channel handles approval flows and monitoring alerts; daily health check, auto-maintain, and reindex crons keep the stack current without manual intervention.
 
-**Under the hood:** Tree-sitter symbol indexes, LSP-backed code intelligence, DuckDB over Parquet/CSV/S3, ChromaDB semantic search, Langfuse trace observability, and a verification-gated autonomous loop. Twelve components, one install script.
+Install once. The retrieval routing, hooks, and guardrails apply to every Claude Code project on the machine automatically.
 
-**Linux/macOS.** Built and tested on Debian/Ubuntu. macOS works without modification.
+**Linux (Debian/Ubuntu).** Built and tested on Debian with apt-based package management. This is a one-operator system — no multi-user mode, no SaaS, no cloud install.
 
 ---
 
@@ -147,7 +150,7 @@ Everything outside the `/ee` folder is MIT — free for commercial use with no u
 - **~15 GB free disk** — Langfuse images are ~5 GB; Postgres/ClickHouse/MinIO grow as they run
 - **Internet connection** — first run pulls ~2 GB of Python/Node/Docker packages
 
-The installers detect missing prerequisites and either auto-install them (where safe — e.g., `uv`) or tell you what to `apt`/`dnf`/`brew` and exit cleanly.
+The installers detect missing prerequisites and either auto-install them (where safe — e.g., `uv`) or tell you what to `apt` and exit cleanly.
 
 ---
 
@@ -186,7 +189,7 @@ Installs git, Node.js LTS, and the Claude Code CLI via your OS package manager. 
 ./prerequisites.sh
 ```
 
-Supported: **Debian/Ubuntu** (`apt-get`), **Fedora/RHEL** (`dnf`), **Arch** (`pacman`), **macOS** (`brew`).
+Supported: **Debian/Ubuntu** (`apt-get`). Other distros require manual prerequisite installation.
 
 ### 2. Python stack and MCP server registration
 
@@ -401,11 +404,7 @@ Your palace lives at `~/.mempalace/palace` — outside the repo, outside any con
 #### One-time setup
 
 ```bash
-# Linux
 sudo apt install rclone   # or: curl https://rclone.org/install.sh | sudo bash
-
-# macOS
-brew install rclone
 
 rclone config   # follow the interactive prompts — supports S3, GCS, Dropbox, Backblaze B2, SFTP, and more
 ```

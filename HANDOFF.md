@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-22 (README rewrite; Telegram gateway multi-line command support; 2 new global skills)*
+*Last updated: 2026-05-22 (README rewrite + Linux-only; ECC competitive analysis + import proposal)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -119,17 +119,17 @@ All items from all previous HANDOFFs are resolved.
 
 ## Priorities
 
-### 1. Competitive gap closure plan (for consideration)
+### 1. ECC agent import (next action — low risk, high ROI)
 
-Competitive analysis against Hermes Agent, OpenClaw, and the agentskills.io ecosystem identified 3 genuine gaps. Full plan with validated code at:
+Full competitive analysis against ECC v2.0.0-rc.1 (182K stars) at:
 
-`docs/superpowers/plans/2026-05-22-competitive-gap-closure.md`
+`docs/ecc-import-proposal.md`
 
-**Gaps in priority order:**
-- **Skill promotion body scanner** ✅ — `scan_skill_body()` added to `scripts/lib/tg_security.py`; wired into gateway `promote_confirm` block; 6 tests passing.
-- **agentskills.io compliance healthcheck** ✅ — `check_skill_compliance` added to `healthcheck.sh`; 22/22 global skills compliant.
+**Summary:** We win on retrieval stack, memory, observability, and autonomous ops. Their only real advantage over us is the **agent library** — 60 specialist subagents vs. our 0. The proposal identifies 7 to import immediately (planner, code-reviewer, security-reviewer, architect, tdd-guide, performance-optimizer, silent-failure-hunter) with a single `cp` command. No infrastructure changes needed.
 
-Note: skill auto-capture (already in `skill-suggest.sh`), Docker isolation for Ralph, and a mine cron (already a Stop hook in `settings.json` via `mempalace-mine-convos.sh`) were all evaluated and discarded — none are real gaps.
+**Prior gap closure (done):**
+- **Skill promotion body scanner** ✅ — `scan_skill_body()` in `scripts/lib/tg_security.py`; 6 tests passing.
+- **agentskills.io compliance healthcheck** ✅ — `check_skill_compliance` in `healthcheck.sh`; 22/22 global skills compliant.
 
 ### 2. No urgent items
 
