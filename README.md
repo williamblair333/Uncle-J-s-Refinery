@@ -11,8 +11,7 @@ A complete harness built for a single operator on a single Linux machine:
 
 Install once. The retrieval routing, hooks, and guardrails apply to every Claude Code project on the machine automatically.
 
-**Linux (Debian/Ubuntu).** Built and tested on Debian with apt-based package management. This is a one-operator system — no multi-user mode, no SaaS, no cloud install.
-
+**Linux (Debian/Ubuntu).** Built and tested on Debian with apt-based package management.
 ---
 
 ## Contents
