@@ -39,6 +39,26 @@ for src in "$STACK_ROOT/global-skills"/*/; do
     ok "skill installed: $skill_name"
 done
 
+# ── Agents ───────────────────────────────────────────────────────────────────
+step "Installing agents to $CLAUDE_DIR/agents"
+mkdir -p "$CLAUDE_DIR/agents"
+if [ ! -d "$STACK_ROOT/global-agents" ]; then
+    warn "global-agents/ directory not found — no agents will be installed"
+else
+    for src in "$STACK_ROOT/global-agents"/*.md; do
+        [ -f "$src" ] || continue
+        agent_name=$(basename "$src")
+        dst="$CLAUDE_DIR/agents/$agent_name"
+        if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
+            ok "agent already linked: $agent_name"
+            continue
+        fi
+        rm -f "$dst"
+        ln -sfn "$src" "$dst"
+        ok "agent installed: $agent_name"
+    done
+fi
+
 # ── Write OUTCOMES_MAX_ITERATIONS to settings.json ───────────────────────────
 step "Ensuring OUTCOMES_MAX_ITERATIONS in $CLAUDE_DIR/settings.json"
 python3 - "$CLAUDE_DIR/settings.json" << 'PYPATCH'

@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-22 (README rewrite + Linux-only; ECC competitive analysis + import proposal)*
+*Last updated: 2026-05-22 (ECC agent import — 6 specialist agents installed)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -119,17 +119,16 @@ All items from all previous HANDOFFs are resolved.
 
 ## Priorities
 
-### 1. ECC agent import (next action — low risk, high ROI)
+### 1. No urgent items
 
-Full competitive analysis against ECC v2.0.0-rc.1 (182K stars) at:
+**ECC agent import: done** ✅ — 6 specialist agents imported from ECC v2.0.0-rc.1:
+`planner`, `code-reviewer`, `security-reviewer`, `architect`, `tdd-guide`, `silent-failure-hunter`
 
-`docs/ecc-import-proposal.md`
-
-**Summary:** We win on retrieval stack, memory, observability, and autonomous ops. Their only real advantage over us is the **agent library** — 60 specialist subagents vs. our 0. The proposal identifies 7 to import immediately (planner, code-reviewer, security-reviewer, architect, tdd-guide, performance-optimizer, silent-failure-hunter) with a single `cp` command. No infrastructure changes needed.
-
-**Prior gap closure (done):**
-- **Skill promotion body scanner** ✅ — `scan_skill_body()` in `scripts/lib/tg_security.py`; 6 tests passing.
-- **agentskills.io compliance healthcheck** ✅ — `check_skill_compliance` in `healthcheck.sh`; 22/22 global skills compliant.
+- Live in `global-agents/`, symlinked to `~/.claude/agents/` via `install-reliability.sh`
+- `performance-optimizer` skipped — covered by jCodeMunch hotspot tools + code-reviewer
+- `tdd-guide` patched: `npm test` → `pytest`, `npm run test:coverage` → `pytest --cov`
+- Healthcheck guard: `check_agents()` in `healthcheck.sh`
+- Full analysis: `docs/ecc-import-proposal.md`
 
 ### 2. No urgent items
 

@@ -286,6 +286,22 @@ check_skill_compliance() {
     [[ $failed -eq 0 ]] && ok "all $skill_count global skills agentskills.io compliant"
 }
 
+# ----- agents installed -----
+check_agents() {
+    step "agents — core agents installed"
+    local missing=0
+    for agent in planner code-reviewer security-reviewer architect tdd-guide silent-failure-hunter; do
+        if [ -f "$HOME/.claude/agents/${agent}.md" ]; then
+            ok "agent: $agent"
+        else
+            bad "agent missing: $agent"
+            hint "run: bash $REPO_ROOT/install-reliability.sh"
+            record_fail "agent-$agent"
+            missing=$((missing+1))
+        fi
+    done
+}
+
 # ----- 9. MemPalace health: SQLite integrity + no stale mine locks ----------
 check_mempalace() {
     step "MemPalace — SQLite FTS5 integrity"
@@ -626,6 +642,7 @@ check_langfuse_api
 check_langfuse_sdk
 check_skills
 check_skill_compliance
+check_agents
 check_mempalace
 check_crons
 check_stack_freshness
