@@ -2,7 +2,7 @@
 
 *A self-hosted personal AI operating system for Claude Code — retrieval stack, memory, observability, and a nightly self-improvement loop.*
 
-Uncle J's Refinery is not a library of prompts or a plugin pack. It is a complete harness built for a single operator on a single Linux machine:
+A complete harness built for a single operator on a single Linux machine:
 
 - **Retrieval stack** — six MCP servers, each routed by modality (source code, tabular data, project docs, semantic memory, SQL, third-party library docs). Claude queries a symbol index instead of reading whole files; a ChromaDB palace with semantic search replaces re-explaining prior decisions each session.
 - **Observability** — every Claude turn traced to a self-hosted Langfuse instance: tool calls, timings, token counts, full session replay in a local web UI.
@@ -59,7 +59,7 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
 
 | Problem | What the Refinery does | Numbers |
 |---|---|---|
-| Claude reads whole files to find one function | jCodeMunch indexes your repo via Tree-sitter; Claude queries the symbol index instead | ~80% token reduction on code-reading |
+| Claude reads whole files to find one function | jCodeMunch indexes your repo via Tree-sitter; Claude queries the symbol index instead | ~80% token reduction on real code tasks (up to ~95% on large-file, single-symbol lookups) |
 | Massive data files get dumped into context | jDataMunch profiles and slices CSV/TSV; DuckDB handles Parquet/SQL joins | ~25,000× reduction on the LAPD 1M-row benchmark |
 | Claude forgets everything between sessions | MemPalace stores decisions, patterns, and prior art in a local ChromaDB palace with semantic search | "What did we decide about auth?" hits sessions from months ago |
 | Verbose boilerplate responses | jOutputMunch system-prompt rules strip preamble, summaries, and filler from every reply | 25–40% output token reduction |
@@ -72,7 +72,7 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
 
 This project is named in tribute to **J. Gravelle** ([@jgravelle](https://github.com/jgravelle)), creator of the four tools that do the actual distillation:
 
-- **jCodeMunch** — symbol-level code retrieval (~95% token reduction on code-reading workflows)
+- **jCodeMunch** — symbol-level code retrieval (~95% per-read reduction on large files; ~80% across real mixed-use sessions)
 - **jDataMunch** — CSV/tabular retrieval (~25,000× reduction on the LAPD 1M-row benchmark)
 - **jDocMunch** — section-precise documentation retrieval
 - **jOutputMunch** — system-prompt rules that cut output tokens 25–40%
@@ -172,8 +172,6 @@ cp CLAUDE.md.merged ~/.claude/CLAUDE.md
 ```
 
 Then open a Claude Code session in any project. The routing policy and hooks apply automatically.
-
-For the full step-by-step with explanations, see [Install guide](#install-guide).
 
 ---
 
@@ -477,7 +475,7 @@ bash features/telegram-gateway/install.sh
 # uninstall: bash features/telegram-gateway/install.sh --uninstall
 ```
 
-**Security:** rate limits, injection-pattern blocking, dangerous Unicode stripping, output path/secret redaction, and an anti-disclosure system prompt so the bot never leaks OS, kernel, paths, git details, MCP stack, or credentials. Implemented in `scripts/lib/tg_security.py` with a 38-test suite in `tests/test_tg_security.py`.
+**Security:** rate limits, injection-pattern blocking, dangerous Unicode stripping, output path/secret redaction, and an anti-disclosure system prompt so the bot never leaks OS, kernel, paths, git details, MCP stack, or credentials. Implemented in `scripts/lib/tg_security.py`.
 
 Logs: `state/telegram-gateway.log`
 
