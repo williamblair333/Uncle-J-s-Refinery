@@ -293,9 +293,9 @@ arrow(ax, CX, JG_Y - H/2, CX, SA_Y + H/2)
 # ── SPECIALIST AGENTS ─────────────────────────────────────────────────────────
 section_tag(ax, SA_Y, "AGENTS")
 box(ax, CX, SA_Y, W + 0.06, H,
-    "Specialist agent spawned (optional delegation)",
+    "Judge delegates to specialist agent(s)",
     SKILL_C,
-    sublabel="code-reviewer  |  security-reviewer  |  silent-failure-hunter  |  architect  |  planner  |  tdd-guide")
+    sublabel="risk-based — trivial diffs: none  |  code change: code-reviewer  |  security path: security-reviewer  |  new feature: silent-failure-hunter")
 
 arrow(ax, CX, SA_Y - H/2, CX, VD_Y + DH/2)
 
