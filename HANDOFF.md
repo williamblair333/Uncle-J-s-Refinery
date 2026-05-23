@@ -8,7 +8,11 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state
 
-### ⚠️ ACTION REQUIRED at next session start
+### ⚠️ ACTION REQUIRED at next session start (or runs automatically at boot)
+
+The `@reboot` cron entry will attempt this automatically 2 minutes after power-on.
+If starting a session without rebooting first, run manually:
+
 
 Run immediately after opening Claude Code (before any mine jobs run):
 ```bash
@@ -22,6 +26,8 @@ This rebuilds the HNSW vector index from the 474K intact SQLite embeddings. It c
 - **Health check fixed**: `header.bin` was parsed as uint32 — 7.2T corruption wrapped to 0 and silently passed all checks. Now int64 with 10M sanity cap; CRIT alert fires correctly
 - **FTS5 rebuilt** in-place; SQLite `PRAGMA integrity_check` confirms clean
 - **`mempalace-repair-now.sh`** added: safe one-shot rebuild script with pre-flight writer check
+- **Stop-hook overlap fixed**: stop-hook mine command now wrapped with `flock -n` — concurrent session ends no longer spawn multiple overlapping mine processes
+- **Crontab deduplicated**: removed duplicate backup/health entries; flock guards added to all mine crons; `@reboot` entry added for missed-cron recovery
 - **HANDOFF correction**: previous entry said "chromadb 1.5.9 (Rust HNSW bug fixed)" — this was wrong. We run 1.5.8 (pinned in pyproject.toml); the bug is unresolved in 1.5.9 too. Single-thread mitigation is the correct fix.
 
 ### Previous session (2026-05-23 — MemPalace HNSW auto-fix)

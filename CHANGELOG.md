@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-23 — Stop-hook mine overlap fix + cron deduplication
+
+### Fixed
+- `settings.json`: stop-hook mine command wrapped with `flock -n /tmp/mempalace-mine-convos.lock` — concurrent Claude session stops no longer spawn overlapping mine processes
+- Crontab: removed duplicate `uncle-j-mempalace-backup` and `uncle-j-mempalace-health` entries that had accumulated from multiple install runs
+- Crontab: added `flock -n` guards to all mine cron commands (project + convos) to match stop-hook guard
+
+### Added
+- Crontab: `@reboot` entry — runs `mempalace-repair-now.sh` after 120s boot delay; self-heals HNSW when 3am/4am crons were missed due to shutdown
+
+---
+
 ## 2026-05-23 — MemPalace HNSW corruption root-cause fix
 
 ### Fixed
