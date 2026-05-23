@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (session cleanup: skill symlink, HNSW status, CHANGELOG gap)*
+*Last updated: 2026-05-23 (healthcheck HNSW/SQLite drift detection + interactive repair prompt)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -9,6 +9,7 @@ Read this before touching anything. Work priorities are in order below.
 ## Current state
 
 ### New this session
+- **Healthcheck HNSW/SQLite drift detection**: new sub-step added to `check_mempalace()` — Python snippet compares SQLite drawer count to HNSW header element count; fails with interactive `run: mempalace repair` hint when HNSW < SQLite/2. `uncle-j-mempalace-repair` added to `check_crons()` EXPECTED. SQLite FTS5 hint prefix fixed from `repair:` → `run:` so Y/n auto-exec fires.
 - **Session-end checklist system** live: pre-commit hook blocks commits missing CHANGELOG.md/HANDOFF.md; Stop hook sends Telegram warning; `session-end-checklist` skill walks all steps. Config in `.session-end.yml`.
 - **Standard docs added**: `LICENSE` (AGPL-3.0), `CONTRIBUTING.md`, `SECURITY.md`, `ROADMAP.md`
 - **install.sh improvements**: Context7 key auto-reads from `context7.key`; Telegram overwrite protection (`[y/N]` default)

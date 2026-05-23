@@ -318,7 +318,7 @@ check_mempalace() {
         ok "SQLite integrity_check: ok"
     else
         bad "SQLite integrity failure: $result"
-        hint "repair: sqlite3 $db \"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild');\""
+        hint "run: sqlite3 $db \"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild');\""
         record_fail "mempalace-sqlite"
     fi
 
@@ -352,6 +352,58 @@ check_mempalace() {
         fi
     done
     [ "$corrupted" -eq 0 ] && ok "HNSW link_lists.bin sizes normal"
+
+    step "MemPalace — HNSW/SQLite drawer count sync"
+    local drift_result
+    drift_result=$( "$REPO_ROOT/.venv/bin/python3" - "$HOME/.mempalace/palace" <<'PYEOF'
+import sys, sqlite3, struct, pathlib
+
+palace = pathlib.Path(sys.argv[1])
+db = palace / "chroma.sqlite3"
+if not db.exists():
+    print("SKIP")
+    sys.exit(0)
+
+try:
+    with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
+        sqlite_count = conn.execute(
+            "SELECT COUNT(*) FROM embedding_fulltext_search_content"
+        ).fetchone()[0]
+except Exception as e:
+    print(f"ERR:{e}")
+    sys.exit(0)
+
+hnsw_count = 0
+for hdr_path in palace.glob("*/header.bin"):
+    try:
+        data = hdr_path.read_bytes()
+        if len(data) >= 24:
+            cur = struct.unpack_from("<I", data, 20)[0]
+            hnsw_count = max(hnsw_count, cur)
+    except Exception:
+        pass
+
+print(f"{sqlite_count}:{hnsw_count}")
+PYEOF
+    )
+
+    case "$drift_result" in
+        SKIP)
+            ok "HNSW drift check skipped (no palace db yet)" ;;
+        ERR:*)
+            warn "HNSW drift check error: ${drift_result#ERR:}" ;;
+        *:*)
+            local sqlite_n hnsw_n
+            sqlite_n="${drift_result%%:*}"
+            hnsw_n="${drift_result##*:}"
+            if [ "$sqlite_n" -gt 0 ] && [ "$hnsw_n" -lt "$((sqlite_n / 2))" ]; then
+                bad "HNSW/SQLite drift: HNSW has ${hnsw_n} elements, SQLite has ${sqlite_n} drawers"
+                hint "run: $REPO_ROOT/.venv/bin/mempalace repair"
+                record_fail "mempalace-hnsw-drift"
+            else
+                ok "HNSW/SQLite in sync (HNSW=${hnsw_n}, SQLite=${sqlite_n})"
+            fi ;;
+    esac
 }
 
 # ----- 9d. crons: all expected jobs registered -----------------------------
@@ -369,6 +421,7 @@ check_crons() {
         [uncle-j-auto-maintain]="bash $REPO_ROOT/scripts/auto-maintain.sh"
         [uncle-j-healthcheck-notify]="bash $REPO_ROOT/scripts/healthcheck-notify.sh"
         [uncle-j-jcodemunch-reindex]="bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
+        [uncle-j-mempalace-repair]="mempalace repair"
     )
     for label in "${!EXPECTED[@]}"; do
         if printf '%s\n' "$tab" | grep -q "$label"; then

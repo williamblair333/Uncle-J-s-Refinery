@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-23 — Healthcheck HNSW/SQLite drift detection + interactive repair
+
+### Added
+- `healthcheck.sh`: new sub-step "MemPalace — HNSW/SQLite drawer count sync" — Python snippet reads SQLite row count vs HNSW header element count and fails with `run: mempalace repair` hint when HNSW < SQLite/2
+- `healthcheck.sh`: `uncle-j-mempalace-repair` added to `check_crons()` EXPECTED array
+
+### Fixed
+- `healthcheck.sh`: SQLite FTS5 integrity hint prefix changed from `repair:` to `run:` so interactive Y/n auto-execution fires correctly
+
+---
+
 ## 2026-05-23 — Session cleanup + skill wiring
 
 ### Added
