@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-05-23 — MemPalace HNSW auto-fix system
+
+### Added
+- `pyproject.toml`: `override-dependencies = ["chromadb==1.5.8"]` under `[tool.uv]` — freezes the embedded Rust HNSW bindings version to prevent corruption bugs in future upgrades
+- `healthcheck.sh`: `--fixall` flag — auto-runs all `run:`-prefixed hints without prompting (for unattended use); `FIX_ALL` variable + `hint()` updated accordingly
+- `healthcheck.sh`: HNSW/SQLite drift detection sub-step — Python snippet compares drawer counts; triggers `run: mempalace repair` hint (interactive Y/n or auto under `--fixall`) when HNSW < SQLite/2
+- `healthcheck.sh`: `uncle-j-mempalace-repair` added to `check_crons()` EXPECTED array
+- `features/mempalace/install.sh`: nightly `mempalace repair` cron at 4am (after 3am mine) — keeps HNSW in sync with SQLite automatically
+- `features/mempalace/install.sh`: `--uninstall` now removes both mine and repair crons
+
+### Fixed
+- `healthcheck.sh`: SQLite FTS5 hint prefix changed from `repair:` → `run:` so Y/n auto-execution fires correctly
+
+---
+
 ## 2026-05-23 — Nightly MemPalace repair cron
 
 ### Added
