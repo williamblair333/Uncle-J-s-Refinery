@@ -1,86 +1,61 @@
 ---
 name: polling-bot-backlog-diagnosis
 description: Diagnose and fix message backlog and notification-spam issues in cron-based polling bots — covers per-run deduplication flags and stale-message age filters
----
+metadata:
+  type: feedback
 
 ## When to use
 
-When a cron-based polling bot (Telegram, Slack, etc.) exhibits either of these symptoms:
-
-- **Notification spam**: Multiple identical rate-limit or error notifications per cron run when a queue backs up
-- **Backlog starvation**: Old queued messages burn through hourly rate-limit slots before fresh messages are processed
+When a cron-based polling bot (Telegram, Slack, etc.) shows either of these symptoms:
+- Multiple identical notification messages per cron run (e.g., "⚠️ Message limit reached" appearing 4× instead of once)
+- A stale backlog consuming the full rate-limit budget on every reset cycle (e.g., 20 "⏳ Running…" messages over 40 min, then rate limit hit, then repeat)
 
 ## Root causes and fixes
 
-### Symptom 1 — Multiple notifications per run
+### Bug 1: Multiple notifications per cron run
 
-**Root cause**: Each message in the batch independently triggers a notification (e.g., "⚠️ Message limit reached"), so N queued messages = N notifications per cron tick.
+**Symptom:** Each queued message triggers its own rate-limit or error notification. N queued messages → N notifications per run.
 
-**Fix**: Add a per-run boolean flag before the message loop. Only send the notification on the first hit; silently skip subsequent ones (still advance offsets so they won't be reprocessed).
+**Root cause:** The notification flag is checked per-message rather than per-run.
 
-rate_limit_notified = False  # reset before the loop
+**Fix:** Set a `rate_limit_notified = False` flag before the message loop. Inside the loop, only send the notification on the first hit and flip the flag. All subsequent rate-limited messages in the same run are silently dropped (advance offsets so they don't reprocess).
 
-for message in messages:
+rate_limit_notified = False
+for message in pending_messages:
     if rate_limited:
         if not rate_limit_notified:
             send("⚠️ Message limit reached")
             rate_limit_notified = True
-        continue  # skip; offset still advances
-
-# bash equivalent
-rate_limit_notified=false
-
-for msg in "${messages[@]}"; do
-    if is_rate_limited; then
-        if ! $rate_limit_notified; then
-            send_notification "⚠️ Message limit reached"
-            rate_limit_notified=true
-        fi
+        advance_offset(message)
         continue
-    fi
-done
+    process(message)
 
-### Symptom 2 — Stale backlog eating rate-limit slots
+### Bug 2: Stale backlog consuming rate-limit budget
 
-**Root cause**: Messages queued overnight (or during downtime) are reprocessed in bulk on restart, consuming all rate-limit slots before any fresh messages get through. The pattern: 20× "⏳ Running…" over 40 minutes, then rate limit, repeat.
+**Symptom:** Bot processes messages from hours ago on every cron cycle, burning all hourly slots before reaching fresh messages.
 
-**Fix**: Skip messages older than a threshold (10 minutes is safe for interactive bots). Telegram's `message.date` is a Unix timestamp.
+**Root cause:** No message age check — the bot processes everything in the queue regardless of when it was sent.
+
+**Fix:** Add an age filter immediately after the authorized-chat check (before any Claude call). Telegram's `message.date` is a Unix timestamp. Drop anything older than 10 minutes silently.
 
 import time
+MAX_AGE_SECONDS = 600  # 10 minutes
 
-MAX_MESSAGE_AGE_SECONDS = 600  # 10 minutes
-
-for message in messages:
-    age = time.time() - message.date
-    if age > MAX_MESSAGE_AGE_SECONDS:
-        continue  # silently drop stale message; offset advances
-
-MAX_AGE=600
-now=$(date +%s)
-
-msg_time=$(echo "$message" | jq '.date')
-age=$(( now - msg_time ))
-if (( age > MAX_AGE )); then
+msg_age = time.time() - message.date
+if msg_age > MAX_AGE_SECONDS:
+    advance_offset(message)
+    log(f"Skipped stale message ({int(msg_age)}s old)")
     continue
-fi
 
-**Apply age filter BEFORE the rate-limit check** — stale messages should never even count against the limit.
+**Order matters:** Age filter first, then rate-limit dedup. Age filter removes backlog cheaply before any API calls occur.
 
-## Apply both fixes together
+## Verification steps
 
-| Symptom | Root cause | Fix |
-|---|---|---|
-| N× "Message limit reached" per cron run | Each queued message sent its own notification | `rate_limit_notified` flag — one notification per run |
-| 20× "⏳ Running…" over 40 min then rate limit | Stale backlog from prior session consuming all hourly slots | Age filter — skip messages older than 10 min |
+1. Check the rate-limit state file — confirm slot count is reasonable (not maxed)
+2. Grep the polling script for both fixes: `rate_limit_notified` flag and age check
+3. Confirm age check appears before the rate-limit block in the loop
+4. If rate-limit state is stuck at max, reset it manually so the next cron run can proceed immediately
 
-## Bonus: reset a stuck rate-limit state file
+## Clearing stuck rate-limit state
 
-If the bot persists rate-limit state to disk and is stuck, clear it directly:
-
-# Find and inspect the state file
-cat /path/to/bot/rate_limit_state.json
-
-# Reset by zeroing the counter (keep structure intact)
-echo '{"message_count": 0, "window_start": null}' > /path/to/bot/rate_limit_state.json
-
-The next cron tick picks up fresh messages immediately — no restart needed.
+If the state file shows the limit already consumed, zero it out directly — don't wait for the hourly reset. The state file path is typically in `tg_security` constants or the script header.

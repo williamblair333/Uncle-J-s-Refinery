@@ -152,6 +152,12 @@ for update in updates:
         tg_send(f"⚠️ <b>Security alert</b>: message received from unauthorized chat_id <code>{from_chat[:8]}…</code>. If unexpected, rotate your bot token.")
         continue
 
+    # Age filter: drop stale messages so a backlog can't consume the hourly rate-limit budget.
+    msg_age = datetime.datetime.now().timestamp() - msg.get("date", 0)
+    if msg_age > 600:
+        log(f"Skipped stale message ({int(msg_age)}s old)")
+        continue
+
     log(f"Received message ({len(text)} chars)")  # do not log message content
 
     # Rate limit check — send at most one notification per cron run to avoid
