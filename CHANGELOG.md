@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-05-23 — MemPalace HNSW corruption root-cause fix
+
+### Fixed
+- `mempalace-health.py`: header.bin was parsed as uint32 — 7.2 trillion corruption value wrapped to 0, silently passing all checks. Now parsed as int64 with a 10M sanity cap; CRIT alert fires on astronomical values (chroma-core/chroma#4460)
+- FTS5 inverted index rebuilt in-place (`INSERT INTO ... VALUES('rebuild')`) after mine jobs left it malformed
+
+### Added
+- `mempalace-repair-now.sh`: one-shot post-restart repair script — safely rebuilds FTS5 then HNSW, checks for active writers first
+- `hnsw:num_threads=1` set on both collections (`mempalace_drawers`, `mempalace_closets`) in SQLite metadata — survives chromadb upgrades and prevents the concurrent `updatePoint` thread-safety race
+- `hnsw_params.py` default patched to `1` (was `multiprocessing.cpu_count()`) as belt-and-suspenders
+
+### Pending (requires MCP server restart to complete)
+- HNSW binary rebuild from SQLite: run `bash mempalace-repair-now.sh` immediately after starting a new Claude session, before any mine jobs run
+
+---
+
 ## 2026-05-23 — MemPalace HNSW auto-fix system
 
 ### Added

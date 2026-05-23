@@ -79,14 +79,22 @@ def check_hnsw_segment(seg_dir: Path, col_name: str) -> list[str]:
         # Absent binary files = fresh empty index (valid after deletion-fix); not an error.
         return []
 
-    # Parse header.bin
+    # Parse header.bin — use int64 (not uint32) to catch trillion-value type-confusion corruption
+    SANE_ELEMENT_CAP = 10_000_000  # no mempalace should exceed 10M entries
     try:
         hdr = (seg_dir / "header.bin").read_bytes()
         if len(hdr) < 24:
             issues.append(f"WARN [{col_name}]: header.bin too small ({len(hdr)} bytes)")
             return issues
-        max_elements  = struct.unpack_from("<I", hdr, 12)[0]
-        cur_elements  = struct.unpack_from("<I", hdr, 20)[0]
+        max_elements, cur_elements = struct.unpack_from("<qq", hdr, 8)[0], struct.unpack_from("<qq", hdr, 16)[0]
+        if max_elements > SANE_ELEMENT_CAP or cur_elements > SANE_ELEMENT_CAP:
+            issues.append(
+                f"CRIT [{col_name}]: HNSW header has astronomical values "
+                f"(max={max_elements:,} cur={cur_elements:,}) — "
+                f"type-confusion corruption (chroma-core/chroma#4460). "
+                f"Delete segment HNSW binaries and run `mempalace repair`."
+            )
+            return issues
     except Exception as e:
         issues.append(f"WARN [{col_name}]: cannot parse header.bin: {e}")
         return issues

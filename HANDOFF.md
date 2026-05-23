@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (Task 3 complete — nightly mempalace repair cron)*
+*Last updated: 2026-05-23 (MemPalace HNSW corruption root-cause fix)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -8,7 +8,23 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state
 
-### New this session (2026-05-23 — MemPalace HNSW auto-fix)
+### ⚠️ ACTION REQUIRED at next session start
+
+Run immediately after opening Claude Code (before any mine jobs run):
+```bash
+bash /opt/proj/Uncle-J-s-Refinery/mempalace-repair-now.sh
+```
+This rebuilds the HNSW vector index from the 474K intact SQLite embeddings. It could not complete this session because the MCP server was writing to the database. BM25 search works fine in the meantime.
+
+### New this session (2026-05-23 — HNSW corruption root-cause fix)
+- **Root cause identified and mitigated**: `updatePoint` thread-safety bug in chromadb-hnswlib 1.5.x (chroma-core/chroma#4460, unresolved upstream across all 1.5.x including 1.5.9)
+- **`hnsw:num_threads=1`** set on both collections in SQLite metadata AND patched as default in `hnsw_params.py` — eliminates the concurrent update race; survives chromadb upgrades via collection metadata
+- **Health check fixed**: `header.bin` was parsed as uint32 — 7.2T corruption wrapped to 0 and silently passed all checks. Now int64 with 10M sanity cap; CRIT alert fires correctly
+- **FTS5 rebuilt** in-place; SQLite `PRAGMA integrity_check` confirms clean
+- **`mempalace-repair-now.sh`** added: safe one-shot rebuild script with pre-flight writer check
+- **HANDOFF correction**: previous entry said "chromadb 1.5.9 (Rust HNSW bug fixed)" — this was wrong. We run 1.5.8 (pinned in pyproject.toml); the bug is unresolved in 1.5.9 too. Single-thread mitigation is the correct fix.
+
+### Previous session (2026-05-23 — MemPalace HNSW auto-fix)
 - **chromadb pinned**: `pyproject.toml` now has `override-dependencies = ["chromadb==1.5.8"]` — freezes the embedded Rust HNSW version; bump intentionally after verifying repair runs clean on a new version
 - **`healthcheck.sh --fixall`**: new flag auto-runs all fixable hints without prompting (safe for cron/CI); normal interactive Y/n unchanged
 - **HNSW/SQLite drift detection**: `check_mempalace()` now has a Python sub-step that compares SQLite drawer count to HNSW header element count — fails with an auto-fixable `run: mempalace repair` hint when HNSW < 50% of SQLite
@@ -40,8 +56,8 @@ Read this before touching anything. Work priorities are in order below.
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
 - **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
 - **MemPalace v3.3.5** — BM25 search operational; 467k+ drawers
-  - chromadb 1.5.9 (Rust HNSW type-confusion bug fixed)
-  - **HNSW index degraded**: 1,056 elements indexed vs 467,748 in sqlite — vector (semantic) search is blind to 99.9% of drawers; BM25 fallback active. Run `mempalace repair` to rebuild. See ROADMAP.
+  - chromadb 1.5.8 (pinned in pyproject.toml; bug unresolved upstream — mitigated via `hnsw:num_threads=1`)
+  - **HNSW index pending rebuild**: HNSW binaries deleted this session; SQLite has 474K embeddings intact. Run `bash mempalace-repair-now.sh` at next session start to rebuild. BM25 active in the meantime.
   - HNSW size guard active in both mine wrappers (aborts if > 200 MB)
   - Mine stale-lock auto-clear: locks older than 30 min cleared automatically on next invocation
   - PR #1523 (VACUUM+FTS5 fix in `repair --yes`) merged upstream and running in our installed version
@@ -190,24 +206,34 @@ Set `MEMPALACE_REMOTE` in `.env` and configure rclone if you want off-machine pa
 
 ### MemPalace repair procedure (if HNSW corrupts again)
 
+Use the one-shot script (handles FTS5 rebuild + HNSW delete + repair in the right order):
 ```bash
-# 1. Check sizes
-ls -lh ~/.mempalace/palace/*/link_lists.bin
+bash /opt/proj/Uncle-J-s-Refinery/mempalace-repair-now.sh
+```
 
-# 2. Clear stale locks (if any mine process died)
-rmdir /opt/proj/Uncle-J-s-Refinery/state/mempalace-mine-convos.lock 2>/dev/null
-rmdir /opt/proj/Uncle-J-s-Refinery/state/mempalace-mine-project.lock 2>/dev/null
+**Must be run when MCP server is not writing** — i.e., at the start of a fresh Claude session, before any mine jobs. The script pre-checks for active writers and aborts if found.
 
-# 3. Delete corrupted HNSW segment directory
-HNSW_DIR=$(ls -d ~/.mempalace/palace/*/link_lists.bin | awk '{print $1}' | xargs -I{} dirname {} | head -1)
-rm "$HNSW_DIR"/*.bin "$HNSW_DIR"/*.pickle 2>/dev/null
-rmdir "$HNSW_DIR"
+Manual steps (if script fails):
+```bash
+# 1. Kill any active mine jobs
+ps aux | grep "mempalace mine" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null
 
-# 4. Rebuild with repair command
-/opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace repair --yes
+# 2. Rebuild FTS5
+python3 -c "
+import sqlite3
+c = sqlite3.connect('$HOME/.mempalace/palace/chroma.sqlite3')
+c.execute(\"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')\")
+c.commit()
+print(c.execute('PRAGMA quick_check').fetchone()[0])
+"
 
-# 5. Verify
-ls -lh ~/.mempalace/palace/*/link_lists.bin
+# 3. Delete HNSW binaries from active segments
+for seg in 3a9d5d2b-2ccd-45c7-9bde-54bd7dc1a784 859be8a7-69ca-4409-81ab-4386a620320c; do
+  rm -f ~/.mempalace/palace/$seg/{header,link_lists,data_level0}.bin
+done
+
+# 4. Rebuild
+/opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace repair
 ```
 
 ### Mine lockfile cleanup (if mine process killed hard)
