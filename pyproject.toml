@@ -38,6 +38,10 @@ groq      = ["jcodemunch-mcp[groq]"]
 [tool.uv]
 # Keep the lockfile deterministic.
 managed = true
+# Pin chromadb to the version whose embedded Rust HNSW bindings are known-good.
+# The chromadb-hnswlib 1.5.x type-confusion bug can corrupt HNSW indexes on upsert.
+# Bump this intentionally after verifying repair runs clean on the new version.
+override-dependencies = ["chromadb==1.5.8"]
 
 [tool.uv.sources]
 jcodemunch-mcp = { git = "https://github.com/jgravelle/jcodemunch-mcp.git" }
