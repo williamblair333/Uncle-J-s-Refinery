@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-23 — Healthcheck --fixall flag
+
+### Added
+- `healthcheck.sh`: `--fixall` flag — when set, all `run:` hints auto-execute without prompting instead of offering interactive `[y/N]`; `FIX_ALL` variable declared at arg-parse time; `hint()` updated with auto-run branch before the existing interactive branch
+
+---
+
 ## 2026-05-23 — Healthcheck HNSW/SQLite drift detection + interactive repair
 
 ### Added

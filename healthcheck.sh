@@ -25,10 +25,12 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODE="quick"
+FIX_ALL=false
 for arg in "$@"; do
     case "$arg" in
-        --quick) MODE="quick" ;;
-        --full)  MODE="full"  ;;
+        --quick)  MODE="quick" ;;
+        --full)   MODE="full"  ;;
+        --fixall) FIX_ALL=true ;;
         -h|--help)
             sed -n '1,18p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
@@ -43,17 +45,21 @@ warn() { printf '    W   %s\n' "$*" >&2; }
 bad()  { printf '    X   %s\n' "$*" >&2; }
 hint() {
     printf '        fix: %s\n' "$*" >&2
-    # When running in an interactive terminal and the hint is a runnable command,
-    # offer to execute it immediately.
-    if [[ -t 2 && "$*" == run:\ * ]]; then
+    # When hint is a runnable command: auto-run under --fixall, or offer [y/N] interactively.
+    if [[ "$*" == run:\ * ]]; then
         local cmd="${*#run: }"
         cmd="${cmd%  (*}"   # strip trailing parenthetical notes like "  (or re-run X)"
-        printf '        Fix it now? [y/N] ' >&2
-        local reply=""
-        read -r reply </dev/tty 2>/dev/null || true
-        if [[ "$reply" =~ ^[Yy]$ ]]; then
-            printf '        Running: %s\n' "$cmd" >&2
+        if [[ "${FIX_ALL:-false}" == true ]]; then
+            printf '        Auto-fixing: %s\n' "$cmd" >&2
             bash -c "$cmd" || printf '        Command exited non-zero — check output above\n' >&2
+        elif [[ -t 2 ]]; then
+            printf '        Fix it now? [y/N] ' >&2
+            local reply=""
+            read -r reply </dev/tty 2>/dev/null || true
+            if [[ "$reply" =~ ^[Yy]$ ]]; then
+                printf '        Running: %s\n' "$cmd" >&2
+                bash -c "$cmd" || printf '        Command exited non-zero — check output above\n' >&2
+            fi
         fi
     fi
 }

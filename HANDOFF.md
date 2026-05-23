@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (healthcheck HNSW/SQLite drift detection + interactive repair prompt)*
+*Last updated: 2026-05-23 (healthcheck --fixall flag)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -9,6 +9,7 @@ Read this before touching anything. Work priorities are in order below.
 ## Current state
 
 ### New this session
+- **Healthcheck `--fixall` flag**: `healthcheck.sh --fixall` auto-runs every `run:` hint without prompting. `FIX_ALL=false` declared in arg parser; `--fixall` sets it true; `hint()` checks `FIX_ALL` first before the interactive `[y/N]` branch.
 - **Healthcheck HNSW/SQLite drift detection**: new sub-step added to `check_mempalace()` — Python snippet compares SQLite drawer count to HNSW header element count; fails with interactive `run: mempalace repair` hint when HNSW < SQLite/2. `uncle-j-mempalace-repair` added to `check_crons()` EXPECTED. SQLite FTS5 hint prefix fixed from `repair:` → `run:` so Y/n auto-exec fires.
 - **Session-end checklist system** live: pre-commit hook blocks commits missing CHANGELOG.md/HANDOFF.md; Stop hook sends Telegram warning; `session-end-checklist` skill walks all steps. Config in `.session-end.yml`.
 - **Standard docs added**: `LICENSE` (AGPL-3.0), `CONTRIBUTING.md`, `SECURITY.md`, `ROADMAP.md`
