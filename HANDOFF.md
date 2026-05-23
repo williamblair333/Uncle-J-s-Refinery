@@ -8,12 +8,14 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state
 
-### New this session (2026-05-23 continued — Task 3)
-- **MemPalace nightly repair cron**: `features/mempalace/install.sh` now installs two crons:
-  - 3am: `mempalace mine` (project code index + session backfill)
-  - 4am: `mempalace repair` (HNSW rebuild from SQLite to prevent drift)
-- Both crons have `--uninstall` cleanup path; summary output updated to show both
-- Purpose: HNSW index (link_lists.bin) can drift from SQLite drawer count; nightly repair keeps vectors in sync. See ROADMAP for context.
+### New this session (2026-05-23 — MemPalace HNSW auto-fix)
+- **chromadb pinned**: `pyproject.toml` now has `override-dependencies = ["chromadb==1.5.8"]` — freezes the embedded Rust HNSW version; bump intentionally after verifying repair runs clean on a new version
+- **`healthcheck.sh --fixall`**: new flag auto-runs all fixable hints without prompting (safe for cron/CI); normal interactive Y/n unchanged
+- **HNSW/SQLite drift detection**: `check_mempalace()` now has a Python sub-step that compares SQLite drawer count to HNSW header element count — fails with an auto-fixable `run: mempalace repair` hint when HNSW < 50% of SQLite
+- **Nightly repair cron**: `features/mempalace/install.sh` now installs two crons:
+  - 3am: `mempalace mine` (project code index)
+  - 4am: `mempalace repair` (HNSW rebuild from SQLite)
+- HNSW vector search was fully broken at session start (1,056 HNSW vs 467k SQLite); self-healed during session — now in sync (468k/472k)
 
 ### Previous session
 - **Healthcheck `--fixall` flag**: `healthcheck.sh --fixall` auto-runs every `run:` hint without prompting. `FIX_ALL=false` declared in arg parser; `--fixall` sets it true; `hint()` checks `FIX_ALL` first before the interactive `[y/N]` branch.
