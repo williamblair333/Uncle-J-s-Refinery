@@ -7,17 +7,11 @@ Completed items age out after ~4 weeks.
 
 ## In Progress
 
-- **Session-end checklist system** — `.session-end.yml` config, pre-commit hook,
-  Stop hook, skill, and supporting docs. Implements mandatory doc enforcement
-  with three-layer defense (skill → Stop hook → git block). _(2026-05-23)_
+_(none)_
 
 ---
 
 ## Planned
-
-- **`install-reliability.sh` symlink the new `session-end-checklist` skill** —
-  currently only wired in `global-skills/`; needs symlink into `~/.claude/skills/`
-  via `install-reliability.sh`
 
 - **CI test job for `session-end-check.sh`** — add a pytest step to
   `.github/workflows/ci.yml` now that the test file exists
@@ -42,6 +36,10 @@ Completed items age out after ~4 weeks.
 
 | Date | Item |
 |------|------|
+| 2026-05-23 | Session-end checklist system — three-layer enforcement (skill → Stop hook → pre-commit block) |
+| 2026-05-23 | Standard project docs — LICENSE (AGPL-3.0), CONTRIBUTING.md, SECURITY.md, ROADMAP.md |
+| 2026-05-23 | `telegram-inline-button-promote` skill — inline keyboard button wiring pattern documented |
+| 2026-05-23 | `session-end-checklist` skill symlinked — invocable as `/session-end-checklist` |
 | 2026-05-23 | Telegram backlog age filter — drops messages >10 min old to prevent rate-limit burn |
 | 2026-05-23 | `install.sh`: Telegram overwrite protection — `[y/N]` default, skip if not configured |
 | 2026-05-23 | `install.sh`: Context7 API key setup — auto-reads `context7.key`, falls back to prompt |

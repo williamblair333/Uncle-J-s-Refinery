@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (session-end checklist system + project standard docs)*
+*Last updated: 2026-05-23 (session cleanup: skill symlink, HNSW status, CHANGELOG gap)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -14,6 +14,8 @@ Read this before touching anything. Work priorities are in order below.
 - **install.sh improvements**: Context7 key auto-reads from `context7.key`; Telegram overwrite protection (`[y/N]` default)
 - **Context7 API key** configured in `~/.claude/.env`
 - **Telegram backlog age filter**: messages >10 min old dropped silently (prevents rate-limit burn)
+- **`telegram-inline-button-promote` skill** added (concurrent session): documents how to wire inline keyboard buttons into polling bots
+- **`session-end-checklist` skill symlinked** to `~/.claude/skills/` — now invocable as `/session-end-checklist`
 
 ### Working
 
@@ -26,8 +28,9 @@ Read this before touching anything. Work priorities are in order below.
   - **Notification events**: stack upgrades (approve/skip pitch) · new skill drafts (promote instructions) · healthcheck failures (daily 07:00 via `healthcheck-notify.sh`) · unauthorized chat access · injection attempts · Ralph plateau · dream synthesis complete
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
 - **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
-- **MemPalace v3.3.5** — fully operational; 10,000+ drawers; HNSW healthy (all `link_lists.bin` = 0 bytes)
+- **MemPalace v3.3.5** — BM25 search operational; 467k+ drawers
   - chromadb 1.5.9 (Rust HNSW type-confusion bug fixed)
+  - **HNSW index degraded**: 1,056 elements indexed vs 467,748 in sqlite — vector (semantic) search is blind to 99.9% of drawers; BM25 fallback active. Run `mempalace repair` to rebuild. See ROADMAP.
   - HNSW size guard active in both mine wrappers (aborts if > 200 MB)
   - Mine stale-lock auto-clear: locks older than 30 min cleared automatically on next invocation
   - PR #1523 (VACUUM+FTS5 fix in `repair --yes`) merged upstream and running in our installed version

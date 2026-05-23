@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-05-23 — Session cleanup + skill wiring
+
+### Added
+- `global-skills/telegram-inline-button-promote/SKILL.md` — documents inline Telegram keyboard button pattern (missed CHANGELOG in prior commit)
+- `~/.claude/skills/session-end-checklist` symlink — skill now invocable as `/session-end-checklist`
+
+### Fixed
+- HANDOFF: corrected stale "HNSW healthy" claim — HNSW index is degraded (1,056/467,748 elements); BM25 fallback active
+
+### Changed
+- ROADMAP: session-end checklist moved from In Progress → Completed
+
+---
+
 ## 2026-05-23 — Session-end checklist system + project standard docs
 
 ### Added
