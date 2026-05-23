@@ -130,7 +130,7 @@ See [`docs/RELIABILITY.md`](docs/RELIABILITY.md) for the agent trigger matrix an
 
 ## Commercial use — read before you ship
 
-Most of this stack is MIT and safe for commercial use. Three pieces are **not** straight MIT — if you're deploying this anywhere that makes money, read this section before you ship.
+The glue in this repo (install scripts, skills, harness) is **AGPL-3.0**: free to use, modify, and self-host, but if you deploy a modified version as a network service you must publish your modifications under the same license. Four additional pieces have their own terms — read before you ship.
 
 **1. Uncle J's tools (jCodeMunch, jDataMunch, jDocMunch, jOutputMunch)**
 
@@ -150,6 +150,8 @@ Commercial use is governed by [Anthropic's Commercial Terms of Service](https://
 Everything outside the `/ee` folder is MIT — free for commercial use with no usage limits. The `/ee` folder contains enterprise-only features (SCIM, audit logs, data retention policies) that require a commercial license. See [Langfuse open-source FAQ](https://langfuse.com/docs/open-source).
 
 **Everything else** — MemPalace, Serena, DuckDB MCP, Context7, Superpowers, dwarvesf/claude-guardrails, and the Langfuse template — is MIT-licensed. No commercial restrictions beyond attribution.
+
+**This repo's glue code** — install scripts, merged CLAUDE.md, custom skills, Ralph harness, and all supporting scripts — is **AGPL-3.0** (see `LICENSE`). Free for personal and commercial use; network-deployed modifications must be released under the same license.
 
 ---
 
@@ -768,6 +770,10 @@ Uncle-J-s-Refinery/
 ├── AGENTS.md                           ← agent-facing policy mirror
 ├── CHANGELOG.md                        ← version history
 ├── HANDOFF.md                          ← overnight-handoff brief + work log
+├── ROADMAP.md                          ← living roadmap (In Progress / Planned / Completed)
+├── CONTRIBUTING.md                     ← contribution guide, commit format, session-end requirement
+├── SECURITY.md                         ← vulnerability reporting policy (private disclosure)
+├── .session-end.yml                    ← per-project session-end checklist config
 ├── PORTING.md                          ← notes for porting to a new machine
 ├── PRD.md                              ← Ralph-driven maintenance PRD
 ├── prd-template.md                     ← starting template for Ralph tasks
@@ -777,7 +783,7 @@ Uncle-J-s-Refinery/
 ├── mempalace-backup.sh                 ← rclone sync of ~/.mempalace/palace to remote
 ├── mempalace-health.py                 ← SQLite health probe used by healthcheck.sh
 ├── patch-jcodemunch-hook-paths.py      ← one-time fix for hook path mismatches after move
-├── LICENSE                             ← MIT for the glue; upstream licenses apply to each dep
+├── LICENSE                             ← AGPL-3.0; upstream licenses apply to each dep
 ├── .venv/                              ← real Python venv created by install.sh (gitignored)
 │
 ├── prerequisites.sh                    ← step 1: git/node/claude
@@ -802,6 +808,7 @@ Uncle-J-s-Refinery/
 │   ├── post-merge-hook.sh              ← git post-merge hook; alerts on new features
 │   ├── ralph-cron-run.sh               ← runs ralph-harness.sh for a given PRD (cron target)
 │   ├── review-check.sh                 ← runs the code review checklist
+│   ├── session-end-check.sh            ← pre-commit hook (blocks) + Stop hook (Telegram warn)
 │   ├── session-notify.sh               ← sends Telegram notification on session end
 │   ├── skill-link.sh                   ← symlinks a skill into ~/.claude/skills/
 │   ├── skill-suggest.sh                ← analyzes session tool use and suggests skills
@@ -863,18 +870,23 @@ Uncle-J-s-Refinery/
 │   ├── orchestrator/
 │   ├── outcomes/
 │   ├── per-task-review-cycle/
+│   ├── polling-bot-age-filter-fix/
+│   ├── polling-bot-backlog-diagnosis/
 │   ├── post-upgrade-mcp-integration/
 │   ├── prior-art-check/
+│   ├── session-end-checklist/          ← AI-invoked checklist walker (mandatory → consider → custom)
 │   ├── stack-not-at-head-remediation/
 │   ├── stale-lock-diagnosis/
 │   ├── stale-pending-memory-guard/
 │   ├── telegram-gateway-security-audit/
+│   ├── telegram-inline-button-promote/
 │   └── verify-handoff-claims/
 │
 ├── skills/                             ← per-project skills (symlinked only in this repo's sessions)
 │
 ├── tests/
 │   ├── __init__.py
+│   ├── test_session_end_check.py       ← pytest suite for scripts/session-end-check.sh (10 tests)
 │   └── test_tg_security.py             ← pytest suite for scripts/lib/tg_security.py
 │
 ├── state/                              ← runtime state (gitignored except .gitkeep)
@@ -889,7 +901,8 @@ Uncle-J-s-Refinery/
 │
 ├── docs/
 │   ├── STACK.md                        ← one-page-per-tool reference
-│   └── RELIABILITY.md                  ← reliability-layer deep dive
+│   ├── RELIABILITY.md                  ← reliability-layer deep dive
+│   └── SESSION-END.md                  ← session-end checklist standard (three-layer model)
 │
 └── mcp-clients/
     ├── claude-code-mcp.json.tmpl       ← templates rendered at install time
@@ -992,7 +1005,7 @@ rm -rf Uncle-J-s-Refinery
 
 ## License & credits
 
-The glue in this repo — install scripts, merged CLAUDE.md, custom skills, Ralph harness, templates — is MIT (see `LICENSE`). Each upstream component retains its own license. See [Commercial use](#commercial-use--read-before-you-ship) for the full license audit.
+The glue in this repo — install scripts, merged CLAUDE.md, custom skills, Ralph harness, templates — is **AGPL-3.0** (see `LICENSE`). Each upstream component retains its own license. See [Commercial use](#commercial-use--read-before-you-ship) for the full license audit.
 
 ### Primary credit — the namesake
 
