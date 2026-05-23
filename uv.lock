@@ -7,6 +7,9 @@ resolution-markers = [
     "python_full_version < '3.13'",
 ]
 
+[manifest]
+overrides = [{ name = "chromadb", specifier = "==1.5.8" }]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.4"
