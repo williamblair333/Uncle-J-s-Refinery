@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-22 (ECC agent import — 6 specialist agents installed)*
+*Last updated: 2026-05-23 (Telegram inline promote button + stop-hook dedup)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -74,6 +74,11 @@ All items from all previous HANDOFFs are resolved.
 - **New skills committed**: `fog-of-chess-engine-mode-implementation`, `mcp-index-empty-diagnosis`, `stale-pending-memory-guard`, `validate-external-audit` — were on disk and symlinked but not committed
 - **Stack upgrade**: jcodemunch 1.108.19 → 1.108.20; index rebuilt 77 → 4,624 symbols
 - **CLAUDE.md routing expanded**: 30+ missing jcodemunch tools added (digest, get_repo_health, assemble_task_context, check_rename_safe, check_delete_safe, plan_refactoring, get_symbol_provenance, register_edit, get_tectonic_map, get_signal_chains, render_diagram, search_ast, get_dead_code_v2, audit_agent_config, + runtime trace tools); both global + project CLAUDE.md in sync
+
+### 2026-05-23
+- **Telegram inline promote button**: `skill-suggest.sh` now sends skill draft notifications with an inline "✅ Promote Global" button; gateway polls for `callback_query` updates and handles button taps directly
+- **promote <id> defaults to global**: classify round-trip removed — `promote <id>` installs straight to global without asking
+- **Stop-hook dedup**: `session-end-check.sh` skips duplicate Telegram warnings within 15 seconds (fixes double-send when two sessions close simultaneously)
 
 ### 2026-05-21
 - **Design spec written**: two automation gaps identified and fully specced — skill auto-install (dynamic `global-skills/` scan + symlink in auto-maintain Part C) and post-upgrade evaluation for all 4 packages with breaking-change detection and HANDOFF/CLAUDE.md auto-update. Spec at `docs/superpowers/specs/2026-05-21-skill-auto-install-and-upgrade-eval-design.md`. Implementation plan is next.

@@ -143,11 +143,12 @@ mkdir -p "$DRAFTS_DIR"
 DRAFT_FILE="$DRAFTS_DIR/${SHORT_ID}-skill-draft.md"
 printf '%s\n' "$SKILL_MARKDOWN" > "$DRAFT_FILE"
 
-# Send Telegram notification
+# Send Telegram notification with inline Promote Global button
 PREVIEW="$(printf '%s' "$SKILL_MARKDOWN" | head -c 300)"
-MSG="$(printf '📝 Skill draft for session <code>%s</code>.\n\n<b>File:</b> <code>%s</code>\n\n<b>Preview:</b>\n<pre>%s</pre>\n\nReply <code>promote %s</code> to install.' \
-  "$SHORT_ID" "$DRAFT_FILE" "$PREVIEW" "$SHORT_ID")"
+MSG="$(printf '📝 Skill draft for session <code>%s</code>.\n\n<b>File:</b> <code>%s</code>\n\n<b>Preview:</b>\n<pre>%s</pre>' \
+  "$SHORT_ID" "$DRAFT_FILE" "$PREVIEW")"
+KEYBOARD="$(printf '[[{"text":"✅ Promote Global","callback_data":"promote_global:%s"}]]' "$SHORT_ID")"
 
-notify_send_text "$MSG" || true
+notify_send_pitch "$MSG" "$KEYBOARD" || true
 
 exit 0

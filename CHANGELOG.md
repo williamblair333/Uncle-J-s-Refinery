@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-05-23 — Telegram inline promote button + stop-hook dedup
+
+### Added
+- `scripts/session-end-check.sh`: 15-second dedup window suppresses duplicate Telegram warnings when two Claude Code sessions stop simultaneously
+- `telegram-gateway-poll.sh`: `callback_query` support — inline keyboard button presses handled; `promote_global:<id>` button taps install skill directly
+- `telegram-gateway-poll.sh`: helper functions (`find_draft`, `parse_skill_name`, `install_skill`) moved above the update loop; `answer_callback` added
+
+### Changed
+- `skill-suggest.sh`: draft notifications now include an inline "✅ Promote Global" button via `notify_send_pitch` (previously plain text with typed command)
+- `telegram-gateway-poll.sh`: `promote <id>` (no scope) now promotes directly to global — classify round-trip removed; `getUpdates` switched to POST with `callback_query` in `allowed_updates`
+
+---
+
 ## 2026-05-22 — ECC agent import
 
 ### Added
