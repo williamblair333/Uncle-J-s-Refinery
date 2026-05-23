@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-23 — Session-end checklist system + project standard docs
+
+### Added
+- `.session-end.yml` — per-project config: mandatory docs, consider docs with `when:` conditions, file-type gate, custom checks
+- `scripts/session-end-check.sh` — pre-commit hook (blocks) + Stop hook (Telegram warning); reads `.session-end.yml`; 10-test suite in `tests/test_session_end_check.py`
+- `global-skills/session-end-checklist/SKILL.md` — AI-invoked checklist walker (mandatory → consider → custom checks)
+- `docs/SESSION-END.md` — human-readable standard; explains three-layer enforcement model
+- `ROADMAP.md` — living roadmap (In Progress / Planned / Completed); added to consider list
+- `LICENSE` — AGPL-3.0
+- `CONTRIBUTING.md` — contribution guide; references session-end standard
+- `SECURITY.md` — vulnerability reporting policy (private disclosure)
+- `Stop` hook in `~/.claude/settings.json` wired to `session-end-check.sh --stop-hook`
+- Pre-commit hook symlinked: `.git/hooks/pre-commit → scripts/session-end-check.sh`
+- `install.sh`: pre-commit hook auto-installed (non-optional); Context7 key auto-reads `context7.key`; Telegram overwrite defaults to `[y/N]`
+
+### Changed
+- `install.sh`: Telegram setup skipped if not configured; prompts overwrite if already configured
+
+---
+
 ## 2026-05-23 — Telegram inline promote button + stop-hook dedup
 
 ### Added

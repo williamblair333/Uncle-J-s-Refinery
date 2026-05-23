@@ -44,3 +44,8 @@ jcodemunch-mcp = { git = "https://github.com/jgravelle/jcodemunch-mcp.git" }
 jdatamunch-mcp = { git = "https://github.com/jgravelle/jdatamunch-mcp.git" }
 jdocmunch-mcp  = { git = "https://github.com/jgravelle/jdocmunch-mcp.git" }
 mempalace      = { git = "https://github.com/MemPalace/mempalace.git" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

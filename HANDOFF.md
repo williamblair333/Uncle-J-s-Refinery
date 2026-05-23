@@ -1,12 +1,19 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (Telegram inline promote button + stop-hook dedup)*
+*Last updated: 2026-05-23 (session-end checklist system + project standard docs)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
 ## Current state
+
+### New this session
+- **Session-end checklist system** live: pre-commit hook blocks commits missing CHANGELOG.md/HANDOFF.md; Stop hook sends Telegram warning; `session-end-checklist` skill walks all steps. Config in `.session-end.yml`.
+- **Standard docs added**: `LICENSE` (AGPL-3.0), `CONTRIBUTING.md`, `SECURITY.md`, `ROADMAP.md`
+- **install.sh improvements**: Context7 key auto-reads from `context7.key`; Telegram overwrite protection (`[y/N]` default)
+- **Context7 API key** configured in `~/.claude/.env`
+- **Telegram backlog age filter**: messages >10 min old dropped silently (prevents rate-limit burn)
 
 ### Working
 

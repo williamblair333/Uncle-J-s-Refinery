@@ -341,10 +341,50 @@ if [[ -d "$STACK_ROOT/.git" ]]; then
     else
         ok "skipped post-merge hook"
     fi
+
+    # Pre-commit hook: session-end documentation gate (always installed — not optional)
+    _PRECOMMIT_SRC="$STACK_ROOT/scripts/session-end-check.sh"
+    _PRECOMMIT_DEST="$STACK_ROOT/.git/hooks/pre-commit"
+    chmod +x "$_PRECOMMIT_SRC"
+    ln -sfn "$_PRECOMMIT_SRC" "$_PRECOMMIT_DEST"
+    ok "pre-commit hook installed (session-end documentation gate)"
 fi
 
-if prompt_yes_no "Enable automated stack update alerts (Telegram)?"; then
-  bash "$STACK_ROOT/features/stack-alerts/install.sh"
+_tg_configured=0
+[[ -f "$STACK_ROOT/.env" ]] && grep -q "TELEGRAM_BOT_TOKEN=" "$STACK_ROOT/.env" && _tg_configured=1
+if [[ "$_tg_configured" -eq 1 ]]; then
+    if prompt_yes_no "Telegram already configured. Overwrite existing credentials?" n; then
+        bash "$STACK_ROOT/features/stack-alerts/install.sh"
+    else
+        ok "Telegram config unchanged"
+    fi
+fi
+
+# --- 6d. Context7 API key (optional, higher rate limits) --------------------
+if [[ "$SKIP_CONTEXT7" -eq 0 ]] && [[ "${NON_INTERACTIVE:-0}" != "1" ]]; then
+    _claude_env="$CLAUDE_DIR/.env"
+    if [[ -f "$_claude_env" ]] && grep -q "^CONTEXT7_API_KEY=" "$_claude_env"; then
+        ok "Context7 API key already configured"
+    elif [[ -f "$STACK_ROOT/context7.key" ]]; then
+        _c7_key="$(cat "$STACK_ROOT/context7.key")"
+        mkdir -p "$(dirname "$_claude_env")"
+        write_env_var "$_claude_env" "CONTEXT7_API_KEY" "$_c7_key"
+        ok "Context7 API key loaded from context7.key → $_claude_env"
+    else
+        echo ""
+        echo "  Context7 provides version-pinned library docs (React, FastAPI, etc.)"
+        echo "  in Claude's context. A free API key raises the rate limit."
+        echo "  Get one at: https://context7.com/dashboard"
+        echo ""
+        prompt_value "Context7 API key (press Enter to skip)" "" _c7_key
+        if [[ -n "$_c7_key" ]]; then
+            mkdir -p "$(dirname "$_claude_env")"
+            write_env_var "$_claude_env" "CONTEXT7_API_KEY" "$_c7_key"
+            ok "CONTEXT7_API_KEY written to $_claude_env"
+        else
+            ok "Context7 API key skipped — add CONTEXT7_API_KEY= to $CLAUDE_DIR/.env later"
+        fi
+    fi
 fi
 
 cat <<EOF

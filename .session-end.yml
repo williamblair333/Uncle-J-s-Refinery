@@ -1,0 +1,35 @@
+version: 1
+
+# File-type gate: pre-commit hook only fires when staged files match these extensions.
+# Pure doc/config-only commits (e.g. fixing a typo in README) pass freely.
+trigger:
+  file_types: [".sh", ".py", ".ts", ".js", ".go", ".rs", ".json"]
+
+# Mandatory: git pre-commit hook BLOCKS if these are not staged and modified.
+mandatory:
+  - CHANGELOG.md
+  - HANDOFF.md
+
+# Consider: session-end skill surfaces each of these and prompts.
+# Modification is NOT required — explicit acknowledgement is.
+consider:
+  - file: README.md
+    prompt: "Did any user-facing feature, install step, or behavior change?"
+
+  - file: ROADMAP.md
+    prompt: "Any items completed or new ones to add?"
+
+  - file: SECURITY.md
+    when: security
+    prompt: "Were any security fixes or policies changed?"
+
+  - file: docs/STACK.md
+    when: stack
+    prompt: "Did the stack or MCP server config change?"
+
+# Custom checks: run as shell commands before commit.
+# on_failure: warn (print but continue) | block (exit 1)
+custom_checks:
+  - name: MemPalace snapshot
+    command: "mempalace diary write"
+    on_failure: warn
