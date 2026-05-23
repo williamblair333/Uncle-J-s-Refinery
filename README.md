@@ -566,7 +566,12 @@ bash features/ralph-cron/install.sh --uninstall MARKER
 
 ### 21. MemPalace automation — keep the palace current (optional)
 
-Installs a Stop hook that mines `~/.claude/projects/` after every session (conversation mode) and a daily 3 AM cron that mines the project repo (code mode). Without this, you must run `mempalace mine` manually.
+Installs:
+- **Stop hook**: mines `~/.claude/projects/` after every session (conversation mode)
+- **Daily 3 AM cron**: mines the project repo (code mode)
+- **Nightly 4 AM cron**: runs `mempalace repair` to rebuild HNSW index from SQLite (prevents drift)
+
+Without this, you must run `mempalace mine` manually; HNSW index can drift and degrade semantic search.
 
 ```bash
 bash features/mempalace/install.sh

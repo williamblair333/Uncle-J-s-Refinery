@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-23 — Nightly MemPalace repair cron
+
+### Added
+- `features/mempalace/install.sh`: `MARKER_CRON_REPAIR` constant and second cron job — `mempalace repair` runs at 4am daily to rebuild HNSW index from SQLite, preventing drift
+- Uninstall path: `--uninstall` flag now removes both mine (3am) and repair (4am) cron jobs
+- Summary output updated to show both daily (mine) and nightly (repair) cron schedules
+
+---
+
 ## 2026-05-23 — Healthcheck --fixall flag
 
 ### Added

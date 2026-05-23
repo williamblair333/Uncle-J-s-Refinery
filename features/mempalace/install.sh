@@ -19,6 +19,7 @@ MEMPALACE_BIN="$PROJ_ROOT/.venv/bin/mempalace"
 CLAUDE_PROJECTS="$HOME/.claude/projects"
 MARKER_STOP="uncle-j-mempalace-convos"
 MARKER_CRON="uncle-j-mempalace-mine"
+MARKER_CRON_REPAIR="uncle-j-mempalace-repair"
 
 source "$PROJ_ROOT/lib/feature-helpers.sh"
 
@@ -60,6 +61,9 @@ if [[ "${1:-}" == "--uninstall" ]]; then
   step "Removing cron job ($MARKER_CRON)"
   remove_cron "$MARKER_CRON"
   ok "Cron removed"
+  step "Removing repair cron ($MARKER_CRON_REPAIR)"
+  remove_cron "$MARKER_CRON_REPAIR"
+  ok "Repair cron removed"
   step "Done"
   exit 0
 fi
@@ -123,10 +127,15 @@ ok "Stop hook registered (async, fires after every session)"
 
 # ── cron — mine project code daily ───────────────────────────────────────────
 
-step "Registering daily cron (3am)"
+step "Registering daily cron (3am — mine)"
 CRON_ENTRY="0 3 * * * ${MEMPALACE_BIN} mine ${PROJ_ROOT} >> ${PROJ_ROOT}/state/mempalace-mine.log 2>&1"
 install_cron "$MARKER_CRON" "$CRON_ENTRY"
 ok "Cron installed: 0 3 * * *"
+
+step "Registering nightly repair cron (4am — HNSW rebuild)"
+CRON_REPAIR="0 4 * * * ${MEMPALACE_BIN} repair >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
+install_cron "$MARKER_CRON_REPAIR" "$CRON_REPAIR"
+ok "Cron installed: 0 4 * * *"
 
 # ── summary ───────────────────────────────────────────────────────────────────
 
@@ -135,7 +144,8 @@ printf '\n'
 printf '  Project indexed:  %s\n' "$PROJ_ROOT"
 printf '  Sessions indexed: %s\n' "$CLAUDE_PROJECTS"
 printf '  Stop hook:        mines convos after every session\n'
-printf '  Daily cron:       3am — re-mines project code\n'
+printf '  Daily cron (mine):     3am — re-mines project code\n'
+printf '  Nightly cron (repair): 4am — rebuilds HNSW index from SQLite\n'
 printf '\n'
 printf '  To uninstall: bash %s/install.sh --uninstall\n' "$SCRIPT_DIR"
 printf '\n'

@@ -24,10 +24,6 @@ _(none)_
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
-- **HNSW vector search repair** — MemPalace palace has 467k embeddings but HNSW
-  index only holds 1,056 elements; run `mempalace repair` to rebuild so semantic
-  search works alongside BM25
-
 - **Review-queue triage workflow** — skill exists; wire into regular session rhythm
 
 ---
@@ -36,6 +32,7 @@ _(none)_
 
 | Date | Item |
 |------|------|
+| 2026-05-23 | Nightly MemPalace repair cron — 4am automated `mempalace repair` prevents HNSW drift; healthcheck detects drift and prompts repair |
 | 2026-05-23 | Session-end checklist system — three-layer enforcement (skill → Stop hook → pre-commit block) |
 | 2026-05-23 | Standard project docs — LICENSE (AGPL-3.0), CONTRIBUTING.md, SECURITY.md, ROADMAP.md |
 | 2026-05-23 | `telegram-inline-button-promote` skill — inline keyboard button wiring pattern documented |
