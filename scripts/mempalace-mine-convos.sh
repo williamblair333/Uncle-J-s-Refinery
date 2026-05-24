@@ -5,6 +5,8 @@ set -euo pipefail
 
 PROJ_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MEMPALACE="$PROJ_ROOT/.venv/bin/mempalace"
+# Force Python segment API — default RustBindingsAPI has HNSW type-confusion bug
+export CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI
 LOG="$PROJ_ROOT/state/mempalace-mine.log"
 CONVOS_DIR="$HOME/.claude/projects"
 LOCK="$PROJ_ROOT/state/mempalace-mine-convos.lock"

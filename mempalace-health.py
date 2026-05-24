@@ -79,15 +79,31 @@ def check_hnsw_segment(seg_dir: Path, col_name: str) -> list[str]:
         # Absent binary files = fresh empty index (valid after deletion-fix); not an error.
         return []
 
-    # Parse header.bin — use int64 (not uint32) to catch trillion-value type-confusion corruption
-    SANE_ELEMENT_CAP = 10_000_000  # no mempalace should exceed 10M entries
+    # Corruption detection: use link_lists.bin size as the primary indicator.
+    # chroma-hnswlib 0.7.6 (Python segment API) writes max_elements at offset 8 as
+    # N * 2^32 (e.g. 1000 elements → 4,294,967,296,000), so a naive uint64 threshold
+    # of 10M would false-positive on valid indexes. Instead:
+    #   • link_lists.bin > 100MB = almost certainly Rust HNSW corruption
+    #   • uint64@8 > 10^16 = pointer-sized corruption from Rust type confusion
+    ll_bin = seg_dir / "link_lists.bin"
+    ll_size = ll_bin.stat().st_size if ll_bin.exists() else 0
+    if ll_size > 100_000_000:
+        issues.append(
+            f"CRIT [{col_name}]: link_lists.bin is {ll_size/1e6:.0f}MB — "
+            f"Rust HNSW type-confusion corruption (chroma-core/chroma#4460). "
+            f"Delete segment HNSW binaries and run `mempalace repair`."
+        )
+        return issues
+
     try:
         hdr = (seg_dir / "header.bin").read_bytes()
         if len(hdr) < 24:
             issues.append(f"WARN [{col_name}]: header.bin too small ({len(hdr)} bytes)")
             return issues
         max_elements, cur_elements = struct.unpack_from("<qq", hdr, 8)[0], struct.unpack_from("<qq", hdr, 16)[0]
-        if max_elements > SANE_ELEMENT_CAP or cur_elements > SANE_ELEMENT_CAP:
+        # 10^16 threshold: catches Rust pointer values (2^51+ range) while allowing
+        # chroma-hnswlib Python format where a 500K collection shows ~2×10^15.
+        if max_elements > 10_000_000_000_000_000 or cur_elements > 10_000_000_000_000_000:
             issues.append(
                 f"CRIT [{col_name}]: HNSW header has astronomical values "
                 f"(max={max_elements:,} cur={cur_elements:,}) — "
@@ -99,14 +115,19 @@ def check_hnsw_segment(seg_dir: Path, col_name: str) -> list[str]:
         issues.append(f"WARN [{col_name}]: cannot parse header.bin: {e}")
         return issues
 
-    # Parse index_metadata.pickle
+    # Parse index_metadata.pickle — may be a dict or a PersistentData object
     try:
         pkl_path = seg_dir / "index_metadata.pickle"
         with open(pkl_path, "rb") as f:
             meta = pickle.load(f)
-        dim = meta.get("dimensionality")
-        n_labels = len(meta.get("id_to_label", {}))
-        total_added = meta.get("total_elements_added", 0)
+        if isinstance(meta, dict):
+            dim = meta.get("dimensionality")
+            n_labels = len(meta.get("id_to_label", {}))
+            total_added = meta.get("total_elements_added", 0)
+        else:
+            dim = getattr(meta, "dimensionality", None)
+            n_labels = len(getattr(meta, "id_to_label", {}))
+            total_added = getattr(meta, "total_elements_added", 0)
     except Exception as e:
         issues.append(f"WARN [{col_name}]: cannot parse index_metadata.pickle: {e}")
         return issues
@@ -173,10 +194,18 @@ def main():
     all_issues.extend(check_sqlite(PALACE))
     all_issues.extend(check_all_hnsw(PALACE))
 
-    # Live open test — catches Rust hnswlib-rs loader errors that static checks miss
+    # Live open test — catches loader errors that static checks miss.
+    # Use segment API to avoid triggering the Rust HNSW corruption on open.
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=str(PALACE))
+        import chromadb, os
+        os.environ.setdefault("CHROMA_API_IMPL", "chromadb.api.segment.SegmentAPI")
+        settings = chromadb.config.Settings(
+            chroma_api_impl="chromadb.api.segment.SegmentAPI",
+            is_persistent=True,
+            persist_directory=str(PALACE),
+        )
+        from chromadb.api.client import Client as _Client
+        client = _Client(settings=settings)
         cols = client.list_collections()
         for col in cols:
             try:

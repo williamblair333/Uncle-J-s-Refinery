@@ -14,6 +14,10 @@ dependencies = [
     "jdatamunch-mcp @ git+https://github.com/jgravelle/jdatamunch-mcp.git",
     "jdocmunch-mcp @ git+https://github.com/jgravelle/jdocmunch-mcp.git",
     "mempalace @ git+https://github.com/MemPalace/mempalace.git",
+    # Provides the `hnswlib` Python module so chromadb uses the Python segment API
+    # (SegmentAPI) instead of the broken Rust bindings. MUST stay pinned at 0.7.6 —
+    # chromadb 1.5.x requires exactly this version as its dev extra.
+    "chroma-hnswlib==0.7.6",
     # uv is not a dep of the stack itself but we pin a recent version so
     # `uv run` resolves consistently for ad-hoc scripts.
     "uv >=0.5",
@@ -38,10 +42,12 @@ groq      = ["jcodemunch-mcp[groq]"]
 [tool.uv]
 # Keep the lockfile deterministic.
 managed = true
-# Pin chromadb to the version whose embedded Rust HNSW bindings are known-good.
-# The chromadb-hnswlib 1.5.x type-confusion bug can corrupt HNSW indexes on upsert.
-# Bump this intentionally after verifying repair runs clean on the new version.
-override-dependencies = ["chromadb==1.5.8"]
+# chromadb 1.5.x defaults to RustBindingsAPI which has a type-confusion HNSW bug
+# (chroma-core/chroma#4460): element_levels_[i] written as float but read as int32.
+# Fix: pin chroma-hnswlib==0.7.6 (stable Python hnswlib) and force SegmentAPI via
+# CHROMA_API_IMPL env var in all launch scripts. Never remove this pin without
+# verifying repair runs clean with zero astronomical header values.
+override-dependencies = ["chromadb==1.5.8", "chroma-hnswlib==0.7.6"]
 
 [tool.uv.sources]
 jcodemunch-mcp = { git = "https://github.com/jgravelle/jcodemunch-mcp.git" }

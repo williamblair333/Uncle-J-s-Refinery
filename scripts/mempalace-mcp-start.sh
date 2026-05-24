@@ -7,6 +7,10 @@ VENV=/opt/proj/Uncle-J-s-Refinery/.venv
 LOG=/opt/proj/Uncle-J-s-Refinery/state/mempalace-health.log
 HEALTH=/opt/proj/Uncle-J-s-Refinery/mempalace-health.py
 
+# Force chromadb Python segment API — the default RustBindingsAPI has a
+# type-confusion HNSW corruption bug (chroma-core/chroma#4460).
+export CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI
+
 if [[ -f "$HEALTH" ]]; then
     "$VENV/bin/python" "$HEALTH" >> "$LOG" 2>&1 || {
         echo "$(date -Iseconds) WARNING: mempalace health check failed (see $LOG)" >> "$LOG"
