@@ -1,12 +1,35 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-24 (MemPalace self-healing repair + upstream PR #1607)*
+*Last updated: 2026-05-24 (pre-mortem hook enforcement + uv.lock bump)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
 ## Current state (2026-05-24)
+
+### Pre-mortem enforcement hooks — live in `~/.claude/` (NOT in repo)
+
+Two hook layers added to force `pre-mortem` skill invocation before GitHub artifact creation:
+
+| Hook | File | Trigger |
+|------|------|---------|
+| `UserPromptSubmit` | `~/.claude/hooks/pre-mortem-guard/prompt-guard.sh` | message contains PR/issue/push/merge/wrap-up keywords |
+| `PreToolUse/Bash` | `~/.claude/hooks/pre-mortem-guard/pretool-guard.sh` | command matches `gh pr create\|gh issue create\|gh issue new` |
+
+Wired in `~/.claude/settings.json`. Pre-mortem skill (`~/.claude/skills/pre-mortem/SKILL.md`) also updated — "GitHub actions" surface row added.
+
+**New-machine setup:** these files are not in the repo. Copy manually or add to a dotfiles install script. Paths:
+```
+~/.claude/hooks/pre-mortem-guard/prompt-guard.sh
+~/.claude/hooks/pre-mortem-guard/pretool-guard.sh
+~/.claude/settings.json  (hooks.UserPromptSubmit[-1] + hooks.PreToolUse[-1])
+~/.claude/skills/pre-mortem/SKILL.md
+```
+
+**uv.lock:** mempalace bumped to `3a4be3e` (adds `python-dateutil`). Committed this session.
+
+---
 
 **MemPalace is healthy and verified.** HNSW rebuilt, FTS5 clean, ~94K drawers active
 (down from 475K: the 437K fog-of-chess wing was deleted this session as intended).

@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-05-24 — Pre-mortem hook enforcement (skill discipline gap fix)
+
+### Added
+- `~/.claude/hooks/pre-mortem-guard/prompt-guard.sh` — `UserPromptSubmit` hook; fires when message contains PR/issue/push/merge/wrap-up keywords and outputs `PRE-MORTEM REQUIRED` before any action is taken
+- `~/.claude/hooks/pre-mortem-guard/pretool-guard.sh` — `PreToolUse/Bash` hook; fires immediately before `gh pr create`, `gh issue create`, `gh issue new` executes
+- `~/.claude/projects/…/memory/feedback_pre-mortem-discipline.md` — persistent cross-session memory enforcing pre-mortem before GitHub artifact creation
+
+### Changed
+- `~/.claude/settings.json` — two new hook entries: `UserPromptSubmit` → `prompt-guard.sh`, `PreToolUse/Bash` → `pretool-guard.sh`
+- `~/.claude/skills/pre-mortem/SKILL.md` — "GitHub actions" row added to surface table (`gh pr create`, `gh issue create`, `gh issue new`, push to remote); frontmatter updated to name these triggers explicitly
+- `prompt-guard.sh` regex broadened mid-session: now catches `\bpr\b`, `\bpush\b`, `\bissue\b`, `wrap-up`, `session-end`, `ship it` — original tight pattern missed natural-language "pr / push" (live regression caught in session)
+- `uv.lock` — mempalace bumped `be64371` → `3a4be3e`; adds `python-dateutil` dependency
+
+### Note — out-of-repo
+Hook enforcement lives entirely in `~/.claude/` (global config, skills, hooks). A fresh-clone machine does not get this infrastructure via `git clone`. Manual setup required — see HANDOFF for all paths.
+
+---
+
 ## 2026-05-24 — MemPalace repair self-healing + upstream PR #1607
 
 ### Fixed

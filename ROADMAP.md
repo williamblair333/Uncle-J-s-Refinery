@@ -24,6 +24,8 @@ Completed items age out after ~4 weeks.
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
+- **Pre-mortem guard hooks in `install.sh`** — `prompt-guard.sh` and `pretool-guard.sh` exist in `~/.claude/hooks/pre-mortem-guard/` and `~/.claude/settings.json` but are not installed by `install.sh`; a new-machine clone gets none of this enforcement
+
 - **Review-queue triage workflow** — skill exists; wire into regular session rhythm
 
 ---
