@@ -7,28 +7,24 @@ description: Use when about to finalize any consequential action — fixes, feat
 
 `verification-before-completion` asks "does it work now?" This skill asks "when will it break, and will we know?"
 
-## When to Trigger
+## Surface List
 
-Fire on any action matching:
-> *Any action whose effects persist beyond this session, cannot be trivially reversed, or affects systems that run unattended.*
+Fires on these surfaces (auto-triggers deep analysis):
 
-**Surface list** (auto-triggers deep analysis):
-- Scheduled tasks (cron, systemd, @reboot)
-- Hooks and daemons (stop hooks, background processes)
-- Persistent file writes (config, state, databases)
-- Auth / credentials / permissions
-- Infrastructure (services, ports, network)
-- Data mutations (schema changes, migrations, bulk writes)
-- Architecture decisions (new modules, service boundaries, data models)
-- Third-party integrations (APIs, webhooks)
-- Dependency changes (upgrades, downgrades, version pins)
-- Deployment actions (push, release, merge to main)
+| Surface | Examples |
+|---------|---------|
+| Scheduled tasks | cron, systemd, @reboot |
+| Hooks / daemons | stop hooks, background processes |
+| Persistent writes | config, state, databases |
+| Auth / permissions | credentials, access control |
+| Infrastructure | services, ports, network |
+| Data mutations | schema changes, migrations, bulk writes |
+| Architecture decisions | new modules, service boundaries, data models |
+| Third-party integrations | APIs, webhooks |
+| Dependency changes | upgrades, downgrades, version pins |
+| Deployment | push, release, merge to main |
 
-**Non-consequential work** still gets a minimum stamp:
-```
-PRE-MORTEM · [action] · CLEAR — no consequential surfaces detected.
-```
-Silence stops meaning safety. The user always knows it ran.
+Non-consequential work gets a minimum stamp: `PRE-MORTEM · [action] · CLEAR — no consequential surfaces detected.`
 
 ## Output Format
 
@@ -165,6 +161,19 @@ LOW/MEDIUM findings logged as advisories when relevant. No transfer record requi
 - Feeling time pressure ("meeting in 5 minutes")
 - Just finished a long debugging session and want to be done
 - ANY completion claim on work touching the surface list
+
+## Rationalization Table
+
+These are the thoughts that mean STOP — you are about to skip the pre-mortem:
+
+| Rationalization | Reality |
+|----------------|---------|
+| "The fix is straightforward" | Straightforward fixes fail in production for non-obvious reasons. Cron timing, concurrent runs, and silent failures are not visible in the code. That is exactly what pre-mortem catches. |
+| "We already tested it / verified it works" | `verification-before-completion` checks if it works now. Pre-mortem checks if it will keep working unattended, over time, across upgrades. Different questions. |
+| "Time pressure — no time for analysis" | 5 minutes of pre-mortem now vs. hours of incident response later. The cron fires whether or not you are in a meeting. |
+| "The user said we're done" | The user said the fix looks right. They did not enumerate failure modes — that is your job. |
+| "Small change" | Size has no correlation with blast radius. An @reboot entry is one line. Temporal failures are catastrophic. |
+| "We can fix issues if they come up" | Unattended systems fail silently. You will not know it came up until the damage has compounded. |
 
 ## Integration
 
