@@ -7,57 +7,130 @@ description: Diagnose and fix MemPalace HNSW index corruption where link_lists.b
 
 - `~/.mempalace/palace/*/link_lists.bin` is abnormally large (GB+ range)
 - `mempalace mine` crashes with OOM or hangs
-- `header.bin` shows `max_elements` or `cur_element_count` in the trillions (C++ pointer values written where integers should be)
+- `header.bin` shows `max_elements` or `cur_element_count` in the trillions
 - Mine log shows repeated runs each making the file larger
 - SQLite drawer count diverges from HNSW `cur_element_count`
 
 ## Root cause
 
-chromadb-hnswlib 1.5.x has a type-confusion bug in its Rust bindings: `element_levels_[i]` is written as float but read as int32. The `updatePoint` path (called on every upsert of an existing item) triggers it. This produces ~1 billion as link list sizes per node, so hnswlib treats each node as having a ~1 GB link list. Every subsequent mine run reads the corrupt header and serializes back equally-corrupted output, compounding the damage.
+chromadb 1.5.x defaults to `RustBindingsAPI`. The Rust HNSW binding has a
+type-confusion bug: `element_levels_[i]` is written as float but read as int32.
+Every `updatePoint` call (upsert of an existing item) triggers it, producing
+~1 billion link-list sizes per node.
 
-## Step 1 — Stop active processes immediately
+**Critical:** Pinning `chromadb==1.5.8` is NOT sufficient. Without `chroma-hnswlib`
+installed, chromadb has no Python hnswlib fallback and always uses the broken Rust
+path. The repair itself calls `updatePoint` on existing items, immediately
+re-corrupting the fresh HNSW files.
 
-# Find and kill any stuck mine processes
-ps aux | grep mempalace
-kill <pid>
+**Full fix requires both:**
+1. `chroma-hnswlib==0.7.6` installed (provides the `hnswlib` Python module)
+2. `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI` set in every entry point
 
-# Remove stale lockfiles
-ls ~/.mempalace/palace/*/locks/
-rm ~/.mempalace/palace/*/locks/*.lock
+## Step 1 — Install the Python hnswlib package
 
-## Step 2 — Assess damage
+```bash
+# In the mempalace venv:
+uv pip install "chroma-hnswlib==0.7.6"
 
-# Check link_lists.bin size
+# Verify it's present:
+python3 -c "import hnswlib; print(hnswlib.__file__)"
+```
+
+Also add to `pyproject.toml` under `[tool.uv.override-dependencies]` and
+`[project.dependencies]` so `uv sync` keeps it.
+
+## Step 2 — Set CHROMA_API_IMPL in ALL entry points
+
+Every process that touches chromadb must export:
+
+```bash
+export CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI
+```
+
+Patch **all** of the following:
+- MCP start script (`mempalace-mcp-start.sh` or equivalent)
+- Mine script (`mempalace-mine-convos.sh` or equivalent)
+- Repair script (`mempalace-repair-now.sh`)
+- Crontab — add as a top-level variable before all entries:
+  `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`
+- Stop hook in `settings.json` — route via the patched script, not direct `mempalace mine`
+
+## Step 3 — Check for active mine processes and wait
+
+```bash
+ps aux | grep mempalace | grep -v grep
+```
+
+**Wait for them to finish** — do NOT kill a running mine. Deleting HNSW while
+a mine is active means the mine writes fresh corrupt files on top of your repair.
+
+```bash
+# Monitor until process exits:
+watch -n 5 'ps aux | grep mempalace | grep -v grep'
+```
+
+Once all mine processes have exited, also remove stale lockfiles:
+
+```bash
+rm -f ~/.mempalace/palace/*/locks/*.lock
+```
+
+## Step 4 — Assess damage
+
+```bash
+# Primary corruption indicator: link_lists.bin > 100 MB
 du -sh ~/.mempalace/palace/*/link_lists.bin
 
-# Check header values (Python)
+# Check header values (correct Python hnswlib offsets)
 python3 - <<'EOF'
 import struct, pathlib
 p = pathlib.Path("~/.mempalace/palace").expanduser()
 for f in p.glob("*/header.bin"):
     data = f.read_bytes()
-    # hnswlib header: offset_level0_=8, max_elements_=16, cur_element_count_=24
-    max_el, cur_el = struct.unpack_from('<qq', data, 16)
-    print(f"{f.parent.name}: max={max_el:,}  cur={cur_el:,}")
+    # Python hnswlib format: max_elements at offset 8, cur_element_count at offset 16
+    max_el = struct.unpack_from('<q', data, 8)[0]
+    cur_el = struct.unpack_from('<q', data, 16)[0]
+    link_sz = (f.parent / "link_lists.bin").stat().st_size
+    print(f"{f.parent.name}: max={max_el:,} cur={cur_el:,} link_lists={link_sz/1e6:.1f}MB")
 EOF
+```
 
-# Compare SQLite vs HNSW counts
+Sane values: `max_elements` ≈ 10K–500K; `link_lists.bin` ≤ a few MB.
+Corruption signature: `cur_element_count` ≈ 652 billion; `link_lists.bin` in GB.
+
+## Step 5 — Dynamically detect corrupt segments
+
+Do not hardcode segment IDs. Detect dynamically:
+
+```bash
 python3 - <<'EOF'
-import sqlite3, pathlib
-p = pathlib.Path("~/.mempalace").expanduser()
-for db in p.glob("palace/*/chroma.sqlite3"):
-    conn = sqlite3.connect(db)
-    count = conn.execute("SELECT COUNT(*) FROM embedding_fulltext_search_content").fetchone()[0]
-    print(f"{db.parent.name}: SQLite={count:,}")
-    conn.close()
+import pathlib, sqlite3
+palace = pathlib.Path("~/.mempalace/palace").expanduser()
+threshold = 100 * 1024 * 1024  # 100 MB
+
+# Find corrupt segments
+corrupt = {ll.parent.name for ll in palace.glob("*/link_lists.bin")
+           if ll.stat().st_size > threshold}
+
+# Cross-reference against active segments in SQLite
+db = pathlib.Path("~/.mempalace/chroma.sqlite3").expanduser()
+conn = sqlite3.connect(db)
+active = {r[0] for r in conn.execute("SELECT id FROM segments")}
+conn.close()
+
+for seg in corrupt & active:
+    print(f"CORRUPT ACTIVE: {seg}")
+for seg in corrupt - active:
+    print(f"CORRUPT ORPHAN (skip): {seg}")
 EOF
+```
 
-Sane header values: `max_elements` ≈ 10K–100K range. Trillion-scale values confirm corruption.
+Only repair segments that are both corrupt AND active.
 
-## Step 3 — Check source text recoverability
+## Step 6 — Check source text recoverability
 
-Before deleting any HNSW files, confirm source text is in SQLite (so you can re-mine):
-
+```bash
 python3 - <<'EOF'
 import sqlite3, pathlib
 p = pathlib.Path("~/.mempalace").expanduser()
@@ -67,46 +140,39 @@ for db in p.glob("palace/*/chroma.sqlite3"):
     print(f"{db.parent.name}: {count:,} recoverable rows")
     conn.close()
 EOF
+```
 
-**Note:** embedding vectors live only in HNSW binary files (`data_level0.bin`). Deleting HNSW means losing vectors — but source text in `embedding_fulltext_search_content` lets you re-embed from scratch.
+Embedding vectors live only in HNSW binary files. Deleting them loses vectors,
+but source text in `embedding_fulltext_search_content` lets you re-embed from scratch.
 
-## Step 4 — Delete corrupt HNSW and rebuild
+## Step 7 — Delete corrupt HNSW and rebuild
 
-# Delete only HNSW files (not SQLite)
-rm ~/.mempalace/palace/<segment>/header.bin
-rm ~/.mempalace/palace/<segment>/link_lists.bin
-rm ~/.mempalace/palace/<segment>/data_level0.bin
-rm -f ~/.mempalace/palace/<segment>/index_metadata.pickle
+```bash
+# For each corrupt active segment (from Step 5):
+SEGMENT="<segment-id>"
+rm ~/.mempalace/palace/$SEGMENT/header.bin
+rm ~/.mempalace/palace/$SEGMENT/link_lists.bin
+rm ~/.mempalace/palace/$SEGMENT/data_level0.bin
+rm -f ~/.mempalace/palace/$SEGMENT/index_metadata.pickle
 
-# Trigger rebuild via mempalace repair
-mempalace repair
+# Run repair with the env var set:
+CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI mempalace repair
+```
 
-## Step 5 — Verify rebuild is sane
+## Step 8 — Verify the fix holds
 
-du -sh ~/.mempalace/palace/*/link_lists.bin   # expect KB, not GB
+```bash
+# Run a mine pass, then check sizes again
+CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI mempalace mine
 
-python3 - <<'EOF'
-import struct, pathlib
-p = pathlib.Path("~/.mempalace/palace").expanduser()
-for f in p.glob("*/header.bin"):
-    data = f.read_bytes()
-    max_el, cur_el = struct.unpack_from('<qq', data, 16)
-    print(f"{f.parent.name}: max={max_el:,}  cur={cur_el:,}")
-EOF
+du -sh ~/.mempalace/palace/*/link_lists.bin   # expect KB–low MB, stable
+```
 
-**Known caveat (chromadb 1.5.8):** Even a fresh rebuild may show `cur_element_count = N × 2^32` in the header due to the same type-confusion bug. The files stay small until `updatePoint` is called (i.e., until a second mine run adds items that already exist). The explosion happens on the second mine, not the first.
+If `link_lists.bin` grows again on the second mine run, Step 1 or Step 2 is
+incomplete — a process is still reaching the Rust path.
 
-## Step 6 — Pin chromadb version to avoid recurrence
+## Health check threshold
 
-The fix is to downgrade or pin chromadb-hnswlib to a version before the Rust binding regression:
-
-pip install "chromadb-hnswlib==0.7.6"  # last known-good version
-# or pin in pyproject.toml:
-# "chromadb-hnswlib==0.7.6"
-
-After pinning, re-run repair and verify header values are sane after a mine run that includes updates to existing items.
-
-## Step 7 — Set up a watch
-
-# Add to cron or monitoring — alert if link_lists.bin exceeds 100 MB
-watch -n 60 'du -sh ~/.mempalace/palace/*/link_lists.bin'
+Use `link_lists.bin > 100 MB` as the corruption indicator. Header-based checks
+are unreliable because the Python hnswlib format stores larger uint64 values
+than the Rust format, causing false positives at lower thresholds.
