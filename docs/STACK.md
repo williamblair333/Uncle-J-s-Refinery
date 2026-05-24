@@ -87,6 +87,8 @@ mempalace wake-up                                    # hydrate new session
 
 **Source here.** `../../mempalace-develop/`.
 
+**ChromaDB version pin.** `pyproject.toml` pins `chromadb==1.5.8` + `chroma-hnswlib==0.7.6`. The `chroma-hnswlib` package is critical — without it, chromadb falls back to Rust HNSW bindings with a type-confusion corruption bug (chroma-core/chroma#4460). All mine/repair scripts also export `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`. Do not bump chromadb without verifying a clean repair run.
+
 ---
 
 ## Serena (LSP-grade code intelligence — second opinion)

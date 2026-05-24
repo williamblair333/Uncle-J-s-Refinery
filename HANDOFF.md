@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (MemPalace HNSW corruption root-cause fix)*
+*Last updated: 2026-05-23 (HNSW permanent fix: chroma-hnswlib + SegmentAPI)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -8,17 +8,23 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state
 
-### ⚠️ ACTION REQUIRED at next session start (or runs automatically at boot)
+### ✅ MemPalace HNSW corruption — PERMANENTLY FIXED
 
-The `@reboot` cron entry will attempt this automatically 2 minutes after power-on.
-If starting a session without rebooting first, run manually:
+The HNSW corruption from chroma-core/chroma#4460 is now prevented at the source. No manual repair needed at next session start.
 
+**What was done:**
+- `chroma-hnswlib==0.7.6` added to project dependencies — provides stable Python hnswlib; chromadb now uses the Python HNSW path instead of the buggy Rust bindings
+- `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI` exported in all mine/repair/MCP-start scripts and crontab entries (belt-and-suspenders)
+- Health check detection thresholds corrected for chroma-hnswlib format
+- Stop hook now goes through `mempalace-mine-convos.sh` (picks up env var + HNSW size guard)
 
-Run immediately after opening Claude Code (before any mine jobs run):
-```bash
-bash /opt/proj/Uncle-J-s-Refinery/mempalace-repair-now.sh
-```
-This rebuilds the HNSW vector index from the 474K intact SQLite embeddings. It could not complete this session because the MCP server was writing to the database. BM25 search works fine in the meantime.
+**Current HNSW status (verified clean):**
+- `mempalace_closets` (3a9d5d2b): link_lists=0B ✓
+- `mempalace_drawers` (9e08b487): link_lists=203KB ✓
+- Health check: exits 1 (WARN only — embeddings_queue compactor lag), no CRIT
+
+**Remaining WARN (pre-existing, not urgent):**
+- `embeddings_queue` has ~24K entries — compactor lag from large mine session. Clears automatically after the current mine finishes.
 
 ### New this session (2026-05-23 — HNSW corruption root-cause fix)
 - **Root cause identified and mitigated**: `updatePoint` thread-safety bug in chromadb-hnswlib 1.5.x (chroma-core/chroma#4460, unresolved upstream across all 1.5.x including 1.5.9)

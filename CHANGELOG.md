@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-23 — HNSW corruption permanent fix: chroma-hnswlib + SegmentAPI
+
+### Fixed
+- `pyproject.toml`: added `chroma-hnswlib==0.7.6` to both `dependencies` and `override-dependencies` — provides the stable Python hnswlib module; without it chromadb 1.5.x silently fell back to Rust bindings which have the type-confusion bug (chroma-core/chroma#4460)
+- All mine/repair launch paths now export `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`: `scripts/mempalace-mcp-start.sh`, `scripts/mempalace-mine-convos.sh`, `mempalace-repair-now.sh`, crontab mine+repair entries
+- `.claude/settings.json` stop-hook: switched from inline `mempalace mine` call to `bash scripts/mempalace-mine-convos.sh` so the env var is picked up
+- `mempalace-health.py`: fixed corruption detection — `link_lists.bin >100MB` is now primary indicator (not header uint64 threshold, which false-positives on valid Python hnswlib format); increased header threshold from 10M to 10^16 to accommodate chroma-hnswlib 0.7.6 encoding; fixed `PersistentData` pickle parsing (was calling `.get()` on object, not dict); live-load test now uses SegmentAPI
+- `mempalace-repair-now.sh`: now dynamically discovers corrupt segments from SQLite instead of hardcoding 2 segment IDs — works for any number of collections
+
+---
+
 ## 2026-05-23 — Stop-hook mine overlap fix + cron deduplication
 
 ### Fixed
