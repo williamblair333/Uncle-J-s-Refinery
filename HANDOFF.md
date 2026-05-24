@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (pre-mortem skill shipped + PR #2 open)*
+*Last updated: 2026-05-24 (MemPalace self-healing repair + upstream PR #1607)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -14,63 +14,24 @@ already installed at `~/.claude/skills/pre-mortem/SKILL.md` — it is active now
 
 ---
 
-## ⚠️ NEXT SESSION ACTION REQUIRED: Verify MemPalace after 4am repair
-
-The 4am nightly cron ran (or will run) `mempalace repair` with `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`. This should rebuild the full HNSW index from all ~474K SQLite drawers. MemPalace has never been verified to be fully and correctly working end-to-end — this is the session that confirms it.
-
-**Run these checks at session start (before anything else):**
-
-```bash
-# 1. Check repair ran — should show a recent 4am timestamp
-grep -i "repair\|rebuild" ~/.mempalace/palace/repair.log 2>/dev/null | tail -5
-# or check if HNSW index is present and sane
-ls -lh ~/.mempalace/palace/*/link_lists.bin
-
-# 2. Run health check — must show "OK" with no CRIT
-cd /opt/proj/Uncle-J-s-Refinery
-python3 mempalace-health.py
-
-# 3. Check HNSW element counts — cur_elements should be close to SQLite count (~474K)
-python3 - <<'EOF'
-import struct, pathlib, sqlite3
-p = pathlib.Path("~/.mempalace/palace").expanduser()
-for f in p.glob("*/header.bin"):
-    data = f.read_bytes()
-    max_el, cur_el = struct.unpack_from('<qq', data, 16)
-    print(f"{f.parent.name}: max={max_el:,}  cur={cur_el:,}")
-db = p / "chroma.sqlite3"
-if db.exists():
-    c = sqlite3.connect(db)
-    count = c.execute("SELECT COUNT(*) FROM embeddings").fetchone()[0]
-    print(f"SQLite embeddings: {count:,}")
-EOF
-
-# 4. Test semantic search actually returns results
-# In this Claude session, use the MCP tool:
-# mcp__mempalace__mempalace_search with query="HNSW corruption fix"
-# Should return relevant results from session history
-```
-
-**What "working correctly" looks like:**
-- Health check: `OK: MemPalace healthy` (no CRIT, ideally no WARN)
-- HNSW `cur_elements` ≥ 400K (close to SQLite embedding count)
-- `link_lists.bin` size: MB range, not GB and not 0B
-- Semantic search via MCP returns relevant results (not empty)
-
-**If repair didn't run or HNSW is still at 24K elements:**
-```bash
-# Run manually (takes ~30 min for 474K drawers):
-CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
-  /opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace repair
-# Watch progress with:
-watch -n 5 'ls -lh ~/.mempalace/palace/*/link_lists.bin'
-```
-
-**Clear this section once MemPalace is confirmed fully working.**
-
----
-
 ## Current state
+
+### 2026-05-24 — MemPalace self-healing repair + upstream PR #1607
+
+**MemPalace is healthy and verified.** HNSW rebuilt, FTS5 clean, ~94K drawers active
+(down from 475K: the 437K fog-of-chess wing was deleted this session as intended).
+
+**Upstream PR #1607 open** (`mempalace-develop/mempalace`):
+- Adds FTS5 auto-rebuild before aborting on `mempalace repair` and `mempalace repair-hnsw rebuild`
+- 5 of 6 CI jobs passing (lint ✓, test-linux 3.9/3.11/3.13 ✓, test-macos ✓, test-windows pending)
+- Fork lives at `/opt/proj/mempalace`
+- Upstream contrib backlog: `~/.claude/projects/-opt-proj-Uncle-J-s-Refinery/memory/project_mempalace-contrib.md`
+
+**What changed this session:**
+- `mempalace-repair-now.sh` — updated to handle new segment UUIDs after fog-of-chess deletion
+- `mempalace-repair-verify.sh` — new script; verifies HNSW health post-repair (SQLite vs HNSW count, FTS5 integrity)
+- `mempalace-delete-wing.py` — new script; deletes a wing's drawers from MemPalace by prefix
+- `fog-of-chess` wing deleted (437K drawers removed); HNSW rebuilt clean at ~94K
 
 ### ✅ MemPalace HNSW corruption — PERMANENTLY FIXED
 
@@ -131,12 +92,13 @@ The HNSW corruption from chroma-core/chroma#4460 is now prevented at the source.
   - **Notification events**: stack upgrades (approve/skip pitch) · new skill drafts (promote instructions) · healthcheck failures (daily 07:00 via `healthcheck-notify.sh`) · unauthorized chat access · injection attempts · Ralph plateau · dream synthesis complete
 - `scripts/ralph-harness.sh` — bash port complete with `--rubric` and `--decompose` modes
 - **Langfuse** — fully operational, all 6 containers healthy, version 3.169.0 at `http://localhost:3050`
-- **MemPalace v3.3.5** — BM25 search operational; 467k+ drawers
+- **MemPalace v3.3.5** — fully operational; ~94K drawers (437K fog-of-chess wing deleted)
   - chromadb 1.5.8 (pinned in pyproject.toml; bug unresolved upstream — mitigated via `hnsw:num_threads=1`)
-  - **HNSW index pending rebuild**: HNSW binaries deleted this session; SQLite has 474K embeddings intact. Run `bash mempalace-repair-now.sh` at next session start to rebuild. BM25 active in the meantime.
+  - HNSW verified healthy; FTS5 clean; semantic search working
   - HNSW size guard active in both mine wrappers (aborts if > 200 MB)
   - Mine stale-lock auto-clear: locks older than 30 min cleared automatically on next invocation
   - PR #1523 (VACUUM+FTS5 fix in `repair --yes`) merged upstream and running in our installed version
+  - **Upstream PR #1607 open**: FTS5 auto-rebuild before abort (covers both `repair --yes` and `repair-hnsw rebuild`)
 - **ClickHouse 24.8.14.39** — patched past CVE-2025-1385. Library bridge not running. No upgrade needed.
 - **Git-as-golden-reference**: all 4 packages (`jcodemunch`, `jdatamunch`, `jdocmunch`, `mempalace`) installed from GitHub SHA via `uv`, not PyPI. `pyproject.toml` uses `git+https://` sources; `uv.lock` pins exact commit SHAs.
 - **Post-merge hook**: fires on `git pull`, sends Telegram alert listing new features/installers/skills needing action; also reindexes jcodemunch when code files change
