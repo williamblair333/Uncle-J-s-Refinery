@@ -1,6 +1,6 @@
 # Uncle J's Refinery
 
-*A self-hosted personal AI operating system for Claude Code — retrieval stack, memory, observability, and a nightly self-improvement loop.*
+*Claude Code forgets everything when you close the terminal. This doesn't. It remembers past decisions, navigates your codebase without re-reading files from scratch, logs every action for review, and runs overnight to extract playbooks from its own mistakes. One install, every project.*
 
 A complete harness built for a single operator on a single Linux machine:
 
