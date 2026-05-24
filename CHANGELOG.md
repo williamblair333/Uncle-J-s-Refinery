@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-05-24 — MemPalace repair self-healing + upstream PR #1607
+
+### Fixed
+- `mempalace-repair-now.sh`: uses venv Python for all SQLite checks — system `sqlite3` CLI (3.46.1) reports false-positive FTS5 corruption on indexes written by Python's SQLite 3.50.x; replaced all `sqlite3 "$DB" "..."` calls with `pycheck()` helper that invokes `.venv/bin/python3` directly
+- `mempalace-repair-now.sh`: FTS5 corruption now auto-rebuilt before aborting — `PRAGMA quick_check` failure no longer silently blocks the 4am repair cron indefinitely; script attempts `INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')` first and only aborts if that fails
+- `mempalace-repair-now.sh`: HNSW corruption threshold corrected from 10^16 to 500_000_000_000 — previous threshold missed trillion-element corruption values that were actually present
+- `mempalace-repair-now.sh`: `mempalace repair --yes` with `"Aborted"` string detection — repair exits 0 even on abort; script now checks both exit code and output
+- `mempalace-repair-now.sh`: removed `set -e`; explicit `REPAIR_RESULT=` tracking; drawer count sanity check (95% threshold) post-repair
+
+### Added
+- `mempalace-repair-verify.sh`: post-repair verification script — waits for flock release, compares HNSW element count to SQLite count (95% threshold), writes `VERIFY_RESULT=success|fail` to repair log, creates sentinel `/tmp/mempalace-verify-done` on success; run by monitoring cron every 30 min
+- `mempalace-delete-wing.py`: bulk wing deletion tool — queries all drawer IDs for a named wing and deletes in 500-ID batches with confirmation prompt and pre/post count display
+
+### Changed
+- Deleted 437,420 fog-of-chess drawers from the shared palace — palace down from 475K to ~94K drawers; repair now takes ~15 min instead of 3+ hours; fog-of-chess project should use a separate palace if re-mined
+
+### Upstream contributions (MemPalace/mempalace)
+- Filed issue #1606: `repair` aborts on FTS5 inverted-index corruption without attempting auto-recovery
+- Submitted PR #1607: fixes both `rebuild_index()` in `repair.py` (repair-hnsw rebuild path) and `cmd_repair` in `cli.py` (`mempalace repair --yes` path) — scope-guarded FTS5 auto-rebuild, re-validates with `PRAGMA quick_check` before proceeding; 5 new regression tests; 150/150 passing; lint+format clean; 5/6 CI jobs passing (Windows pending)
+
+---
+
 ## 2026-05-23 — HNSW corruption permanent fix: chroma-hnswlib + SegmentAPI
 
 ### Fixed
