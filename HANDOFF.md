@@ -1,12 +1,20 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-24 (pre-mortem hook enforcement + uv.lock bump)*
+*Last updated: 2026-05-24 (README hero tagline rewrite)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
 ## Current state (2026-05-24)
+
+### README hero tagline — rewritten this session
+
+Old: *"A self-hosted personal AI operating system for Claude Code — retrieval stack, memory, observability, and a nightly self-improvement loop."*
+
+New: *"Claude Code forgets everything when you close the terminal. This doesn't. It remembers past decisions, navigates your codebase without re-reading files from scratch, logs every action for review, and runs overnight to extract playbooks from its own mistakes. One install, every project."*
+
+---
 
 ### Pre-mortem enforcement hooks — live in `~/.claude/` (NOT in repo)
 

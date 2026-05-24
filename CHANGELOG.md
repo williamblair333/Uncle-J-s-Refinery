@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-24 — README hero tagline rewrite
+
+### Changed
+- `README.md` — opening tagline replaced: "AI operating system" framing dropped in favour of a problem-led pitch ("Claude Code forgets everything when you close the terminal. This doesn't...")
+
+---
+
 ## 2026-05-24 — Pre-mortem hook enforcement (skill discipline gap fix)
 
 ### Added
