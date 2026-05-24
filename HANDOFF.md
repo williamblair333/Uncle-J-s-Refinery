@@ -6,6 +6,62 @@ Read this before touching anything. Work priorities are in order below.
 
 ---
 
+## ⚠️ NEXT SESSION ACTION REQUIRED: Verify MemPalace after 4am repair
+
+The 4am nightly cron ran (or will run) `mempalace repair` with `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`. This should rebuild the full HNSW index from all ~474K SQLite drawers. MemPalace has never been verified to be fully and correctly working end-to-end — this is the session that confirms it.
+
+**Run these checks at session start (before anything else):**
+
+```bash
+# 1. Check repair ran — should show a recent 4am timestamp
+grep -i "repair\|rebuild" ~/.mempalace/palace/repair.log 2>/dev/null | tail -5
+# or check if HNSW index is present and sane
+ls -lh ~/.mempalace/palace/*/link_lists.bin
+
+# 2. Run health check — must show "OK" with no CRIT
+cd /opt/proj/Uncle-J-s-Refinery
+python3 mempalace-health.py
+
+# 3. Check HNSW element counts — cur_elements should be close to SQLite count (~474K)
+python3 - <<'EOF'
+import struct, pathlib, sqlite3
+p = pathlib.Path("~/.mempalace/palace").expanduser()
+for f in p.glob("*/header.bin"):
+    data = f.read_bytes()
+    max_el, cur_el = struct.unpack_from('<qq', data, 16)
+    print(f"{f.parent.name}: max={max_el:,}  cur={cur_el:,}")
+db = p / "chroma.sqlite3"
+if db.exists():
+    c = sqlite3.connect(db)
+    count = c.execute("SELECT COUNT(*) FROM embeddings").fetchone()[0]
+    print(f"SQLite embeddings: {count:,}")
+EOF
+
+# 4. Test semantic search actually returns results
+# In this Claude session, use the MCP tool:
+# mcp__mempalace__mempalace_search with query="HNSW corruption fix"
+# Should return relevant results from session history
+```
+
+**What "working correctly" looks like:**
+- Health check: `OK: MemPalace healthy` (no CRIT, ideally no WARN)
+- HNSW `cur_elements` ≥ 400K (close to SQLite embedding count)
+- `link_lists.bin` size: MB range, not GB and not 0B
+- Semantic search via MCP returns relevant results (not empty)
+
+**If repair didn't run or HNSW is still at 24K elements:**
+```bash
+# Run manually (takes ~30 min for 474K drawers):
+CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
+  /opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace repair
+# Watch progress with:
+watch -n 5 'ls -lh ~/.mempalace/palace/*/link_lists.bin'
+```
+
+**Clear this section once MemPalace is confirmed fully working.**
+
+---
+
 ## Current state
 
 ### ✅ MemPalace HNSW corruption — PERMANENTLY FIXED
