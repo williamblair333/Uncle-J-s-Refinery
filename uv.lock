@@ -1195,9 +1195,10 @@ wheels = [
 [[package]]
 name = "mempalace"
 version = "3.3.5"
-source = { git = "https://github.com/MemPalace/mempalace.git#be64371611cfd945201f3b600be5714f67ff0051" }
+source = { git = "https://github.com/MemPalace/mempalace.git#3a4be3ef74d20547e429ce9625f6089a538c5f67" }
 dependencies = [
     { name = "chromadb" },
+    { name = "python-dateutil" },
     { name = "pyyaml" },
 ]
 
