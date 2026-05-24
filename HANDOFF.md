@@ -1,8 +1,16 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (HNSW permanent fix: chroma-hnswlib + SegmentAPI)*
+*Last updated: 2026-05-23 (pre-mortem skill shipped + PR #2 open)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## 🔀 PR #2 open — merge pre-mortem skill
+
+`feat/pre-mortem-skill` is pushed and PR #2 is open on GitHub. Merge it to bring
+spec, plan, skill draft, and global-skills updates onto main. The live skill is
+already installed at `~/.claude/skills/pre-mortem/SKILL.md` — it is active now.
 
 ---
 

@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-05-23 — pre-mortem skill: adversarial failure analysis
+
+### Added
+- `~/.claude/skills/pre-mortem/SKILL.md` — forward-looking failure analysis; fires on every consequential action; 12 failure dimensions, adversarial+steelman voice, WarGames 3-warning escalation, CATASTROPHIC ceremony, MemPalace audit logging
+- `docs/superpowers/specs/2026-05-23-pre-mortem-design.md` — full design spec
+- `docs/superpowers/plans/2026-05-23-pre-mortem-skill.md` — TDD implementation plan
+- `global-skills/mempalace-repair-mine-interference/SKILL.md` — flock mutex pattern for stop-hook overlap
+- `global-skills/session-status-briefing/SKILL.md` — session status briefing pattern
+- `.gitignore`: added `*.kate-swp`
+
+### Changed
+- `global-skills/mempalace-hnsw-corruption-fix/SKILL.md` — corrected header offsets, dynamic segment detection
+
+---
+
 ## 2026-05-23 — HNSW corruption permanent fix: chroma-hnswlib + SegmentAPI
 
 ### Fixed
