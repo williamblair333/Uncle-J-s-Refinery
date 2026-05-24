@@ -1,8 +1,27 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-23 (HNSW permanent fix: chroma-hnswlib + SegmentAPI)*
+*Last updated: 2026-05-24 (MemPalace self-healing repair + upstream PR #1607)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-24)
+
+**MemPalace is healthy and verified.** HNSW rebuilt, FTS5 clean, ~94K drawers active
+(down from 475K: the 437K fog-of-chess wing was deleted this session as intended).
+
+**Upstream PR #1607 open** (`mempalace-develop/mempalace`):
+- Adds FTS5 auto-rebuild before aborting on `mempalace repair` and `mempalace repair-hnsw rebuild`
+- 5 of 6 CI jobs passing (lint ✓, test-linux 3.9/3.11/3.13 ✓, test-macos ✓, test-windows pending)
+- Fork lives at `/opt/proj/mempalace`
+- Upstream contrib backlog: `~/.claude/projects/-opt-proj-Uncle-J-s-Refinery/memory/project_mempalace-contrib.md`
+
+**What changed this session:**
+- `mempalace-repair-now.sh` — updated to handle new segment UUIDs after fog-of-chess deletion
+- `mempalace-repair-verify.sh` — new script; verifies HNSW health post-repair (SQLite vs HNSW count, FTS5 integrity)
+- `mempalace-delete-wing.py` — new script; deletes a wing's drawers from MemPalace by prefix
+- `fog-of-chess` wing deleted (437K drawers removed); HNSW rebuilt clean at ~94K
 
 ---
 
