@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-05-25 — blocking discipline hooks wired (edit-surface-guard, grep-guard)
+
+### Added
+- `hooks/discipline/edit-surface-guard.sh` — PreToolUse hook; blocks Edit/Write on surface-list files (`.sh`, `.py`, `.toml`, `.yml`, `.yaml`, `Dockerfile*`, `settings.json`, `CLAUDE.md`, `scripts/`, `hooks/`, `features/`) until pre-mortem clears bypass flag (`/tmp/premortem-cleared-SESSION_ID`).
+- `hooks/discipline/grep-guard.sh` — PreToolUse hook; blocks `grep -r` on source directories; redirects to `mcp__jcodemunch__search_text`.
+- Both hooks log BLOCKED/ALLOWED entries to `state/hook-blocks.log` for weekly review.
+- `install-reliability.sh`: new section symlinks `hooks/discipline/*.sh` to `~/.claude/hooks/discipline/` and wires PreToolUse entries into `settings.json` on fresh-machine setup.
+- `global-skills/session-end-checklist/SKILL.md`: new Step 6 — weekly `hook-blocks.log` review.
+- Hooks wired into `~/.claude/settings.json` (10 PreToolUse hooks total, 2 new).
+
+### Bypass mechanism
+After invoking pre-mortem: `touch /tmp/premortem-cleared-SESSION_ID` — the guard script consumes and removes it, then allows the edit.
+
+---
+
 ## 2026-05-25 — repair output now streams live to log
 
 Removed `REPAIR_OUT=$(mempalace repair ...)` capture pattern in `mempalace-repair-now.sh`. Output now streams directly to stdout (and therefore to the cron log) in real time. Previously the log showed nothing for 90 minutes then dumped everything at once.

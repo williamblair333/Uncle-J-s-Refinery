@@ -1,8 +1,30 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-25 (dict-format pickle root cause found and fixed, session 4)*
+*Last updated: 2026-05-25 (discipline hooks wired — blocking pre-mortem enforcement, session 6)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-25, session 6)
+
+### Blocking discipline hooks — LIVE
+
+Two PreToolUse hooks now mechanically block undisciplined tool use:
+
+1. **`hooks/discipline/edit-surface-guard.sh`** — fires on every Edit/Write. If the target file is on the surface list (`.sh`, `.py`, `.toml`, `.yml`, `.yaml`, `Dockerfile*`, `settings.json`, `CLAUDE.md`, `scripts/`, `hooks/`, `features/`), it blocks the edit and requires pre-mortem first.
+   - Bypass: after running pre-mortem, `touch /tmp/premortem-cleared-SESSION_ID` — consumed and removed on the next edit attempt.
+2. **`hooks/discipline/grep-guard.sh`** — fires on every Bash call containing `grep -r` / `grep --recursive` on non-log paths. Blocks and directs to `mcp__jcodemunch__search_text` instead.
+
+**State:**
+- Hook scripts: `hooks/discipline/` in repo (symlinked to `~/.claude/hooks/discipline/`)
+- Wired in `~/.claude/settings.json`: 10 PreToolUse hooks total
+- `state/hook-blocks.log` receives all BLOCKED/ALLOWED entries
+- `install-reliability.sh` now wires these on fresh-machine setup
+
+**Weekly review:** session-end-checklist Step 6 reviews `hook-blocks.log` weekly.
+
+**MemPalace HNSW** — should be healthy on next session start (skip-if-healthy cron in place). Verify via SessionStart health check output at session open.
 
 ---
 

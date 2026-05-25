@@ -943,6 +943,9 @@ Cloned at install time (gitignored):
 │   ├── health.md                       ← /health slash command
 │   └── ...
 ├── hooks/
+│   ├── discipline/                     ← blocking PreToolUse guards (step 6)
+│   │   ├── edit-surface-guard.sh       ← blocks Edit/Write on surface-list files (requires pre-mortem)
+│   │   └── grep-guard.sh               ← blocks grep -r (routes to jcodemunch search_text)
 │   ├── langfuse_hook.py                ← Stop hook (step 8)
 │   ├── scan-secrets/                   ← guardrail (step 7)
 │   ├── scan-commit/                    ← guardrail (step 7)

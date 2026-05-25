@@ -75,6 +75,46 @@ else:
     print(f"  OK  OUTCOMES_MAX_ITERATIONS already set ({env['OUTCOMES_MAX_ITERATIONS']})")
 PYPATCH
 
+# ── Discipline hooks (edit-surface-guard, grep-guard) ────────────────────
+step "Installing discipline hooks to $CLAUDE_DIR/hooks/discipline"
+mkdir -p "$CLAUDE_DIR/hooks/discipline"
+if [ ! -d "$STACK_ROOT/hooks/discipline" ]; then
+    warn "hooks/discipline/ not found in repo — skipping discipline hook install"
+else
+    for hook_src in "$STACK_ROOT/hooks/discipline/"*.sh; do
+        [ -f "$hook_src" ] || continue
+        hook_name=$(basename "$hook_src")
+        dst="$CLAUDE_DIR/hooks/discipline/$hook_name"
+        rm -f "$dst"
+        ln -sfn "$(readlink -f "$hook_src")" "$dst"
+        chmod +x "$hook_src"
+        ok "discipline hook linked: $hook_name"
+    done
+
+    # Wire hooks into settings.json if not already present
+    _settings="$CLAUDE_DIR/settings.json"
+    if [ -f "$_settings" ]; then
+        _already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("discipline"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"Edit|Write","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/edit-surface-guard.sh","timeout":10}]},
+                {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/grep-guard.sh","timeout":10}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "discipline hooks wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "discipline hooks already wired in settings.json"
+        fi
+    else
+        warn "settings.json not found — run install-guardrails.sh first, then re-run this script"
+    fi
+fi
+
 # ── Clone dwarvesf/claude-guardrails ─────────────────────────────────────
 step "Installing dwarvesf/claude-guardrails"
 if [ -d "$STACK_ROOT/claude-guardrails" ]; then
