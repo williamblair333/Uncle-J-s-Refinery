@@ -18,7 +18,7 @@ CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
   --mode from-sqlite --yes --archive-existing
 ```
 
-After repair, restart the MCP server so it picks up the fresh palace (currently PID 139783 points to the old palace path).
+After repair completes, the MCP server picks up the fresh palace automatically on the next Claude Code session start — no manual restart needed.
 
 BM25 and KG search are working. Vector similarity search is down until rebuild completes.
 

@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-24 — MemPalace repair: fix success notification (MCP auto-restarts)
+
+### Fixed
+- `mempalace-repair-now.sh` — success notification corrected: removed incorrect "Restart MCP server" instruction. Claude Code spawns a fresh MCP server subprocess on every session start, so no manual restart is needed after palace rebuild.
+
+---
+
 ## 2026-05-24 — MemPalace repair: Telegram notifications on success/failure
 
 ### Added
