@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-05-25 — MemPalace dict-format pickle root cause found and fixed (session 4)
+
+### Root cause
+- **`'dict' object has no attribute 'dimensionality'`** was NOT stale in-memory state. The `index_metadata.pickle` for segment `f89df21a` (mempalace_drawers VECTOR) was stored as a plain Python dict, not a `PersistentData` object.
+- chromadb 1.5.8 SegmentAPI does `cast(PersistentData, pickle.load(f))` — if the pickle contains a dict, `cast` silently returns the dict, then `.dimensionality` fails with AttributeError.
+- `PersistentClient` (Rust API, the default) handles dict-format pickles. MCP server + mine scripts force `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`, hitting the failure.
+- "Restart Claude Code" never fixed it because each new process loaded the same broken dict from disk.
+
+### Fixed
+- Migrated `~/.mempalace/palace/f89df21a.../index_metadata.pickle`: dict → `PersistentData` format.
+- Fixed FTS5 corruption (`malformed inverted index for FTS5 table embedding_fulltext_search`).
+- `mempalace-health.py` live query: replaced `Client(settings)` with `chromadb.PersistentClient` (avoids the fragile lower-level path).
+- Added SessionStart health check hook to `.claude/settings.json` (30s timeout, shows summary line).
+
+### Status
+- MCP tools deregistered this session (server killed to apply fix). Restart Claude Code to reconnect.
+- How dict-format pickles form in the first place: not yet fully traced. Health check at session start will catch recurrence early.
+
+---
+
 ## 2026-05-25 — MemPalace stale-server-state re-verified (session 3)
 
 ### Diagnosed

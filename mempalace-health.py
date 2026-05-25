@@ -195,17 +195,13 @@ def main():
     all_issues.extend(check_all_hnsw(PALACE))
 
     # Live open test — catches loader errors that static checks miss.
-    # Use segment API to avoid triggering the Rust HNSW corruption on open.
+    # Use PersistentClient (the standard API) rather than Client(Settings(...)) directly;
+    # the lower-level Client path fails on dict-format pickles that PersistentClient handles.
+    # CHROMA_API_IMPL must be set before importing chromadb to ensure SegmentAPI is used.
     try:
         import chromadb, os
-        os.environ.setdefault("CHROMA_API_IMPL", "chromadb.api.segment.SegmentAPI")
-        settings = chromadb.config.Settings(
-            chroma_api_impl="chromadb.api.segment.SegmentAPI",
-            is_persistent=True,
-            persist_directory=str(PALACE),
-        )
-        from chromadb.api.client import Client as _Client
-        client = _Client(settings=settings)
+        os.environ["CHROMA_API_IMPL"] = "chromadb.api.segment.SegmentAPI"
+        client = chromadb.PersistentClient(path=str(PALACE))
         cols = client.list_collections()
         for col in cols:
             try:

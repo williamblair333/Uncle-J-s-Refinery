@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-25 (MemPalace stale-server-state re-verification, session 3)*
+*Last updated: 2026-05-25 (dict-format pickle root cause found and fixed, session 4)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -8,25 +8,29 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state (2026-05-25)
 
-### MemPalace — MCP server restart required (stale HNSW state confirmed × 2 sessions)
+### MemPalace — MCP server offline (needs Claude Code restart)
 
-**Health check results (session 3 re-verification):**
-- 243,278 total drawers ✅ (up from 234K — stop-hook mined more convos)
-- Global search works ✅
-- `conversations` wing works ✅
-- `uncle_j_s_refinery` and `sessions` wings: HNSW error in the **live MCP server** ❌
-- Direct `chromadb.PersistentClient` queries from a fresh subprocess: both wings return results ✅ — disk is clean
+**Status:** Tools deregistered this session (server killed to apply fix). Restart Claude Code to reconnect.
 
-**Root cause (confirmed)**: MCP server C++ hnswlib object is stale from before the palace rebuild. `mempalace_reconnect` now changes the error (`ef or M is too small` → `'dict' object has no attribute 'dimensionality'`) but does not fully reload the native heap objects.
+**Root cause finally found (session 4):**  
+The `'dict' object has no attribute 'dimensionality'` error was NOT stale in-memory HNSW state — it was a **dict-format pickle on disk**. The `index_metadata.pickle` for segment `f89df21a` (mempalace_drawers VECTOR segment) was stored as a plain Python dict instead of the `PersistentData` object that chromadb 1.5.8's SegmentAPI expects. SegmentAPI loads the dict, `cast(PersistentData, dict)` silently returns the dict, then `.dimensionality` fails.
 
-**MCP server is currently offline** — disconnected at end of session 3 as a side effect of the investigation.
+`PersistentClient` (default Rust API) can handle dict-format pickles, which is why direct subprocess queries always succeeded — they used Rust API by default. The MCP server and mine scripts force `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`, which hits the failure.
 
-**Fix: restart Claude Code.** Fresh session spawns a new MCP server that loads rebuilt HNSW cleanly. Post-restart, verify:
+**Why "restart Claude Code" never fixed it:** A new server process loaded the same broken dict-format pickle from disk, got the same error.
+
+**Fixes applied this session:**
+1. Migrated `f89df21a/index_metadata.pickle` from dict → `PersistentData` format (one-time, immediate)
+2. Fixed `mempalace-health.py` live query to use `chromadb.PersistentClient` instead of `Client(settings)` (the latter was the fragile path that triggered the failure)
+3. Fixed FTS5 corruption (malformed inverted index) via `INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')`
+4. Added SessionStart health check hook to `.claude/settings.json` — health check now runs at every session start
+
+**Post-restart verify (in the new session):**
 ```bash
-# In the new session — should return results without error
-mempalace_search(query="test", wing="uncle_j_s_refinery", limit=1)
-mempalace_search(query="test", wing="sessions", limit=1)
+mempalace_search(query="HNSW test", limit=1)  # should return results, no 'dict' error
 ```
+
+**Open question:** What process writes dict-format pickles? The 4am repair (SegmentAPI) should write PersistentData format. The mine also uses SegmentAPI. The exact mechanism is unclear. If the problem recurs, the SessionStart health check will catch it.
 
 **Previous rebuild**: 4am cron ran on 2026-05-25 at 04:00–05:29. `REPAIR_RESULT=success`, 235,251 embeddings rebuilt from SQLite. Previous corrupt palace at `~/.mempalace/palace.pre-rebuild-20260525-040008`.
 
