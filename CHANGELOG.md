@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-05-24 — MemPalace HNSW repair: switch to from-sqlite mode
+
+### Fixed
+- `mempalace-repair-now.sh` — replaced `mempalace repair --yes` (legacy mode) with `mempalace repair --mode from-sqlite --yes --archive-existing`. Legacy mode opens the chromadb client against the corrupt palace, hits SIGBUS on corrupt `max_el` values in `header.bin`, then writes NEW corrupt headers to additional segments — cascading the damage on every repair attempt. `from-sqlite` reads directly from `chroma.sqlite3`, never touches the corrupt HNSW files, and builds a fresh palace.
+- `mempalace-repair-now.sh` — removed manual HNSW segment clearing steps (unnecessary with `from-sqlite --archive-existing`).
+- `mempalace-repair-now.sh` — fixed embedding count bug: was querying `embedding_metadata` rows (~9× per embedding), reporting 2.7M instead of actual 298K.
+- `mempalace-health.py`, `healthcheck.sh`, `mempalace-delete-wing.py` — updated repair command hints to use `--mode from-sqlite`.
+- `global-skills/mempalace-hnsw-corruption-fix/SKILL.md` — Step 7 updated; added explicit warning against using legacy `repair --yes`.
+- `global-skills/mempalace-repair-mine-interference/SKILL.md` — Step 4 updated.
+
+### Root cause (documented)
+`chroma-hnswlib 0.7.6` Rust bindings have a type-confusion bug (`element_levels_[i]` written as float, read as int32). Every `updatePoint` call on an existing item triggers it, writing astronomical `max_el` values (e.g. `4,294,967,296,000`) to `header.bin`. The `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI` env var is a mitigation (forces Python hnswlib path) and is correctly set in all entry points. The repair cascade was the compounding problem: legacy repair SIGBUSed and left new corrupt headers behind. No upstream fix exists in `chroma-hnswlib` (0.7.6 is the only release). MemPalace `--mode from-sqlite` (shipped in 3.3.5, which we run) is the correct recovery path.
+
+---
+
 ## 2026-05-24 — README hero tagline rewrite
 
 ### Changed

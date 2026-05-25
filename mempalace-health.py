@@ -91,7 +91,7 @@ def check_hnsw_segment(seg_dir: Path, col_name: str) -> list[str]:
         issues.append(
             f"CRIT [{col_name}]: link_lists.bin is {ll_size/1e6:.0f}MB — "
             f"Rust HNSW type-confusion corruption (chroma-core/chroma#4460). "
-            f"Delete segment HNSW binaries and run `mempalace repair`."
+            f"Run `mempalace repair --mode from-sqlite --yes --archive-existing`."
         )
         return issues
 
@@ -108,7 +108,7 @@ def check_hnsw_segment(seg_dir: Path, col_name: str) -> list[str]:
                 f"CRIT [{col_name}]: HNSW header has astronomical values "
                 f"(max={max_elements:,} cur={cur_elements:,}) — "
                 f"type-confusion corruption (chroma-core/chroma#4460). "
-                f"Delete segment HNSW binaries and run `mempalace repair`."
+                f"Run `mempalace repair --mode from-sqlite --yes --archive-existing`."
             )
             return issues
     except Exception as e:

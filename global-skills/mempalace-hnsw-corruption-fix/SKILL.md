@@ -148,16 +148,18 @@ but source text in `embedding_fulltext_search_content` lets you re-embed from sc
 ## Step 7 — Delete corrupt HNSW and rebuild
 
 ```bash
-# For each corrupt active segment (from Step 5):
-SEGMENT="<segment-id>"
-rm ~/.mempalace/palace/$SEGMENT/header.bin
-rm ~/.mempalace/palace/$SEGMENT/link_lists.bin
-rm ~/.mempalace/palace/$SEGMENT/data_level0.bin
-rm -f ~/.mempalace/palace/$SEGMENT/index_metadata.pickle
-
-# Run repair with the env var set:
-CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI mempalace repair
+# Use from-sqlite mode — reads directly from chroma.sqlite3, never opens
+# the corrupt HNSW files (avoids SIGBUS from corrupt max_el values).
+# --archive-existing renames the current palace to palace.pre-rebuild-<ts>
+# so it can be restored if needed.
+CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
+  mempalace repair --mode from-sqlite --yes --archive-existing
 ```
+
+> **Do NOT use `mempalace repair --yes` (legacy mode)** — it opens the
+> chromadb client against the corrupt palace, hits the Rust SIGBUS, and
+> writes NEW corrupt headers to additional segments, making things worse.
+> Manual segment deletion before repair is also unnecessary with this mode.
 
 ## Step 8 — Verify the fix holds
 

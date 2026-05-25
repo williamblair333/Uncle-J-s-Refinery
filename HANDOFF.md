@@ -1,12 +1,28 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-24 (README hero tagline rewrite)*
+*Last updated: 2026-05-24 (MemPalace HNSW repair — from-sqlite fix)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
 ## Current state (2026-05-24)
+
+### MemPalace HNSW — repair infrastructure fixed, palace rebuild needed
+
+All HNSW segment files are currently corrupt (`max_el` overflow values from `chroma-hnswlib` Rust bug). The repair script has been updated to use `--mode from-sqlite` instead of the legacy mode that was cascading corruption. A palace rebuild is pending — will run automatically at 4am via cron, or run manually:
+
+```bash
+CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
+  /opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace repair \
+  --mode from-sqlite --yes --archive-existing
+```
+
+After repair, restart the MCP server so it picks up the fresh palace (currently PID 139783 points to the old palace path).
+
+BM25 and KG search are working. Vector similarity search is down until rebuild completes.
+
+---
 
 ### README hero tagline — rewritten this session
 

@@ -404,7 +404,7 @@ PYEOF
             hnsw_n="${drift_result##*:}"
             if [ "$sqlite_n" -gt 0 ] && [ "$hnsw_n" -lt "$((sqlite_n / 2))" ]; then
                 bad "HNSW/SQLite drift: HNSW has ${hnsw_n} elements, SQLite has ${sqlite_n} drawers"
-                hint "run: $REPO_ROOT/.venv/bin/mempalace repair"
+                hint "run: $REPO_ROOT/.venv/bin/mempalace repair --mode from-sqlite --yes --archive-existing"
                 record_fail "mempalace-hnsw-drift"
             else
                 ok "HNSW/SQLite in sync (HNSW=${hnsw_n}, SQLite=${sqlite_n})"

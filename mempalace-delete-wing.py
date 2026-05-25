@@ -62,7 +62,7 @@ def main():
     print(f"\nDeleted {deleted:,} drawers.")
     total_after = col.count()
     print(f"Total drawers after: {total_after:,}  (removed {total_before - total_after:,})")
-    print("\nRun `mempalace repair --yes` to rebuild HNSW without the deleted wing.")
+    print("\nRun `mempalace repair --mode from-sqlite --yes --archive-existing` to rebuild HNSW without the deleted wing.")
 
 if __name__ == "__main__":
     main()

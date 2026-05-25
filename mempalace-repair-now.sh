@@ -39,7 +39,7 @@ $1
 }
 
 # --- Pre-repair drawer count ---
-PRE_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embedding_metadata').fetchone()[0])" || echo "0")
+PRE_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])" || echo "0")
 log "Pre-repair embedding count: $PRE_COUNT"
 
 # --- Step 1: FTS5 rebuild ---
@@ -85,57 +85,16 @@ if [ "$QC_POST" != "ok" ]; then
   exit 1
 fi
 
-# --- Step 2: Discover and clear corrupt HNSW segments ---
-log "==> Discovering corrupt HNSW segments..."
-"$VENV/python" - <<'PYEOF' 2>&1
-import sqlite3, struct, pathlib
-
-palace = pathlib.Path.home() / '.mempalace' / 'palace'
-db = palace / 'chroma.sqlite3'
-with sqlite3.connect(f'file:{db}?mode=ro', uri=True) as conn:
-    rows = conn.execute("SELECT s.id FROM segments s WHERE s.scope='VECTOR'").fetchall()
-
-corrupt = []
-for (seg_id,) in rows:
-    seg_dir = palace / seg_id
-    ll = seg_dir / 'link_lists.bin'
-    hdr = seg_dir / 'header.bin'
-    if not hdr.exists():
-        continue
-    ll_size = ll.stat().st_size if ll.exists() else 0
-    data = hdr.read_bytes()
-    if len(data) < 24:
-        continue
-    max_el, = struct.unpack_from('<Q', data, 8)
-    # Corrupt headers have astronomical max_el values (trillions+).
-    # Realistic ceiling: 500M drawers × 1000x headroom = 5×10^11.
-    if ll_size > 100_000_000 or max_el > 500_000_000_000:
-        corrupt.append(seg_id)
-        print(f'  CORRUPT: {seg_id} (link_lists={ll_size}B max_el={max_el:,})')
-    else:
-        print(f'  ok: {seg_id} (link_lists={ll_size}B max_el={max_el:,})')
-
-with open('/tmp/corrupt_segs.txt', 'w') as f:
-    for s in corrupt:
-        f.write(s + '\n')
-PYEOF
-
-log "==> Clearing corrupt HNSW binaries..."
-while IFS= read -r seg; do
-  dir="$PALACE/$seg"
-  log "  Clearing $seg"
-  for f in header.bin link_lists.bin data_level0.bin index_metadata.pickle; do
-    [ -f "$dir/$f" ] && rm "$dir/$f" && log "    deleted $f" || true
-  done
-done < /tmp/corrupt_segs.txt
-rm -f /tmp/corrupt_segs.txt
-
-# --- Step 3: Rebuild HNSW from SQLite ---
-log "==> Running mempalace repair..."
-REPAIR_OUT=$("$VENV/mempalace" repair --yes 2>&1)
+# --- Step 2: Rebuild palace from SQLite (bypasses corrupt HNSW entirely) ---
+# --mode from-sqlite reads (id, document, metadata) directly from chroma.sqlite3,
+# never opens a chromadb client against the corrupt HNSW files, and rebuilds a
+# fresh palace. --archive-existing renames the corrupt palace before rebuilding
+# so it can be restored if needed: mv ~/.mempalace/palace.pre-rebuild-* ~/.mempalace/palace
+log "==> Running mempalace repair (from-sqlite mode)..."
+REPAIR_OUT=$("$VENV/mempalace" repair --mode from-sqlite --yes --archive-existing 2>&1)
 REPAIR_EXIT=$?
 echo "$REPAIR_OUT"
-if [ $REPAIR_EXIT -ne 0 ] || echo "$REPAIR_OUT" | grep -q "Aborted"; then
+if [ $REPAIR_EXIT -ne 0 ]; then
   HNSW_STATUS="repair_failed"
   log "  [WARN] mempalace repair failed (exit=$REPAIR_EXIT)"
   REPAIR_RESULT="hnsw_repair_failed"
@@ -146,7 +105,7 @@ HNSW_STATUS="rebuilt_ok"
 log "  mempalace repair: OK"
 
 # --- Post-repair drawer count sanity check ---
-POST_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embedding_metadata').fetchone()[0])" || echo "0")
+POST_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])" || echo "0")
 log "Post-repair embedding count: $POST_COUNT"
 if [ "$PRE_COUNT" -gt 0 ] && [ "$POST_COUNT" -gt 0 ]; then
   if python3 -c "import sys; sys.exit(0 if $POST_COUNT >= $PRE_COUNT * 0.95 else 1)" 2>/dev/null; then
