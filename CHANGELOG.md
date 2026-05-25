@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-25 — unpushed-warn Stop hook + push status in session-end-checklist
+
+### Added
+- `hooks/discipline/unpushed-warn.sh` — Stop hook; fires at session end and warns (via `systemMessage`) when branch is ahead of remote. Non-blocking. Timeout-guarded, upstream-existence-guarded, handles non-git dirs.
+- `global-skills/session-end-checklist/SKILL.md` Step 8: reports unpushed commit count after committing. Does NOT auto-push — reports status only, user decides when to push.
+- `install-reliability.sh`: wires `unpushed-warn.sh` Stop hook on fresh-machine setup.
+
+---
+
 ## 2026-05-25 — blocking discipline hooks wired (edit-surface-guard, grep-guard)
 
 ### Added

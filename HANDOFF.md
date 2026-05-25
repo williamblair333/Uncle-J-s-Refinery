@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-25 (discipline hooks wired — blocking pre-mortem enforcement, session 6)*
+*Last updated: 2026-05-25 (unpushed-warn Stop hook added, session 6 continued)*
 
 Read this before touching anything. Work priorities are in order below.
 

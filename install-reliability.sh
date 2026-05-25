@@ -91,7 +91,7 @@ else
         ok "discipline hook linked: $hook_name"
     done
 
-    # Wire hooks into settings.json if not already present
+    # Wire PreToolUse hooks if not already present
     _settings="$CLAUDE_DIR/settings.json"
     if [ -f "$_settings" ]; then
         _already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("discipline"))) | length' "$_settings" 2>/dev/null || echo 0)
@@ -105,10 +105,27 @@ else
             ' "$_settings" > "$_tmp" \
               && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
               && mv "$_tmp" "$_settings" \
-              && ok "discipline hooks wired into settings.json" \
+              && ok "discipline PreToolUse hooks wired into settings.json" \
               || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
         else
-            ok "discipline hooks already wired in settings.json"
+            ok "discipline PreToolUse hooks already wired in settings.json"
+        fi
+
+        # Wire Stop hook (unpushed-warn) if not already present
+        _stop_already=$(jq '[.hooks.Stop[]?.hooks[]?.command // ""] | map(select(contains("unpushed"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_stop_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.Stop += [
+                {"hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/unpushed-warn.sh","timeout":8}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.Stop | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "unpushed-warn Stop hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "unpushed-warn Stop hook already wired in settings.json"
         fi
     else
         warn "settings.json not found — run install-guardrails.sh first, then re-run this script"

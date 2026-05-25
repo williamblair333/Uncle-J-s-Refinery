@@ -95,7 +95,7 @@ mempalace diary write   # snapshot this session to MemPalace
 If a check fails and `on_failure: warn`, log the failure and continue.
 If `on_failure: block`, stop and report.
 
-### Step 8 — Commit
+### Step 8 — Commit and push status
 
 Once all mandatory docs are staged and consider docs are addressed:
 
@@ -105,6 +105,18 @@ git commit -m "..."     # commit with descriptive message
 ```
 
 The pre-commit hook will now pass.
+
+After committing, check for unpushed commits and report status:
+
+```bash
+git log @{u}..HEAD --oneline 2>/dev/null | wc -l
+```
+
+- **0** → "Branch is up to date with remote."
+- **N > 0** → "N commits ahead of remote — push when ready: `git push`"
+
+**Do NOT auto-push.** Report the count and let the user decide. The Stop hook
+will also warn at session exit if commits remain unpushed.
 
 ## Notes
 
