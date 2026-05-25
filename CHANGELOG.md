@@ -2,6 +2,134 @@
 
 ---
 
+## 2026-05-25 — unpushed-warn Stop hook + push status in session-end-checklist
+
+### Added
+- `hooks/discipline/unpushed-warn.sh` — Stop hook; fires at session end and warns (via `systemMessage`) when branch is ahead of remote. Non-blocking. Timeout-guarded, upstream-existence-guarded, handles non-git dirs.
+- `global-skills/session-end-checklist/SKILL.md` Step 8: reports unpushed commit count after committing. Does NOT auto-push — reports status only, user decides when to push.
+- `install-reliability.sh`: wires `unpushed-warn.sh` Stop hook on fresh-machine setup.
+
+---
+
+## 2026-05-25 — blocking discipline hooks wired (edit-surface-guard, grep-guard)
+
+### Added
+- `hooks/discipline/edit-surface-guard.sh` — PreToolUse hook; blocks Edit/Write on surface-list files (`.sh`, `.py`, `.toml`, `.yml`, `.yaml`, `Dockerfile*`, `settings.json`, `CLAUDE.md`, `scripts/`, `hooks/`, `features/`) until pre-mortem clears bypass flag (`/tmp/premortem-cleared-SESSION_ID`).
+- `hooks/discipline/grep-guard.sh` — PreToolUse hook; blocks `grep -r` on source directories; redirects to `mcp__jcodemunch__search_text`.
+- Both hooks log BLOCKED/ALLOWED entries to `state/hook-blocks.log` for weekly review.
+- `install-reliability.sh`: new section symlinks `hooks/discipline/*.sh` to `~/.claude/hooks/discipline/` and wires PreToolUse entries into `settings.json` on fresh-machine setup.
+- `global-skills/session-end-checklist/SKILL.md`: new Step 6 — weekly `hook-blocks.log` review.
+- Hooks wired into `~/.claude/settings.json` (10 PreToolUse hooks total, 2 new).
+
+### Bypass mechanism
+After invoking pre-mortem: `touch /tmp/premortem-cleared-SESSION_ID` — the guard script consumes and removes it, then allows the edit.
+
+---
+
+## 2026-05-25 — repair output now streams live to log
+
+Removed `REPAIR_OUT=$(mempalace repair ...)` capture pattern in `mempalace-repair-now.sh`. Output now streams directly to stdout (and therefore to the cron log) in real time. Previously the log showed nothing for 90 minutes then dumped everything at once.
+
+---
+
+## 2026-05-25 — @reboot repair made conditional (skip-if-healthy)
+
+### Problem
+Every reboot triggered a 90-minute unconditional `mempalace repair --archive-existing`, even when HNSW was healthy. Sessions always started with HNSW=0 (rebuild in progress). Root cause: `@reboot` cron was designed as a missed-cron recovery but behaved as a wipe-and-rebuild every boot.
+
+### Fixed
+- Added `--skip-if-healthy` flag to `mempalace-repair-now.sh`. Checks: all `link_lists.bin` files exist, non-empty, <200MB (corruption threshold), and HNSW element count ≥80% of SQLite count. If all pass → exits immediately with `REPAIR_RESULT=skipped_healthy`.
+- `@reboot` cron updated locally to pass `--skip-if-healthy`.
+- 4am nightly cron unchanged — still rebuilds unconditionally to sync mining additions.
+
+---
+
+## 2026-05-25 — MemPalace dict-format pickle root cause found and fixed (session 4)
+
+### Root cause
+- **`'dict' object has no attribute 'dimensionality'`** was NOT stale in-memory state. The `index_metadata.pickle` for segment `f89df21a` (mempalace_drawers VECTOR) was stored as a plain Python dict, not a `PersistentData` object.
+- chromadb 1.5.8 SegmentAPI does `cast(PersistentData, pickle.load(f))` — if the pickle contains a dict, `cast` silently returns the dict, then `.dimensionality` fails with AttributeError.
+- `PersistentClient` (Rust API, the default) handles dict-format pickles. MCP server + mine scripts force `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`, hitting the failure.
+- "Restart Claude Code" never fixed it because each new process loaded the same broken dict from disk.
+
+### Fixed
+- Migrated `~/.mempalace/palace/f89df21a.../index_metadata.pickle`: dict → `PersistentData` format.
+- Fixed FTS5 corruption (`malformed inverted index for FTS5 table embedding_fulltext_search`).
+- `mempalace-health.py` live query: replaced `Client(settings)` with `chromadb.PersistentClient` (avoids the fragile lower-level path).
+- Added SessionStart health check hook to `.claude/settings.json` (30s timeout, shows summary line).
+
+### Status
+- MCP tools deregistered this session (server killed to apply fix). Restart Claude Code to reconnect.
+- How dict-format pickles form in the first place: not yet fully traced. Health check at session start will catch recurrence early.
+
+---
+
+## 2026-05-25 — MemPalace stale-server-state re-verified (session 3)
+
+### Diagnosed
+- **Re-ran MemPalace wing health check**: 243,278 drawers (up from 234K — stop hook mined more). Global search and `conversations` wing still working; `uncle_j_s_refinery` and `sessions` wings still failing in the live MCP server.
+- **New finding**: `mempalace_reconnect` now changes error type (`ef or M is too small` → `'dict' object has no attribute 'dimensionality'`) — Python cache cleared but C++ hnswlib object still stale.
+- **Disk confirmed healthy**: direct `chromadb.PersistentClient` query from a fresh subprocess returned results for both failing wings. Issue is definitively server-side state.
+- **MCP server disconnected** at session end (expected side effect of investigation; Claude Code restart will bring it back clean).
+- **Fix**: restart Claude Code — no file changes needed.
+
+---
+
+## 2026-05-25 — MemPalace health diagnostic + mempalace 3.3.6
+
+### Diagnosed
+- **MemPalace health check**: 234,147 drawers confirmed in palace. Global search and `conversations` wing working. `uncle_j_s_refinery` and `sessions` wings failing in the live MCP server with HNSW "ef or M is too small" error.
+- **Root cause**: live MCP server (PID 2159655) holds a stale in-memory HNSW state from before the 05:25 rebuild. `mempalace_reconnect` cleared the Python cache but the C++ hnswlib object survived. All direct Python calls work correctly — issue is isolated to the running process.
+- **Fix**: restart Claude Code (or the MCP server) — fresh process loads the rebuilt HNSW cleanly.
+- **HNSW vs SQLite**: 200K/234K (34K in the pending flush batch; within `batch_size=50000` tolerance; not a bug).
+
+### Added
+- `global-skills/mempalace-wing-failure-stale-server-state/` — new skill: diagnose and fix wing-scoped HNSW failures caused by stale in-memory server state (distinct from disk corruption). Covers the exact pattern found this session.
+
+### Changed
+- `uv.lock` — mempalace 3.3.5 → 3.3.6 (SHA `d0d011eb`); adds `huggingface-hub`, `numpy`, `tokenizers` dependencies (pre-existing from prior session, not from this session's work).
+
+---
+
+## 2026-05-25 — MemPalace palace rebuild complete
+
+### Outcome
+- 4am cron ran `mempalace repair --mode from-sqlite --yes --archive-existing` at 04:00–05:29.
+- 235,251 embeddings rebuilt. HNSW index healthy. Vector similarity search restored.
+- Corrupt palace archived at `~/.mempalace/palace.pre-rebuild-20260525-040008`.
+- Compactor queue at 35,252 entries post-rebuild (expected; will drain on next mine run).
+
+---
+
+## 2026-05-24 — MemPalace repair: fix success notification (MCP auto-restarts)
+
+### Fixed
+- `mempalace-repair-now.sh` — success notification corrected: removed incorrect "Restart MCP server" instruction. Claude Code spawns a fresh MCP server subprocess on every session start, so no manual restart is needed after palace rebuild.
+
+---
+
+## 2026-05-24 — MemPalace repair: Telegram notifications on success/failure
+
+### Added
+- `mempalace-repair-now.sh` — Telegram notification at every exit point (success, FTS5 fail, HNSW fail, writer-active abort) via `lib/notify.sh`. No more babysitting the repair log.
+
+---
+
+## 2026-05-24 — MemPalace HNSW repair: switch to from-sqlite mode
+
+### Fixed
+- `mempalace-repair-now.sh` — replaced `mempalace repair --yes` (legacy mode) with `mempalace repair --mode from-sqlite --yes --archive-existing`. Legacy mode opens the chromadb client against the corrupt palace, hits SIGBUS on corrupt `max_el` values in `header.bin`, then writes NEW corrupt headers to additional segments — cascading the damage on every repair attempt. `from-sqlite` reads directly from `chroma.sqlite3`, never touches the corrupt HNSW files, and builds a fresh palace.
+- `mempalace-repair-now.sh` — removed manual HNSW segment clearing steps (unnecessary with `from-sqlite --archive-existing`).
+- `mempalace-repair-now.sh` — fixed embedding count bug: was querying `embedding_metadata` rows (~9× per embedding), reporting 2.7M instead of actual 298K.
+- `mempalace-health.py`, `healthcheck.sh`, `mempalace-delete-wing.py` — updated repair command hints to use `--mode from-sqlite`.
+- `global-skills/mempalace-hnsw-corruption-fix/SKILL.md` — Step 7 updated; added explicit warning against using legacy `repair --yes`.
+- `global-skills/mempalace-repair-mine-interference/SKILL.md` — Step 4 updated.
+
+### Root cause (documented)
+`chroma-hnswlib 0.7.6` Rust bindings have a type-confusion bug (`element_levels_[i]` written as float, read as int32). Every `updatePoint` call on an existing item triggers it, writing astronomical `max_el` values (e.g. `4,294,967,296,000`) to `header.bin`. The `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI` env var is a mitigation (forces Python hnswlib path) and is correctly set in all entry points. The repair cascade was the compounding problem: legacy repair SIGBUSed and left new corrupt headers behind. No upstream fix exists in `chroma-hnswlib` (0.7.6 is the only release). MemPalace `--mode from-sqlite` (shipped in 3.3.5, which we run) is the correct recovery path.
+
+---
+
 ## 2026-05-24 — README hero tagline rewrite
 
 ### Changed

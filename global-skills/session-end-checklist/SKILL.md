@@ -67,7 +67,24 @@ Check `.session-end.yml` `consider` list for `when:` conditions:
 - `when: security` — surfaces if any `tg_security.py`, `scripts/lib/`, or auth-related file changed. If triggered, check SECURITY.md.
 - `when: stack` — surfaces if `pyproject.toml`, `uv.lock`, or `mcp-clients/` changed. If triggered, check `docs/STACK.md`.
 
-### Step 6 — Custom checks
+### Step 6 — Hook-blocks log review (weekly)
+
+Check `state/hook-blocks.log`. If the file is non-empty:
+
+```bash
+wc -l /opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log
+tail -20 /opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log
+```
+
+Review BLOCKED entries since last session. Ask:
+- Are the same patterns being blocked repeatedly? → The rule is working; no action.
+- Are blocks happening on files that shouldn't be on the surface list? → Narrow the pattern.
+- Are blocks being bypassed excessively (many ALLOWED entries)? → Pre-mortem discipline is holding; verify quality.
+- Zero entries since last check → note "hook-blocks.log empty — no discipline violations this session."
+
+This step is **weekly** — skip if fewer than 7 days since last review (check log date of oldest unreviewed entry).
+
+### Step 7 — Custom checks
 
 Run each `custom_checks` entry from `.session-end.yml`:
 
@@ -78,7 +95,7 @@ mempalace diary write   # snapshot this session to MemPalace
 If a check fails and `on_failure: warn`, log the failure and continue.
 If `on_failure: block`, stop and report.
 
-### Step 7 — Commit
+### Step 8 — Commit and push status
 
 Once all mandatory docs are staged and consider docs are addressed:
 
@@ -88,6 +105,18 @@ git commit -m "..."     # commit with descriptive message
 ```
 
 The pre-commit hook will now pass.
+
+After committing, check for unpushed commits and report status:
+
+```bash
+git log @{u}..HEAD --oneline 2>/dev/null | wc -l
+```
+
+- **0** → "Branch is up to date with remote."
+- **N > 0** → "N commits ahead of remote — push when ready: `git push`"
+
+**Do NOT auto-push.** Report the count and let the user decide. The Stop hook
+will also warn at session exit if commits remain unpushed.
 
 ## Notes
 

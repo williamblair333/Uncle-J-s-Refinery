@@ -24,7 +24,7 @@ Completed items age out after ~4 weeks.
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
-- **Pre-mortem guard hooks in `install.sh`** — `prompt-guard.sh` and `pretool-guard.sh` exist in `~/.claude/hooks/pre-mortem-guard/` and `~/.claude/settings.json` but are not installed by `install.sh`; a new-machine clone gets none of this enforcement
+- **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
 
 - **Review-queue triage workflow** — skill exists; wire into regular session rhythm
 
@@ -34,6 +34,10 @@ Completed items age out after ~4 weeks.
 
 | Date | Item |
 |------|------|
+| 2026-05-25 | Blocking discipline hooks wired — `edit-surface-guard.sh` (pre-mortem gate on surface-list edits) and `grep-guard.sh` (routes `grep -r` to jcodemunch); `install-reliability.sh` now installs them on fresh machine |
+| 2026-05-25 | `@reboot` repair made conditional (`--skip-if-healthy`); repair output now streams live |
+| 2026-05-25 | MemPalace dict-format pickle root cause found — migrated `f89df21a` to `PersistentData`; fixed FTS5; fixed `mempalace-health.py` live query; added SessionStart health check hook |
+| 2026-05-25 | `session-status-briefing` skill updated — now includes HANDOFF.md read and healthcheck.sh run as mandatory first steps |
 | 2026-05-24 | MemPalace self-healing repair — FTS5 auto-rebuild pre-flight added to both `repair --yes` and `repair-hnsw rebuild` paths; 3 regression tests in repair.py, 2 in cli.py; fog-of-chess wing deleted (437K drawers); HNSW rebuilt clean at ~94K |
 | 2026-05-24 | `mempalace-repair-verify.sh` — new verification script: SQLite vs HNSW count, FTS5 integrity check, semantic search smoke test |
 | 2026-05-24 | `mempalace-delete-wing.py` — new utility: deletes a MemPalace wing by drawer prefix |

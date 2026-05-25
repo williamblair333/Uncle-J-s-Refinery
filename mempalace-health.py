@@ -91,7 +91,7 @@ def check_hnsw_segment(seg_dir: Path, col_name: str) -> list[str]:
         issues.append(
             f"CRIT [{col_name}]: link_lists.bin is {ll_size/1e6:.0f}MB — "
             f"Rust HNSW type-confusion corruption (chroma-core/chroma#4460). "
-            f"Delete segment HNSW binaries and run `mempalace repair`."
+            f"Run `mempalace repair --mode from-sqlite --yes --archive-existing`."
         )
         return issues
 
@@ -108,7 +108,7 @@ def check_hnsw_segment(seg_dir: Path, col_name: str) -> list[str]:
                 f"CRIT [{col_name}]: HNSW header has astronomical values "
                 f"(max={max_elements:,} cur={cur_elements:,}) — "
                 f"type-confusion corruption (chroma-core/chroma#4460). "
-                f"Delete segment HNSW binaries and run `mempalace repair`."
+                f"Run `mempalace repair --mode from-sqlite --yes --archive-existing`."
             )
             return issues
     except Exception as e:
@@ -195,17 +195,13 @@ def main():
     all_issues.extend(check_all_hnsw(PALACE))
 
     # Live open test — catches loader errors that static checks miss.
-    # Use segment API to avoid triggering the Rust HNSW corruption on open.
+    # Use PersistentClient (the standard API) rather than Client(Settings(...)) directly;
+    # the lower-level Client path fails on dict-format pickles that PersistentClient handles.
+    # CHROMA_API_IMPL must be set before importing chromadb to ensure SegmentAPI is used.
     try:
         import chromadb, os
-        os.environ.setdefault("CHROMA_API_IMPL", "chromadb.api.segment.SegmentAPI")
-        settings = chromadb.config.Settings(
-            chroma_api_impl="chromadb.api.segment.SegmentAPI",
-            is_persistent=True,
-            persist_directory=str(PALACE),
-        )
-        from chromadb.api.client import Client as _Client
-        client = _Client(settings=settings)
+        os.environ["CHROMA_API_IMPL"] = "chromadb.api.segment.SegmentAPI"
+        client = chromadb.PersistentClient(path=str(PALACE))
         cols = client.list_collections()
         for col in cols:
             try:

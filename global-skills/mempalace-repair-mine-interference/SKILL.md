@@ -39,7 +39,11 @@ ps aux | grep mempalace | grep -v grep
 
 ## Step 4 — Run repair
 
-mempalace repair
+```bash
+# Use from-sqlite mode to avoid SIGBUS from corrupt HNSW headers
+CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
+  mempalace repair --mode from-sqlite --yes --archive-existing
+```
 
 ## Step 5 — Detect FTS5 corruption
 

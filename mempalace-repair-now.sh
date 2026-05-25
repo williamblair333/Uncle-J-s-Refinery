@@ -5,15 +5,71 @@
 set -uo pipefail  # NOT -e: errors handled explicitly with REPAIR_RESULT tracking
 
 VENV="/opt/proj/Uncle-J-s-Refinery/.venv/bin"
+REPO_ROOT="/opt/proj/Uncle-J-s-Refinery"
 PALACE="$HOME/.mempalace/palace"
 DB="$PALACE/chroma.sqlite3"
 export CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI
+
+SKIP_IF_HEALTHY=0
+for _arg in "$@"; do [[ "$_arg" == "--skip-if-healthy" ]] && SKIP_IF_HEALTHY=1; done
 
 FTS5_STATUS="not_run"
 HNSW_STATUS="not_run"
 REPAIR_RESULT="unknown"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+notify() {
+  local msg=$1
+  if [[ -f "$REPO_ROOT/lib/notify.sh" ]]; then
+    source "$REPO_ROOT/lib/notify.sh"
+    notify_send_text "$msg" 2>/dev/null || true
+  fi
+}
+
+# --- Skip if healthy (used by @reboot cron to avoid unnecessary rebuild) ---
+if [[ $SKIP_IF_HEALTHY -eq 1 ]]; then
+  log "==> --skip-if-healthy: checking if repair is needed..."
+  _need_repair=0
+
+  # Check every segment has a non-empty link_lists.bin AND is below corruption threshold
+  _found=0
+  for _f in "$PALACE"/*/link_lists.bin; do
+    _found=1
+    if [[ ! -s "$_f" ]]; then
+      log "  missing/empty HNSW: $_f"; _need_repair=1; break
+    fi
+    _sz=$(du -m "$_f" 2>/dev/null | cut -f1)
+    if [[ "${_sz:-0}" -gt 200 ]]; then
+      log "  HNSW oversized ($_sz MB) — corruption likely: $_f"; _need_repair=1; break
+    fi
+  done
+  [[ $_found -eq 0 ]] && { log "  no link_lists.bin found — repair needed"; _need_repair=1; }
+
+  if [[ $_need_repair -eq 0 ]]; then
+    # Compare HNSW element count (from header.bin) vs SQLite drawer count
+    _sqlite=$(  "$VENV/python3" -c "
+import sqlite3, pathlib
+db = str(pathlib.Path.home()/'.mempalace'/'palace'/'chroma.sqlite3')
+print(sqlite3.connect(db).execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])
+" 2>/dev/null || echo 0)
+    _hnsw=$(  "$VENV/python3" -c "
+import pathlib, struct
+total=0
+for f in (pathlib.Path.home()/'.mempalace'/'palace').glob('*/header.bin'):
+  try:
+    b=f.read_bytes()
+    n=struct.unpack('<q',b[:8])[0] if len(b)>=8 else 0
+    total += n if 0<=n<=10_000_000 else 0
+  except: pass
+print(total)
+" 2>/dev/null || echo 0)
+    log "  SQLite=$_sqlite  HNSW=$_hnsw"
+    "$VENV/python3" -c "import sys; sys.exit(0 if int('$_hnsw') >= int('$_sqlite')*0.8 else 1)" 2>/dev/null \
+      && { log "  HNSW healthy — skipping repair"; REPAIR_RESULT="skipped_healthy"; log "REPAIR_RESULT=$REPAIR_RESULT"; exit 0; } \
+      || { log "  HNSW/SQLite drift — proceeding with repair"; }
+  fi
+fi
 
 # --- Active writer check ---
 log "==> Checking for active writers..."
@@ -24,6 +80,7 @@ for pid in $(fuser "$DB" 2>/dev/null || true); do
     log "  [WARN] mine/repair process active — aborting"
     REPAIR_RESULT="aborted_writer_active"
     log "REPAIR_RESULT=$REPAIR_RESULT"
+    notify "⚠️ MemPalace repair aborted — active writer (PID $pid) still running. Will retry at next cron window."
     exit 1
   fi
 done
@@ -39,7 +96,7 @@ $1
 }
 
 # --- Pre-repair drawer count ---
-PRE_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embedding_metadata').fetchone()[0])" || echo "0")
+PRE_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])" || echo "0")
 log "Pre-repair embedding count: $PRE_COUNT"
 
 # --- Step 1: FTS5 rebuild ---
@@ -68,6 +125,7 @@ PYEOF
     log "  [WARN] FTS5 rebuild failed — skipping HNSW repair to avoid data loss"
     REPAIR_RESULT="fts5_rebuild_failed"
     log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
+    notify "❌ MemPalace repair FAILED — FTS5 rebuild could not fix SQLite corruption. Manual recovery needed."
     exit 1
   fi
 else
@@ -85,68 +143,27 @@ if [ "$QC_POST" != "ok" ]; then
   exit 1
 fi
 
-# --- Step 2: Discover and clear corrupt HNSW segments ---
-log "==> Discovering corrupt HNSW segments..."
-"$VENV/python" - <<'PYEOF' 2>&1
-import sqlite3, struct, pathlib
-
-palace = pathlib.Path.home() / '.mempalace' / 'palace'
-db = palace / 'chroma.sqlite3'
-with sqlite3.connect(f'file:{db}?mode=ro', uri=True) as conn:
-    rows = conn.execute("SELECT s.id FROM segments s WHERE s.scope='VECTOR'").fetchall()
-
-corrupt = []
-for (seg_id,) in rows:
-    seg_dir = palace / seg_id
-    ll = seg_dir / 'link_lists.bin'
-    hdr = seg_dir / 'header.bin'
-    if not hdr.exists():
-        continue
-    ll_size = ll.stat().st_size if ll.exists() else 0
-    data = hdr.read_bytes()
-    if len(data) < 24:
-        continue
-    max_el, = struct.unpack_from('<Q', data, 8)
-    # Corrupt headers have astronomical max_el values (trillions+).
-    # Realistic ceiling: 500M drawers × 1000x headroom = 5×10^11.
-    if ll_size > 100_000_000 or max_el > 500_000_000_000:
-        corrupt.append(seg_id)
-        print(f'  CORRUPT: {seg_id} (link_lists={ll_size}B max_el={max_el:,})')
-    else:
-        print(f'  ok: {seg_id} (link_lists={ll_size}B max_el={max_el:,})')
-
-with open('/tmp/corrupt_segs.txt', 'w') as f:
-    for s in corrupt:
-        f.write(s + '\n')
-PYEOF
-
-log "==> Clearing corrupt HNSW binaries..."
-while IFS= read -r seg; do
-  dir="$PALACE/$seg"
-  log "  Clearing $seg"
-  for f in header.bin link_lists.bin data_level0.bin index_metadata.pickle; do
-    [ -f "$dir/$f" ] && rm "$dir/$f" && log "    deleted $f" || true
-  done
-done < /tmp/corrupt_segs.txt
-rm -f /tmp/corrupt_segs.txt
-
-# --- Step 3: Rebuild HNSW from SQLite ---
-log "==> Running mempalace repair..."
-REPAIR_OUT=$("$VENV/mempalace" repair --yes 2>&1)
+# --- Step 2: Rebuild palace from SQLite (bypasses corrupt HNSW entirely) ---
+# --mode from-sqlite reads (id, document, metadata) directly from chroma.sqlite3,
+# never opens a chromadb client against the corrupt HNSW files, and rebuilds a
+# fresh palace. --archive-existing renames the corrupt palace before rebuilding
+# so it can be restored if needed: mv ~/.mempalace/palace.pre-rebuild-* ~/.mempalace/palace
+log "==> Running mempalace repair (from-sqlite mode)..."
+"$VENV/mempalace" repair --mode from-sqlite --yes --archive-existing 2>&1
 REPAIR_EXIT=$?
-echo "$REPAIR_OUT"
-if [ $REPAIR_EXIT -ne 0 ] || echo "$REPAIR_OUT" | grep -q "Aborted"; then
+if [ $REPAIR_EXIT -ne 0 ]; then
   HNSW_STATUS="repair_failed"
   log "  [WARN] mempalace repair failed (exit=$REPAIR_EXIT)"
   REPAIR_RESULT="hnsw_repair_failed"
   log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
+  notify "❌ MemPalace repair FAILED (exit=$REPAIR_EXIT) — HNSW rebuild did not complete. Check repair log."
   exit 1
 fi
 HNSW_STATUS="rebuilt_ok"
 log "  mempalace repair: OK"
 
 # --- Post-repair drawer count sanity check ---
-POST_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embedding_metadata').fetchone()[0])" || echo "0")
+POST_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])" || echo "0")
 log "Post-repair embedding count: $POST_COUNT"
 if [ "$PRE_COUNT" -gt 0 ] && [ "$POST_COUNT" -gt 0 ]; then
   if python3 -c "import sys; sys.exit(0 if $POST_COUNT >= $PRE_COUNT * 0.95 else 1)" 2>/dev/null; then
@@ -163,3 +180,4 @@ log "==> Running health check..."
 REPAIR_RESULT="success"
 log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
 log "Done."
+notify "✅ MemPalace repair complete — HNSW rebuilt from SQLite ($POST_COUNT embeddings). Palace ready; MCP server picks it up automatically on next session start."

@@ -1194,12 +1194,15 @@ wheels = [
 
 [[package]]
 name = "mempalace"
-version = "3.3.5"
-source = { git = "https://github.com/MemPalace/mempalace.git#3a4be3ef74d20547e429ce9625f6089a538c5f67" }
+version = "3.3.6"
+source = { git = "https://github.com/MemPalace/mempalace.git#d0d011eb33c25bba87fb530047e5ce2066fd6ba7" }
 dependencies = [
     { name = "chromadb" },
+    { name = "huggingface-hub" },
+    { name = "numpy" },
     { name = "python-dateutil" },
     { name = "pyyaml" },
+    { name = "tokenizers" },
 ]
 
 [[package]]

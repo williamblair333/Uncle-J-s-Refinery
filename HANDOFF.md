@@ -1,12 +1,81 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-24 (README hero tagline rewrite)*
+*Last updated: 2026-05-25 (unpushed-warn Stop hook added, session 6 continued)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-05-24)
+## Current state (2026-05-25, session 6)
+
+### Blocking discipline hooks — LIVE
+
+Two PreToolUse hooks now mechanically block undisciplined tool use:
+
+1. **`hooks/discipline/edit-surface-guard.sh`** — fires on every Edit/Write. If the target file is on the surface list (`.sh`, `.py`, `.toml`, `.yml`, `.yaml`, `Dockerfile*`, `settings.json`, `CLAUDE.md`, `scripts/`, `hooks/`, `features/`), it blocks the edit and requires pre-mortem first.
+   - Bypass: after running pre-mortem, `touch /tmp/premortem-cleared-SESSION_ID` — consumed and removed on the next edit attempt.
+2. **`hooks/discipline/grep-guard.sh`** — fires on every Bash call containing `grep -r` / `grep --recursive` on non-log paths. Blocks and directs to `mcp__jcodemunch__search_text` instead.
+
+**State:**
+- Hook scripts: `hooks/discipline/` in repo (symlinked to `~/.claude/hooks/discipline/`)
+- Wired in `~/.claude/settings.json`: 10 PreToolUse hooks total
+- `state/hook-blocks.log` receives all BLOCKED/ALLOWED entries
+- `install-reliability.sh` now wires these on fresh-machine setup
+
+**Weekly review:** session-end-checklist Step 6 reviews `hook-blocks.log` weekly.
+
+**MemPalace HNSW** — should be healthy on next session start (skip-if-healthy cron in place). Verify via SessionStart health check output at session open.
+
+---
+
+## Current state (2026-05-25, session 5 continued)
+
+### repair output now streams live
+`mempalace-repair-now.sh` no longer buffers output. Progress lines write to `state/mempalace-repair.log` in real time.
+
+---
+
+## Current state (2026-05-25, session 5)
+
+### @reboot repair now conditional — skip-if-healthy
+
+`mempalace-repair-now.sh` has a new `--skip-if-healthy` flag. The `@reboot` cron uses it. On next reboot, if HNSW is healthy (non-empty, <200MB, element count ≥80% of SQLite), repair skips and exits in seconds instead of running a 90-min rebuild.
+
+**Crontab change is machine-local** — not in the repo. If reinstalling on a new machine, update the `@reboot` cron manually to add `--skip-if-healthy`.
+
+---
+
+## Current state (2026-05-25)
+
+### MemPalace — MCP server offline (needs Claude Code restart)
+
+**Status:** Tools deregistered this session (server killed to apply fix). Restart Claude Code to reconnect.
+
+**Root cause finally found (session 4):**  
+The `'dict' object has no attribute 'dimensionality'` error was NOT stale in-memory HNSW state — it was a **dict-format pickle on disk**. The `index_metadata.pickle` for segment `f89df21a` (mempalace_drawers VECTOR segment) was stored as a plain Python dict instead of the `PersistentData` object that chromadb 1.5.8's SegmentAPI expects. SegmentAPI loads the dict, `cast(PersistentData, dict)` silently returns the dict, then `.dimensionality` fails.
+
+`PersistentClient` (default Rust API) can handle dict-format pickles, which is why direct subprocess queries always succeeded — they used Rust API by default. The MCP server and mine scripts force `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`, which hits the failure.
+
+**Why "restart Claude Code" never fixed it:** A new server process loaded the same broken dict-format pickle from disk, got the same error.
+
+**Fixes applied this session:**
+1. Migrated `f89df21a/index_metadata.pickle` from dict → `PersistentData` format (one-time, immediate)
+2. Fixed `mempalace-health.py` live query to use `chromadb.PersistentClient` instead of `Client(settings)` (the latter was the fragile path that triggered the failure)
+3. Fixed FTS5 corruption (malformed inverted index) via `INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')`
+4. Added SessionStart health check hook to `.claude/settings.json` — health check now runs at every session start
+
+**Post-restart verify (in the new session):**
+```bash
+mempalace_search(query="HNSW test", limit=1)  # should return results, no 'dict' error
+```
+
+**Open question:** What process writes dict-format pickles? The 4am repair (SegmentAPI) should write PersistentData format. The mine also uses SegmentAPI. The exact mechanism is unclear. If the problem recurs, the SessionStart health check will catch it.
+
+**Previous rebuild**: 4am cron ran on 2026-05-25 at 04:00–05:29. `REPAIR_RESULT=success`, 235,251 embeddings rebuilt from SQLite. Previous corrupt palace at `~/.mempalace/palace.pre-rebuild-20260525-040008`.
+
+Root cause (chroma-hnswlib Rust type-confusion bug) mitigated by `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI` set in all entry points. Repair script updated to use `--mode from-sqlite` so any future corruption will recover cleanly without cascading damage.
+
+---
 
 ### README hero tagline — rewritten this session
 
