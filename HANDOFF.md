@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-25 (MemPalace health diagnostic)*
+*Last updated: 2026-05-25 (MemPalace stale-server-state re-verification, session 3)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -8,18 +8,25 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state (2026-05-25)
 
-### MemPalace — mostly healthy; MCP server restart required
+### MemPalace — MCP server restart required (stale HNSW state confirmed × 2 sessions)
 
-**Health check results (session 2, post-rebuild):**
-- 234,147 total drawers ✅
+**Health check results (session 3 re-verification):**
+- 243,278 total drawers ✅ (up from 234K — stop-hook mined more convos)
 - Global search works ✅
-- `conversations` wing (183K drawers) works ✅
+- `conversations` wing works ✅
 - `uncle_j_s_refinery` and `sessions` wings: HNSW error in the **live MCP server** ❌
-- HNSW vs SQLite: 200K / 234K — 34K in pending flush batch (normal, within `batch_size=50000`)
+- Direct `chromadb.PersistentClient` queries from a fresh subprocess: both wings return results ✅ — disk is clean
 
-**Root cause of wing failures**: The running MCP server has a stale in-memory HNSW loaded before the palace rebuild completed. `mempalace_reconnect` cleared the Python cache but the C++ hnswlib object survived. All direct Python calls work correctly — this is a process-state issue only.
+**Root cause (confirmed)**: MCP server C++ hnswlib object is stale from before the palace rebuild. `mempalace_reconnect` now changes the error (`ef or M is too small` → `'dict' object has no attribute 'dimensionality'`) but does not fully reload the native heap objects.
 
-**Fix: restart Claude Code.** A fresh session spawns a new MCP server process that loads the rebuilt HNSW cleanly. Both failing wings will work after restart.
+**MCP server is currently offline** — disconnected at end of session 3 as a side effect of the investigation.
+
+**Fix: restart Claude Code.** Fresh session spawns a new MCP server that loads rebuilt HNSW cleanly. Post-restart, verify:
+```bash
+# In the new session — should return results without error
+mempalace_search(query="test", wing="uncle_j_s_refinery", limit=1)
+mempalace_search(query="test", wing="sessions", limit=1)
+```
 
 **Previous rebuild**: 4am cron ran on 2026-05-25 at 04:00–05:29. `REPAIR_RESULT=success`, 235,251 embeddings rebuilt from SQLite. Previous corrupt palace at `~/.mempalace/palace.pre-rebuild-20260525-040008`.
 

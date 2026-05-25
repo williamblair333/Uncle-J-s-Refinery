@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-25 — MemPalace stale-server-state re-verified (session 3)
+
+### Diagnosed
+- **Re-ran MemPalace wing health check**: 243,278 drawers (up from 234K — stop hook mined more). Global search and `conversations` wing still working; `uncle_j_s_refinery` and `sessions` wings still failing in the live MCP server.
+- **New finding**: `mempalace_reconnect` now changes error type (`ef or M is too small` → `'dict' object has no attribute 'dimensionality'`) — Python cache cleared but C++ hnswlib object still stale.
+- **Disk confirmed healthy**: direct `chromadb.PersistentClient` query from a fresh subprocess returned results for both failing wings. Issue is definitively server-side state.
+- **MCP server disconnected** at session end (expected side effect of investigation; Claude Code restart will bring it back clean).
+- **Fix**: restart Claude Code — no file changes needed.
+
+---
+
 ## 2026-05-25 — MemPalace health diagnostic + mempalace 3.3.6
 
 ### Diagnosed
