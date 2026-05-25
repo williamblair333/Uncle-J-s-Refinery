@@ -1,26 +1,22 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-24 (MemPalace repair — Telegram notifications added)*
+*Last updated: 2026-05-25 (MemPalace palace rebuild complete)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-05-24)
+## Current state (2026-05-25)
 
-### MemPalace HNSW — repair infrastructure fixed, palace rebuild needed
+### MemPalace HNSW — palace rebuild complete ✓
 
-All HNSW segment files are currently corrupt (`max_el` overflow values from `chroma-hnswlib` Rust bug). The repair script has been updated to use `--mode from-sqlite` instead of the legacy mode that was cascading corruption. A palace rebuild is pending — will run automatically at 4am via cron, or run manually:
+The 4am cron ran the palace rebuild on 2026-05-25 at 04:00–05:29. Result: `REPAIR_RESULT=success`, 235,251 embeddings rebuilt from SQLite. HNSW index is healthy. Vector similarity search is back up. MCP server picks up fresh palace on next session start.
 
-```bash
-CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
-  /opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace repair \
-  --mode from-sqlite --yes --archive-existing
-```
+Previous corrupt palace archived at: `~/.mempalace/palace.pre-rebuild-20260525-040008`
 
-After repair completes, the MCP server picks up the fresh palace automatically on the next Claude Code session start — no manual restart needed.
+**Compactor lag**: health check flagged `embeddings_queue` at 35,252 entries — normal after a large rebuild, compactor will drain on next mine run.
 
-BM25 and KG search are working. Vector similarity search is down until rebuild completes.
+Root cause (chroma-hnswlib Rust type-confusion bug) mitigated by `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI` set in all entry points. Repair script updated to use `--mode from-sqlite` so any future corruption will recover cleanly without cascading damage.
 
 ---
 

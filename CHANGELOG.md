@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-25 — MemPalace palace rebuild complete
+
+### Outcome
+- 4am cron ran `mempalace repair --mode from-sqlite --yes --archive-existing` at 04:00–05:29.
+- 235,251 embeddings rebuilt. HNSW index healthy. Vector similarity search restored.
+- Corrupt palace archived at `~/.mempalace/palace.pre-rebuild-20260525-040008`.
+- Compactor queue at 35,252 entries post-rebuild (expected; will drain on next mine run).
+
+---
+
 ## 2026-05-24 — MemPalace repair: fix success notification (MCP auto-restarts)
 
 ### Fixed
