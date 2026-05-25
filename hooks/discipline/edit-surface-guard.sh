@@ -3,7 +3,8 @@
 # Bypass: invoke pre-mortem skill, then: touch /tmp/premortem-cleared-SESSION_ID
 set -uo pipefail
 
-LOG="/opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log"
+_REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/.claude")
+LOG="$_REPO_ROOT/state/hook-blocks.log"
 BYPASS_PREFIX="/tmp/premortem-cleared"
 
 INPUT=$(cat)

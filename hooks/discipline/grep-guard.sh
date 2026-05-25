@@ -2,7 +2,8 @@
 # PreToolUse guard — blocks grep -r on source dirs; routes to jcodemunch search_text.
 set -uo pipefail
 
-LOG="/opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log"
+_REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/.claude")
+LOG="$_REPO_ROOT/state/hook-blocks.log"
 
 INPUT=$(cat)
 CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)

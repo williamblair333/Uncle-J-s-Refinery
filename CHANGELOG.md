@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-05-25 — fix hardcoded LOG path in discipline hook scripts
+
+- `hooks/discipline/edit-surface-guard.sh`, `grep-guard.sh`: replaced hardcoded `/opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log` with `$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/.claude")/state/hook-blocks.log`. Scripts now work correctly on any machine regardless of clone path; fallback to `$HOME/.claude/state/` when run outside a git repo.
+
+---
+
 ## 2026-05-25 — unpushed-warn Stop hook + push status in session-end-checklist
 
 ### Added

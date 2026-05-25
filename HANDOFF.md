@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-25 (unpushed-warn Stop hook added, session 6 continued)*
+*Last updated: 2026-05-25 (hardcoded LOG path fixed in discipline hooks, session 6 final)*
 
 Read this before touching anything. Work priorities are in order below.
 
