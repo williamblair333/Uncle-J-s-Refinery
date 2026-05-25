@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-05-25 — repair output now streams live to log
+
+Removed `REPAIR_OUT=$(mempalace repair ...)` capture pattern in `mempalace-repair-now.sh`. Output now streams directly to stdout (and therefore to the cron log) in real time. Previously the log showed nothing for 90 minutes then dumped everything at once.
+
+---
+
 ## 2026-05-25 — @reboot repair made conditional (skip-if-healthy)
 
 ### Problem

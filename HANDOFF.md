@@ -6,6 +6,13 @@ Read this before touching anything. Work priorities are in order below.
 
 ---
 
+## Current state (2026-05-25, session 5 continued)
+
+### repair output now streams live
+`mempalace-repair-now.sh` no longer buffers output. Progress lines write to `state/mempalace-repair.log` in real time.
+
+---
+
 ## Current state (2026-05-25, session 5)
 
 ### @reboot repair now conditional — skip-if-healthy

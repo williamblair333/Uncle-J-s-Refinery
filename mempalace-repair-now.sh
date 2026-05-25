@@ -149,9 +149,8 @@ fi
 # fresh palace. --archive-existing renames the corrupt palace before rebuilding
 # so it can be restored if needed: mv ~/.mempalace/palace.pre-rebuild-* ~/.mempalace/palace
 log "==> Running mempalace repair (from-sqlite mode)..."
-REPAIR_OUT=$("$VENV/mempalace" repair --mode from-sqlite --yes --archive-existing 2>&1)
+"$VENV/mempalace" repair --mode from-sqlite --yes --archive-existing 2>&1
 REPAIR_EXIT=$?
-echo "$REPAIR_OUT"
 if [ $REPAIR_EXIT -ne 0 ]; then
   HNSW_STATUS="repair_failed"
   log "  [WARN] mempalace repair failed (exit=$REPAIR_EXIT)"
