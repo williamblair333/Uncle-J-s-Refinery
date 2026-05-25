@@ -5,6 +5,7 @@
 set -uo pipefail  # NOT -e: errors handled explicitly with REPAIR_RESULT tracking
 
 VENV="/opt/proj/Uncle-J-s-Refinery/.venv/bin"
+REPO_ROOT="/opt/proj/Uncle-J-s-Refinery"
 PALACE="$HOME/.mempalace/palace"
 DB="$PALACE/chroma.sqlite3"
 export CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI
@@ -15,6 +16,14 @@ REPAIR_RESULT="unknown"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
+notify() {
+  local msg=$1
+  if [[ -f "$REPO_ROOT/lib/notify.sh" ]]; then
+    source "$REPO_ROOT/lib/notify.sh"
+    notify_send_text "$msg" 2>/dev/null || true
+  fi
+}
+
 # --- Active writer check ---
 log "==> Checking for active writers..."
 for pid in $(fuser "$DB" 2>/dev/null || true); do
@@ -24,6 +33,7 @@ for pid in $(fuser "$DB" 2>/dev/null || true); do
     log "  [WARN] mine/repair process active — aborting"
     REPAIR_RESULT="aborted_writer_active"
     log "REPAIR_RESULT=$REPAIR_RESULT"
+    notify "⚠️ MemPalace repair aborted — active writer (PID $pid) still running. Will retry at next cron window."
     exit 1
   fi
 done
@@ -68,6 +78,7 @@ PYEOF
     log "  [WARN] FTS5 rebuild failed — skipping HNSW repair to avoid data loss"
     REPAIR_RESULT="fts5_rebuild_failed"
     log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
+    notify "❌ MemPalace repair FAILED — FTS5 rebuild could not fix SQLite corruption. Manual recovery needed."
     exit 1
   fi
 else
@@ -99,6 +110,7 @@ if [ $REPAIR_EXIT -ne 0 ]; then
   log "  [WARN] mempalace repair failed (exit=$REPAIR_EXIT)"
   REPAIR_RESULT="hnsw_repair_failed"
   log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
+  notify "❌ MemPalace repair FAILED (exit=$REPAIR_EXIT) — HNSW rebuild did not complete. Check repair log."
   exit 1
 fi
 HNSW_STATUS="rebuilt_ok"
@@ -122,3 +134,4 @@ log "==> Running health check..."
 REPAIR_RESULT="success"
 log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
 log "Done."
+notify "✅ MemPalace repair complete — HNSW rebuilt from SQLite ($POST_COUNT embeddings). Restart MCP server to pick up fresh palace."

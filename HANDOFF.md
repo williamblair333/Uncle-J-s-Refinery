@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-24 (MemPalace HNSW repair — from-sqlite fix)*
+*Last updated: 2026-05-24 (MemPalace repair — Telegram notifications added)*
 
 Read this before touching anything. Work priorities are in order below.
 

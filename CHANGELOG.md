@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-24 — MemPalace repair: Telegram notifications on success/failure
+
+### Added
+- `mempalace-repair-now.sh` — Telegram notification at every exit point (success, FTS5 fail, HNSW fail, writer-active abort) via `lib/notify.sh`. No more babysitting the repair log.
+
+---
+
 ## 2026-05-24 — MemPalace HNSW repair: switch to from-sqlite mode
 
 ### Fixed
