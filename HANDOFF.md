@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-25 (MemPalace palace rebuild complete)*
+*Last updated: 2026-05-25 (MemPalace health diagnostic)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -8,13 +8,20 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state (2026-05-25)
 
-### MemPalace HNSW — palace rebuild complete ✓
+### MemPalace — mostly healthy; MCP server restart required
 
-The 4am cron ran the palace rebuild on 2026-05-25 at 04:00–05:29. Result: `REPAIR_RESULT=success`, 235,251 embeddings rebuilt from SQLite. HNSW index is healthy. Vector similarity search is back up. MCP server picks up fresh palace on next session start.
+**Health check results (session 2, post-rebuild):**
+- 234,147 total drawers ✅
+- Global search works ✅
+- `conversations` wing (183K drawers) works ✅
+- `uncle_j_s_refinery` and `sessions` wings: HNSW error in the **live MCP server** ❌
+- HNSW vs SQLite: 200K / 234K — 34K in pending flush batch (normal, within `batch_size=50000`)
 
-Previous corrupt palace archived at: `~/.mempalace/palace.pre-rebuild-20260525-040008`
+**Root cause of wing failures**: The running MCP server has a stale in-memory HNSW loaded before the palace rebuild completed. `mempalace_reconnect` cleared the Python cache but the C++ hnswlib object survived. All direct Python calls work correctly — this is a process-state issue only.
 
-**Compactor lag**: health check flagged `embeddings_queue` at 35,252 entries — normal after a large rebuild, compactor will drain on next mine run.
+**Fix: restart Claude Code.** A fresh session spawns a new MCP server process that loads the rebuilt HNSW cleanly. Both failing wings will work after restart.
+
+**Previous rebuild**: 4am cron ran on 2026-05-25 at 04:00–05:29. `REPAIR_RESULT=success`, 235,251 embeddings rebuilt from SQLite. Previous corrupt palace at `~/.mempalace/palace.pre-rebuild-20260525-040008`.
 
 Root cause (chroma-hnswlib Rust type-confusion bug) mitigated by `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI` set in all entry points. Repair script updated to use `--mode from-sqlite` so any future corruption will recover cleanly without cascading damage.
 

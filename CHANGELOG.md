@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-05-25 — MemPalace health diagnostic + mempalace 3.3.6
+
+### Diagnosed
+- **MemPalace health check**: 234,147 drawers confirmed in palace. Global search and `conversations` wing working. `uncle_j_s_refinery` and `sessions` wings failing in the live MCP server with HNSW "ef or M is too small" error.
+- **Root cause**: live MCP server (PID 2159655) holds a stale in-memory HNSW state from before the 05:25 rebuild. `mempalace_reconnect` cleared the Python cache but the C++ hnswlib object survived. All direct Python calls work correctly — issue is isolated to the running process.
+- **Fix**: restart Claude Code (or the MCP server) — fresh process loads the rebuilt HNSW cleanly.
+- **HNSW vs SQLite**: 200K/234K (34K in the pending flush batch; within `batch_size=50000` tolerance; not a bug).
+
+### Added
+- `global-skills/mempalace-wing-failure-stale-server-state/` — new skill: diagnose and fix wing-scoped HNSW failures caused by stale in-memory server state (distinct from disk corruption). Covers the exact pattern found this session.
+
+### Changed
+- `uv.lock` — mempalace 3.3.5 → 3.3.6 (SHA `d0d011eb`); adds `huggingface-hub`, `numpy`, `tokenizers` dependencies (pre-existing from prior session, not from this session's work).
+
+---
+
 ## 2026-05-25 — MemPalace palace rebuild complete
 
 ### Outcome
