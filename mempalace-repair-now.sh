@@ -10,6 +10,9 @@ PALACE="$HOME/.mempalace/palace"
 DB="$PALACE/chroma.sqlite3"
 export CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI
 
+SKIP_IF_HEALTHY=0
+for _arg in "$@"; do [[ "$_arg" == "--skip-if-healthy" ]] && SKIP_IF_HEALTHY=1; done
+
 FTS5_STATUS="not_run"
 HNSW_STATUS="not_run"
 REPAIR_RESULT="unknown"
@@ -23,6 +26,50 @@ notify() {
     notify_send_text "$msg" 2>/dev/null || true
   fi
 }
+
+# --- Skip if healthy (used by @reboot cron to avoid unnecessary rebuild) ---
+if [[ $SKIP_IF_HEALTHY -eq 1 ]]; then
+  log "==> --skip-if-healthy: checking if repair is needed..."
+  _need_repair=0
+
+  # Check every segment has a non-empty link_lists.bin AND is below corruption threshold
+  _found=0
+  for _f in "$PALACE"/*/link_lists.bin; do
+    _found=1
+    if [[ ! -s "$_f" ]]; then
+      log "  missing/empty HNSW: $_f"; _need_repair=1; break
+    fi
+    _sz=$(du -m "$_f" 2>/dev/null | cut -f1)
+    if [[ "${_sz:-0}" -gt 200 ]]; then
+      log "  HNSW oversized ($_sz MB) — corruption likely: $_f"; _need_repair=1; break
+    fi
+  done
+  [[ $_found -eq 0 ]] && { log "  no link_lists.bin found — repair needed"; _need_repair=1; }
+
+  if [[ $_need_repair -eq 0 ]]; then
+    # Compare HNSW element count (from header.bin) vs SQLite drawer count
+    _sqlite=$(  "$VENV/python3" -c "
+import sqlite3, pathlib
+db = str(pathlib.Path.home()/'.mempalace'/'palace'/'chroma.sqlite3')
+print(sqlite3.connect(db).execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])
+" 2>/dev/null || echo 0)
+    _hnsw=$(  "$VENV/python3" -c "
+import pathlib, struct
+total=0
+for f in (pathlib.Path.home()/'.mempalace'/'palace').glob('*/header.bin'):
+  try:
+    b=f.read_bytes()
+    n=struct.unpack('<q',b[:8])[0] if len(b)>=8 else 0
+    total += n if 0<=n<=10_000_000 else 0
+  except: pass
+print(total)
+" 2>/dev/null || echo 0)
+    log "  SQLite=$_sqlite  HNSW=$_hnsw"
+    "$VENV/python3" -c "import sys; sys.exit(0 if int('$_hnsw') >= int('$_sqlite')*0.8 else 1)" 2>/dev/null \
+      && { log "  HNSW healthy — skipping repair"; REPAIR_RESULT="skipped_healthy"; log "REPAIR_RESULT=$REPAIR_RESULT"; exit 0; } \
+      || { log "  HNSW/SQLite drift — proceeding with repair"; }
+  fi
+fi
 
 # --- Active writer check ---
 log "==> Checking for active writers..."

@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-25 — @reboot repair made conditional (skip-if-healthy)
+
+### Problem
+Every reboot triggered a 90-minute unconditional `mempalace repair --archive-existing`, even when HNSW was healthy. Sessions always started with HNSW=0 (rebuild in progress). Root cause: `@reboot` cron was designed as a missed-cron recovery but behaved as a wipe-and-rebuild every boot.
+
+### Fixed
+- Added `--skip-if-healthy` flag to `mempalace-repair-now.sh`. Checks: all `link_lists.bin` files exist, non-empty, <200MB (corruption threshold), and HNSW element count ≥80% of SQLite count. If all pass → exits immediately with `REPAIR_RESULT=skipped_healthy`.
+- `@reboot` cron updated locally to pass `--skip-if-healthy`.
+- 4am nightly cron unchanged — still rebuilds unconditionally to sync mining additions.
+
+---
+
 ## 2026-05-25 — MemPalace dict-format pickle root cause found and fixed (session 4)
 
 ### Root cause

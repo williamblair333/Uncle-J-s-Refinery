@@ -6,6 +6,16 @@ Read this before touching anything. Work priorities are in order below.
 
 ---
 
+## Current state (2026-05-25, session 5)
+
+### @reboot repair now conditional — skip-if-healthy
+
+`mempalace-repair-now.sh` has a new `--skip-if-healthy` flag. The `@reboot` cron uses it. On next reboot, if HNSW is healthy (non-empty, <200MB, element count ≥80% of SQLite), repair skips and exits in seconds instead of running a 90-min rebuild.
+
+**Crontab change is machine-local** — not in the repo. If reinstalling on a new machine, update the `@reboot` cron manually to add `--skip-if-healthy`.
+
+---
+
 ## Current state (2026-05-25)
 
 ### MemPalace — MCP server offline (needs Claude Code restart)
