@@ -1,8 +1,45 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-26 (maintenance: cron restore, git-fetch hook, reindex)*
+*Last updated: 2026-05-26 (OpenClaw analysis, doctor+routing spec and plans)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-26) — doctor + routing plans ready to implement
+
+### Two new features specced and planned — no code written yet
+
+Design spec: `docs/superpowers/specs/2026-05-26-doctor-and-routing-design.md`
+
+**Feature 1 — `scripts/refinery-doctor.sh`** (branch: `feat/refinery-doctor`)
+- Standalone bash script for config-schema-drift detection
+- Dry-run by default; `--fix` applies auto-fixable migrations atomically
+- 4 checks: `embed-model`, `jcodemunch-scope`, `claude-md-sync`, `env-placeholders`
+- Atomic `.env` write: `.env.bak` + `.env.tmp` → `mv` (never partial-corrupt)
+- Plan: `docs/superpowers/plans/2026-05-26-refinery-doctor.md` (7 tasks, TDD)
+
+**Feature 2 — Telegram multi-agent routing** (branch: `feat/telegram-agent-routing`)
+- New file: `config/telegram-agents.toml` (prefix → agent dispatch table)
+- New functions in `scripts/telegram-gateway-poll.sh` Python section:
+  `load_agents()`, `route_message()`, `resolve_cwd()`
+- `/work` prefix → work agent (PROJ_ROOT, CLAUDE.md); no prefix → restricted default
+- Pre-mortem requirements R1–R5 baked into the plan
+- Plan: `docs/superpowers/plans/2026-05-26-telegram-agent-routing.md` (5 tasks)
+
+**Feature 3 — Docker-sandboxed Telegram sessions** — deferred
+- Requires getting `claude --print` (OAuth tokens from `~/.claude/`) working inside
+  Docker containers; credential management is non-trivial. Own session, own PR.
+
+### Next action
+
+Start implementation on either feature:
+```
+feat/refinery-doctor          # create branch, execute 7-task plan
+feat/telegram-agent-routing   # create branch, execute 5-task plan
+```
+Each plan is self-contained — tasks are ordered with TDD steps, exact code, and commit
+commands. Use `superpowers:executing-plans` or `superpowers:subagent-driven-development`.
 
 ---
 
