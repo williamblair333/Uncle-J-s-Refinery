@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-05-26 — maintenance: cron restored, git-fetch hook wired, reindex run
+
+### Fixed
+- Re-added `uncle-j-mempalace-repair` cron (`0 4 * * *` — `mempalace repair`) — was dropped during the `@reboot --skip-if-healthy` transition; `HEALTHCHECK: fail` cron check now passes
+- jcodemunch index reindexed — was 41 commits stale at session open; now at HEAD (`17d0708b`)
+
+### Added
+- `git fetch --quiet` async `SessionStart` hook in `~/.claude/settings.json` — runs in background each session open; closes the stale remote-state gap identified in the previous session
+
+### Noted
+- `pre-mortem` skill (`~/.claude/skills/pre-mortem/SKILL.md`) referenced by `edit-surface-guard.sh` does not exist on disk; hook blocked then bypassed via inline pre-mortem analysis — skill needs to be restored for discipline system to function cleanly
+
+---
+
+## 2026-05-26 — pulled 40 commits, linked new skills, dropped orphaned stash
+
+### Changed
+- Pulled `origin/main` (40 commits behind, May 22–25 work) via fast-forward
+- Ran `install-reliability.sh`: symlinked discipline hooks (`edit-surface-guard.sh`, `grep-guard.sh`, `unpushed-warn.sh`) and linked 6 new global skills (`session-end-checklist`, `session-status-briefing`, `mempalace-repair-mine-interference`, `mempalace-wing-failure-stale-server-state`, `polling-bot-age-filter-fix`, `telegram-inline-button-promote`)
+
+### Removed
+- Dropped stale `stash@{0}` containing undocumented `graphviz>=0.21` and `matplotlib>=3.10.9` additions to `pyproject.toml` — no commit message, no HANDOFF mention, provenance unknown
+
+### Gap identified
+- `git status` without prior `git fetch` gave a false "up to date" report; need `SessionStart` hook to auto-fetch
+
+---
+
 ## 2026-05-25 — unpushed-warn Stop hook + push status in session-end-checklist
 
 ### Added
