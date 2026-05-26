@@ -1,8 +1,26 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-25 (unpushed-warn Stop hook added, session 6 continued)*
+*Last updated: 2026-05-26 (catch-up pull + skill install session)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-26)
+
+### Main is at HEAD — fully caught up
+
+- Pulled 40 commits (May 22–25). Fast-forward, no conflicts.
+- `install-reliability.sh` run: all discipline hooks linked, 6 new skills live.
+- `state/hook-blocks.log` does not exist yet — first discipline block will create it.
+
+### Open gap: no SessionStart git fetch hook
+
+`git status` without `git fetch` reports stale remote state ("up to date" when 40 commits behind). A `SessionStart` hook running `git fetch --quiet` would fix this permanently. Not yet wired — add to `~/.claude/settings.json`.
+
+### Orphaned stash dropped
+
+`stash@{0}` contained `graphviz>=0.21` and `matplotlib>=3.10.9` additions with no commit, no HANDOFF mention, no context. Dropped. If those deps are actually needed, they need to be added with a documented reason.
 
 ---
 

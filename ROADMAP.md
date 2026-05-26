@@ -24,6 +24,8 @@ Completed items age out after ~4 weeks.
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
+- **SessionStart git fetch hook** — add `git fetch --quiet` to `SessionStart` in `~/.claude/settings.json` so remote tracking state is never stale at session open
+
 - **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
 
 - **Review-queue triage workflow** — skill exists; wire into regular session rhythm

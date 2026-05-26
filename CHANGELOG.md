@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-05-26 — pulled 40 commits, linked new skills, dropped orphaned stash
+
+### Changed
+- Pulled `origin/main` (40 commits behind, May 22–25 work) via fast-forward
+- Ran `install-reliability.sh`: symlinked discipline hooks (`edit-surface-guard.sh`, `grep-guard.sh`, `unpushed-warn.sh`) and linked 6 new global skills (`session-end-checklist`, `session-status-briefing`, `mempalace-repair-mine-interference`, `mempalace-wing-failure-stale-server-state`, `polling-bot-age-filter-fix`, `telegram-inline-button-promote`)
+
+### Removed
+- Dropped stale `stash@{0}` containing undocumented `graphviz>=0.21` and `matplotlib>=3.10.9` additions to `pyproject.toml` — no commit message, no HANDOFF mention, provenance unknown
+
+### Gap identified
+- `git status` without prior `git fetch` gave a false "up to date" report; need `SessionStart` hook to auto-fetch
+
+---
+
 ## 2026-05-25 — unpushed-warn Stop hook + push status in session-end-checklist
 
 ### Added
