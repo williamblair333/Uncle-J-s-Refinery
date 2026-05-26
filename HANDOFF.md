@@ -8,6 +8,16 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state (2026-05-26)
 
+### Skills promoted to global this session
+
+4 skills from the dma64 machine promoted to `global-skills/` and committed — will auto-symlink on next `install-reliability.sh` run on any machine:
+- `healthcheck-interactive-hints`
+- `mempalace-boot-repair-always-runs`
+- `platform-removal-cleanup`
+- `stop-hook-dedup-guard`
+
+**Note:** `pre-mortem` was NOT promoted — it remains machine-local on both machines. If you want it global, it needs a separate commit to `global-skills/`.
+
 ### Machine-local changes made this session
 
 - **`uncle-j-mempalace-repair` cron restored** — `0 4 * * * .venv/bin/mempalace repair` added back to crontab; was missing since the `@reboot --skip-if-healthy` transition. `HEALTHCHECK: fail (1)` on cron check now cleared.
