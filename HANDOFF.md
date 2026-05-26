@@ -8,6 +8,13 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state (2026-05-26)
 
+### skill-link.sh now covers global-skills/
+
+`scripts/skill-link.sh` (SessionStart async hook) now walks both `skills/` and
+`global-skills/`. Any skill promoted to `global-skills/` and pulled will be
+auto-symlinked on the next session open — no manual `install-reliability.sh` needed.
+Also upgrades flat copies to proper symlinks automatically.
+
 ### Skills promoted to global this session
 
 4 skills from the dma64 machine promoted to `global-skills/` and committed — will auto-symlink on next `install-reliability.sh` run on any machine:

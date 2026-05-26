@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-26 — skill-link.sh now walks global-skills/ on every SessionStart
+
+### Fixed
+- `scripts/skill-link.sh` — extracted loop into `link_skill_dirs()` and called it
+  for both `skills/` and `global-skills/`; now auto-symlinks all global skills on
+  every session open without needing to manually run `install-reliability.sh`
+- Upgraded bare `ln -s` to `ln -sfn` with correct-link check — flat copies left
+  behind from manual installs are now auto-upgraded to proper symlinks
+
+---
+
 ## 2026-05-26 — promote 4 machine-local skills to global
 
 ### Added
