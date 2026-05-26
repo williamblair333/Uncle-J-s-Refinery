@@ -1,11 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-26 (OpenClaw analysis, doctor+routing spec and plans)*
+*Last updated: 2026-05-26 (session housekeeping — skill link fix, FTS5 repair, pulled to main)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
-Other machine got this error in two different sessions:  Error: Unknown skill: session-end-checklist <- Investigate
+
+## Current state (2026-05-26) — housekeeping session complete
+
+### `Unknown skill: session-end-checklist` — ROOT CAUSE FOUND AND FIXED
+
+Both machines saw `Error: Unknown skill: session-end-checklist` because `install-reliability.sh`
+was not run after `git pull` brought in new `global-skills/` entries. Running it now links all 36
+skills. The `skill-link.sh` SessionStart hook should prevent this automatically — but if it recurs,
+run `bash install-reliability.sh` from `STACK_ROOT`.
+
+### Remaining from this session
+
+- **`stack-not-at-head` (X)** — packages behind HEAD. Next session: run `stack-not-at-head-remediation` skill.
+- **Stash** — `wip: session-end-2026-05-24 uncommitted changes` on the docs branch contains
+  `scripts/session-start-autofix.sh` hook wiring (new SessionStart script). Review and drop
+  or cherry-pick next session: `git stash list`.
+
+---
+
 ## Current state (2026-05-26) — doctor + routing plans ready to implement
 
 ### Two new features specced and planned — no code written yet
