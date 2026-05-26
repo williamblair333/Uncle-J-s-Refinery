@@ -1,14 +1,23 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-26 (OpenClaw analysis, doctor+routing spec and plans)*
+*Last updated: 2026-05-26 (refinery-doctor implementation complete, PR #13 open)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
-Other machine got this error in two different sessions:  Error: Unknown skill: session-end-checklist <- Investigate
-## Current state (2026-05-26) — doctor + routing plans ready to implement
+Other machine skill-link issue: `Error: Unknown skill: session-end-checklist / pre-mortem` — Fix: `bash scripts/skill-link.sh link` (needs the `link` arg; skill-link.sh is a SessionStart hook but the arg was missing). Run once per machine after fresh install.
 
-### Two new features specced and planned — no code written yet
+## Current state (2026-05-26) — Feature 1 done (PR open), Feature 2 next
+
+### Feature 1 — `scripts/refinery-doctor.sh` — DONE, PR #13 open
+
+**Branch:** `feat/refinery-doctor` (pushed, PR open at github.com/williamblair333/Uncle-J-s-Refinery/pull/13)
+
+4 checks working + verified, 54 tests passing, atomic `--fix`. Merge when ready.
+
+### Feature 2 — Telegram multi-agent routing — NEXT
+
+### Both features specced — Feature 1 done
 
 Design spec: `docs/superpowers/specs/2026-05-26-doctor-and-routing-design.md`
 
