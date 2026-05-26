@@ -24,7 +24,9 @@ Completed items age out after ~4 weeks.
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
-- **SessionStart git fetch hook** — add `git fetch --quiet` to `SessionStart` in `~/.claude/settings.json` so remote tracking state is never stale at session open
+- **Restore pre-mortem skill** — `~/.claude/skills/pre-mortem/SKILL.md` is missing on disk; `edit-surface-guard.sh` requires it but cannot invoke it; discipline system falls back to manual bypass until restored
+
+- **stack-not-at-head** — one or more git-sourced packages behind GitHub HEAD; run `stack-not-at-head-remediation` skill
 
 - **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
 
@@ -36,6 +38,8 @@ Completed items age out after ~4 weeks.
 
 | Date | Item |
 |------|------|
+| 2026-05-26 | `SessionStart` git fetch hook — async `git fetch --quiet` wired in `~/.claude/settings.json`; remote tracking state no longer stale at session open |
+| 2026-05-26 | `uncle-j-mempalace-repair` cron restored — 4am nightly `mempalace repair` re-added to crontab; was dropped during `@reboot --skip-if-healthy` transition |
 | 2026-05-25 | Blocking discipline hooks wired — `edit-surface-guard.sh` (pre-mortem gate on surface-list edits) and `grep-guard.sh` (routes `grep -r` to jcodemunch); `install-reliability.sh` now installs them on fresh machine |
 | 2026-05-25 | `@reboot` repair made conditional (`--skip-if-healthy`); repair output now streams live |
 | 2026-05-25 | MemPalace dict-format pickle root cause found — migrated `f89df21a` to `PersistentData`; fixed FTS5; fixed `mempalace-health.py` live query; added SessionStart health check hook |

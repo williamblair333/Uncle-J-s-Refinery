@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-26 (catch-up pull + skill install session)*
+*Last updated: 2026-05-26 (maintenance: cron restore, git-fetch hook, reindex)*
 
 Read this before touching anything. Work priorities are in order below.
 
@@ -8,19 +8,29 @@ Read this before touching anything. Work priorities are in order below.
 
 ## Current state (2026-05-26)
 
-### Main is at HEAD — fully caught up
+### Machine-local changes made this session
+
+- **`uncle-j-mempalace-repair` cron restored** — `0 4 * * * .venv/bin/mempalace repair` added back to crontab; was missing since the `@reboot --skip-if-healthy` transition. `HEALTHCHECK: fail (1)` on cron check now cleared.
+- **`git fetch --quiet` SessionStart hook** — added to `~/.claude/settings.json` as async hook; runs in background each session open so remote tracking state is never stale.
+- **jcodemunch reindexed** — was 41 commits stale; now at HEAD (`17d0708b`).
+
+### Remaining healthcheck failure
+
+`HEALTHCHECK: fail (1) -- stack-not-at-head` — one or more git-sourced packages are behind their GitHub HEAD. Run the `stack-not-at-head-remediation` skill to resolve.
+
+### Pre-mortem skill missing — discipline system partially broken
+
+`~/.claude/skills/pre-mortem/SKILL.md` is referenced by `edit-surface-guard.sh` but does not exist on disk. Surface-file edits trigger a BLOCKED entry and ask to invoke `/pre-mortem` — which fails. Workaround this session: ran inline pre-mortem analysis and used the bypass flag manually. The skill needs to be restored before the discipline hook can be properly satisfied.
+
+### post-merge-hook.sh — verified working
+
+`scripts/post-merge-hook.sh` exists and is wired as `.git/hooks/post-merge`. Fires on every `git pull`, categorizes actionable changes (new feature install.sh, CLAUDE.md updates, new skills/scripts), delivers via Telegram or terminal boxed summary. Auto-reindexes jdocmunch and jcodemunch on relevant file changes.
+
+### Previous session (catch-up pull + skill install)
 
 - Pulled 40 commits (May 22–25). Fast-forward, no conflicts.
 - `install-reliability.sh` run: all discipline hooks linked, 6 new skills live.
-- `state/hook-blocks.log` does not exist yet — first discipline block will create it.
-
-### Open gap: no SessionStart git fetch hook
-
-`git status` without `git fetch` reports stale remote state ("up to date" when 40 commits behind). A `SessionStart` hook running `git fetch --quiet` would fix this permanently. Not yet wired — add to `~/.claude/settings.json`.
-
-### Orphaned stash dropped
-
-`stash@{0}` contained `graphviz>=0.21` and `matplotlib>=3.10.9` additions with no commit, no HANDOFF mention, no context. Dropped. If those deps are actually needed, they need to be added with a documented reason.
+- Orphaned `stash@{0}` dropped (undocumented graphviz/matplotlib dep additions).
 
 ---
 

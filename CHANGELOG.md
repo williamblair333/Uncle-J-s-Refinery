@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-05-26 — maintenance: cron restored, git-fetch hook wired, reindex run
+
+### Fixed
+- Re-added `uncle-j-mempalace-repair` cron (`0 4 * * *` — `mempalace repair`) — was dropped during the `@reboot --skip-if-healthy` transition; `HEALTHCHECK: fail` cron check now passes
+- jcodemunch index reindexed — was 41 commits stale at session open; now at HEAD (`17d0708b`)
+
+### Added
+- `git fetch --quiet` async `SessionStart` hook in `~/.claude/settings.json` — runs in background each session open; closes the stale remote-state gap identified in the previous session
+
+### Noted
+- `pre-mortem` skill (`~/.claude/skills/pre-mortem/SKILL.md`) referenced by `edit-surface-guard.sh` does not exist on disk; hook blocked then bypassed via inline pre-mortem analysis — skill needs to be restored for discipline system to function cleanly
+
+---
+
 ## 2026-05-26 — pulled 40 commits, linked new skills, dropped orphaned stash
 
 ### Changed
