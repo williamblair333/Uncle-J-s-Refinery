@@ -5,7 +5,18 @@
 Read this before touching anything. Work priorities are in order below.
 
 ---
-Other machine skill-link issue: `Error: Unknown skill: session-end-checklist / pre-mortem` — Fix: `bash scripts/skill-link.sh link` (needs the `link` arg; skill-link.sh is a SessionStart hook but the arg was missing). Run once per machine after fresh install.
+
+## Current state (2026-05-26) — Feature 1 done (PR open), Feature 2 next
+
+### `Unknown skill` fix — both machines resolved
+
+Root cause (other machine): `install-reliability.sh` not run after `git pull` brought in new `global-skills/`. Fix: `bash install-reliability.sh`.
+Root cause (this machine): `skill-link.sh` needs `link` arg — SessionStart hook was calling it without args. Fix: `bash scripts/skill-link.sh link`.
+
+### Remaining items
+
+- **`stack-not-at-head` (X)** — packages behind HEAD. Next session: run `stack-not-at-head-remediation` skill.
+- **Stash** — `wip: session-end-2026-05-24 uncommitted changes` on the docs branch contains `scripts/session-start-autofix.sh` wiring. Review and drop or cherry-pick: `git stash list`.
 
 ## Current state (2026-05-26) — Feature 1 done (PR open), Feature 2 next
 
