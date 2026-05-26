@@ -5,7 +5,7 @@
 Read this before touching anything. Work priorities are in order below.
 
 ---
-
+Other machine got this error in two different sessions:  Error: Unknown skill: session-end-checklist <- Investigate
 ## Current state (2026-05-26) — doctor + routing plans ready to implement
 
 ### Two new features specced and planned — no code written yet
