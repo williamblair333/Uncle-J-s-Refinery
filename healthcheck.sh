@@ -111,16 +111,21 @@ check_mcp_connected() {
 # ----- 3. jcodemunch at venv path (NOT uvx) --------------------------------
 check_jcodemunch_path() {
     step "jcodemunch — stack venv binary (not uvx)"
-    local output expected="$REPO_ROOT/.venv/bin/jcodemunch-mcp"
+    local output
+    local project_venv="$REPO_ROOT/.venv/bin/jcodemunch-mcp"
     output="$(claude mcp get jcodemunch 2>&1)" || {
         bad "claude mcp get jcodemunch failed"
         record_fail "jcodemunch-get"
         return
     }
-    if printf '%s\n' "$output" | grep -qF "$expected"; then
-        ok "jcodemunch -> $expected"
+    if printf '%s\n' "$output" | grep -qF "$project_venv"; then
+        ok "jcodemunch -> $project_venv"
+    elif printf '%s\n' "$output" | grep -qE "$HOME/.code-index/local-.+/jcodemunch-mcp"; then
+        local actual_path
+        actual_path=$(printf '%s\n' "$output" | grep -oE "[^ ]+jcodemunch-mcp" | head -1)
+        ok "jcodemunch -> $actual_path (code-index venv — updated by reindex)"
     else
-        bad "jcodemunch not at venv path — likely a stale local-scope registration"
+        bad "jcodemunch not at a known venv path — may be uvx or stale local-scope registration"
         hint "run: claude mcp remove jcodemunch -s local ; claude mcp remove jcodemunch -s project"
         record_fail "jcodemunch-wrong-scope"
     fi
