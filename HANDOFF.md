@@ -30,6 +30,10 @@ Also upgrades flat copies to proper symlinks automatically.
 - **`git fetch --quiet` SessionStart hook** — added to `~/.claude/settings.json` as async hook; runs in background each session open so remote tracking state is never stale.
 - **jcodemunch reindexed** — was 41 commits stale; now at HEAD (`17d0708b`).
 
+### Open PRs
+
+- **PR #9** (`fix/skill-link-global-coverage`) — `skill-link.sh` walks `global-skills/` on every SessionStart. Ready to merge.
+
 ### Healthcheck — all clear
 
 `HEALTHCHECK: ok` expected on next session start. All issues from previous session resolved:
