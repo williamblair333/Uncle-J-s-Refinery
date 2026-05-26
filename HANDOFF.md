@@ -1,11 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-26 (OpenClaw analysis, doctor+routing spec and plans)*
+*Last updated: 2026-05-26 (session-start-autofix hook, FTS5 skill, skill link fix)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
-Other machine got this error in two different sessions:  Error: Unknown skill: session-end-checklist <- Investigate
+
+## Current state (2026-05-26) — session-start-autofix live
+
+### SessionStart hook now auto-fixes common startup failures
+
+`scripts/session-start-autofix.sh` fires on every session open:
+1. Detects and rebuilds FTS5 corruption (was manual this session — now automatic)
+2. Reindexes jcodemunch when stale (was manual — now automatic)
+3. Async-upgrades stack packages when `stack-not-at-head` detected (background, disown'd)
+
+**`Unknown skill: session-end-checklist` — RESOLVED**: root cause was `install-reliability.sh`
+not run after pull; `skill-link.sh` SessionStart hook auto-links now. All 36 global-skills
+linked. Run `bash install-reliability.sh` on any new machine after first pull.
+
+**Remaining**: `stack-not-at-head` (X) — async upgrade queued by session-start-autofix;
+confirm resolved next session with `healthcheck.sh --quick`.
+
+---
+
 ## Current state (2026-05-26) — doctor + routing plans ready to implement
 
 ### Two new features specced and planned — no code written yet

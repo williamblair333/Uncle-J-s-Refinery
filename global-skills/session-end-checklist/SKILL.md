@@ -95,7 +95,7 @@ mempalace diary write   # snapshot this session to MemPalace
 If a check fails and `on_failure: warn`, log the failure and continue.
 If `on_failure: block`, stop and report.
 
-### Step 8 — Commit and push status
+### Step 8 — Commit, push, and integrate
 
 Once all mandatory docs are staged and consider docs are addressed:
 
@@ -106,17 +106,31 @@ git commit -m "..."     # commit with descriptive message
 
 The pre-commit hook will now pass.
 
-After committing, check for unpushed commits and report status:
+After committing, push the branch so the session's work is backed up remotely:
 
 ```bash
-git log @{u}..HEAD --oneline 2>/dev/null | wc -l
+git push -u origin HEAD
 ```
 
-- **0** → "Branch is up to date with remote."
-- **N > 0** → "N commits ahead of remote — push when ready: `git push`"
+If the push fails (no remote auth), report the error and the manual command. Do not retry.
 
-**Do NOT auto-push.** Report the count and let the user decide. The Stop hook
-will also warn at session exit if commits remain unpushed.
+After pushing, check which branch you're on:
+
+- **On `main`** → done. Report "Pushed to main."
+- **On a feature or docs branch** → offer two options and ask the user:
+
+  **Option A — Create PR** (recommended when any code changed):
+  ```bash
+  gh pr create --base main --fill
+  ```
+  Report the PR URL after creation.
+
+  **Option B — Merge to main directly** (for docs-only or small sessions):
+  ```bash
+  git checkout main && git merge --no-ff <branch> && git push && git checkout -
+  ```
+
+Default recommendation: PR if any `.sh`, `.py`, or config files changed; direct merge if docs-only. If the user says "just do it" without specifying, default to PR.
 
 ## Notes
 
