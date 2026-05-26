@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-05-26 — OpenClaw competitive analysis + doctor+routing spec and plans
+
+### Added
+- `docs/superpowers/specs/2026-05-26-doctor-and-routing-design.md` — approved design
+  spec for two new features:
+  1. `scripts/refinery-doctor.sh` — standalone config-schema-drift detection with dry-run
+     and `--fix` mode; 4 migration checks: `embed-model`, `jcodemunch-scope`,
+     `claude-md-sync`, `env-placeholders`; atomic `.env` writes (tmp+mv)
+  2. Telegram multi-agent routing — prefix-based dispatch via
+     `config/telegram-agents.toml`; `/work` prefix → project agent (PROJ_ROOT, CLAUDE.md);
+     no-prefix → restricted default agent (/tmp, TELEGRAM_SYSTEM_RESTRICTION)
+- `docs/superpowers/plans/2026-05-26-refinery-doctor.sh.md` — 7-task TDD implementation
+  plan for `scripts/refinery-doctor.sh`
+- `docs/superpowers/plans/2026-05-26-telegram-agent-routing.md` — 5-task implementation
+  plan for `config/telegram-agents.toml` + routing layer in `telegram-gateway-poll.sh`
+
+### Analysis
+- OpenClaw competitive analysis completed (TypeScript, 52K commits, ClawHub marketplace,
+  Docker sandboxing, `openclaw doctor --fix` pattern); 3 features identified as worth
+  borrowing. Feature 3 (Docker-sandboxed Telegram sessions) deferred — credential
+  management non-trivial, gets its own session.
+
+---
+
 ## 2026-05-26 — skill-link.sh now walks global-skills/ on every SessionStart
 
 ### Fixed
