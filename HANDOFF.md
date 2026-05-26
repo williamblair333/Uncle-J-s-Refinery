@@ -15,8 +15,7 @@ Read this before touching anything. Work priorities are in order below.
 - `mempalace-boot-repair-always-runs`
 - `platform-removal-cleanup`
 - `stop-hook-dedup-guard`
-
-**Note:** `pre-mortem` was NOT promoted — it remains machine-local on both machines. If you want it global, it needs a separate commit to `global-skills/`.
+- `pre-mortem`
 
 ### Machine-local changes made this session
 

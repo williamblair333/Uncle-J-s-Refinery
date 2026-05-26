@@ -9,8 +9,9 @@
 - `global-skills/mempalace-boot-repair-always-runs/` — diagnoses `@reboot` repair loops when HNSW shows 0 elements after reboot despite healthy SQLite
 - `global-skills/platform-removal-cleanup/` — scrubs all artifacts when dropping platform support (scripts, docs, config, source branches)
 - `global-skills/stop-hook-dedup-guard/` — fixes duplicate Stop hook Telegram notifications from near-simultaneous session closes
+- `global-skills/pre-mortem/` — adversarial failure analysis (12 dimensions, WarGames escalation, CATASTROPHIC ceremony) before consequential actions
 
-All four existed as machine-local skills on the dma64 machine; promoted here so `install-reliability.sh` distributes them to all machines on next pull.
+All five existed as machine-local skills on the dma64 machine; promoted here so `install-reliability.sh` distributes them to all machines on next pull.
 
 ---
 
