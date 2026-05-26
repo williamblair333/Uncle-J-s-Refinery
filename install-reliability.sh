@@ -8,6 +8,8 @@
 #
 # Superpowers and Ralph are installed separately from within Claude Code
 # via /plugin install — see README.md step 6.
+#
+# Config drift: bash scripts/refinery-doctor.sh [--fix]
 
 set -euo pipefail
 STACK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

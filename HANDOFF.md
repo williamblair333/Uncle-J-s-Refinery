@@ -1,14 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-26 (OpenClaw analysis, doctor+routing spec and plans)*
+*Last updated: 2026-05-26 (refinery-doctor implementation complete, PR pending)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
-Other machine got this error in two different sessions:  Error: Unknown skill: session-end-checklist <- Investigate
-## Current state (2026-05-26) — doctor + routing plans ready to implement
+Other machine got this error in two different sessions:  Error: Unknown skill: session-end-checklist / pre-mortem <- Fixed on this machine via `bash scripts/skill-link.sh link`. The same fix should work on the other machine. Root cause: `skill-link.sh link` was never run after global-skills were added.
 
-### Two new features specced and planned — no code written yet
+## Current state (2026-05-26) — refinery-doctor implemented, telegram-routing next
+
+### Feature 1 — `scripts/refinery-doctor.sh` — DONE, PR pending
+
+Implementation complete on branch `feat/refinery-doctor`. All 4 checks working and verified:
+- `embed-model` — detects missing `JCODEMUNCH_EMBED_MODEL` in `.env`, fixes atomically
+- `jcodemunch-scope` — detects stale `local`/`project` MCP scope, fixes via `claude mcp remove`
+- `claude-md-sync` — sha256 drift detection for `~/.claude/CLAUDE.md`, fixes with backup
+- `env-placeholders` — report-only, flags template values in `.env`
+
+`--fix` is safe: atomic writes (`.env.bak` + `.env.tmp` → `mv`). Exit 0 = clean.
+
+**Next action:** Create PR for `feat/refinery-doctor` (run pre-mortem first).
+
+### Feature 2 — Telegram multi-agent routing — not started
+
+### Two new features specced and planned — Feature 1 now DONE
 
 Design spec: `docs/superpowers/specs/2026-05-26-doctor-and-routing-design.md`
 
