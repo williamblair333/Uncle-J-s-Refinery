@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-05-26 — stack upgrade, pre-mortem skill restored, healthcheck path fix
+
+### Fixed
+- jcodemunch-mcp upgraded 1.108.20 → 1.108.24 (was 4 versions behind HEAD)
+- `check_jcodemunch_path()` in `healthcheck.sh` — relaxed path check to accept code-index venv path (updated by jcodemunch-reindex.sh) alongside project venv; no longer false-fails after every reindex run
+- `~/.claude/skills/pre-mortem/SKILL.md` restored — skill was missing on disk, causing edit-surface-guard to block and fail to find `/pre-mortem`; discipline system now fully operational
+- jcodemunch index reindexed to HEAD (`5462a188`) after upgrade
+
+### Unchanged
+- No new tools added to CLAUDE.md — jcodemunch_guide tool list identical to 1.108.20
+
+---
+
 ## 2026-05-26 — maintenance: cron restored, git-fetch hook wired, reindex run
 
 ### Fixed

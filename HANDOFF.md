@@ -14,13 +14,14 @@ Read this before touching anything. Work priorities are in order below.
 - **`git fetch --quiet` SessionStart hook** — added to `~/.claude/settings.json` as async hook; runs in background each session open so remote tracking state is never stale.
 - **jcodemunch reindexed** — was 41 commits stale; now at HEAD (`17d0708b`).
 
-### Remaining healthcheck failure
+### Healthcheck — all clear
 
-`HEALTHCHECK: fail (1) -- stack-not-at-head` — one or more git-sourced packages are behind their GitHub HEAD. Run the `stack-not-at-head-remediation` skill to resolve.
+`HEALTHCHECK: ok` expected on next session start. All issues from previous session resolved:
+- jcodemunch-mcp upgraded 1.108.20 → 1.108.24; index at HEAD (`5462a188`)
+- `pre-mortem` skill restored at `~/.claude/skills/pre-mortem/SKILL.md`
+- `healthcheck.sh check_jcodemunch_path()` updated to accept code-index venv path (no more false-fail after jcodemunch-reindex.sh runs)
 
-### Pre-mortem skill missing — discipline system partially broken
-
-`~/.claude/skills/pre-mortem/SKILL.md` is referenced by `edit-surface-guard.sh` but does not exist on disk. Surface-file edits trigger a BLOCKED entry and ask to invoke `/pre-mortem` — which fails. Workaround this session: ran inline pre-mortem analysis and used the bypass flag manually. The skill needs to be restored before the discipline hook can be properly satisfied.
+**Note:** After Claude Code restart the MCP server will reconnect with jcodemunch 1.108.24. Run `jcodemunch_guide` in the first session after restart to confirm the tool list is unchanged.
 
 ### post-merge-hook.sh — verified working
 
