@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-27 — Session catchup: health check + git pull to HEAD
+
+### Maintenance
+- Full health check run — all green except untracked-skills (auto-maintain will handle) and Langfuse traces API returning "Invalid credentials" (open item)
+- `git pull` fast-forwarded main by 2 commits (PR #14: fts5-guard, cron coordination, skill-link fix)
+- Confirmed `fts5-guard.sh` wired as SessionStart hook in settings.json
+
+---
+
 ## 2026-05-27 — FTS5 guard, repair/mine coordination, skill-link blocking fix
 
 ### Fixed
