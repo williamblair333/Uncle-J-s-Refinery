@@ -123,9 +123,12 @@ with open(path) as f:
     cfg = json.load(f)
 hooks = cfg.setdefault("hooks", {})
 for event, cmd in [("SessionStart", session_cmd), ("Stop", stop_cmd)]:
-    hooks.setdefault(event, []).append({
-        "hooks": [{"type": "command", "command": cmd, "async": True}]
-    })
+    # SessionStart must be blocking so skills are present before the first prompt.
+    # Stop unlink is fine async — sessions end regardless.
+    hook = {"type": "command", "command": cmd}
+    if event == "Stop":
+        hook["async"] = True
+    hooks.setdefault(event, []).append({"hooks": [hook]})
 with open(path, "w") as f:
     json.dump(cfg, f, indent=2)
     f.write("\n")

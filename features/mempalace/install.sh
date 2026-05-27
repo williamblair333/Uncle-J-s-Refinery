@@ -128,14 +128,15 @@ ok "Stop hook registered (async, fires after every session)"
 # ── cron — mine project code daily ───────────────────────────────────────────
 
 step "Registering daily cron (3am — mine)"
-CRON_ENTRY="0 3 * * * ${MEMPALACE_BIN} mine ${PROJ_ROOT} >> ${PROJ_ROOT}/state/mempalace-mine.log 2>&1"
+CRON_ENTRY="0 3 * * * nice -n 19 flock -n /tmp/mempalace-mine-project.lock env CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI ${MEMPALACE_BIN} mine ${PROJ_ROOT} >> ${PROJ_ROOT}/state/mempalace-mine.log 2>&1"
 install_cron "$MARKER_CRON" "$CRON_ENTRY"
 ok "Cron installed: 0 3 * * *"
 
 step "Registering nightly repair cron (4am — HNSW rebuild)"
-CRON_REPAIR="0 4 * * * ${MEMPALACE_BIN} repair >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
+# flock -w 7200 waits up to 2h for 3am mine crons to finish before repairing
+CRON_REPAIR="0 4 * * * flock -w 7200 /tmp/mempalace-mine-project.lock flock -w 7200 /tmp/mempalace-mine-convos.lock flock -n /tmp/mempalace-repair.lock bash ${PROJ_ROOT}/mempalace-repair-now.sh >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
 install_cron "$MARKER_CRON_REPAIR" "$CRON_REPAIR"
-ok "Cron installed: 0 4 * * *"
+ok "Cron installed: 0 4 * * * (waits for 3am mines, flock-guarded)"
 
 # ── summary ───────────────────────────────────────────────────────────────────
 

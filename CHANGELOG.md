@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-05-27 — FTS5 guard, repair/mine coordination, skill-link blocking fix
+
+### Fixed
+- **FTS5 recurring corruption** — root cause: 4am repair cron had no awareness of 3am mine
+  cron; used its own unrelated lock, aborted immediately if mine still writing. Fixed crontab
+  to use `flock -w 7200` on both mine lock files so repair waits for mines to finish before
+  running. Also added `flock -n /tmp/mempalace-repair.lock` to prevent duplicate repair instances.
+- **`features/mempalace/install.sh`** — mine cron now registers with `flock -n`, `nice -n 19`,
+  and `env CHROMA_API_IMPL=...`; repair cron now registers the coordinated `flock -w 7200` form.
+  New users and reinstalls get the correct crons automatically (no manual crontab edit needed).
+- **`Unknown skill` at session start** — skill-link.sh SessionStart hook was `async: true`,
+  so the Skill tool could be invoked before symlinking finished. Removed `async: true` to make
+  it blocking (~142ms cost, imperceptible). Fixed in both `settings.json` and
+  `features/skill-manager/install.sh` so reinstalls don't revert it.
+
+### Added
+- `scripts/fts5-guard.sh` — async SessionStart safety net; checks FTS5 integrity via venv
+  Python (correct SQLite version) and auto-rebuilds if corrupt. Wired as SessionStart hook.
+  Catches any corruption that slips past the 4am repair (e.g. if mine runs >2h).
+
+---
+
 ## 2026-05-26 — feat/refinery-doctor implementation
 
 ### Added
@@ -32,7 +54,6 @@
 
 ### Fixed
 - `.gitignore` — added `.claude/scheduled_tasks.json` and `.claude/worktrees/`
-
 ---
 
 ## 2026-05-26 — session housekeeping: pull to main, FTS5 repair, skill link fix
