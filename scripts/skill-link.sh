@@ -35,4 +35,5 @@ link_skill_dirs() {
 }
 
 link_skill_dirs "$PROJ_ROOT/skills"        "${1:-}"
-link_skill_dirs "$PROJ_ROOT/global-skills" "${1:-}"
+# Global skills are permanent (managed by install-reliability.sh) — link only, never unlink
+[[ "${1:-}" == "link" ]] && link_skill_dirs "$PROJ_ROOT/global-skills" "link"

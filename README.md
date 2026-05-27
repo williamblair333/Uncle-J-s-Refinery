@@ -258,16 +258,19 @@ Installs two custom skills:
 - `~/.claude/skills/prior-art-check/SKILL.md` — forces a MemPalace lookup at the start of every non-trivial task ("have we solved this before?")
 - `~/.claude/skills/judge/SKILL.md` — spawns a code-reviewer subagent with structural evidence before any Edit or Write lands
 
-Then, inside a Claude Code session, install the two Anthropic marketplace plugins:
+The script also auto-installs the two Anthropic marketplace plugins at user scope (available in every project, not just this one):
+
+- **Superpowers** — 20+ battle-tested skills: brainstorming with design gates, TDD enforcement, systematic debugging, requesting-code-review, and verification-before-completion
+- **Ralph Wiggum** — `/ralph-loop` for autonomous agent loops with configurable exit criteria
+
+If `claude` is not on your PATH when `install-reliability.sh` runs, install the plugins manually inside a Claude Code session:
 
 ```
 /plugin marketplace add anthropics/claude-code
-/plugin install superpowers@claude-plugins-official
-/plugin install ralph-wiggum@anthropics-claude-code
+/plugin install superpowers@claude-plugins-official --scope user
+/plugin install ralph-wiggum@claude-code-plugins --scope user
 /reload-plugins
 ```
-
-**Superpowers** adds 20+ battle-tested skills: brainstorming with design gates, TDD enforcement, systematic debugging, requesting-code-review, and verification-before-completion. **Ralph Wiggum** adds `/ralph-loop` for autonomous agent loops with configurable exit criteria.
 
 ### 7. Guardrails
 

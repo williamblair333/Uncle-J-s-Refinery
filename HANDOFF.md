@@ -1,8 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-27 (stop hook inline, verify-pr-branch skill committed)*
+*Last updated: 2026-05-27 (plugin auto-install, skill-link global-skills fix)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-27) — plugin install automated, skill-link bug fixed
+
+### install-reliability.sh now fully self-contained
+
+New users running `./install-reliability.sh` get everything including plugins:
+- `superpowers` and `ralph-wiggum` installed at `--scope user` (all projects, not just this one)
+- Marketplaces registered automatically; fallback warn message if `claude` not on PATH
+- Manual "install plugins inside Claude Code" step removed from README and "Next:" output
+
+### skill-link.sh Stop hook bug fixed
+
+Global skills (`global-skills/`) were being unlinked on session Stop, causing `session-end-checklist`, `session-status-briefing`, and others to vanish in other project directories. Fixed: Stop hook now only unlinks `skills/` (project-local); global skills are permanent.
+
+### Langfuse operational (recovered this session)
+
+`install-langfuse.sh` failed because `POSTGRES_PASSWORD` in `.env` diverged from the initialized volume after container recreation. Fixed via `ALTER USER postgres PASSWORD` inside the running container. Health endpoint returns 200. Open issue: **Langfuse traces API credential failure** still present — smoke test passes but traces API returns "Invalid credentials". Check `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` in `.env` against `http://localhost:3050` Settings → API Keys.
+
+### Next action — Feature 2: Telegram multi-agent routing
+
+Plan ready at `docs/superpowers/plans/2026-05-26-telegram-agent-routing.md` (5 tasks, branch `feat/telegram-agent-routing`).
 
 ---
 

@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-05-27 — automate plugin install, fix skill-link global-skills unlink bug
+
+### Fixed
+- **`scripts/skill-link.sh`** — Stop hook was unlinking global-skills symlinks as well as project-local ones, causing skills like `session-end-checklist` and `session-status-briefing` to vanish from `~/.claude/skills/` at session end. Global skills are now link-only (never unlinked); only `skills/` is session-scoped.
+- **`install-reliability.sh`** — wrong marketplace name `anthropics-claude-code` in "Next:" manual instructions (correct: `claude-code-plugins`). Instructions removed; step is now automated.
+- **Langfuse postgres auth** — `POSTGRES_PASSWORD` in `.env` diverged from the initialized volume after container recreation. Fixed via `ALTER USER postgres PASSWORD` inside the running container. (Not a code change — operational fix.)
+
+### Added
+- **`install-reliability.sh` — plugin auto-install** — new section registers both marketplaces (`claude-code-plugins`, `claude-plugins-official`) and installs `superpowers` and `ralph-wiggum` at `--scope user` so they work in every project, not just this one. Falls back to clear warn message if `claude` CLI not on PATH. Idempotent (checks before installing).
+
+### Changed
+- **`README.md` step 6** — manual `/plugin install` block replaced with description of auto-install; fallback manual commands retained with correct marketplace names and `--scope user`.
+- **`install-reliability.sh` "Next:" steps** — manual plugin install step removed; new install is self-contained in two steps: `./install-guardrails.sh` + optional `./install-langfuse.sh`.
+
 ## 2026-05-27 — chore: stop hook inline form, verify-pr-branch skill
 
 ### Maintenance
