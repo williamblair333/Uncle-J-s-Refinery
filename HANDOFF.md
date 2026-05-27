@@ -1,8 +1,20 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-27 (healthcheck FTS5 false positive fixed, Feature 2 next)*
+*Last updated: 2026-05-27 (install path gap fixed — new users now get full mine cron suite)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-27) — install path gap fixed, Feature 2 next
+
+### Install path now complete for new users
+
+`install.sh` → `features/mempalace/install.sh` is now wired. A fresh install delivers:
+- Mine-project cron (3am), mine-convos cron (3:03am), repair cron (4am, flock-coordinated), boot-repair (@reboot)
+- Backup + health crons now have `nice -n 19` to match production
+
+**FTS5 corruption active on this machine** — palace reports malformed FTS5 index. The 4am repair cron (now installed) will fix it tonight. If urgent: `bash mempalace-repair-now.sh`.
 
 ---
 

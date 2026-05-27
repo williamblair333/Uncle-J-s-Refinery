@@ -6,6 +6,9 @@
 #   1. Run `mempalace init` on the project (idempotent)
 #   2. Register a Stop hook — mines ~/.claude/projects/ --mode convos after every session
 #   3. Register a daily 3am cron — mines the project repo for code content
+#   4. Register a daily 3:03am cron — mines conversation history (--mode convos --wing conversations)
+#   5. Register a nightly 4am cron — HNSW rebuild (waits for mines via flock)
+#   6. Register an @reboot cron — repair after power-on if nightly crons were missed
 #
 # Usage:
 #   bash features/mempalace/install.sh [--uninstall]
@@ -19,7 +22,9 @@ MEMPALACE_BIN="$PROJ_ROOT/.venv/bin/mempalace"
 CLAUDE_PROJECTS="$HOME/.claude/projects"
 MARKER_STOP="uncle-j-mempalace-convos"
 MARKER_CRON="uncle-j-mempalace-mine"
+MARKER_CRON_CONVOS="uncle-j-mempalace-mine-convos"
 MARKER_CRON_REPAIR="uncle-j-mempalace-repair"
+MARKER_CRON_BOOT_REPAIR="uncle-j-mempalace-boot-repair"
 
 source "$PROJ_ROOT/lib/feature-helpers.sh"
 
@@ -61,9 +66,15 @@ if [[ "${1:-}" == "--uninstall" ]]; then
   step "Removing cron job ($MARKER_CRON)"
   remove_cron "$MARKER_CRON"
   ok "Cron removed"
+  step "Removing convos mine cron ($MARKER_CRON_CONVOS)"
+  remove_cron "$MARKER_CRON_CONVOS"
+  ok "Convos mine cron removed"
   step "Removing repair cron ($MARKER_CRON_REPAIR)"
   remove_cron "$MARKER_CRON_REPAIR"
   ok "Repair cron removed"
+  step "Removing boot-repair cron ($MARKER_CRON_BOOT_REPAIR)"
+  remove_cron "$MARKER_CRON_BOOT_REPAIR"
+  ok "Boot-repair cron removed"
   step "Done"
   exit 0
 fi
@@ -127,10 +138,16 @@ ok "Stop hook registered (async, fires after every session)"
 
 # ── cron — mine project code daily ───────────────────────────────────────────
 
-step "Registering daily cron (3am — mine)"
+step "Registering daily cron (3am — mine project code)"
 CRON_ENTRY="0 3 * * * nice -n 19 flock -n /tmp/mempalace-mine-project.lock env CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI ${MEMPALACE_BIN} mine ${PROJ_ROOT} >> ${PROJ_ROOT}/state/mempalace-mine.log 2>&1"
 install_cron "$MARKER_CRON" "$CRON_ENTRY"
-ok "Cron installed: 0 3 * * *"
+ok "Cron installed: 0 3 * * * (project code)"
+
+step "Registering daily cron (3:03am — mine conversations)"
+# flock -n skips if stop-hook mine is still running; same lock namespace
+CRON_CONVOS="3 3 * * * nice -n 19 flock -n /tmp/mempalace-mine-convos.lock env CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI ${MEMPALACE_BIN} mine ${CLAUDE_PROJECTS} --mode convos --wing conversations >> ${PROJ_ROOT}/state/mempalace-mine.log 2>&1"
+install_cron "$MARKER_CRON_CONVOS" "$CRON_CONVOS"
+ok "Cron installed: 3 3 * * * (conversations)"
 
 step "Registering nightly repair cron (4am — HNSW rebuild)"
 # flock -w 7200 waits up to 2h for 3am mine crons to finish before repairing
@@ -138,15 +155,23 @@ CRON_REPAIR="0 4 * * * flock -w 7200 /tmp/mempalace-mine-project.lock flock -w 7
 install_cron "$MARKER_CRON_REPAIR" "$CRON_REPAIR"
 ok "Cron installed: 0 4 * * * (waits for 3am mines, flock-guarded)"
 
+step "Registering @reboot boot-repair cron"
+# Runs repair after power-on in case 3am/4am crons were missed; --skip-if-healthy is a no-op if palace is clean
+CRON_BOOT_REPAIR="@reboot sleep 120 && flock -n /tmp/mempalace-repair.lock bash ${PROJ_ROOT}/mempalace-repair-now.sh --skip-if-healthy >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
+install_cron "$MARKER_CRON_BOOT_REPAIR" "$CRON_BOOT_REPAIR"
+ok "Cron installed: @reboot (skip-if-healthy)"
+
 # ── summary ───────────────────────────────────────────────────────────────────
 
 step "Done"
 printf '\n'
 printf '  Project indexed:  %s\n' "$PROJ_ROOT"
 printf '  Sessions indexed: %s\n' "$CLAUDE_PROJECTS"
-printf '  Stop hook:        mines convos after every session\n'
-printf '  Daily cron (mine):     3am — re-mines project code\n'
-printf '  Nightly cron (repair): 4am — rebuilds HNSW index from SQLite\n'
+printf '  Stop hook:             mines convos after every session\n'
+printf '  Daily cron (mine):     3am    — re-mines project code\n'
+printf '  Daily cron (convos):   3:03am — re-mines conversation history\n'
+printf '  Nightly cron (repair): 4am    — rebuilds HNSW (waits for mines)\n'
+printf '  Boot cron (repair):    @reboot — repair if nightly crons were missed\n'
 printf '\n'
 printf '  To uninstall: bash %s/install.sh --uninstall\n' "$SCRIPT_DIR"
 printf '\n'
