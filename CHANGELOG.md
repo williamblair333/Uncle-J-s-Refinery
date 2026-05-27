@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-05-27 — install.sh: add mempalace mine crons to new-user install path
+
+### Fixed
+- **New-user install gap** — `install.sh` installed MemPalace Python package and backup/health
+  crons but never called `features/mempalace/install.sh`, leaving the palace permanently empty
+  for fresh installs. Added section 5c2 that calls the feature installer automatically.
+- **`features/mempalace/install.sh`** — added `mine-convos` (3:03am) and `boot-repair`
+  (@reboot) cron entries with proper `install_cron` markers so they survive re-installs.
+  Previously these were manually applied on the dma64 machine only.
+- **`install.sh` backup/health crons** — added `nice -n 19` to match the running production
+  configuration on dma64.
+
+---
+
 ## 2026-05-27 — healthcheck FTS5 check: use venv Python to fix sqlite3 version false positive
 
 ### Fixed

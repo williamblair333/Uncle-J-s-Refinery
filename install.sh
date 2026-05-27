@@ -283,8 +283,8 @@ PY
 step "Setting up MemPalace backup + health-check cron jobs"
 mkdir -p "$STACK_ROOT/state"
 for entry in \
-    "uncle-j-mempalace-backup|0 */6 * * * bash $STACK_ROOT/mempalace-backup.sh >> $STACK_ROOT/state/mempalace-backup.log 2>&1" \
-    "uncle-j-mempalace-health|0 8 * * * $STACK_ROOT/.venv/bin/python $STACK_ROOT/mempalace-health.py >> $STACK_ROOT/state/mempalace-health.log 2>&1" \
+    "uncle-j-mempalace-backup|0 */6 * * * nice -n 19 bash $STACK_ROOT/mempalace-backup.sh >> $STACK_ROOT/state/mempalace-backup.log 2>&1" \
+    "uncle-j-mempalace-health|0 8 * * * nice -n 19 $STACK_ROOT/.venv/bin/python $STACK_ROOT/mempalace-health.py >> $STACK_ROOT/state/mempalace-health.log 2>&1" \
     "uncle-j-jcodemunch-reindex|0 1 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin bash $STACK_ROOT/scripts/jcodemunch-reindex.sh >> $STACK_ROOT/state/jcodemunch-reindex.log 2>&1" \
     "uncle-j-auto-maintain|0 3 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin CLAUDE_BIN=/home/bill/.local/bin/claude bash $STACK_ROOT/scripts/auto-maintain.sh >> $STACK_ROOT/state/auto-maintain.log 2>&1" \
     "uncle-j-healthcheck-notify|0 7 * * * bash $STACK_ROOT/scripts/healthcheck-notify.sh >> $STACK_ROOT/state/healthcheck-notify.log 2>&1"
@@ -294,6 +294,10 @@ do
     install_cron "$tag" "$line"
     ok "cron registered: $tag"
 done
+
+# --- 5c2. MemPalace mine crons (project code, conversations, repair, boot) ---
+step "Setting up MemPalace mine + repair crons"
+bash "$STACK_ROOT/features/mempalace/install.sh"
 
 # --- 5d. Skills (reliability layer) ----------------------------------------
 step "Installing global skills (reliability layer)"
