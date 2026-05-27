@@ -1,8 +1,20 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-27 (PR #14 merged, HNSW repaired, Feature 2 next)*
+*Last updated: 2026-05-27 (healthcheck FTS5 false positive fixed, Feature 2 next)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-27) — healthcheck FTS5 false positive fixed, Feature 2 next
+
+### Healthcheck — now fully green
+
+`HEALTHCHECK: ok` — both previous failures cleared:
+- **`mempalace-sqlite` false positive** — `healthcheck.sh` was using system `sqlite3` 3.46.1
+  to validate FTS5 indexes written by Python's sqlite3 3.50.4. Fixed to use venv Python
+  with fallback guard. PR #15.
+- **`stack-not-at-head`** — `uv.lock` updated; jcodemunch and mempalace at today's HEAD.
 
 ---
 
