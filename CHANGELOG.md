@@ -14,6 +14,51 @@
 
 ---
 
+## 2026-05-26 — session-start-autofix hook + FTS5 skill + gitignore
+
+### Added
+- `scripts/session-start-autofix.sh` — SessionStart hook that auto-repairs FTS5 corruption,
+  reindexes jcodemunch when stale, and async-upgrades stack packages behind HEAD; replaces
+  manual `healthcheck.sh --quick` approach; logs to `state/session-start-autofix.log`
+- `global-skills/mempalace-fts5-malformed-index-repair/` — new skill for FTS5 malformed
+  inverted index repair; distinct from HNSW corruption and 0-elements-after-reboot
+
+### Changed
+- `.claude/settings.json` — SessionStart hook now runs `session-start-autofix.sh`
+  (timeout 60 s, "Health check + auto-fix..." message) instead of bare healthcheck
+- `global-skills/session-end-checklist/SKILL.md` — Step 8 improved: auto-push after
+  commit; offer PR vs direct-merge options based on what changed
+- `uv.lock` — jcodemunch-mcp 1.108.24 → 1.108.25
+
+### Fixed
+- `.gitignore` — added `.claude/scheduled_tasks.json` and `.claude/worktrees/`
+
+---
+
+## 2026-05-26 — session housekeeping: pull to main, FTS5 repair, skill link fix
+
+### Fixed
+- FTS5 malformed inverted index — rebuilt via `sqlite3 INSERT INTO embedding_fulltext_search`
+  (~1.6 GB DB, ~2 min rebuild); `HEALTHCHECK: ok` confirmed post-repair
+- Stale mine lock cleared (`state/mempalace-mine-convos.lock`, 106 709 s old)
+- 22 global-skills missing from `~/.claude/skills/` — `install-reliability.sh` had not been
+  run after the pull that added them; re-running on main linked all 36 skills
+- Root cause of `Unknown skill: session-end-checklist` confirmed (seen on both machines):
+  `install-reliability.sh` must be run after any `git pull` that adds new `global-skills/`
+  entries; `skill-link.sh` SessionStart hook should prevent recurrence automatically
+
+### Changed
+- Switched from stale `docs/session-end-2026-05-24` to `main` — fast-forwarded 33 commits;
+  WIP stashed as `wip: session-end-2026-05-24 uncommitted changes`
+- jcodemunch index advanced to HEAD (`68846f0`) via `scripts/jcodemunch-reindex.sh`
+
+### Remaining
+- `stack-not-at-head` (X) — packages behind HEAD; run `stack-not-at-head-remediation` skill
+- Stash `wip: session-end-2026-05-24 uncommitted changes` contains `scripts/session-start-autofix.sh`
+  hook wiring — review and drop or apply next session
+
+---
+
 ## 2026-05-26 — OpenClaw competitive analysis + doctor+routing spec and plans
 
 ### Added

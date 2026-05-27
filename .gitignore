@@ -82,6 +82,8 @@ $RECYCLE.BIN/
 
 # ── Claude Code project-local overrides (should stay local) ─────────────
 .claude/settings.local.json
+.claude/scheduled_tasks.json
+.claude/worktrees/
 
 # ── Node (from any npm-installed MCP server experiments) ────────────────
 node_modules/
