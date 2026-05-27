@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-27 — chore: stop hook inline form, verify-pr-branch skill
+
+### Maintenance
+- **`settings.json`** — mempalace install re-registered the stop hook with the inline
+  `mempalace mine` command (canonical form written by the install script) instead of the
+  `mempalace-mine-convos.sh` wrapper. Functionally equivalent; marker preserved.
+- **`global-skills/verify-pr-branch-before-resolve/SKILL.md`** — committed untracked skill
+  for verifying correct branch before merge-conflict resolution.
+
+---
+
 ## 2026-05-27 — install.sh: add mempalace mine crons to new-user install path
 
 ### Fixed

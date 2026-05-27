@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-27 (install path gap fixed — new users now get full mine cron suite)*
+*Last updated: 2026-05-27 (stop hook inline, verify-pr-branch skill committed)*
 
 Read this before touching anything. Work priorities are in order below.
 

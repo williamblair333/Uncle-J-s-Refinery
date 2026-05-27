@@ -77,7 +77,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/mempalace-mine-convos.sh  # uncle-j-mempalace-convos",
+            "command": "/opt/proj/Uncle-J-s-Refinery/.venv/bin/mempalace mine /home/bill/.claude/projects --mode convos < /dev/null  # uncle-j-mempalace-convos",
             "async": true
           }
         ]
