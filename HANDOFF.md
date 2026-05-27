@@ -6,43 +6,19 @@ Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-05-26) — session-start-autofix live
-
-### SessionStart hook now auto-fixes common startup failures
-
-`scripts/session-start-autofix.sh` fires on every session open:
-1. Detects and rebuilds FTS5 corruption (was manual this session — now automatic)
-2. Reindexes jcodemunch when stale (was manual — now automatic)
-3. Async-upgrades stack packages when `stack-not-at-head` detected (background, disown'd)
-
-**`Unknown skill: session-end-checklist` — RESOLVED**: root cause was `install-reliability.sh`
-not run after pull; `skill-link.sh` SessionStart hook auto-links now. All 36 global-skills
-linked. Run `bash install-reliability.sh` on any new machine after first pull.
-
-**Remaining**: `stack-not-at-head` (X) — async upgrade queued by session-start-autofix;
-confirm resolved next session with `healthcheck.sh --quick`.
-
----
-
-## Current state (2026-05-26) — Feature 1 done (PR open), Feature 2 next
-
-### `Unknown skill` fix — both machines resolved
-
-Root cause (other machine): `install-reliability.sh` not run after `git pull` brought in new `global-skills/`. Fix: `bash install-reliability.sh`.
-Root cause (this machine): `skill-link.sh` needs `link` arg — SessionStart hook was calling it without args. Fix: `bash scripts/skill-link.sh link`.
-
-### Remaining items
-
-- **`stack-not-at-head` (X)** — packages behind HEAD. Next session: run `stack-not-at-head-remediation` skill.
-- **Stash** — `wip: session-end-2026-05-24 uncommitted changes` on the docs branch contains `scripts/session-start-autofix.sh` wiring. Review and drop or cherry-pick: `git stash list`.
-
-## Current state (2026-05-26) — Feature 1 done (PR open), Feature 2 next
+## Current state (2026-05-26) — refinery-doctor implemented, PR #13 open
 
 ### Feature 1 — `scripts/refinery-doctor.sh` — DONE, PR #13 open
 
 **Branch:** `feat/refinery-doctor` (pushed, PR open at github.com/williamblair333/Uncle-J-s-Refinery/pull/13)
 
-4 checks working + verified, 54 tests passing, atomic `--fix`. Merge when ready.
+Implementation complete. All 4 checks working and verified:
+- `embed-model` — detects missing `JCODEMUNCH_EMBED_MODEL` in `.env`, fixes atomically
+- `jcodemunch-scope` — detects stale `local`/`project` MCP scope, fixes via `claude mcp remove`
+- `claude-md-sync` — sha256 drift detection for `~/.claude/CLAUDE.md`, fixes with backup
+- `env-placeholders` — report-only, flags template values in `.env`
+
+54 tests passing, atomic `--fix` (`.env.bak` + `.env.tmp` → `mv`). Exit 0 = clean. Merge when ready.
 
 ### Feature 2 — Telegram multi-agent routing — NEXT
 

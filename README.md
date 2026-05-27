@@ -633,6 +633,19 @@ Automated invocation:
 - **SessionStart hook** — `healthcheck.sh --quick` runs at the start of every Claude Code session. Banner prints as a system-reminder at session open; no-ops silently when you open a session outside this repo.
 - **`/health` slash command** — runs `healthcheck.sh --full` on demand mid-session.
 
+### Config drift check
+
+`refinery-doctor.sh` detects config schema drift — env key renames, stale MCP scopes, `~/.claude/CLAUDE.md` out of sync, and unfilled template values. Distinct from `healthcheck.sh` (runtime health) — doctor checks migration state.
+
+```bash
+bash scripts/refinery-doctor.sh            # dry-run: report only
+bash scripts/refinery-doctor.sh --fix      # apply auto-fixable migrations
+bash scripts/refinery-doctor.sh --check embed-model  # single check
+```
+
+Final stdout line is machine-parseable: `DOCTOR: ok` or `DOCTOR: N migration(s) available`.
+`--fix` writes atomically (`.env.bak` + `.env.tmp` → `mv`). Exit 0 = clean, exit 1 = pending.
+
 ---
 
 ## Troubleshooting

@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-26 — feat/refinery-doctor implementation
+
+### Added
+- `scripts/refinery-doctor.sh` — standalone config-drift detection and repair script
+  - 4 checks: `embed-model`, `jcodemunch-scope`, `claude-md-sync`, `env-placeholders`
+  - `--fix` mode with atomic `.env` writes (`.env.bak` + `.env.tmp` → `mv`)
+  - `--check <name>` for single-check mode; `--help` from script header
+  - Exit 0 = clean, exit 1 = pending migrations
+- `install-reliability.sh` — added `# Config drift: bash scripts/refinery-doctor.sh [--fix]` to header
+
+---
+
 ## 2026-05-26 — session-start-autofix hook + FTS5 skill + gitignore
 
 ### Added
