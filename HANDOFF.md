@@ -1,8 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-26 (refinery-doctor implementation complete, PR #13 open)*
+*Last updated: 2026-05-27 (FTS5 guard + repair coordination + skill-link blocking fix, PR #14 open)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-27) — infrastructure fixes done (PR #14 open), Feature 2 next
+
+### FTS5 / repair coordination / skill-link fixes — DONE, PR #14 open
+
+**Branch:** `fix/fts5-guard-repair-coordination`
+
+Three issues fixed:
+1. **FTS5 recurring corruption** — 4am repair now waits for 3am mine locks via `flock -w 7200`
+2. **`scripts/fts5-guard.sh`** — async SessionStart safety net; auto-repairs FTS5 if still corrupt
+3. **skill-link async race** — SessionStart hook now blocking; fixed in settings.json + install.sh
+
+⚠️ **Machine-local crontab change required** (not in repo — apply manually):
+```bash
+# Replace the uncle-j-mempalace-repair cron entry with:
+# 0 4 * * * flock -w 7200 /tmp/mempalace-mine-project.lock flock -w 7200 /tmp/mempalace-mine-convos.lock flock -n /tmp/mempalace-repair.lock bash /opt/proj/Uncle-J-s-Refinery/mempalace-repair-now.sh >> /opt/proj/Uncle-J-s-Refinery/state/mempalace-repair.log 2>&1
+```
+
+### PR #13 — refinery-doctor — MERGED ✓
+
+(HANDOFF previously said "open" — confirmed merged via git log)
 
 ---
 

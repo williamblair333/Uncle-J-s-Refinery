@@ -88,8 +88,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh link  # uncle-j-skill-manager-session",
-            "async": true
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh link  # uncle-j-skill-manager-session"
           }
         ]
       },
@@ -110,6 +109,15 @@
             "command": "CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI bash /opt/proj/Uncle-J-s-Refinery/healthcheck.sh --quick 2>&1 | tail -5",
             "timeout": 30,
             "statusMessage": "Health check..."
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/fts5-guard.sh  # uncle-j-fts5-guard",
+            "async": true
           }
         ]
       }
