@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-05-26 — session-start-autofix hook + FTS5 skill + gitignore
+
+### Added
+- `scripts/session-start-autofix.sh` — SessionStart hook that auto-repairs FTS5 corruption,
+  reindexes jcodemunch when stale, and async-upgrades stack packages behind HEAD; replaces
+  manual `healthcheck.sh --quick` approach; logs to `state/session-start-autofix.log`
+- `global-skills/mempalace-fts5-malformed-index-repair/` — new skill for FTS5 malformed
+  inverted index repair; distinct from HNSW corruption and 0-elements-after-reboot
+
+### Changed
+- `.claude/settings.json` — SessionStart hook now runs `session-start-autofix.sh`
+  (timeout 60 s, "Health check + auto-fix..." message) instead of bare healthcheck
+- `global-skills/session-end-checklist/SKILL.md` — Step 8 improved: auto-push after
+  commit; offer PR vs direct-merge options based on what changed
+- `uv.lock` — jcodemunch-mcp 1.108.24 → 1.108.25
+
+### Fixed
+- `.gitignore` — added `.claude/scheduled_tasks.json` and `.claude/worktrees/`
+
+---
+
 ## 2026-05-26 — session housekeeping: pull to main, FTS5 repair, skill link fix
 
 ### Fixed
