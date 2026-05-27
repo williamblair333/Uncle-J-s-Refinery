@@ -1,24 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-27 (FTS5 guard + repair coordination + skill-link blocking fix, PR #14 open)*
+*Last updated: 2026-05-27 (PR #14 merged, HNSW repaired, Feature 2 next)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-05-27) — infrastructure fixes done (PR #14 open), Feature 2 next
+## Current state (2026-05-27) — PR #14 merged, Feature 2 next
 
-### FTS5 / repair coordination / skill-link fixes — DONE, PR #14 open
+### Next action — Feature 2: Telegram multi-agent routing
 
-**Branch:** `fix/fts5-guard-repair-coordination`
+Plan ready at `docs/superpowers/plans/2026-05-26-telegram-agent-routing.md` (5 tasks).
 
-Three issues fixed:
-1. **FTS5 recurring corruption** — 4am repair now waits for 3am mine locks via `flock -w 7200`
+### Infrastructure fixes — MERGED ✓ (PR #14)
+
+1. **FTS5 recurring corruption** — 4am repair waits for 3am mine locks via `flock -w 7200`
 2. **`scripts/fts5-guard.sh`** — async SessionStart safety net; auto-repairs FTS5 if still corrupt
 3. **skill-link async race** — SessionStart hook now blocking; fixed in settings.json + install.sh
-4. **`features/mempalace/install.sh`** — mine + repair crons now register with full lock coordination; new users get correct crons automatically via `bash features/mempalace/install.sh`
+4. **`features/mempalace/install.sh`** — mine + repair crons register with full lock coordination automatically
 
 Other machines: `git pull && bash features/mempalace/install.sh` to pick up the updated crons.
+
+### MemPalace — HNSW healthy
+
+Rebuilt this session: 294,397 elements. `embeddings_queue` compactor lag (~44K) is normal post-repair — clears on next mine run.
 
 ### PR #13 — refinery-doctor — MERGED ✓
 
