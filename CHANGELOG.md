@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-05-27 — healthcheck FTS5 check: use venv Python to fix sqlite3 version false positive
+
+### Fixed
+- **`healthcheck.sh` `check_mempalace()` false positive** — system `sqlite3` 3.46.1 reports
+  FTS5 indexes written by Python's sqlite3 3.50.4 as malformed on every session start.
+  Switched to venv Python for the FTS5 `integrity-check` command, with fallback to system
+  binary when venv is absent. Also updated repair hint to use venv Python.
+- **`stack-not-at-head`** — updated `uv.lock` with jcodemunch 1.108.25 and mempalace 3.3.6
+  at today's HEAD, clearing the remaining healthcheck failure.
+
+---
+
 ## 2026-05-27 — Session catchup: health check + git pull to HEAD
 
 ### Maintenance

@@ -1,16 +1,28 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-27 (catchup session — pulled PR #14, Langfuse traces API issue open)*
+*Last updated: 2026-05-27 (healthcheck FTS5 false positive fixed, Feature 2 next)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-05-27) — Pulled to HEAD, Feature 2 next
+## Current state (2026-05-27) — healthcheck FTS5 false positive fixed, Feature 2 next
+
+### Healthcheck — now fully green
+
+`HEALTHCHECK: ok` — both previous failures cleared:
+- **`mempalace-sqlite` false positive** — `healthcheck.sh` was using system `sqlite3` 3.46.1
+  to validate FTS5 indexes written by Python's sqlite3 3.50.4. Fixed to use venv Python
+  with fallback guard. PR #15.
+- **`stack-not-at-head`** — `uv.lock` updated; jcodemunch and mempalace at today's HEAD.
 
 ### Open issue — Langfuse traces API credential failure
 
-Health check reports: `trace API returned no trace (got: {"message":"Invalid credentials. Confirm that you've configured the correct host...})`. Smoke test (stop hook → langfuse_hook.log) passes fine; this is isolated to the traces API endpoint. Check `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` in `.env`.
+Health check reports: `Invalid credentials` on traces API endpoint. Smoke test (stop hook → `langfuse_hook.log`) passes fine — isolated to traces API. Check `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` in `.env`.
+
+---
+
+## Current state (2026-05-27) — PR #14 merged, Feature 2 next
 
 ### Next action — Feature 2: Telegram multi-agent routing
 

@@ -324,12 +324,33 @@ check_mempalace() {
         return
     fi
     local result
-    result="$(sqlite3 "$db" 'PRAGMA integrity_check;' 2>&1)"
+    local py="$REPO_ROOT/.venv/bin/python3"
+    if [ -x "$py" ]; then
+        # Use venv Python — avoids SQLite 3.46 vs 3.50 version mismatch where
+        # the system binary reports FTS5 indexes written by Python as malformed.
+        result="$("$py" - "$db" <<'PYEOF' 2>&1
+import sqlite3, sys
+db = sys.argv[1]
+try:
+    c = sqlite3.connect(db)
+    c.execute("INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('integrity-check')")
+    c.commit()
+    c.close()
+    print("ok")
+except Exception as e:
+    print(str(e))
+PYEOF
+)"
+    else
+        # Venv not built yet (pre-install) — fall back to system sqlite3.
+        # May produce false positives when system sqlite3 < Python's sqlite3 version.
+        result="$(sqlite3 "$db" 'PRAGMA integrity_check;' 2>&1)"
+    fi
     if [ "$result" = "ok" ]; then
         ok "SQLite integrity_check: ok"
     else
         bad "SQLite integrity failure: $result"
-        hint "run: sqlite3 $db \"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild');\""
+        hint "run: $REPO_ROOT/.venv/bin/python3 -c \"import sqlite3; c=sqlite3.connect('$db'); c.execute(\\\"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')\\\"); c.commit()\""
         record_fail "mempalace-sqlite"
     fi
 
