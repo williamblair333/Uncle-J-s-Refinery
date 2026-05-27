@@ -16,20 +16,15 @@ Three issues fixed:
 1. **FTS5 recurring corruption** — 4am repair now waits for 3am mine locks via `flock -w 7200`
 2. **`scripts/fts5-guard.sh`** — async SessionStart safety net; auto-repairs FTS5 if still corrupt
 3. **skill-link async race** — SessionStart hook now blocking; fixed in settings.json + install.sh
+4. **`features/mempalace/install.sh`** — mine + repair crons now register with full lock coordination; new users get correct crons automatically via `bash features/mempalace/install.sh`
 
-⚠️ **Machine-local crontab change required** (not in repo — apply manually):
-```bash
-# Replace the uncle-j-mempalace-repair cron entry with:
-# 0 4 * * * flock -w 7200 /tmp/mempalace-mine-project.lock flock -w 7200 /tmp/mempalace-mine-convos.lock flock -n /tmp/mempalace-repair.lock bash /opt/proj/Uncle-J-s-Refinery/mempalace-repair-now.sh >> /opt/proj/Uncle-J-s-Refinery/state/mempalace-repair.log 2>&1
-```
+Other machines: `git pull && bash features/mempalace/install.sh` to pick up the updated crons.
 
 ### PR #13 — refinery-doctor — MERGED ✓
 
-(HANDOFF previously said "open" — confirmed merged via git log)
-
 ---
 
-## Current state (2026-05-26) — Feature 1 done (PR open), Feature 2 next
+## Current state (2026-05-26) — refinery-doctor implemented, PR #13 open
 
 ### `Unknown skill` fix — both machines resolved
 
@@ -41,13 +36,17 @@ Root cause (this machine): `skill-link.sh` needs `link` arg — SessionStart hoo
 - **`stack-not-at-head` (X)** — packages behind HEAD. Next session: run `stack-not-at-head-remediation` skill.
 - **Stash** — `wip: session-end-2026-05-24 uncommitted changes` on the docs branch contains `scripts/session-start-autofix.sh` wiring. Review and drop or cherry-pick: `git stash list`.
 
-## Current state (2026-05-26) — Feature 1 done (PR open), Feature 2 next
-
 ### Feature 1 — `scripts/refinery-doctor.sh` — DONE, PR #13 open
 
 **Branch:** `feat/refinery-doctor` (pushed, PR open at github.com/williamblair333/Uncle-J-s-Refinery/pull/13)
 
-4 checks working + verified, 54 tests passing, atomic `--fix`. Merge when ready.
+Implementation complete. All 4 checks working and verified:
+- `embed-model` — detects missing `JCODEMUNCH_EMBED_MODEL` in `.env`, fixes atomically
+- `jcodemunch-scope` — detects stale `local`/`project` MCP scope, fixes via `claude mcp remove`
+- `claude-md-sync` — sha256 drift detection for `~/.claude/CLAUDE.md`, fixes with backup
+- `env-placeholders` — report-only, flags template values in `.env`
+
+54 tests passing, atomic `--fix` (`.env.bak` + `.env.tmp` → `mv`). Exit 0 = clean. Merge when ready.
 
 ### Feature 2 — Telegram multi-agent routing — NEXT
 

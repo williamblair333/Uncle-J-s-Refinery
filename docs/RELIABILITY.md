@@ -14,6 +14,7 @@ Claude *actually uses them correctly*. Four components:
 | Superpowers plugin            | 20+ skills: brainstorm, systematic-debug, TDD, verify-before-done | if total skill count > 25   |
 | Ralph Wiggum plugin           | /ralph slash command (Anthropic official version)                 | --                          |
 | outcomes skill (--rubric)     | Rubric-aware grader in fresh context after each Ralph iteration   | when not using --rubric flag |
+| refinery-doctor.sh            | Config drift detection: env key renames, stale MCP scopes, CLAUDE.md sync, placeholder values; `--fix` applies atomic migrations | after fresh install confirms all green |
 
 ## How the pieces compose
 

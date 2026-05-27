@@ -9,7 +9,9 @@
   cron; used its own unrelated lock, aborted immediately if mine still writing. Fixed crontab
   to use `flock -w 7200` on both mine lock files so repair waits for mines to finish before
   running. Also added `flock -n /tmp/mempalace-repair.lock` to prevent duplicate repair instances.
-  ⚠️ **Crontab change is machine-local** — must be applied manually on each machine (see HANDOFF).
+- **`features/mempalace/install.sh`** — mine cron now registers with `flock -n`, `nice -n 19`,
+  and `env CHROMA_API_IMPL=...`; repair cron now registers the coordinated `flock -w 7200` form.
+  New users and reinstalls get the correct crons automatically (no manual crontab edit needed).
 - **`Unknown skill` at session start** — skill-link.sh SessionStart hook was `async: true`,
   so the Skill tool could be invoked before symlinking finished. Removed `async: true` to make
   it blocking (~142ms cost, imperceptible). Fixed in both `settings.json` and
@@ -20,6 +22,38 @@
   Python (correct SQLite version) and auto-rebuilds if corrupt. Wired as SessionStart hook.
   Catches any corruption that slips past the 4am repair (e.g. if mine runs >2h).
 
+---
+
+## 2026-05-26 — feat/refinery-doctor implementation
+
+### Added
+- `scripts/refinery-doctor.sh` — standalone config-drift detection and repair script
+  - 4 checks: `embed-model`, `jcodemunch-scope`, `claude-md-sync`, `env-placeholders`
+  - `--fix` mode with atomic `.env` writes (`.env.bak` + `.env.tmp` → `mv`)
+  - `--check <name>` for single-check mode; `--help` from script header
+  - Exit 0 = clean, exit 1 = pending migrations
+- `install-reliability.sh` — added `# Config drift: bash scripts/refinery-doctor.sh [--fix]` to header
+
+---
+
+## 2026-05-26 — session-start-autofix hook + FTS5 skill + gitignore
+
+### Added
+- `scripts/session-start-autofix.sh` — SessionStart hook that auto-repairs FTS5 corruption,
+  reindexes jcodemunch when stale, and async-upgrades stack packages behind HEAD; replaces
+  manual `healthcheck.sh --quick` approach; logs to `state/session-start-autofix.log`
+- `global-skills/mempalace-fts5-malformed-index-repair/` — new skill for FTS5 malformed
+  inverted index repair; distinct from HNSW corruption and 0-elements-after-reboot
+
+### Changed
+- `.claude/settings.json` — SessionStart hook now runs `session-start-autofix.sh`
+  (timeout 60 s, "Health check + auto-fix..." message) instead of bare healthcheck
+- `global-skills/session-end-checklist/SKILL.md` — Step 8 improved: auto-push after
+  commit; offer PR vs direct-merge options based on what changed
+- `uv.lock` — jcodemunch-mcp 1.108.24 → 1.108.25
+
+### Fixed
+- `.gitignore` — added `.claude/scheduled_tasks.json` and `.claude/worktrees/`
 ---
 
 ## 2026-05-26 — session housekeeping: pull to main, FTS5 repair, skill link fix

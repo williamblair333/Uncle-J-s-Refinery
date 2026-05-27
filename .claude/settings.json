@@ -106,9 +106,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI bash /opt/proj/Uncle-J-s-Refinery/healthcheck.sh --quick 2>&1 | tail -5",
-            "timeout": 30,
-            "statusMessage": "Health check..."
+            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/session-start-autofix.sh",
+            "timeout": 60,
+            "statusMessage": "Health check + auto-fix..."
           }
         ]
       },
