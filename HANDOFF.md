@@ -16,6 +16,10 @@ Read this before touching anything. Work priorities are in order below.
   with fallback guard. PR #15.
 - **`stack-not-at-head`** — `uv.lock` updated; jcodemunch and mempalace at today's HEAD.
 
+### Open issue — Langfuse traces API credential failure
+
+Health check reports: `Invalid credentials` on traces API endpoint. Smoke test (stop hook → `langfuse_hook.log`) passes fine — isolated to traces API. Check `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` in `.env`.
+
 ---
 
 ## Current state (2026-05-27) — PR #14 merged, Feature 2 next
