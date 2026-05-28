@@ -1,22 +1,28 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-28 (Feature 2: Telegram multi-agent routing — PR ready)*
+*Last updated: 2026-05-28 (triage session — review queue cleared, stable)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-05-28) — Feature 2: Telegram multi-agent routing (complete, PR pending)
+## Current state (2026-05-28) — stable, no active work items
 
-Branch `feat/telegram-agent-routing`. All implementation tasks done. PR ready to create.
+All features merged. `main` is clean. `_review/` is empty.
 
-**What was built:**
-- `config/telegram-agents.toml` — agent routing config (Task 1)
-- `load_agents()` / `route_message()` / `resolve_cwd()` + `AGENTS = load_agents(proj_root)` in gateway heredoc (Task 2)
-- Hardcoded dispatch replaced with routed dispatch; `ELEVATED:` log prefix for `/work` (Task 3)
-- Routing smoke tests passing: default path, `/work` strip, fallback (Task 4)
+**HNSW repair in progress (background):**
+- Prior repair PID 13765 was stuck in `Tl` state (SIGSTOP, unresumable); killed and restarted
+- Fresh repair PID 151601 running `from-sqlite` rebuild of 18K embeddings
+- Monitor: `tail -f state/mempalace-repair.log`
+- BM25 search active in the meantime; HNSW semantic search resumes when repair completes
 
-**Pre-mortem finding applied:** `_HARDCODED_AGENTS` fallback is restricted-only (no `/work` entry) — TOML-missing = safe mode. Security note: `/work` = full project context; Telegram account is the security boundary.
+**Stack-not-at-head (non-urgent):**
+- jcodemunch-mcp, jdatamunch-mcp, jdocmunch-mcp, mempalace all behind GitHub HEAD
+- Upgrade when ready: `cd /opt/proj/Uncle-J-s-Refinery && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact`
+- Run `/stack-not-at-head-remediation` if upgrading this session
+
+**Review queue:**
+- `_review/` is now empty — `openclaw/` moved to `_reviewed/` (analysis done, Features 1+2 shipped)
 
 ---
 

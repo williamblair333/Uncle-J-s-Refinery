@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-28 — chore: triage session — review queue cleared, HNSW repair
+
+### Fixed
+- **HNSW repair process** — prior repair (PID 13765) was stuck in `Tl` (stopped) state for 28 min with 0 HNSW elements; killed and restarted fresh repair (PID 151601) rebuilding 18K embeddings from SQLite
+
+### Changed
+- **`_review/openclaw/`** → `_reviewed/openclaw/` — competitive analysis complete; Features 1 (refinery-doctor, PR #13) and 2 (Telegram routing, PR #20) both shipped; Feature 3 (Docker sandbox) explicitly deferred
+
+---
+
 ## 2026-05-28 — feat: Telegram multi-agent routing + session-end docs
 
 ### Changed
