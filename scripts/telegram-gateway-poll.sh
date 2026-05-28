@@ -456,22 +456,39 @@ for update in updates:
         "Say nothing else. Do not explain. Do not apologize."
     )
 
-    # Use `claude --print --system-prompt` to invoke Claude.
-    # --system-prompt REPLACES the entire default system context, including the
-    # harness system-reminder injection (OS, kernel, email, paths, git state,
-    # MCP stack). The CLI handles OAuth token rotation internally — no key management.
-    # Running from /tmp ensures no project CLAUDE.md or git repo is loaded.
+    # Route message to the appropriate agent based on prefix
+    agent, routed_text = route_message(text, AGENTS)
+    agent_name = agent.get("name", "unknown")
+    agent_cwd  = resolve_cwd(agent.get("cwd", "/tmp"), proj_root)
+    agent_sp   = agent.get("system_prompt", "restricted")
+
+    # R5: always log which agent handles the message
+    if agent_name == "work":
+        log(f"ELEVATED: agent={agent_name} cwd={agent_cwd}")
+    else:
+        log(f"agent={agent_name} cwd={agent_cwd}")
+
+    # Build subprocess args
+    if agent_sp == "restricted":
+        extra_args = ["--system-prompt", TELEGRAM_SYSTEM_RESTRICTION]
+    else:
+        extra_args = []
+
+    # Use `claude --print` to invoke Claude.
+    # --system-prompt (when present) REPLACES the entire default system context.
+    # Running from /tmp (default agent) ensures no project CLAUDE.md is loaded.
+    # Running from proj_root (work agent) loads project CLAUDE.md normally.
     try:
         result = subprocess.run(
             [
                 claude_bin,
                 "--dangerously-skip-permissions",
                 "--print",
-                "--system-prompt", TELEGRAM_SYSTEM_RESTRICTION,
+                *extra_args,
                 "-p",
-                text,
+                routed_text,
             ],
-            cwd="/tmp",
+            cwd=agent_cwd,
             capture_output=True,
             text=True,
             timeout=120,

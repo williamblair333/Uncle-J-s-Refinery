@@ -1,8 +1,22 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-28 (HNSW nightly destruction root cause fixed)*
+*Last updated: 2026-05-28 (Feature 2: Telegram multi-agent routing in progress)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-28) — Feature 2: Telegram multi-agent routing (complete, PR pending)
+
+Branch `feat/telegram-agent-routing`. All implementation tasks done. PR ready to create.
+
+**What was built:**
+- `config/telegram-agents.toml` — agent routing config (Task 1)
+- `load_agents()` / `route_message()` / `resolve_cwd()` + `AGENTS = load_agents(proj_root)` in gateway heredoc (Task 2)
+- Hardcoded dispatch replaced with routed dispatch; `ELEVATED:` log prefix for `/work` (Task 3)
+- Routing smoke tests passing: default path, `/work` strip, fallback (Task 4)
+
+**Pre-mortem finding applied:** `_HARDCODED_AGENTS` fallback is restricted-only (no `/work` entry) — TOML-missing = safe mode. Security note: `/work` = full project context; Telegram account is the security boundary.
 
 ---
 
