@@ -85,6 +85,75 @@ from tg_security import sanitize_input, scan_output, escape_html_response, check
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
 
+# ── agent routing ─────────────────────────────────────────────────────────────
+
+_HARDCODED_AGENTS = [
+    {"name": "work",    "prefix": "/work", "cwd": ".",    "system_prompt": ""},
+    {"name": "default", "prefix": "",      "cwd": "/tmp", "system_prompt": "restricted"},
+]
+
+def load_agents(proj_root):
+    """Load agent profiles from config/telegram-agents.toml.
+    Falls back to hardcoded defaults on any error (R1).
+    Validates catch-all is last (R4)."""
+    config_path = os.path.join(proj_root, 'config', 'telegram-agents.toml')
+    try:
+        try:
+            import tomllib
+        except ImportError:
+            # Python < 3.11 (R2) — no tomllib, use hardcoded defaults
+            with open(log_file, "a") as _f:
+                _f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                         f"tomllib unavailable (Python < 3.11) — using hardcoded agent defaults\n")
+            return _HARDCODED_AGENTS
+
+        if not os.path.exists(config_path):
+            with open(log_file, "a") as _f:
+                _f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                         f"telegram-agents.toml not found — using hardcoded defaults\n")
+            return _HARDCODED_AGENTS
+
+        with open(config_path, "rb") as f:
+            data = tomllib.load(f)
+
+        agents = data.get("agents", [])
+        if not agents:
+            raise ValueError("agents list is empty")
+
+        # R4: catch-all (empty prefix) must be last
+        for i, agent in enumerate(agents[:-1]):
+            if agent.get("prefix", "") == "":
+                raise ValueError(f"catch-all agent '{agent['name']}' must be last, found at position {i}")
+
+        return agents
+
+    except Exception as exc:
+        with open(log_file, "a") as _f:
+            _f.write(f"[{__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                     f"load_agents error ({exc}) — using hardcoded defaults\n")
+        return _HARDCODED_AGENTS
+
+
+def route_message(text, agents):
+    """Return (agent_dict, stripped_text) for the first matching prefix."""
+    for agent in agents:
+        prefix = agent.get("prefix", "")
+        if prefix and text.startswith(prefix):
+            stripped = text[len(prefix):].lstrip()
+            return agent, stripped
+    # No prefix matched — return default (last/catch-all agent)
+    return agents[-1], text
+
+
+def resolve_cwd(agent_cwd, proj_root):
+    """Resolve '.' to proj_root; leave absolute paths as-is."""
+    if agent_cwd in (".", ""):
+        return proj_root
+    return agent_cwd
+
+
+AGENTS = load_agents(proj_root)
+
 API_BASE = f"https://api.telegram.org/bot{bot_token}"
 
 def log(msg):
