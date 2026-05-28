@@ -1,8 +1,37 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-27 (plugin auto-install, skill-link global-skills fix)*
+*Last updated: 2026-05-28 (HNSW nightly destruction root cause fixed)*
 
 Read this before touching anything. Work priorities are in order below.
+
+---
+
+## Current state (2026-05-28) — MemPalace HNSW nightly destruction fixed (3 bugs)
+
+### Root cause
+
+Three compounding bugs caused HNSW to be rebuilt as empty every night:
+
+1. **4am cron lacked `--skip-if-healthy`** — the cron unconditionally archived the healthy palace and rebuilt from SQLite every night. Fixed in both `features/mempalace/install.sh` (durable) and crontab directly.
+2. **`mempalace repair --mode from-sqlite` never builds HNSW** — the repair writes directly to SQLite WAL tables, bypassing the chromadb Python API, so the HNSW binary is never populated. Fixed by adding Step 2b in `mempalace-repair-now.sh`: opens a `PersistentClient`, calls `col.query()` on each non-empty collection (forces WAL replay into in-memory HNSW), then `client._system.stop()` (triggers `save_index()` to persist).
+3. **Post-repair success check only read SQLite** — SQLite count is always correct, so repair always reported success even when HNSW was 0. Fixed to verify both SQLite and `header.bin` element count.
+
+### Repair in progress
+
+A repair test run is running in background (started 09:23, from-sqlite rebuild of 29.5K embeddings). The system is under memory pressure (2.7GB swap used) so it's slow (~1K rows/12 min). Let it complete — do not kill it. When it finishes, the WAL commit step will test the `col.query + _system.stop` approach.
+
+**To monitor**: `tail -f state/mempalace-repair.log`
+
+**Expected outcome**: `REPAIR_RESULT=success  hnsw=wal_committed_ok` and HNSW element count ≈ SQLite count.
+
+### Files changed
+
+- `mempalace-repair-now.sh` — three bug fixes + code review fixes (python→python3, empty collection guard, blob type guard)
+- `features/mempalace/install.sh` — `--skip-if-healthy` added to 4am cron definition
+
+### Next action — Feature 2: Telegram multi-agent routing
+
+Plan ready at `docs/superpowers/plans/2026-05-26-telegram-agent-routing.md` (5 tasks, branch `feat/telegram-agent-routing`).
 
 ---
 
