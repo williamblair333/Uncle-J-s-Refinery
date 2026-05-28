@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-28 — fix MemPalace HNSW nightly destruction (three-bug root cause)
+
+### Fixed
+- **`mempalace-repair-now.sh`** — three compounding bugs caused HNSW to be destroyed nightly:
+  1. **`--skip-if-healthy` missing from 4am cron** — repair archived the healthy palace every night unconditionally; added to `features/mempalace/install.sh` (durable) and crontab
+  2. **WAL never committed to HNSW** — `mempalace repair --mode from-sqlite` writes directly to SQLite WAL tables and never builds the HNSW binary; added Step 2b that opens a chromadb `PersistentClient`, calls `col.query()` on each collection (forces HNSW segment init + WAL replay into in-memory index), then calls `client._system.stop()` (triggers `save_index()` on all segments to persist to disk)
+  3. **Post-repair check read SQLite only** — repair always reported `REPAIR_RESULT=success` even when HNSW was 0; updated post-repair count check to read both SQLite embeddings count and HNSW `header.bin` element count
+- **`mempalace-repair-now.sh` line 109** — pre-existing bug: `"$VENV/python"` (no 3) in FTS5 rebuild path would fail on Ubuntu/Debian where venvs do not symlink `python`; fixed to `"$VENV/python3"`
+- **Code review fixes** — empty collection guard: `col.query()` raises `InvalidArgumentError` on empty collections; now guarded with `col.count()` check first; blob type guard: `len(row[0])//4` now validates `isinstance(blob, (bytes, bytearray))` before use
+- **`features/mempalace/install.sh`** — 4am repair cron definition now includes `--skip-if-healthy` so re-running install.sh doesn't revert the crontab fix
+
 ## 2026-05-27 — automate plugin install, fix skill-link global-skills unlink bug
 
 ### Fixed

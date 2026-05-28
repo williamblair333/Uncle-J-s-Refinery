@@ -106,7 +106,7 @@ log "  quick_check (pre): $QC_PRE"
 
 if [ "$QC_PRE" != "ok" ]; then
   log "==> FTS5 corruption detected — attempting rebuild..."
-  if "$VENV/python" - <<'PYEOF' 2>&1; then
+  if "$VENV/python3" - <<'PYEOF' 2>&1; then
 import sqlite3, pathlib
 db = str(pathlib.Path.home() / '.mempalace' / 'palace' / 'chroma.sqlite3')
 conn = sqlite3.connect(db, timeout=60)
@@ -162,15 +162,118 @@ fi
 HNSW_STATUS="rebuilt_ok"
 log "  mempalace repair: OK"
 
-# --- Post-repair drawer count sanity check ---
+# --- Step 2b: Commit WAL (embeddings_queue) into HNSW binary ---
+# mempalace repair --mode from-sqlite writes directly to SQLite WAL tables,
+# bypassing the chromadb Python API. The HNSW binary is never touched during
+# the rebuild — embeddings_queue has all the entries but HNSW stays at 0.
+#
+# Fix: open a chromadb client and run a real vector query on each collection.
+# col.query() forces the HNSW segment to initialize and replay pending WAL
+# entries into the in-memory HNSW index. col.count() does NOT trigger this.
+# After all collections are loaded, _system.stop() fires save_index() on every
+# segment, persisting the built HNSW to disk.
+#
+# References:
+#   chromadb sync_threshold: save_index fires every 1000 newly-added vectors
+#   via API — repair bypasses the API so this never fires during from-sqlite mode.
+#   chromadb-ops `chops wal commit` does the same thing via a public CLI, but
+#   is only tested against chromadb 0.6.x; _system.stop() works on 1.5.x.
+log "==> Committing WAL to HNSW via col.query() + _system.stop()..."
+"$VENV/python3" - <<'PYEOF' 2>&1
+import sqlite3, struct, pathlib, sys, os
+os.environ["CHROMA_API_IMPL"] = "chromadb.api.segment.SegmentAPI"
+import chromadb
+
+palace = pathlib.Path.home() / ".mempalace" / "palace"
+db_path = str(palace / "chroma.sqlite3")
+
+# Read embedding dimension from the first stored vector (float32 = 4 bytes/element)
+with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
+    row = conn.execute("SELECT embedding FROM embeddings LIMIT 1").fetchone()
+blob = row[0] if row else None
+dim = len(blob) // 4 if isinstance(blob, (bytes, bytearray)) else 384
+print(f"  embedding dim={dim}", flush=True)
+
+client = chromadb.PersistentClient(path=str(palace))
+
+for col in client.list_collections():
+    try:
+        n = col.count()
+        if n > 0:
+            # Vector query forces HNSW segment init + WAL replay into in-memory index
+            col.query(query_embeddings=[[0.0] * dim], n_results=1)
+            print(f"  WAL replayed: {col.name} ({n} docs)", flush=True)
+        else:
+            print(f"  {col.name}: empty — skipping WAL replay", flush=True)
+    except Exception as e:
+        print(f"  {col.name}: {e}", flush=True)
+
+# _system.stop() triggers save_index() on all HNSW segments.
+# Guard against chromadb versions that rename this private attribute.
+if hasattr(client, "_system"):
+    try:
+        client._system.stop()
+        print("  _system.stop() called — save_index() triggered", flush=True)
+    except Exception as e:
+        print(f"  _system.stop() error (atexit will attempt save): {e}", flush=True)
+else:
+    print("  _system not available — relying on atexit for save_index()", flush=True)
+
+# Verify HNSW binary element count against SQLite
+total = 0
+for f in palace.glob("*/header.bin"):
+    try:
+        b = f.read_bytes()
+        n = struct.unpack("<q", b[:8])[0] if len(b) >= 8 else 0
+        total += n if 0 <= n <= 10_000_000 else 0
+    except Exception:
+        pass
+
+with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
+    sqlite_n = conn.execute("SELECT COUNT(*) FROM embeddings").fetchone()[0]
+
+print(f"  HNSW={total}  SQLite={sqlite_n}", flush=True)
+if sqlite_n > 0 and total < sqlite_n * 0.8:
+    print(f"WARN: HNSW sparse after WAL commit ({total}/{sqlite_n})", flush=True)
+    sys.exit(2)
+sys.exit(0)
+PYEOF
+WAL_EXIT=$?
+if [ $WAL_EXIT -ne 0 ]; then
+  HNSW_STATUS="wal_commit_failed"
+  log "  [WARN] WAL commit to HNSW failed (exit=$WAL_EXIT)"
+  REPAIR_RESULT="hnsw_wal_commit_failed"
+  log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
+  notify "❌ MemPalace repair: WAL not committed to HNSW. HNSW will be empty. Manual review needed."
+  exit 1
+fi
+HNSW_STATUS="wal_committed_ok"
+log "  WAL commit to HNSW: OK"
+
+# --- Post-repair count sanity check (SQLite integrity + HNSW binary verification) ---
 POST_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])" || echo "0")
-log "Post-repair embedding count: $POST_COUNT"
+POST_HNSW=$("$VENV/python3" -c "
+import pathlib, struct
+palace = pathlib.Path.home() / '.mempalace' / 'palace'
+total = 0
+for f in palace.glob('*/header.bin'):
+    try:
+        b = f.read_bytes()
+        n = struct.unpack('<q', b[:8])[0] if len(b) >= 8 else 0
+        total += n if 0 <= n <= 10_000_000 else 0
+    except: pass
+print(total)
+" 2>/dev/null || echo 0)
+log "Post-repair: SQLite=$POST_COUNT  HNSW=$POST_HNSW"
 if [ "$PRE_COUNT" -gt 0 ] && [ "$POST_COUNT" -gt 0 ]; then
-  if python3 -c "import sys; sys.exit(0 if $POST_COUNT >= $PRE_COUNT * 0.95 else 1)" 2>/dev/null; then
-    log "  Count check: OK ($POST_COUNT / $PRE_COUNT = within 5%)"
+  if "$VENV/python3" -c "import sys; sys.exit(0 if $POST_COUNT >= $PRE_COUNT * 0.95 else 1)" 2>/dev/null; then
+    log "  SQLite count check: OK ($POST_COUNT / $PRE_COUNT = within 5%)"
   else
-    log "  [WARN] Drawer count dropped >5% (pre=$PRE_COUNT post=$POST_COUNT) — investigate"
+    log "  [WARN] SQLite drawer count dropped >5% (pre=$PRE_COUNT post=$POST_COUNT) — investigate"
   fi
+fi
+if [ "$POST_HNSW" -lt 1 ]; then
+  log "  [WARN] HNSW element count is 0 after WAL commit — something is wrong"
 fi
 
 # --- Health check ---
@@ -180,4 +283,4 @@ log "==> Running health check..."
 REPAIR_RESULT="success"
 log "REPAIR_RESULT=$REPAIR_RESULT  fts5=$FTS5_STATUS  hnsw=$HNSW_STATUS"
 log "Done."
-notify "✅ MemPalace repair complete — HNSW rebuilt from SQLite ($POST_COUNT embeddings). Palace ready; MCP server picks it up automatically on next session start."
+notify "✅ MemPalace repair complete — HNSW=$POST_HNSW SQLite=$POST_COUNT. Palace ready; MCP server picks it up automatically on next session start."
