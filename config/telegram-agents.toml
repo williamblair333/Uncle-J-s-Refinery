@@ -1,0 +1,23 @@
+# Telegram agent routing configuration.
+# Agents are matched in order — first prefix match wins.
+# The catch-all agent (empty prefix) MUST be last; startup validation enforces this.
+#
+# cwd values:
+#   "."   = resolved to PROJ_ROOT at runtime (loads project CLAUDE.md)
+#   "/tmp" = isolated directory (no project context)
+#
+# system_prompt values:
+#   "restricted" = uses the TELEGRAM_SYSTEM_RESTRICTION disclosure-ban string
+#   ""           = no --system-prompt override; project CLAUDE.md loads normally
+
+[[agents]]
+name          = "work"
+prefix        = "/work"
+cwd           = "."
+system_prompt = ""
+
+[[agents]]
+name          = "default"
+prefix        = ""
+cwd           = "/tmp"
+system_prompt = "restricted"

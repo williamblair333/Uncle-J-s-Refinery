@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-05-28 — feat: Telegram multi-agent routing + session-end docs
+
+### Changed
+- **`README.md`** — added `/work <message>` to Telegram gateway inbound commands
+- **`ROADMAP.md`** — Feature 2 and HNSW fix moved to completed table
+- **`SECURITY.md`** — documented `/work` elevated-access model; Telegram account = security boundary
+
+---
+
+## 2026-05-28 — feat: Telegram multi-agent routing
+
+### Added
+- **`config/telegram-agents.toml`** — prefix-based agent routing config; `/work` prefix routes to full-context project agent (cwd=PROJ_ROOT, CLAUDE.md loads); unqualified messages keep restricted default (cwd=/tmp); catch-all ordering validated at load time (R4)
+- **`load_agents()` / `route_message()` / `resolve_cwd()`** — routing functions in gateway Python heredoc; fallback to restricted-only hardcoded defaults on missing/malformed TOML (R1) or Python < 3.11 (R2); every dispatch logged with agent name + cwd (R5)
+- **Routed dispatch in `telegram-gateway-poll.sh`** — `route_message()` selects agent before subprocess call; `/work` runs Claude in proj_root without `--system-prompt` (loads CLAUDE.md normally); default runs in `/tmp` with `TELEGRAM_SYSTEM_RESTRICTION`; `ELEVATED:` prefix in log for `/work` dispatches
+- **Routing smoke tests** — assertions cover default path, `/work` prefix strip, empty `/work`, `resolve_cwd` proj_root mapping, hardcoded fallback when TOML missing
+
+---
+
 ## 2026-05-28 — fix MemPalace HNSW nightly destruction (three-bug root cause)
 
 ### Fixed
