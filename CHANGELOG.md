@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-28 — feat: Telegram multi-agent routing + session-end docs
+
+### Changed
+- **`README.md`** — added `/work <message>` to Telegram gateway inbound commands
+- **`ROADMAP.md`** — Feature 2 and HNSW fix moved to completed table
+- **`SECURITY.md`** — documented `/work` elevated-access model; Telegram account = security boundary
+
+---
+
 ## 2026-05-28 — feat: Telegram multi-agent routing
 
 ### Added

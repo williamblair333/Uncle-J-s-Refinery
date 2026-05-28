@@ -474,6 +474,7 @@ Manually-written drawers (not derived from sessions) must be migrated via `mempa
 A cron job that polls your Telegram bot every 2 minutes. **Primary purpose: approval and monitoring**, not general-purpose chat. The bot does not maintain conversational context across sessions.
 
 **Inbound commands:**
+- `/work <message>` — route to a full-context project agent (cwd=PROJ_ROOT, CLAUDE.md loaded); no disclosure restrictions
 - `promote <id> global` / `promote <id> project` — install a skill draft from `state/skill-drafts/`
 - `promote <id>` — ask Claude to classify scope first, then confirm
 

@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-28 (Feature 2: Telegram multi-agent routing in progress)*
+*Last updated: 2026-05-28 (Feature 2: Telegram multi-agent routing — PR ready)*
 
 Read this before touching anything. Work priorities are in order below.
 

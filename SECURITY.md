@@ -32,6 +32,19 @@ Security-relevant components:
 - Rate limiting is enforced per chat (20 messages/hour by default)
 - Credentials are stored in `.env`, excluded from git via `.gitignore`
 
+## Telegram `/work` Agent — Elevated Access
+
+Messages prefixed `/work` route to a project-context Claude instance (cwd=PROJ_ROOT,
+project `CLAUDE.md` loaded). This agent can read the full codebase including `.env`
+and other sensitive files.
+
+**Security boundary:** The `TELEGRAM_CHAT_ID` authorisation check is the sole access
+control gate. A compromised Telegram account grants full project-context Claude access.
+Every `/work` dispatch is logged with `ELEVATED:` prefix in `state/telegram-gateway.log`.
+
+Treat your Telegram account security (2FA, app passwords) as equivalent to SSH key
+access to this machine.
+
 ## Supported Versions
 
 Only the latest commit on `main` is supported.
