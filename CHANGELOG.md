@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-06-01 — ops: system freeze diagnosis + foc container CPU throttling
+
+### Fixed
+- **System freeze (RDP unusable)** — diagnosed fairy-stockfish chess engine processes (`foc-server-1` container) running at ~180% CPU continuously for 3h43m; combined with 2.6 GB swap in use from Chrome/KWin/ClickHouse/Langfuse/Grafana stack, caused RDP to freeze
+- **`/opt/proj/foc/docker-compose.yml`** — added hard CPU caps via `cpu_quota`/`cpu_period` (not `deploy.resources.limits.cpus` — that silently fails with Docker 26.1 + cgroup v2 + systemd driver; NanoCPUs is set but cpu.max stays empty; cpu_quota translates to `CPUQuotaPerSecUSec` in the systemd scope and actually bites)
+  - `server`: 2-core cap (`cpu_quota: 200000`, `cpu_period: 100000`)
+  - `learner`: 1-core cap (`cpu_quota: 100000`, `cpu_period: 100000`)
+  - `ENGINE_THREADS` default: 2 → 1 (halves per-engine thread count)
+  - `CPU_IDLE_MS` default: 2000 → 5000 (learner rests longer between self-play games)
+- **Result**: load avg 10 → 3, server CPU% 348% → ~200% (at cap), RDP responsive
+
+### Notes
+- All four throttle values overridable via `.env` (`SERVER_CPU_QUOTA`, `LEARNER_CPU_QUOTA`, `ENGINE_THREADS`, `CPU_IDLE_MS`) without touching compose file
+- HNSW drift healthcheck failure (`mempalace-hnsw-drift`) present at session start — not addressed this session (focus was system freeze)
+
+---
+
 ## 2026-06-01 — fix: WAL commit SQL bug in mempalace-repair-now.sh; stack bump
 
 ### Fixed

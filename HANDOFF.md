@@ -1,14 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-01 — WAL commit SQL bug fixed; legacy repair running*
+*Last updated: 2026-06-01 — system freeze fixed; HNSW drift unresolved*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-06-01) — HNSW legacy repair in progress
+## Current state (2026-06-01) — foc throttled, HNSW drift open
 
-**Most important thing:** A `mempalace repair --mode legacy --yes` process is running in background (started ~09:38). **Do NOT kill it.** Let it complete, then run `bash healthcheck.sh` to verify.
+**Most important thing:** Session start showed `HEALTHCHECK: fail (2) -- mempalace-hnsw-drift`. This was NOT addressed this session — focus was an emergency system freeze. Investigate at next session start with `bash healthcheck.sh`.
+
+**What was done this session:**
+- RDP was unusable — system load hit 10, swap at 2.6 GB. Root cause: `foc-server-1` was running two fairy-stockfish chess engine processes at ~180% CPU continuously for 3h43m.
+- Throttled `/opt/proj/foc/docker-compose.yml`: `cpu_quota`/`cpu_period` added to both `server` (2 cores) and `learner` (1 core) services; `ENGINE_THREADS` default 2→1; `CPU_IDLE_MS` default 2000→5000. Both containers recreated. System now stable (load ~3, server CPU capped at 200%).
+- Key gotcha: Docker 26.1 + cgroup v2 + systemd driver — `deploy.resources.limits.cpus` silently does nothing (cpu.max stays empty); `cpu_quota`/`cpu_period` top-level fields are the working path.
+
+**Open: HNSW drift (`HEALTHCHECK: fail (2)`):**
+```bash
+bash healthcheck.sh   # see what the drift check reports
+```
+Previous legacy repair was started 09:38 on 2026-06-01. Unknown if it completed.
+
+---
+
+## Current state (2026-06-01) — HNSW legacy repair in progress (prior entry, may be stale)
+
+**Most important thing:** A `mempalace repair --mode legacy --yes` process was running in background (started ~09:38). Check if still running: `ps aux | grep "mempalace repair" | grep -v grep`. If gone, run `bash healthcheck.sh` to verify HNSW state.
 
 **What happened:**
 - The 4am cron ran `from-sqlite` rebuild successfully (30,207 rows in SQLite) but the Step 2b WAL commit crashed with `sqlite3.OperationalError: no such column: embedding`. The `embeddings` table has no vector column — vectors are in `embeddings_queue.vector`. This left HNSW at 0 elements.
