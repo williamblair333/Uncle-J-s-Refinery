@@ -963,7 +963,7 @@ wheels = [
 [[package]]
 name = "jcodemunch-mcp"
 version = "1.108.25"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#d6ffcbd57d1e22089cfd6433f6ec34b6d1e27e9e" }
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#7315c5ef2589b70bf28768caed03b6bf3adb19f8" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -1195,7 +1195,7 @@ wheels = [
 [[package]]
 name = "mempalace"
 version = "3.3.6"
-source = { git = "https://github.com/MemPalace/mempalace.git#6957c7e599747c744baaa49148df2b3aaacd5b50" }
+source = { git = "https://github.com/MemPalace/mempalace.git#9b7cfc9940846f9bb06bdfe40476ca34b504ab4b" }
 dependencies = [
     { name = "chromadb" },
     { name = "huggingface-hub" },

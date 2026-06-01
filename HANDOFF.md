@@ -1,28 +1,33 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-05-28 (triage session — review queue cleared, stable)*
+*Last updated: 2026-06-01 — WAL commit SQL bug fixed; legacy repair running*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-05-28) — stable, no active work items
+## Current state (2026-06-01) — HNSW legacy repair in progress
 
-All features merged. `main` is clean. `_review/` is empty.
+**Most important thing:** A `mempalace repair --mode legacy --yes` process is running in background (started ~09:38). **Do NOT kill it.** Let it complete, then run `bash healthcheck.sh` to verify.
 
-**HNSW repair in progress (background):**
-- Prior repair PID 13765 was stuck in `Tl` state (SIGSTOP, unresumable); killed and restarted
-- Fresh repair PID 151601 running `from-sqlite` rebuild of 18K embeddings
-- Monitor: `tail -f state/mempalace-repair.log`
-- BM25 search active in the meantime; HNSW semantic search resumes when repair completes
+**What happened:**
+- The 4am cron ran `from-sqlite` rebuild successfully (30,207 rows in SQLite) but the Step 2b WAL commit crashed with `sqlite3.OperationalError: no such column: embedding`. The `embeddings` table has no vector column — vectors are in `embeddings_queue.vector`. This left HNSW at 0 elements.
+- SQL bug fixed this session in `mempalace-repair-now.sh` line ~192.
+- Attempted WAL commit manually: the `_system.stop()` approach doesn't reliably persist `cur_element_count` in `header.bin` with current chromadb/hnswlib combination (in-memory HNSW works, binary files stay at 0). Investigation pending.
+- Started legacy repair as fallback. It is writing to `.drift-YYYYMMDD-HHMMSS` segment directories (normal for legacy mode).
 
-**Stack-not-at-head (non-urgent):**
-- jcodemunch-mcp, jdatamunch-mcp, jdocmunch-mcp, mempalace all behind GitHub HEAD
-- Upgrade when ready: `cd /opt/proj/Uncle-J-s-Refinery && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact`
-- Run `/stack-not-at-head-remediation` if upgrading this session
+**To monitor:**
+```bash
+ps aux | grep "mempalace repair" | grep -v grep   # still running?
+bash healthcheck.sh --quick                        # pass after repair completes
+```
 
-**Review queue:**
-- `_review/` is now empty — `openclaw/` moved to `_reviewed/` (analysis done, Features 1+2 shipped)
+**Stack updated by auto-maintain (3am cron):**
+- jcodemunch-mcp `d6ffcbd` → `7315c5ef`
+- mempalace `6957c7e` → `9b7cfc99`
+- `uv sync --inexact` still needed after `uv.lock` update
+
+**Review queue:** `_review/` is empty.
 
 ---
 

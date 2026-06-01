@@ -187,10 +187,13 @@ import chromadb
 palace = pathlib.Path.home() / ".mempalace" / "palace"
 db_path = str(palace / "chroma.sqlite3")
 
-# Read embedding dimension from the first stored vector (float32 = 4 bytes/element)
+# Read embedding dimension from the first queued vector (float32 = 4 bytes/element).
+# Vectors live in embeddings_queue.vector (BLOB); the embeddings table has no vector column.
 with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
-    row = conn.execute("SELECT embedding FROM embeddings LIMIT 1").fetchone()
+    row = conn.execute("SELECT vector FROM embeddings_queue WHERE vector IS NOT NULL LIMIT 1").fetchone()
 blob = row[0] if row else None
+if blob is None:
+    print("  no vector in embeddings_queue — using dim=384 fallback", flush=True)
 dim = len(blob) // 4 if isinstance(blob, (bytes, bytearray)) else 384
 print(f"  embedding dim={dim}", flush=True)
 

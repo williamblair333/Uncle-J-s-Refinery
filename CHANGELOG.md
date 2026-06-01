@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-01 — fix: WAL commit SQL bug in mempalace-repair-now.sh; stack bump
+
+### Fixed
+- **`mempalace-repair-now.sh` Step 2b (WAL commit)** — SQL queried `SELECT embedding FROM embeddings` but the `embeddings` table has no vector column; vectors live in `embeddings_queue.vector`. Changed to `SELECT vector FROM embeddings_queue WHERE vector IS NOT NULL LIMIT 1`. Added a log line when queue is empty so fallback to dim=384 is visible in repair logs.
+- **Root cause of 2026-06-01 HNSW=0** — the 4am cron's `from-sqlite` rebuild succeeded (30,207 rows written) but the WAL commit step crashed on the wrong column name, leaving HNSW at 0 elements; fixed SQL ensures tonight's cron completes the full pipeline.
+
+### Changed
+- **`uv.lock`** — auto-maintain cron (3am) bumped jcodemunch-mcp (`d6ffcbd` → `7315c5ef`) and mempalace (`6957c7e` → `9b7cfc99`).
+
+---
+
 ## 2026-05-28 — chore: triage session — review queue cleared, HNSW repair
 
 ### Fixed
