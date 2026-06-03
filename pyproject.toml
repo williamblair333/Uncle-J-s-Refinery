@@ -21,6 +21,12 @@ dependencies = [
     # uv is not a dep of the stack itself but we pin a recent version so
     # `uv run` resolves consistently for ad-hoc scripts.
     "uv >=0.5",
+    # WAL data-race fix (present in all SQLite 3.7.0–3.51.2, fixed in 3.51.3).
+    # The uv Python 3.11 has SQLite 3.50.4 statically compiled in; pysqlite3 is
+    # built from source against 3.51.3 amalgamation by install.sh step 2b.
+    # The _pysqlite3_patch.pth in site-packages swaps stdlib sqlite3 → pysqlite3
+    # at every venv process startup (covers mine crons, repair, MCP server).
+    "pysqlite3>=0.6.0",
 ]
 
 [project.optional-dependencies]

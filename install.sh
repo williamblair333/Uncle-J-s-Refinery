@@ -81,6 +81,49 @@ step "Installing Python stack (jCodeMunch, jDataMunch, jDocMunch, MemPalace)"
 uv sync --inexact
 ok "Python stack installed"
 
+# --- 2b. Patch venv to use pysqlite3 (SQLite 3.51.3) instead of stdlib sqlite3 ---
+# SQLite <3.51.3 has a WAL-reset data race bug present since 3.7.0 (2010).
+# The uv-managed Python 3.11 has SQLite 3.50.4 statically compiled in.
+# pysqlite3 bundles 3.51.3 (the fix). The .pth file applies the swap at every
+# venv process startup — covers mine crons, repair script, and MCP server.
+# Re-run after any `uv sync --reinstall` that wipes site-packages.
+SITE_PKGS="$STACK_ROOT/.venv/lib/python3.11/site-packages"
+step "Wiring pysqlite3 SQLite 3.51.3 patch into venv"
+# Check the bundled SQLite version — the PyPI wheel has 3.51.1 (still affected).
+# We need >= 3.51.3, so always build from source if the version check fails.
+_psql_ver=$("$STACK_ROOT/.venv/bin/python3" -c "import pysqlite3; print(pysqlite3.sqlite_version)" 2>/dev/null || echo "0.0.0")
+_need_build=$("$STACK_ROOT/.venv/bin/python3" -c "
+v=tuple(int(x) for x in '$_psql_ver'.split('.'))
+print('yes' if v < (3,51,3) else 'no')
+" 2>/dev/null || echo "yes")
+if [ "$_need_build" = "yes" ]; then
+  # pysqlite3 missing or bundles SQLite < 3.51.3 — build from source against 3.51.3
+  warn "pysqlite3 SQLite version '$_psql_ver' < 3.51.3 — building from source"
+  SQLITE_AMALG_URL="https://www.sqlite.org/2026/sqlite-amalgamation-3510300.zip"
+  TMP_SRC=$(mktemp -d)
+  curl -sL "$SQLITE_AMALG_URL" -o "$TMP_SRC/amalg.zip"
+  unzip -j "$TMP_SRC/amalg.zip" "*/sqlite3.c" "*/sqlite3.h" -d "$TMP_SRC/"
+  uv pip download "pysqlite3==0.6.0" --no-binary :all: -d "$TMP_SRC" \
+    --python "$STACK_ROOT/.venv/bin/python3" -q
+  tar xz -C "$TMP_SRC" -f "$TMP_SRC"/pysqlite3-*.tar.gz
+  cp "$TMP_SRC/sqlite3.c" "$TMP_SRC/sqlite3.h" "$TMP_SRC/pysqlite3-0.6.0/"
+  uv pip install "$TMP_SRC/pysqlite3-0.6.0/" --python "$STACK_ROOT/.venv/bin/python3" --force-reinstall
+  rm -rf "$TMP_SRC"
+fi
+cat > "$SITE_PKGS/_pysqlite3_patch.py" << 'PYEOF'
+# WAL data-race fix: swap stdlib sqlite3 for pysqlite3 (SQLite 3.51.3+).
+# Applies to every process in this venv at interpreter startup via .pth file.
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass  # graceful fallback if pysqlite3 is ever removed
+PYEOF
+printf 'import _pysqlite3_patch\n' > "$SITE_PKGS/_pysqlite3_patch.pth"
+ACTUAL=$("$STACK_ROOT/.venv/bin/python3" -c "import sqlite3; print(sqlite3.sqlite_version)")
+ok "sqlite3 in venv now: $ACTUAL (via pysqlite3)"
+
 VENV_BIN="$STACK_ROOT/.venv/bin"
 declare -A EXE=(
     [jcodemunch]="$VENV_BIN/jcodemunch-mcp"

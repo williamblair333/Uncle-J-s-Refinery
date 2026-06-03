@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-06-03 — fix: upgrade SQLite to 3.51.3 via pysqlite3 source build
+
+- `install.sh` step 2b: builds pysqlite3 from source against SQLite 3.51.3 amalgamation when bundled version < 3.51.3 (PyPI wheel has 3.51.1, uv Python 3.11 has 3.50.4 — both affected by WAL-reset data race fixed in 3.51.3)
+- `site-packages/_pysqlite3_patch.pth` + `_pysqlite3_patch.py`: swaps stdlib `sqlite3` → pysqlite3 at every venv process startup (covers mine crons, repair script, MCP server — no per-script patching needed)
+- `pyproject.toml`: `pysqlite3>=0.6.0` added as formal dependency with explanatory comment
+- Version check in install.sh is `>= (3,51,3)` not `importable` — correctly triggers rebuild on machines that got the PyPI wheel via `uv sync`
+
 ## 2026-06-03 — fix: eliminate recurring FTS5 corruption (root cause)
 
 ### Root cause

@@ -1,6 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (FTS5 corruption root cause fixed — HEALTHCHECK: ok)*
+*Last updated: 2026-06-03 (SQLite upgraded to 3.51.3 via pysqlite3 — WAL race bug fixed)*
+
+## Current state (2026-06-03) — SQLite WAL data race fixed
+
+`HEALTHCHECK: ok` — all checks passing. SQLite WAL-reset data race (CVE, present since 3.7.0, fixed in 3.51.3) now resolved.
+
+**What was done:**
+- `pysqlite3>=0.6.0` added to `pyproject.toml` dependencies
+- `install.sh` step 2b: builds pysqlite3 from source against SQLite 3.51.3 amalgamation when bundled version < 3.51.3 (triggers on any machine where `uv sync` installs the PyPI wheel with 3.51.1)
+- `site-packages/_pysqlite3_patch.pth` + `_pysqlite3_patch.py` installed by install.sh: swaps stdlib `sqlite3` → pysqlite3 at every venv process startup
+
+**On another machine:** `git pull && bash install.sh` — step 2b detects PyPI wheel has 3.51.1, builds from source, creates .pth files. Requires network access to sqlite.org and files.pythonhosted.org during install.
+
+**Verification:**
+```bash
+.venv/bin/python3 -c "import sqlite3; print(sqlite3.sqlite_version, sqlite3.__name__)"
+# Expected: 3.51.3 pysqlite3
+```
+
+
 
 Read this before touching anything. Work priorities are in order below.
 
