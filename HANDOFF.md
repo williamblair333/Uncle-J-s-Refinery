@@ -1,6 +1,20 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (Step 2b removed from repair; dict-pickle root cause confirmed closed)*
+*Last updated: 2026-06-03 (dreaming URL hold-filter + anti-promotion rule)*
+
+## Current state (2026-06-03) — dreaming hallucination propagation paths closed
+
+`HEALTHCHECK: fail (1) -- untracked-skills` — two untracked global skills (`mempalace-dict-pickle-repair`, `token-economy-prompt-authoring`). Auto-maintain commits tonight at 3am, or run `bash scripts/auto-maintain.sh`.
+
+**What was done this session:**
+
+- **Dreaming URL hold-filter** — `features/dreaming/dream.sh`: after synthesis, before `mempalace mine` + CLAUDE.md append, URL-bearing `Proven Playbooks` entries quarantined to `state/dream-pending-review/held-{timestamp}.md`. Filter failure falls through gracefully. Cascade guard: if all playbooks held, CLAUDE.md section left unchanged (not overwritten empty). Telegram notification extended with held count.
+- **Dream-synthesizer anti-promotion rule** — `features/dreaming/skills/dream-synthesizer/SKILL.md`: citation/sourcing behaviors explicitly excluded from Proven Playbooks; routes to Recurring Mistakes only when fabrication confirmed in trace.
+- **Gap analysis** — confirmed by direct code read (not inference): `verify-handoff-claims` is a HANDOFF-doc staleness checker only (git log vs TODO items), not a citation validator; `mempalace mine --tag` flag does not exist; the 2-session threshold is pattern-level (behavioral), not URL-level — "cite GitHub issues" can still be promoted as a pattern after 2 sessions if traces look like success. SKILL.md rule is the fix at that layer.
+
+**No blockers.** Dreaming pipeline changes are backwards-compatible — no schema change, no mine API change. New `state/dream-pending-review/` directory is created on demand.
+
+**Remaining gap (not closed this session):** Stop-hook citation audit (grep session JSONL for unverified URLs, add signal to dreaming pipeline). Deferred — lower priority since the hold-filter protects CLAUDE.md and the memory entry + SKILL.md rule covers the pattern-promotion path.
 
 ## Current state (2026-06-03) — repair script cleaned up, root cause closed
 

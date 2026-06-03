@@ -38,3 +38,4 @@ Produce exactly this structure, nothing else:
 - Strip all session IDs, user names, project names, and paths that might be sensitive.
 - Keep entries general enough to apply across future sessions on different projects.
 - Never include anything that looks like a credential, key, or password.
+- Citation and sourcing behaviors are never promoted to Proven Playbooks. If a trace shows the agent citing a URL or issue number, do not encode "support findings with references" as a playbook — citation correctness cannot be verified from truncated trace output, and promoting this behavior risks crystallizing fabrication as methodology. If a citation was later found to be fabricated, record it under Recurring Mistakes only.

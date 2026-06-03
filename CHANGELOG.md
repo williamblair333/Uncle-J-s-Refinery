@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-03 — feat: dreaming URL hold-filter + anti-promotion rule to block hallucination propagation
+
+### Added
+- **`features/dreaming/dream.sh`** — URL hold-filter: after synthesis, before `mempalace mine` and CLAUDE.md append, URL-bearing `Proven Playbooks` entries are quarantined to `state/dream-pending-review/held-{ISO-timestamp}.md`. Filter failure falls through to unfiltered synthesis (never kills the run). Filename uses full timestamp to prevent concurrent-run write collision.
+- **`features/dreaming/dream.sh`** — Cascade guard: if all playbooks held (HELD_COUNT ≥ TOTAL_PLAYBOOKS > 0), the CLAUDE.md `Dreaming Notes` section is left unchanged — prevents overwriting prior valid playbooks with an empty section.
+- **`features/dreaming/dream.sh`** — Telegram FYI notification extended: held count and `state/dream-pending-review/` path appended to message when entries are quarantined.
+- **`features/dreaming/skills/dream-synthesizer/SKILL.md`** — Anti-promotion rule: citation and sourcing behaviors explicitly excluded from Proven Playbooks. Routes to Recurring Mistakes only when a fabrication is confirmed in the trace. Prevents the 2-session pattern threshold from crystallizing "cite GitHub issues to support findings" as promoted methodology.
+
+### Context
+Two propagation gaps confirmed by direct code read: (1) `verify-handoff-claims` validates HANDOFF TODO state vs git — orthogonal to citation truth; (2) `dream.sh` stripped identifiers but not URLs, and sent synthesizer output straight to `mempalace mine` + CLAUDE.md with no source-validation step. CLAUDE.md is the highest-consequence destination (in-context every session, unconditional). These changes close the injection path at the propagation layer. Note: this is a locator filter — "URL-free playbook" ≠ "verified playbook." The Telegram notification surfaces held items for human review.
+
 ## 2026-06-03 — fix: remove dead Step 2b + correct Step 2c comment in mempalace-repair-now.sh
 
 ### Fixed

@@ -150,6 +150,85 @@ if [ -z "$SYNTHESIS" ]; then
     exit 2
 fi
 
+# ── URL hold-filter: quarantine URL-bearing playbooks before mine/CLAUDE.md ───
+# This is a locator filter, not a truth filter. It holds playbooks that cite a
+# URL for human review; it cannot judge relevance. "URL-free" != "verified."
+step "Filtering synthesis for URL-bearing playbook entries"
+PENDING_DIR="$STATE_DIR/dream-pending-review"
+HELD_COUNT=0
+TOTAL_PLAYBOOKS=0
+_ORIG_SYNTHESIS="$SYNTHESIS"
+_SYNTH_TMP="$(mktemp --suffix=.txt)"
+printf '%s' "$SYNTHESIS" > "$_SYNTH_TMP"
+FILTER_RESULT="$("$VENV_PY" - "$_SYNTH_TMP" "$NOW_TS" "$PENDING_DIR" "$DRY_RUN" <<'PYEOF'
+import re, sys, pathlib
+
+url_re = re.compile(r'https?://\S+')
+synth_file, now_ts, pending_dir_str, dry_run = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+synthesis_raw = pathlib.Path(synth_file).read_text()
+is_dry_run = dry_run == '1'
+
+try:
+    lines = synthesis_raw.split('\n')
+    in_playbooks = False
+    clean_lines = []
+    held_entries = []
+    total_playbook_entries = 0
+
+    for line in lines:
+        if re.match(r'^## Proven Playbooks', line):
+            in_playbooks = True
+            clean_lines.append(line)
+            continue
+        if in_playbooks and re.match(r'^## ', line):
+            in_playbooks = False
+        if in_playbooks and line.startswith('- '):
+            total_playbook_entries += 1
+            if url_re.search(line):
+                held_entries.append(line)
+                continue
+        clean_lines.append(line)
+
+    held_count = len(held_entries)
+    if held_entries and not is_dry_run:
+        pending_dir = pathlib.Path(pending_dir_str)
+        pending_dir.mkdir(parents=True, exist_ok=True)
+        ts_safe = now_ts.replace(':', '').replace(' ', 'T')[:15]
+        held_file = pending_dir / f'held-{ts_safe}.md'
+        held_content = (
+            f'# Held dream playbooks — {now_ts}\n\n'
+            'These entries contain URLs and require human verification before promotion.\n'
+            'To promote: copy entries to a dream output file and re-run `mempalace mine`.\n'
+            'To reject: delete this file.\n\n'
+            '## Held Playbooks\n\n'
+            + '\n'.join(held_entries) + '\n'
+        )
+        held_file.write_text(held_content)
+
+    print(held_count)
+    print(total_playbook_entries)
+    sys.stdout.write('\n'.join(clean_lines))
+
+except Exception as e:
+    sys.stderr.write(f'URL filter error: {e}\n')
+    print(0)
+    print(-1)
+    sys.stdout.write(synthesis_raw)
+PYEOF
+)"
+rm -f "$_SYNTH_TMP"
+HELD_COUNT="$(printf '%s\n' "$FILTER_RESULT" | head -1)"
+TOTAL_PLAYBOOKS="$(printf '%s\n' "$FILTER_RESULT" | sed -n '2p')"
+SYNTHESIS="$(printf '%s\n' "$FILTER_RESULT" | tail -n +3)"
+if ! printf '%s' "${HELD_COUNT:-x}" | grep -qE '^[0-9]+$'; then
+    warn "URL filter produced unexpected output — proceeding without filtering"
+    HELD_COUNT=0; TOTAL_PLAYBOOKS=-1; SYNTHESIS="$_ORIG_SYNTHESIS"
+fi
+unset _ORIG_SYNTHESIS
+[ "${HELD_COUNT:-0}" -gt 0 ] \
+    && ok "Held ${HELD_COUNT} URL-bearing playbook(s) → $PENDING_DIR" \
+    || ok "No URL-bearing playbooks detected"
+
 # ── Write output to MemPalace ─────────────────────────────────────────────────
 step "Writing to MemPalace via mine"
 mkdir -p "$DREAMING_OUTPUT_DIR"
@@ -171,12 +250,16 @@ fi
 # ── Append proven playbooks to CLAUDE.md (idempotent) ────────────────────────
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 if [ -f "$CLAUDE_MD" ] && [ "$DRY_RUN" -eq 0 ]; then
-    step "Updating ~/.claude/CLAUDE.md § Dreaming Notes"
-    PLAYBOOKS="$(printf '%s' "$SYNTHESIS" | awk '/^## Proven Playbooks/{found=1} found{print}' | head -30)"
-    if [ -n "$PLAYBOOKS" ]; then
-        PLAYBOOKS_TMP="$(mktemp --suffix=.txt)"
-        printf '%s\n' "$PLAYBOOKS" > "$PLAYBOOKS_TMP"
-        "$VENV_PY" - "$CLAUDE_MD" "$PLAYBOOKS_TMP" "$NOW_TS" <<'PYEOF'
+    if [ "${HELD_COUNT:-0}" -gt 0 ] && [ "${TOTAL_PLAYBOOKS:-0}" -gt 0 ] && \
+       [ "${HELD_COUNT:-0}" -ge "${TOTAL_PLAYBOOKS:-0}" ]; then
+        warn "All ${HELD_COUNT} playbook(s) held for URL review — CLAUDE.md Dreaming Notes unchanged"
+    else
+        step "Updating ~/.claude/CLAUDE.md § Dreaming Notes"
+        PLAYBOOKS="$(printf '%s' "$SYNTHESIS" | awk '/^## Proven Playbooks/{found=1} found{print}' | head -30)"
+        if [ -n "$PLAYBOOKS" ]; then
+            PLAYBOOKS_TMP="$(mktemp --suffix=.txt)"
+            printf '%s\n' "$PLAYBOOKS" > "$PLAYBOOKS_TMP"
+            "$VENV_PY" - "$CLAUDE_MD" "$PLAYBOOKS_TMP" "$NOW_TS" <<'PYEOF'
 import pathlib, sys
 claude_md_path, playbooks_path, now_ts = sys.argv[1], sys.argv[2], sys.argv[3]
 p = pathlib.Path(claude_md_path)
@@ -190,7 +273,8 @@ content += pathlib.Path(playbooks_path).read_text()
 p.write_text(content)
 print('  OK  CLAUDE.md updated')
 PYEOF
-        rm -f "$PLAYBOOKS_TMP"
+            rm -f "$PLAYBOOKS_TMP"
+        fi
     fi
 fi
 
@@ -200,8 +284,11 @@ log_entry "ok: $TRACE_COUNT traces processed -> $OUTPUT_FILE"
 
 # FYI notification — skip if no traces or dry-run (nothing interesting to report)
 if [[ "$DRY_RUN" -eq 0 && "${TRACE_COUNT:-0}" -gt 0 ]]; then
+    _DREAM_MSG="🌙 Dream run: ${TRACE_COUNT} trace(s) processed → playbooks updated in MemPalace."
+    [ "${HELD_COUNT:-0}" -gt 0 ] && \
+        _DREAM_MSG="${_DREAM_MSG} ${HELD_COUNT} playbook(s) held for URL review → $PENDING_DIR"
     source "$STACK_ROOT/lib/notify.sh" 2>/dev/null \
-        && notify_send_text "🌙 Dream run: ${TRACE_COUNT} trace(s) processed → playbooks updated in MemPalace." \
+        && notify_send_text "$_DREAM_MSG" \
         || true
 fi
 
