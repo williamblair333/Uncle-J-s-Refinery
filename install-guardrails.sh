@@ -20,9 +20,6 @@ for arg in "$@"; do
     esac
 done
 
-step() { printf '\n==> %s\n'  "$*"; }
-ok()   { printf '    OK  %s\n' "$*"; }
-warn() { printf '    !!  %s\n' "$*" >&2; }
 has()  { command -v "$1" >/dev/null 2>&1; }
 
 # ── jq (required by upstream installer) ──────────────────────────────────

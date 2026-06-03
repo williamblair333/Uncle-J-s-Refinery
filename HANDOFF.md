@@ -1,6 +1,20 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (dict-format pickle detection hardened — healthcheck now catches it)*
+*Last updated: 2026-06-03 (Step 2b removed from repair; dict-pickle root cause confirmed closed)*
+
+## Current state (2026-06-03) — repair script cleaned up, root cause closed
+
+`HEALTHCHECK: fail (1) -- untracked-skills` — only failure is two untracked global skills (`mempalace-dict-pickle-repair`, `token-economy-prompt-authoring`). Auto-maintain commits tonight at 3am, or run `bash scripts/auto-maintain.sh`.
+
+**What was done this session:**
+
+- **Dead code removed**: `install-guardrails.sh` — `step()`, `ok()`, `warn()` helpers (zero callers, confidence 1.0).
+- **Step 2b removed from `mempalace-repair-now.sh`**: WAL commit via `col.query() + _system.stop()` was failing every run with `no such column: embedding`. Root: `chromadb.PersistentClient` hardcodes `RustBindingsAPI` internally, ignoring `CHROMA_API_IMPL` env var. The Rust API uses different SQL column names than SegmentAPI expects. HNSW was always populated by the 3am mine alone. Removing it eliminates 93 lines of dead code and false repair-log confidence.
+- **Step 2c comment corrected**: Removed incorrect claim that `_system.stop()` re-writes the pickle as dict. Verified: `stop()` only closes file handles; `_persist()` is the only `pickle.dump` in chromadb (exhaustive grep confirmed). Updated as accurate safety net for backup-restore scenarios only.
+- **Dict-pickle root cause investigation**: The dict format was a one-time chromadb 0.4.x → 1.5.x migration artifact. Under normal 1.5.x operation, a dict pickle cannot be re-introduced: `_persist()` does attribute assignment before `pickle.dump`, which raises `AttributeError` on a dict before the write. Recurrence is impossible through any current code path.
+- **URL verification feedback memory saved**: Never cite GitHub issue URLs from search results without WebFetch/gh verification first — durable rule in memory.
+
+**No blockers.** HNSW healthy (288,755 / 289,281). FTS5 clean. Pickle format: PersistentData confirmed.
 
 ## Current state (2026-06-03) — dict-format pickle detection + auto-migration
 
