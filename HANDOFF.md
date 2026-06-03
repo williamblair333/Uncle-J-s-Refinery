@@ -1,6 +1,17 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (dreaming URL hold-filter + anti-promotion rule)*
+*Last updated: 2026-06-03 (README hero section — badges + self-healing bullet)*
+
+## Current state (2026-06-03) — docs-only session; README hero rewritten
+
+`HEALTHCHECK: fail (1) -- untracked-skills` — unchanged from prior session (two untracked global skills: `mempalace-dict-pickle-repair`, `token-economy-prompt-authoring`). Auto-maintain commits tonight at 3am, or run `bash scripts/auto-maintain.sh`.
+
+**What was done this session:**
+- **`README.md` hero section rewritten** — added four badges (AGPL-3.0, platform, Claude Code, self-healing); opening paragraph replaced with single-line hook + six concrete bullets; **Self-heals** bullet added explicitly naming HNSW corruption detection, FTS5 drift, and SQLite version mismatch auto-repair — these were entirely absent from prior descriptions despite being a core capability.
+
+**No blockers.** Docs-only change. All prior session work (dreaming hold-filter, repair script cleanup, healthcheck hardening) unchanged.
+
+---
 
 ## Current state (2026-06-03) — CLAUDE.md injection path closed; palace path and pattern-promotion mitigated, not closed
 

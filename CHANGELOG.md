@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-06-03 — docs: README hero section — badges, self-healing bullet, tighter copy
+
+### Changed
+- **`README.md`** — added four shields.io badges (AGPL-3.0, Debian/Ubuntu, Claude Code, self-healing); rewrote opening as single-hook line + six concrete bullets; added **Self-heals** bullet explicitly naming HNSW corruption, FTS5 drift, and SQLite version mismatch detection + auto-repair (was absent from all prior descriptions); removed old prose-block intro.
+
 ## 2026-06-03 — feat: dreaming URL hold-filter + anti-promotion rule to block hallucination propagation
 
 ### Added

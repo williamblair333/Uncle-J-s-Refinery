@@ -1,13 +1,20 @@
 # Uncle J's Refinery
 
-*Claude Code forgets everything when you close the terminal. This doesn't. It remembers past decisions, navigates your codebase without re-reading files from scratch, logs every action for review, and runs overnight to extract playbooks from its own mistakes. One install, every project.*
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Debian%2FUbuntu-orange.svg)](https://github.com/williamblair333/Uncle-J-s-Refinery)
+[![Requires Claude Code](https://img.shields.io/badge/Requires-Claude%20Code-blueviolet.svg)](https://claude.ai/code)
+[![Stack: Self-healing](https://img.shields.io/badge/Stack-Self--healing-brightgreen.svg)](docs/RELIABILITY.md)
 
-A complete harness built for a single operator on a single Linux machine:
+*Claude Code forgets everything when you close the terminal. This doesn't.*
 
-- **Retrieval stack** — six MCP servers, each routed by modality (source code, tabular data, project docs, semantic memory, SQL, third-party library docs). Claude queries a symbol index instead of reading whole files; a ChromaDB palace with semantic search replaces re-explaining prior decisions each session.
-- **Observability** — every Claude turn traced to a self-hosted Langfuse instance: tool calls, timings, token counts, full session replay in a local web UI.
-- **Self-improvement loop** — a nightly cron replays Langfuse traces, extracts recurring mistakes and proven playbooks via the `dream-synthesizer` skill, writes them to MemPalace, and patches the model's operating instructions automatically.
-- **Autonomous operation** — a Telegram channel handles approval flows and monitoring alerts; daily health check, auto-maintain, and reindex crons keep the stack current without manual intervention.
+Seven MCP servers, a self-healing retrieval stack, and a nightly loop that mines your own sessions for mistakes. One install — automatically active in every Claude Code project on the machine.
+
+- **Remembers** — ChromaDB palace stores decisions and prior art with semantic search; "what did we decide about auth?" pulls sessions from months ago by topic, not by scroll
+- **Navigates code** — Tree-sitter symbol index means Claude queries your codebase structurally instead of reading whole files; ~80% token reduction on real code tasks
+- **Self-heals** — daily healthcheck detects HNSW corruption, FTS5 drift, and SQLite version mismatches; targeted repair skills run automatically before a broken index silently degrades your session
+- **Learns overnight** — nightly cron replays Langfuse traces, extracts recurring mistakes and proven playbooks via `dream-synthesizer`, and patches Claude's operating instructions without you lifting a finger
+- **Guards** — four guardrail layers block destructive commands, credential leaks, and prompt injection before they land
+- **Reports** — Telegram channel handles approval flows and monitoring alerts; session-end notifications land in your pocket without staying in front of a terminal
 
 Install once. The retrieval routing, hooks, and guardrails apply to every Claude Code project on the machine automatically.
 
