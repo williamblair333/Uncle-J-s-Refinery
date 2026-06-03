@@ -153,6 +153,15 @@ LOW/MEDIUM findings logged as advisories when relevant. No transfer record requi
 6. Block on HIGH/CATASTROPHIC until resolved or escalation completes with valid reasoning.
 7. Log HIGH/CATASTROPHIC transfers to MemPalace.
 8. Non-consequential work: minimum stamp only.
+9. **After STATUS is ✓ CLEAR TO PROCEED** (or after completing HIGH/CATASTROPHIC escalation
+   with valid user reasoning): create the edit-surface-guard clearance token so the blocked
+   edit can proceed. The token path appears in the guard error as "Token path (written by the skill)".
+   Write it with content — `touch` is blocked by Bash hook; use `printf` or the Write tool:
+   ```bash
+   printf 'PRE-MORTEM-COMPLETE\n' > /tmp/premortem-cleared-SESSION_ID
+   ```
+   Replace SESSION_ID with the ID from the blocked edit's error message.
+   **Do NOT create this token before completing the analysis above.**
 
 ## Red Flags — STOP, Run Pre-Mortem
 

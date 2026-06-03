@@ -1,6 +1,21 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (community: MemPalace GitHub Discussions posts published)*
+*Last updated: 2026-06-03 (fix: pre-mortem rubber-stamp bypass closed)*
+
+## Current state (2026-06-03) — pre-mortem bypass hardened
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+- **Pre-mortem rubber-stamp bypass fixed** — root cause: guard error message printed `touch $BYPASS_FILE` as step 2; Claude was copying that command verbatim without invoking the skill. Three-layer fix:
+  1. `hooks/discipline/edit-surface-guard.sh`: removed `touch` instruction from error output; added `-s` content check (empty file no longer clears guard)
+  2. `~/.claude/settings.json`: new Bash PreToolUse hook blocks `touch.*premortem-cleared` directly
+  3. `global-skills/pre-mortem/SKILL.md`: added step 9 — after CLEAR status, skill creates clearance token via `printf`; `touch` path explicitly blocked
+- **hook-blocks.log reviewed** — pattern confirmed: repeated BLOCKED→ALLOWED on same file/session was the rubber-stamp; sessions `1035a65f` (fog-of-chess) and `f4e39fab` showed 3-4 bypasses each. Fix addresses root cause.
+
+**No blockers.** `settings.json` change is in `~/.claude/` (not in repo) — new machines need the touch-block hook added manually or via `install-reliability.sh` update. Upstream PR #1607 still awaiting maintainer review.
+
+---
 
 ## Current state (2026-06-03) — community knowledge-share session
 

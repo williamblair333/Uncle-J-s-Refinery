@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-06-03 — fix: close pre-mortem rubber-stamp bypass in edit-surface-guard
+
+### Fixed
+- **`hooks/discipline/edit-surface-guard.sh`** — removed `touch $BYPASS_FILE` from error output (was being copy-pasted by Claude to skip the skill); bypass check now requires non-empty file content (`-s` flag), so a bare `touch` no longer clears the guard
+- **`global-skills/pre-mortem/SKILL.md`** — added step 9: after STATUS is CLEAR, skill creates the clearance token via `printf 'PRE-MORTEM-COMPLETE\n' > /tmp/premortem-cleared-SESSION_ID`; skill is now the sole documented path to clearance
+- **`~/.claude/settings.json`** — new Bash PreToolUse hook added: blocks any `touch.*premortem-cleared` command, preventing the most obvious bypass pattern
+
 ## 2026-06-03 — community: published MemPalace journey + HNSW technical posts to GitHub Discussions
 
 ### Added

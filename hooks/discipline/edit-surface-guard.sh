@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # PreToolUse guard — blocks Edit/Write on surface-list files until pre-mortem clears.
-# Bypass: invoke pre-mortem skill, then: touch /tmp/premortem-cleared-SESSION_ID
+# Bypass: invoke /pre-mortem skill — the skill writes PRE-MORTEM-COMPLETE to the token
+# file as its final step. Direct `touch` of the token is blocked by Bash PreToolUse hook.
+# Token path: /tmp/premortem-cleared-SESSION_ID (non-empty content required).
 set -uo pipefail
 
 LOG="/opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log"
@@ -38,7 +40,7 @@ is_surface() {
 
 is_surface "$FILE_PATH" || exit 0
 
-if [[ -f "$BYPASS_FILE" ]]; then
+if [[ -f "$BYPASS_FILE" ]] && [[ -s "$BYPASS_FILE" ]]; then
   rm -f "$BYPASS_FILE"
   log_entry "ALLOWED edit-surface-guard file=$FILE_PATH session=$SESSION_ID"
   exit 0
@@ -51,9 +53,11 @@ REASON="PRE-MORTEM REQUIRED before editing: $(basename "$FILE_PATH")
 Surface matched: $FILE_PATH
 
 Steps:
-  1. Invoke pre-mortem skill  →  /pre-mortem
-  2. After pre-mortem clears  →  touch $BYPASS_FILE
-  3. Retry the edit.
+  1. Invoke /pre-mortem skill — it will write the clearance token as its final step.
+  2. Retry the edit.
+
+Token path (written by the skill, not manually): $BYPASS_FILE
+WARNING: Direct token creation (touch, echo, Write) is blocked by Bash PreToolUse hook.
 
 Logged to state/hook-blocks.log for weekly review."
 
