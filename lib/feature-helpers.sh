@@ -47,9 +47,13 @@ write_env_var() {
 install_cron() {
   local marker=$1 entry=$2 tmpfile
   tmpfile=$(mktemp)
-  # Remove any existing entry for this marker (marker line + command line)
+  # Remove any existing entry for this marker (marker line + command line).
+  # Uses prefix match (m followed by end-of-line, space, or open-paren) so that
+  # old entries with description suffixes like "# uncle-j-foo (details...)" are
+  # also removed when re-installing under the plain marker "# uncle-j-foo".
+  # The [^-] guard prevents "uncle-j-mine" from matching "uncle-j-mine-convos".
   crontab -l 2>/dev/null \
-    | awk -v m="# $marker" '$0==m{skip=1; next} skip{skip=0; next} 1' \
+    | awk -v m="# $marker" '$0 ~ ("^" m "([^-]|$)") {skip=1; next} skip{skip=0; next} 1' \
     > "$tmpfile" || true
   { cat "$tmpfile"; echo "# $marker"; echo "$entry"; } | crontab -
   rm -f "$tmpfile"

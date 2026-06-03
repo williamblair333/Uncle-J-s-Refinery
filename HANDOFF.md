@@ -1,50 +1,28 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-01 — system freeze fixed; HNSW drift unresolved*
+*Last updated: 2026-06-03 (FTS5 corruption root cause fixed — HEALTHCHECK: ok)*
 
 Read this before touching anything. Work priorities are in order below.
 
 ---
 
-## Current state (2026-06-01) — foc throttled, HNSW drift open
+## Current state (2026-06-03) — stable, FTS5 corruption permanently fixed
 
-**Most important thing:** Session start showed `HEALTHCHECK: fail (2) -- mempalace-hnsw-drift`. This was NOT addressed this session — focus was an emergency system freeze. Investigate at next session start with `bash healthcheck.sh`.
+`HEALTHCHECK: ok` — all checks passing including mempalace-sqlite (previously the chronic failure).
 
-**What was done this session:**
-- RDP was unusable — system load hit 10, swap at 2.6 GB. Root cause: `foc-server-1` was running two fairy-stockfish chess engine processes at ~180% CPU continuously for 3h43m.
-- Throttled `/opt/proj/foc/docker-compose.yml`: `cpu_quota`/`cpu_period` added to both `server` (2 cores) and `learner` (1 core) services; `ENGINE_THREADS` default 2→1; `CPU_IDLE_MS` default 2000→5000. Both containers recreated. System now stable (load ~3, server CPU capped at 200%).
-- Key gotcha: Docker 26.1 + cgroup v2 + systemd driver — `deploy.resources.limits.cpus` silently does nothing (cpu.max stays empty); `cpu_quota`/`cpu_period` top-level fields are the working path.
+**What was fixed this session (root cause of recurring FTS5 corruption):**
+- `fts5-guard.sh` — DISABLED. Was the primary corruptor: async hook opened concurrent FTS5 transaction during repair.
+- `session-start-autofix.sh` — now uses venv Python (SQLite 3.50.x) + `PRAGMA quick_check` + flock coordination.
+- `healthcheck.sh` — FTS5 check now uses `PRAGMA quick_check` (was `integrity-check` which gave false-ok).
+- `mempalace-repair-now.sh` — writer check expanded to catch all mempalace processes; WAL dim-detection fixed.
+- `lib/feature-helpers.sh` — `install_cron()` now uses prefix match to remove old entries with description suffixes.
+- Crontab — deduplicated (was 2× for all 6 mempalace jobs).
 
-**Open: HNSW drift (`HEALTHCHECK: fail (2)`):**
-```bash
-bash healthcheck.sh   # see what the drift check reports
-```
-Previous legacy repair was started 09:38 on 2026-06-01. Unknown if it completed.
+**Remaining known issue (low priority):**
+- SQLite 3.50.4 has WAL-reset data race bug (fixed in 3.50.7/3.51.3). Venv Python bundles 3.50.4. Upgrade path: get Python that links against 3.50.7+ or install `pysqlite3-binary`. The flock serialization from this session mitigates the race significantly.
 
----
-
-## Current state (2026-06-01) — HNSW legacy repair in progress (prior entry, may be stale)
-
-**Most important thing:** A `mempalace repair --mode legacy --yes` process was running in background (started ~09:38). Check if still running: `ps aux | grep "mempalace repair" | grep -v grep`. If gone, run `bash healthcheck.sh` to verify HNSW state.
-
-**What happened:**
-- The 4am cron ran `from-sqlite` rebuild successfully (30,207 rows in SQLite) but the Step 2b WAL commit crashed with `sqlite3.OperationalError: no such column: embedding`. The `embeddings` table has no vector column — vectors are in `embeddings_queue.vector`. This left HNSW at 0 elements.
-- SQL bug fixed this session in `mempalace-repair-now.sh` line ~192.
-- Attempted WAL commit manually: the `_system.stop()` approach doesn't reliably persist `cur_element_count` in `header.bin` with current chromadb/hnswlib combination (in-memory HNSW works, binary files stay at 0). Investigation pending.
-- Started legacy repair as fallback. It is writing to `.drift-YYYYMMDD-HHMMSS` segment directories (normal for legacy mode).
-
-**To monitor:**
-```bash
-ps aux | grep "mempalace repair" | grep -v grep   # still running?
-bash healthcheck.sh --quick                        # pass after repair completes
-```
-
-**Stack updated by auto-maintain (3am cron):**
-- jcodemunch-mcp `d6ffcbd` → `7315c5ef`
-- mempalace `6957c7e` → `9b7cfc99`
-- `uv sync --inexact` still needed after `uv.lock` update
-
-**Review queue:** `_review/` is empty.
+**Review queue:**
+- `_review/` is empty — all features shipped.
 
 ---
 

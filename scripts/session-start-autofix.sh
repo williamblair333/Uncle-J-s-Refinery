@@ -12,27 +12,48 @@ ts()  { date '+%Y-%m-%d %H:%M:%S'; }
 log() { printf '%s %s\n' "$(ts)" "$*" >> "$LOG" 2>/dev/null; }
 
 # ── 1. FTS5 direct check + auto-repair (fast, no healthcheck needed) ─────────
-if [[ -f "$CHROMA_DB" ]]; then
-    FTS5_STATUS=$(python3 -c "
-import sqlite3
+# CRITICAL: use venv Python (SQLite 3.50.x), NOT system python3/sqlite3 (3.46.1).
+# System SQLite 3.46 reading/writing FTS5 structures created by 3.50 silently corrupts
+# the inverted index. This was the primary recurring corruption cause.
+# Skip entirely if the 4am repair is already running.
+VENV_PY="$REPO_ROOT/.venv/bin/python3"
+if [[ -f "$CHROMA_DB" ]] && [[ -x "$VENV_PY" ]]; then
+    if ! flock -n /tmp/mempalace-repair.lock true 2>/dev/null; then
+        log "FTS5 check skipped — repair lock held"
+    else
+        FTS5_STATUS=$(flock -n /tmp/mempalace-fts5-session.lock \
+            "$VENV_PY" - "$CHROMA_DB" 2>/dev/null <<'PYEOF' || echo "unknown"
+import sqlite3, sys
+db = sys.argv[1]
 try:
-    sqlite3.connect('$CHROMA_DB', timeout=5).execute(
-        \"SELECT * FROM embedding_fulltext_search('x')\").fetchmany(1)
-    print('ok')
-except Exception as e:
-    err = str(e).lower()
-    print('corrupt' if any(k in err for k in ('fts5','corrupt','malformed','disk image')) else 'ok')
-" 2>/dev/null || echo "unknown")
-
-    if [[ "$FTS5_STATUS" == "corrupt" ]]; then
-        log "FTS5 corrupt detected — rebuilding"
-        if sqlite3 -cmd ".timeout 30000" "$CHROMA_DB" \
-               "INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild');" \
-               >> "$LOG" 2>&1; then
-            log "FTS5 rebuild: OK"
-            printf '    AUTO-FIXED  MemPalace FTS5 rebuilt\n'
-        else
-            log "FTS5 rebuild: FAILED (DB locked — will retry next session)"
+    result = sqlite3.connect(db, timeout=5).execute('PRAGMA quick_check').fetchone()[0]
+    print('ok' if result == 'ok' else 'corrupt')
+except Exception:
+    print('unknown')
+PYEOF
+)
+        if [[ "$FTS5_STATUS" == "corrupt" ]]; then
+            log "FTS5 corrupt detected — rebuilding (venv Python, SQLite 3.50)"
+            FTS5_REBUILD_LOG=$(flock -x /tmp/mempalace-fts5-session.lock \
+                "$VENV_PY" - "$CHROMA_DB" 2>&1 <<'PYEOF'
+import sqlite3, sys
+db = sys.argv[1]
+conn = sqlite3.connect(db, timeout=60)
+conn.execute("INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')")
+conn.commit()
+qc = conn.execute('PRAGMA quick_check').fetchone()[0]
+conn.close()
+if qc != 'ok':
+    raise RuntimeError(f'still corrupt after rebuild: {qc}')
+print('ok')
+PYEOF
+)
+            if echo "$FTS5_REBUILD_LOG" | grep -q "^ok$"; then
+                log "FTS5 rebuild: OK"
+                printf '    AUTO-FIXED  MemPalace FTS5 rebuilt\n'
+            else
+                log "FTS5 rebuild: FAILED — $FTS5_REBUILD_LOG"
+            fi
         fi
     fi
 fi
