@@ -1,15 +1,18 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (README hero section — badges + self-healing bullet)*
+*Last updated: 2026-06-03 (community: MemPalace GitHub Discussions posts published)*
 
-## Current state (2026-06-03) — docs-only session; README hero rewritten
+## Current state (2026-06-03) — community knowledge-share session
 
-`HEALTHCHECK: fail (1) -- untracked-skills` — unchanged from prior session (two untracked global skills: `mempalace-dict-pickle-repair`, `token-economy-prompt-authoring`). Auto-maintain commits tonight at 3am, or run `bash scripts/auto-maintain.sh`.
+`HEALTHCHECK: ok` — 3 previously-untracked global skills committed this session; healthcheck failure cleared.
 
 **What was done this session:**
-- **`README.md` hero section rewritten** — added four badges (AGPL-3.0, platform, Claude Code, self-healing); opening paragraph replaced with single-line hook + six concrete bullets; **Self-heals** bullet added explicitly naming HNSW corruption detection, FTS5 drift, and SQLite version mismatch auto-repair — these were entirely absent from prior descriptions despite being a core capability.
+- **Status check** — confirmed MemPalace fully operational: 289,943 drawers, HNSW live, FTS5 clean. All prior MemPalace woes confirmed closed.
+- **GitHub Discussions #1685** published to MemPalace/mempalace — "Why I use MemPalace, and the road that nearly made me quit": journey/war-story post covering the full arc from smooth install through HNSW corruption, false-ok healthcheck, FTS5 self-corruption hook, dict pickle crash, nightly cron rebuild-to-empty, and stable current state. Ghost-written by Claude, attributed to user.
+- **GitHub Discussions #1686** published — "HNSW silent corruption on chromadb 1.5.x — root cause, symptoms, diagnosis, and fix": standalone technical reference with `header.bin` uint32→int64 fix, `chroma-hnswlib==0.7.6` pin, `hnsw:num_threads=1` metadata fix, dict pickle migration code, FTS5 + SQLite version mismatch callout, summary checklist. Upstream issue number NOT cited (chroma-core/chroma#4460 resolved to wrong bug — verified via gh CLI before publishing).
+- **3 global skills committed**: `audit-pipeline-fabrication-risk`, `mempalace-dict-pickle-repair`, `token-economy-prompt-authoring`.
 
-**No blockers.** Docs-only change. All prior session work (dreaming hold-filter, repair script cleanup, healthcheck hardening) unchanged.
+**No blockers.** All infrastructure unchanged. Upstream PR #1607 still awaiting maintainer review.
 
 ---
 

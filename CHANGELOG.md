@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-03 — community: published MemPalace journey + HNSW technical posts to GitHub Discussions
+
+### Added
+- **GitHub Discussions #1685** — "Why I use MemPalace, and the road that nearly made me quit": journey/war-story post covering the full arc from honeymoon to stable palace; covers HNSW corruption, false-ok healthcheck, FTS5 self-corruption hook, dict-format pickle, nightly cron rebuild-to-empty. Links to PR #1607.
+- **GitHub Discussions #1686** — "HNSW silent corruption on chromadb 1.5.x — root cause, symptoms, diagnosis, and fix": technical reference with `header.bin` uint32 overflow diagnosis, `chroma-hnswlib==0.7.6` pin, `hnsw:num_threads=1` collection metadata fix, dict pickle migration snippet, FTS5 + SQLite version mismatch callout.
+- `global-skills/audit-pipeline-fabrication-risk/SKILL.md` — committed (was untracked since creation)
+- `global-skills/mempalace-dict-pickle-repair/SKILL.md` — committed (was untracked since creation)
+- `global-skills/token-economy-prompt-authoring/SKILL.md` — committed (was untracked since creation)
+
 ## 2026-06-03 — docs: README hero section — badges, self-healing bullet, tighter copy
 
 ### Changed
