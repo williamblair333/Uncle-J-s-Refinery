@@ -1,18 +1,13 @@
 #!/usr/bin/env bash
-# FTS5 integrity guard — async SessionStart safety net.
-# Detects and repairs FTS5 corruption before the healthcheck reports it.
-# Uses venv Python (not system sqlite3) to avoid SQLite 3.46 vs 3.50 version mismatch.
-VENV=/opt/proj/Uncle-J-s-Refinery/.venv/bin
-DB="$HOME/.mempalace/palace/chroma.sqlite3"
-[[ -f "$DB" ]] || exit 0
-"$VENV/python3" -c "
-import sqlite3, sys
-c = sqlite3.connect('$DB')
-try:
-    c.execute(\"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('integrity-check')\")
-    c.fetchall()
-except Exception:
-    c.execute(\"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')\")
-    c.commit()
-    print('[fts5-guard] FTS5 rebuilt at session start', file=sys.stderr)
-" 2>&1 || true
+# fts5-guard.sh — DISABLED
+#
+# This was the primary cause of recurring FTS5 "malformed inverted index" corruption.
+# It ran async at SessionStart, opening a concurrent SQLite FTS5 transaction while
+# the 4am repair and session-start-autofix.sh were also accessing the DB. Concurrent
+# FTS5 writes corrupt the inverted index B-tree.
+#
+# FTS5 health is now handled by session-start-autofix.sh, which uses venv Python
+# (SQLite 3.50.x), PRAGMA quick_check, repair flock, and session flock.
+#
+# Do not re-enable without proper flock coordination.
+exit 0

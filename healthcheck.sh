@@ -326,17 +326,18 @@ check_mempalace() {
     local result
     local py="$REPO_ROOT/.venv/bin/python3"
     if [ -x "$py" ]; then
-        # Use venv Python — avoids SQLite 3.46 vs 3.50 version mismatch where
-        # the system binary reports FTS5 indexes written by Python as malformed.
+        # Use venv Python (SQLite 3.50.x) + PRAGMA quick_check.
+        # IMPORTANT: FTS5 'integrity-check' INSERT only verifies data consistency,
+        # NOT the B-tree structure. It gives false-ok on "malformed inverted index"
+        # corruption. PRAGMA quick_check catches the actual B-tree malformation.
         result="$("$py" - "$db" <<'PYEOF' 2>&1
 import sqlite3, sys
 db = sys.argv[1]
 try:
-    c = sqlite3.connect(db)
-    c.execute("INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('integrity-check')")
-    c.commit()
+    c = sqlite3.connect(db, timeout=10)
+    r = c.execute('PRAGMA quick_check').fetchone()[0]
     c.close()
-    print("ok")
+    print('ok' if r == 'ok' else r)
 except Exception as e:
     print(str(e))
 PYEOF
@@ -344,12 +345,12 @@ PYEOF
     else
         # Venv not built yet (pre-install) — fall back to system sqlite3.
         # May produce false positives when system sqlite3 < Python's sqlite3 version.
-        result="$(sqlite3 "$db" 'PRAGMA integrity_check;' 2>&1)"
+        result="$(sqlite3 "$db" 'PRAGMA quick_check;' 2>&1 | head -1)"
     fi
     if [ "$result" = "ok" ]; then
-        ok "SQLite integrity_check: ok"
+        ok "SQLite quick_check: ok"
     else
-        bad "SQLite integrity failure: $result"
+        bad "SQLite corruption: $result"
         hint "run: $REPO_ROOT/.venv/bin/python3 -c \"import sqlite3; c=sqlite3.connect('$db'); c.execute(\\\"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')\\\"); c.commit()\""
         record_fail "mempalace-sqlite"
     fi

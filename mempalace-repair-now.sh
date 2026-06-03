@@ -76,8 +76,8 @@ log "==> Checking for active writers..."
 for pid in $(fuser "$DB" 2>/dev/null || true); do
   cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "unknown")
   log "  PID $pid: $cmd"
-  if echo "$cmd" | grep -qE "mine|repair"; then
-    log "  [WARN] mine/repair process active — aborting"
+  if echo "$cmd" | grep -qiE "mine|repair|fts5|autofix|mempalace"; then
+    log "  [WARN] mempalace-related process active — aborting"
     REPAIR_RESULT="aborted_writer_active"
     log "REPAIR_RESULT=$REPAIR_RESULT"
     notify "⚠️ MemPalace repair aborted — active writer (PID $pid) still running. Will retry at next cron window."
@@ -187,14 +187,17 @@ import chromadb
 palace = pathlib.Path.home() / ".mempalace" / "palace"
 db_path = str(palace / "chroma.sqlite3")
 
-# Read embedding dimension from the first queued vector (float32 = 4 bytes/element).
-# Vectors live in embeddings_queue.vector (BLOB); the embeddings table has no vector column.
+# Read embedding dimension from collections table.
+# collections.dimension is set at creation and is always present.
+# (embeddings_queue.vector can be empty after repair; embeddings table has no vector column)
 with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
-    row = conn.execute("SELECT vector FROM embeddings_queue WHERE vector IS NOT NULL LIMIT 1").fetchone()
-blob = row[0] if row else None
-if blob is None:
-    print("  no vector in embeddings_queue — using dim=384 fallback", flush=True)
-dim = len(blob) // 4 if isinstance(blob, (bytes, bytearray)) else 384
+    try:
+        row = conn.execute(
+            "SELECT dimension FROM collections WHERE dimension IS NOT NULL LIMIT 1"
+        ).fetchone()
+        dim = row[0] if row and row[0] else 384
+    except Exception:
+        dim = 384
 print(f"  embedding dim={dim}", flush=True)
 
 client = chromadb.PersistentClient(path=str(palace))

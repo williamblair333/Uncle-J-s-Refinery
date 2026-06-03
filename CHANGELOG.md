@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-03 — fix: eliminate recurring FTS5 corruption (root cause)
+
+### Root cause
+Four compounding bugs caused "malformed inverted index" to reappear every morning:
+1. `fts5-guard.sh` (async SessionStart hook) opened an uncommitted FTS5 transaction concurrently with the repair script — corrupted the B-tree between the repair's PRE and POST quick_check calls
+2. `session-start-autofix.sh` used system `python3`/`sqlite3` (SQLite 3.46.1) to read/write an FTS5 index created by venv Python (SQLite 3.50.4) — version mismatch silently corrupts the index
+3. `healthcheck.sh` used FTS5 `integrity-check` INSERT (only checks data consistency) instead of `PRAGMA quick_check` (catches B-tree malformation) — produced false-ok on every session
+4. Crontab had duplicate entries for all 4 mempalace jobs — `install_cron()` used exact marker match, leaving old entries with description suffixes untouched on re-install
+
+### Fixed
+- **`scripts/fts5-guard.sh`** — disabled (exit 0); was the primary corruptor; replaced by improved session-start-autofix.sh
+- **`scripts/session-start-autofix.sh`** — FTS5 check now uses venv Python (SQLite 3.50.x) + `PRAGMA quick_check`; skips if repair lock held; uses `mempalace-fts5-session.lock` to prevent concurrent session races
+- **`healthcheck.sh`** — `check_mempalace()` FTS5 check changed from `integrity-check` INSERT to `PRAGMA quick_check`; now correctly detects B-tree malformation
+- **`mempalace-repair-now.sh`** — writer check expanded from `mine|repair` to `mine|repair|fts5|autofix|mempalace` (catches fts5-guard and mempalace-health.py); WAL commit dim detection fixed (`SELECT embedding FROM embeddings` → `SELECT dimension FROM collections`, fixes `no such column: embedding` error from 2026-06-02)
+- **`lib/feature-helpers.sh`** — `install_cron()` awk pattern changed from exact match to prefix match (`^# $marker([^-]|$)`) so re-installing removes old entries with description suffixes
+- **Crontab** — deduplicated (was 2× for all 6 mempalace jobs); 4am repair now uses `--skip-if-healthy` consistently
 ## 2026-06-01 — ops: system freeze diagnosis + foc container CPU throttling
 
 ### Fixed
