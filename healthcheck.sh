@@ -386,6 +386,68 @@ PYEOF
     done
     [ "$corrupted" -eq 0 ] && ok "HNSW link_lists.bin sizes normal"
 
+    step "MemPalace — HNSW pickle format"
+    # Pure stdlib pickle inspection — no chromadb, no WAL contention.
+    # Detects segments where index_metadata.pickle is a raw dict instead of a
+    # PersistentData (or SimpleNamespace) object. SegmentAPI accesses .dimensionality
+    # as an attribute; dict has it as a key — this mismatch silently passes the
+    # healthcheck but breaks every MCP search query.
+    # $py is already declared at the top of check_mempalace().
+    local pickle_result=""
+    if [ -x "$py" ]; then
+        # tail -1: ensures a Python traceback never matches BAD:/ERR: patterns.
+        # Python always prints a known token as its last line.
+        # BAD: = dict-format (fixable by repair-now.sh)
+        # ERR: = unreadable pickle (fixable by rebuild from SQLite)
+        pickle_result=$( "$py" - "$HOME/.mempalace/palace" <<'PYEOF' 2>&1 | tail -1
+import pickle, pathlib, sys
+palace = pathlib.Path(sys.argv[1])
+if not palace.exists():
+    print("SKIP")
+    sys.exit(0)
+bad, errs = [], []
+for pkl in palace.glob("*/index_metadata.pickle"):
+    try:
+        with open(pkl, "rb") as f:
+            data = pickle.load(f)
+        if isinstance(data, dict):
+            bad.append(pkl.parent.name[:8])
+    except Exception:
+        errs.append(pkl.parent.name[:8])
+parts = []
+if bad:  parts.append("BAD:"  + ",".join(bad))
+if errs: parts.append("ERR:"  + ",".join(errs))
+print("|".join(parts) if parts else "OK")
+PYEOF
+        )
+    else
+        pickle_result="SKIP"
+    fi
+    case "$pickle_result" in
+        OK)
+            ok "HNSW pickle format: ok (PersistentData/SimpleNamespace)" ;;
+        SKIP|"")
+            ok "HNSW pickle format: skipped (no palace or no venv yet)" ;;
+        *BAD:*)
+            _bad_segs="${pickle_result##*BAD:}"; _bad_segs="${_bad_segs%%|*}"
+            bad "HNSW pickle: dict-format in segment(s): $_bad_segs"
+            hint "run: bash $REPO_ROOT/mempalace-repair-now.sh"
+            record_fail "mempalace-pickle-format"
+            case "$pickle_result" in *ERR:*)
+                _err_segs="${pickle_result##*ERR:}"
+                warn "HNSW pickle: also unreadable segment(s): $_err_segs (repair-now.sh will skip — rebuild from SQLite needed)"
+            ;; esac
+            ;;
+        *ERR:*)
+            _err_segs="${pickle_result##*ERR:}"
+            bad "HNSW pickle: unreadable segment(s): $_err_segs — rebuild from SQLite needed"
+            hint "run: bash $REPO_ROOT/mempalace-repair-now.sh"
+            record_fail "mempalace-pickle-unreadable"
+            ;;
+        *)
+            warn "HNSW pickle check error (unexpected output): ${pickle_result%%$'\n'*}" ;;
+    esac
+
     step "MemPalace — HNSW/SQLite drawer count sync"
     local drift_result
     drift_result=$( "$REPO_ROOT/.venv/bin/python3" - "$HOME/.mempalace/palace" <<'PYEOF'

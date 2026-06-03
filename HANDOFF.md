@@ -1,6 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (SQLite upgraded to 3.51.3 via pysqlite3 — WAL race bug fixed)*
+*Last updated: 2026-06-03 (dict-format pickle detection hardened — healthcheck now catches it)*
+
+## Current state (2026-06-03) — dict-format pickle detection + auto-migration
+
+`HEALTHCHECK: fail (1) -- untracked-skills` — only failure is two new untracked global skills (`mempalace-dict-pickle-repair`, `token-economy-prompt-authoring`). Auto-maintain will commit them tonight at 3am, or run `bash scripts/auto-maintain.sh` now.
+
+**What was done this session:**
+
+- **Session start issue**: MemPalace MCP search was broken after restart with `'dict' object has no attribute 'dimensionality'`. Healthcheck said ok — gap confirmed and fixed.
+- **Manual fix applied**: segment `184bcb3d` `index_metadata.pickle` migrated from dict → `SimpleNamespace` using venv Python + stdlib only.
+- **`healthcheck.sh`**: new `MemPalace — HNSW pickle format` step — stdlib-only pickle type check (no chromadb, no WAL contention). Separates `BAD:` (dict, fixable) from `ERR:` (unreadable, needs rebuild). `| tail -1` prevents traceback false-matches. Three code-review bugs fixed (ERR:/BAD: conflation, redundant `local py=`, missing exit-code capture on migration block).
+- **`mempalace-repair-now.sh`**: Step 2c added — after every WAL commit, migrates any remaining dict-format pickles to `types.SimpleNamespace`. Atomic (`.tmp` → rename), backed up (`.bak`), exit-code monitored.
+
+**Why SimpleNamespace instead of PersistentData:**  
+`PersistentData` is an internal chromadb class — importing it would break on any chromadb upgrade. `SimpleNamespace` is stdlib, has real attribute access (`.dimensionality` works), and survives `pickle` round-trips. Chromadb's `cast(PersistentData, ...)` is a type lie — it passes any object through, so SimpleNamespace works.
+
+**Why does dict-format keep appearing:**  
+Root cause not fully closed. `local_persistent_hnsw.py`'s `load_from_file` uses `cast(PersistentData, pickle.load(f))` which doesn't convert the loaded object. If the pickle was written as a dict (legacy chromadb path or Rust API path), `_save_index()` writes the dict back unchanged. Step 2c breaks this cycle after each repair.
+
+**On another machine:** `git pull && bash install.sh` picks up both fixes.
 
 ## Current state (2026-06-03) — SQLite WAL data race fixed
 

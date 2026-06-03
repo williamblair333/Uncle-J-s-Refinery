@@ -256,6 +256,47 @@ fi
 HNSW_STATUS="wal_committed_ok"
 log "  WAL commit to HNSW: OK"
 
+# --- Step 2c: Migrate any dict-format HNSW pickles to SimpleNamespace ---
+# PersistentClient's _system.stop() may write index_metadata.pickle back in
+# dict format if the segment was loaded from a pre-existing dict pickle
+# (chromadb cast() is a type lie — it doesn't convert). SegmentAPI then
+# accesses .dimensionality as an attribute, which dicts don't have, breaking
+# every MCP search query with "'dict' object has no attribute 'dimensionality'".
+#
+# Fix: convert dict → types.SimpleNamespace (stdlib-only, upgrade-safe).
+# SimpleNamespace has real attribute access (.dimensionality works), survives
+# pickle round-trips, and doesn't require importing chromadb internals.
+log "==> Migrating any dict-format HNSW pickles to SimpleNamespace..."
+"$VENV/python3" - <<'PYEOF' 2>&1
+import pickle, pathlib, types, sys, shutil
+
+palace = pathlib.Path.home() / ".mempalace" / "palace"
+migrated = 0
+for pkl_path in palace.glob("*/index_metadata.pickle"):
+    try:
+        with open(pkl_path, "rb") as f:
+            data = pickle.load(f)
+        if not isinstance(data, dict):
+            continue
+        bak = pkl_path.with_suffix(".pickle.bak")
+        shutil.copy2(pkl_path, bak)
+        ns = types.SimpleNamespace(**data)
+        tmp = pkl_path.with_suffix(".pickle.tmp")
+        with open(tmp, "wb") as f:
+            pickle.dump(ns, f, pickle.HIGHEST_PROTOCOL)
+        tmp.rename(pkl_path)
+        print(f"  Migrated {pkl_path.parent.name[:8]}: dict → SimpleNamespace (backup: {bak.name})", flush=True)
+        migrated += 1
+    except Exception as e:
+        print(f"  {pkl_path.parent.name[:8]}: migration error: {e}", flush=True)
+        sys.exit(1)
+print(f"  {migrated} pickle(s) migrated" if migrated else "  No dict-format pickles found — nothing to do", flush=True)
+PYEOF
+PICKLE_MIGRATE_EXIT=$?
+if [ $PICKLE_MIGRATE_EXIT -ne 0 ]; then
+  log "  [WARN] dict-pickle migration had errors (exit=$PICKLE_MIGRATE_EXIT) — MCP search may still fail"
+fi
+
 # --- Post-repair count sanity check (SQLite integrity + HNSW binary verification) ---
 POST_COUNT=$(pycheck "conn=sqlite3.connect(db); print(conn.execute('SELECT COUNT(*) FROM embeddings').fetchone()[0])" || echo "0")
 POST_HNSW=$("$VENV/python3" -c "

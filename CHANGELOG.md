@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-03 — fix: healthcheck dict-pickle detection + repair auto-migration
+
+### Fixed
+- **`healthcheck.sh`** — new `MemPalace — HNSW pickle format` step: pure stdlib `pickle.load` + `type()` check on every `index_metadata.pickle`; no chromadb import (upgrade-safe). Separates `BAD:` (dict-format, fixable by repair) from `ERR:` (unreadable, needs rebuild). `| tail -1` prevents Python traceback from matching `BAD:` pattern. Removes redundant `local py=` redeclaration inside `check_mempalace()`.
+- **`mempalace-repair-now.sh`** — Step 2c: after WAL commit, glob all VECTOR segment pickles and migrate any `dict` → `types.SimpleNamespace` (stdlib-only, survives chromadb upgrades). Backup written to `.pickle.bak` before overwrite; atomic rename via `.pickle.tmp`. Exit code captured; WARN logged on failure.
+- Session start: manually migrated segment `184bcb3d` dict pickle → `SimpleNamespace`; restored MCP search after restart.
+
+### Root cause note
+`PersistentClient._system.stop()` re-saves `self._persist_data` as-is via `pickle.dump`. If the segment was loaded from a legacy dict pickle (chromadb's `cast(PersistentData, ...)` is a type lie), the dict is written back on every save. Step 2c runs after Step 2b so the final on-disk state is always `SimpleNamespace` regardless of what Step 2b wrote.
+
 ## 2026-06-03 — fix: upgrade SQLite to 3.51.3 via pysqlite3 source build
 
 - `install.sh` step 2b: builds pysqlite3 from source against SQLite 3.51.3 amalgamation when bundled version < 3.51.3 (PyPI wheel has 3.51.1, uv Python 3.11 has 3.50.4 — both affected by WAL-reset data race fixed in 3.51.3)
