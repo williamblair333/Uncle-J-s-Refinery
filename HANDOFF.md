@@ -2,7 +2,7 @@
 
 *Last updated: 2026-06-03 (dreaming URL hold-filter + anti-promotion rule)*
 
-## Current state (2026-06-03) — dreaming hallucination propagation paths closed
+## Current state (2026-06-03) — CLAUDE.md injection path closed; palace path and pattern-promotion mitigated, not closed
 
 `HEALTHCHECK: fail (1) -- untracked-skills` — two untracked global skills (`mempalace-dict-pickle-repair`, `token-economy-prompt-authoring`). Auto-maintain commits tonight at 3am, or run `bash scripts/auto-maintain.sh`.
 
@@ -12,9 +12,14 @@
 - **Dream-synthesizer anti-promotion rule** — `features/dreaming/skills/dream-synthesizer/SKILL.md`: citation/sourcing behaviors explicitly excluded from Proven Playbooks; routes to Recurring Mistakes only when fabrication confirmed in trace.
 - **Gap analysis** — confirmed by direct code read (not inference): `verify-handoff-claims` is a HANDOFF-doc staleness checker only (git log vs TODO items), not a citation validator; `mempalace mine --tag` flag does not exist; the 2-session threshold is pattern-level (behavioral), not URL-level — "cite GitHub issues" can still be promoted as a pattern after 2 sessions if traces look like success. SKILL.md rule is the fix at that layer.
 
+**What this session actually closed vs. mitigated — be precise:**
+- **Closed:** CLAUDE.md injection path. URL-bearing playbooks can no longer auto-promote to standing instructions. All-held cascade preserves existing section rather than blanking it.
+- **Mitigated, not closed:** Pattern-promotion path. The SKILL.md rule instructs the synthesizer to exclude citation behaviors, but it's a model-invoked instruction reading 300-char truncated traces — same reliability class as other LLM guards. Closing it structurally requires trace-level verified/unverified metadata, which Langfuse ingestion doesn't capture.
+- **Still open:** Palace path for non-playbook sections. The filter only inspects `## Proven Playbooks`. A fabricated URL in `## Recurring Mistakes` or any other heading passes straight to `mempalace mine` and can resurface via `prior-art-check`. Narrowing to the CLAUDE.md path was the right scope cut, but it's a cut — not full coverage.
+
 **No blockers.** Dreaming pipeline changes are backwards-compatible — no schema change, no mine API change. New `state/dream-pending-review/` directory is created on demand.
 
-**Remaining gap (not closed this session):** Stop-hook citation audit (grep session JSONL for unverified URLs, add signal to dreaming pipeline). Deferred — lower priority since the hold-filter protects CLAUDE.md and the memory entry + SKILL.md rule covers the pattern-promotion path.
+**Remaining gap — the other half of the same problem:** Stop-hook citation audit (grep session JSONL for unverified URLs, cross-check against WebFetch/Bash tool uses in the same session, add verified/unverified signal to dreaming pipeline). This is not a nice-to-have — it's the only component that would let the synthesizer distinguish verified from fabricated citations and structurally close the pattern-promotion path. Deferred because the hold-filter removes the worst consequence (CLAUDE.md injection), not because the problem is solved.
 
 ## Current state (2026-06-03) — repair script cleaned up, root cause closed
 
