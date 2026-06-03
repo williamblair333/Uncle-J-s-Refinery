@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-03 — fix: remove dead Step 2b + correct Step 2c comment in mempalace-repair-now.sh
+
+### Fixed
+- **`mempalace-repair-now.sh`** — removed Step 2b (WAL commit via `col.query() + _system.stop()`): was failing every run with `sqlite3.OperationalError: no such column: embedding` because `chromadb.PersistentClient` hardcodes `RustBindingsAPI` regardless of `CHROMA_API_IMPL` env var, and the Rust API uses a different SQL column name. HNSW was always populated solely by the 3am mine cron. Removing the step eliminates false confidence in repair logs and the blocking `exit 1` on failure.
+- **`mempalace-repair-now.sh`** — corrected Step 2c comment: removed incorrect claim that `_system.stop()` re-writes pickle as dict (verified: `stop()` only closes file handles — no pickle write); replaced with accurate description: safety net for backup-restore from old chromadb, verified `_persist()` is the only `pickle.dump` call in the entire installed chromadb package.
+- **`mempalace-repair-now.sh`** — updated post-repair HNSW=0 warning: "after WAL commit" → "mine cron will populate on next run" (accurate recovery path).
+- **`install-guardrails.sh`** — removed dead helper functions `step()`, `ok()`, `warn()` (zero callers anywhere in repo, confidence 1.0).
+
+### Investigation
+- Deep-dived dict-pickle root cause: confirmed one-time chromadb 0.4.x → 1.5.x migration artifact. `_persist()` cannot write a dict (attribute assignment before `pickle.dump` raises `AttributeError` on a dict). `_persist()` is the only `pickle.dump` in chromadb — verified by exhaustive grep. Recurrence through normal operation: impossible.
+
 ## 2026-06-03 — fix: healthcheck dict-pickle detection + repair auto-migration
 
 ### Fixed
