@@ -89,6 +89,8 @@ mempalace wake-up                                    # hydrate new session
 
 **ChromaDB version pin.** `pyproject.toml` pins `chromadb==1.5.8` + `chroma-hnswlib==0.7.6`. The `chroma-hnswlib` package is critical — without it, chromadb falls back to Rust HNSW bindings with a type-confusion corruption bug (chroma-core/chroma#4460). All mine/repair scripts also export `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`. Do not bump chromadb without verifying a clean repair run.
 
+**SQLite version pin.** The uv-managed Python 3.11 statically embeds SQLite 3.50.4, which has a WAL-reset data race bug (present since SQLite 3.7.0, fixed in 3.51.3). `install.sh` step 2b builds `pysqlite3` from source against the SQLite 3.51.3 amalgamation and installs a `.pth` file in venv site-packages that swaps `stdlib sqlite3 → pysqlite3` at every process startup. Verify with: `.venv/bin/python3 -c "import sqlite3; print(sqlite3.sqlite_version, sqlite3.__name__)"` — should print `3.51.3 pysqlite3`.
+
 ---
 
 ## Serena (LSP-grade code intelligence — second opinion)

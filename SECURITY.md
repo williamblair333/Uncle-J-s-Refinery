@@ -45,6 +45,13 @@ Every `/work` dispatch is logged with `ELEVATED:` prefix in `state/telegram-gate
 Treat your Telegram account security (2FA, app passwords) as equivalent to SSH key
 access to this machine.
 
+## Dependency Security Fixes
+
+| Date | Component | Issue | Fix |
+|------|-----------|-------|-----|
+| 2026-06-03 | SQLite (via uv Python 3.11) | WAL-reset data race — present in all SQLite 3.7.0–3.51.2; concurrent checkpoint + commit can silently skip transaction frames, corrupting the database file | Upgraded to SQLite 3.51.3 via `pysqlite3` source build; `.pth` in venv site-packages patches all processes at startup |
+| 2026-06-03 | SQLite FTS5 | CVE-2025-7709 integer overflow in FTS5 extension; CVE-2025-70873 uninitialized heap memory in zipfile extension | Resolved by SQLite 3.51.3 upgrade above |
+
 ## Supported Versions
 
 Only the latest commit on `main` is supported.
