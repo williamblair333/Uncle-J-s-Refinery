@@ -2,6 +2,21 @@
 
 *Last updated: 2026-06-04 (plan: turbovecdb parallel evaluation rig)*
 
+## Current state (2026-06-04) — turbovecdb parallel eval rig: all 6 tasks complete
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+- All 6 tasks implemented and committed. turbovecdb running in parallel against live 296K-drawer palace.
+- First benchmark run: chroma p50=318ms, tvdb p50=6.5ms (49× faster queries), recall@10=0.408 (quantization tradeoff — tracking weekly).
+- 3 crons registered and healthcheck-verified: sync (3:30am daily), benchmark (Sun 5am), report (Sun 6am).
+- Report script will auto-post weekly table to MemPalace/mempalace discussion #1668.
+
+**Open items:**
+- recall@10=0.408 is low — worth a second run to confirm it's stable or investigate turbovecdb's HNSW ef parameter.
+- Stop-hook citation audit (carried forward).
+- `kostadis/turbovecdb` PR #2 awaiting author review.
+
 ## Current state (2026-06-04) — turbovecdb eval rig: Task 1 done, Tasks 2–6 in progress
 
 `HEALTHCHECK: ok`

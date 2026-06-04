@@ -200,6 +200,11 @@ else
     fi
 fi
 
+# turbovecdb parallel eval (idempotent)
+if [[ -f "$PROJ/scripts/turbovecdb-install.sh" ]]; then
+  bash "$PROJ/scripts/turbovecdb-install.sh" 2>/dev/null || true
+fi
+
 step "Reliability layer: skills, agents, guardrails, and plugins installed"
 cat <<EOF
 

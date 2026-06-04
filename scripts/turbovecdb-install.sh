@@ -10,10 +10,13 @@ uv pip install "$FORK" --quiet
 # Register crons (idempotent: remove old, add new)
 PROJ=/opt/proj/Uncle-J-s-Refinery
 
-crontab -l 2>/dev/null | grep -v "turbovecdb-sync\|turbovecdb-benchmark\|turbovecdb-report" | \
+crontab -l 2>/dev/null | grep -v "uncle-j-turbovecdb\|turbovecdb-sync\|turbovecdb-benchmark\|turbovecdb-report" | \
   { cat; \
+    echo "# uncle-j-turbovecdb-sync"; \
     echo "30 3 * * * cd $PROJ && CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI .venv/bin/python3 scripts/turbovecdb-sync.py >> state/turbovecdb-sync.log 2>&1"; \
+    echo "# uncle-j-turbovecdb-benchmark"; \
     echo "0 5 * * 0 cd $PROJ && CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI .venv/bin/python3 scripts/turbovecdb-benchmark.py >> state/turbovecdb-benchmark.log 2>&1"; \
+    echo "# uncle-j-turbovecdb-report"; \
     echo "0 6 * * 0 cd $PROJ && bash scripts/turbovecdb-report.sh >> state/turbovecdb-report.log 2>&1"; \
   } | crontab -
 
