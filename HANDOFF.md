@@ -2,6 +2,24 @@
 
 *Last updated: 2026-06-04 (plan: turbovecdb parallel evaluation rig)*
 
+## Current state (2026-06-04) — turbovecdb eval rig live + community engaged
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+- turbovecdb parallel eval rig complete — PR #23 merged. 296K drawers migrated, 3 crons running (sync/benchmark/report).
+- First benchmark: tvdb p50=6.5ms vs chroma p50=318ms (49×); recall@10=0.408.
+- MemPalace PR #1524 (geco's OpenCode plugin): reviewed v1.2.0–v1.3.1, flagged `experimental` hook stability + `autoInjectContext` default change; committed to review SKILL.md update when pushed.
+- MemPalace discussion #1668: posted benchmark results to @kostadis; linked to PR #23.
+- Memory saved: draft-then-wait rule (don't post in same turn as asking for approval).
+
+**Open items:**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning before investigating
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- `kostadis/turbovecdb` security PR #2 awaiting author review
+- uv.lock has unstaged turbovecdb dependency change — commit with next session's work or standalone
+
 ## Current state (2026-06-04) — turbovecdb parallel eval rig: all 6 tasks complete
 
 `HEALTHCHECK: ok`

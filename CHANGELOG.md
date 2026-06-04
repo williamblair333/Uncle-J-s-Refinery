@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-04 — community: turbovecdb eval rig shipped + MemPalace community engagement
+
+### Community
+- **MemPalace PR #1524** — reviewed geco's OpenCode plugin v1.2.0–v1.3.1 update; flagged `experimental.chat.messages.transform` stability and `autoInjectContext: true` default shift; agreed to review updated SKILL.md when pushed
+- **MemPalace discussion #1668** — posted first benchmark results tagging @kostadis (49× faster queries, recall@10=0.408, weeks-long eval underway); linked to PR #23
+
+### Added
+- **PR #23** (`williamblair333/Uncle-J-s-Refinery`) — feat: turbovecdb parallel eval rig; merged to main
+
 ## 2026-06-04 — feat: turbovecdb parallel eval rig — all 6 tasks complete
 
 ### Added
