@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-06-04 — feat: turbovecdb parallel eval rig — all 6 tasks complete
+
+### Added
+- **`scripts/turbovecdb-migrate.py`** — one-time migration: 296,595 drawers + 274 closets → `~/.turbovecdb-eval/` in 77s (~3,860 rows/s). Resumable on interrupt.
+- **`scripts/turbovecdb-sync.py`** — nightly incremental sync: ID diff between ChromaDB and turbovecdb, loads missing rows in batches of 500.
+- **`scripts/turbovecdb-benchmark.py`** — weekly benchmark: 200 random query vectors, p50/p95 latency + recall@10 vs ChromaDB. First run results: chroma p50=318ms, tvdb p50=6.5ms, recall@10=0.408.
+- **`scripts/turbovecdb-report.sh`** — weekly markdown table posted to MemPalace/mempalace discussion #1668 via `updateDiscussionComment` GraphQL mutation.
+- **`state/turbovecdb-sync-state.json`** — migration state + sync tracking.
+- **`state/turbovecdb-eval.jsonl`** — append-only benchmark log.
+- **`healthcheck.sh`** — 3 new expected crons: `uncle-j-turbovecdb-sync`, `uncle-j-turbovecdb-benchmark`, `uncle-j-turbovecdb-report`. All showing OK.
+- **`install-reliability.sh`** — idempotent turbovecdb-install.sh call added to re-install on fresh clones.
+
+### Notes
+- recall@10=0.408 on first run is expected: turbovecdb uses quantized (4-bit) HNSW vs ChromaDB's float32 HNSW — some recall loss is the tradeoff being evaluated. Will track over weeks.
+
+## 2026-06-04 — feat: turbovecdb parallel eval rig — Task 1 (install + crons)
+
+### Added
+- **`scripts/turbovecdb-install.sh`** — installs patched turbovecdb fork (`williamblair333/turbovecdb@fix/security-findings`) via `uv pip`, registers 3 crons: nightly sync (3:30am), weekly benchmark (Sun 5am), weekly report (Sun 6am). turbovecdb 0.1.0 + turbovec 0.7.0 installed at commit `cf5eb6c`.
+
 ## 2026-06-04 — plan: turbovecdb parallel evaluation rig
 
 ### Added

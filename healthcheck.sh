@@ -517,6 +517,9 @@ check_crons() {
         [uncle-j-healthcheck-notify]="bash $REPO_ROOT/scripts/healthcheck-notify.sh"
         [uncle-j-jcodemunch-reindex]="bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
         [uncle-j-mempalace-repair]="mempalace repair"
+        [uncle-j-turbovecdb-sync]="turbovecdb-sync.py"
+        [uncle-j-turbovecdb-benchmark]="turbovecdb-benchmark.py"
+        [uncle-j-turbovecdb-report]="turbovecdb-report.sh"
     )
     for label in "${!EXPECTED[@]}"; do
         if printf '%s\n' "$tab" | grep -q "$label"; then
