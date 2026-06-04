@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-06-04 — plan: turbovecdb parallel evaluation rig
+
+### Added
+- **`docs/superpowers/plans/2026-06-04-turbovecdb-parallel-eval.md`** — 6-task implementation plan for weeks-long ChromaDB vs turbovecdb head-to-head: migration script, nightly sync, benchmark (p50/p95 + recall@10), weekly report auto-posted to GitHub discussion #1668. Not yet implemented.
+
 ## 2026-06-04 — community: turbovecdb security review + PR; terse-reply skill
 
 ### Added

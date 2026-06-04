@@ -1,6 +1,22 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-04 (community: turbovecdb security review + PR; terse-reply skill)*
+*Last updated: 2026-06-04 (plan: turbovecdb parallel evaluation rig)*
+
+## Current state (2026-06-04) — turbovecdb eval plan written, not yet implemented
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+- **turbovecdb parallel eval plan** written at `docs/superpowers/plans/2026-06-04-turbovecdb-parallel-eval.md` — 6 tasks covering: install patched fork into venv, one-time 296K-drawer migration, nightly sync script, weekly benchmark (p50/p95 + recall@10 vs ChromaDB), weekly report auto-posted to discussion #1668, cron + healthcheck wiring.
+- Plan is not yet executed. Next session: use `superpowers:subagent-driven-development` to implement task by task.
+
+**Most important thing for next session:** Run `superpowers:subagent-driven-development` against the plan at `docs/superpowers/plans/2026-06-04-turbovecdb-parallel-eval.md`. Task 1 (install turbovecdb) + Task 2 (migration, ~20min runtime) are the critical path — everything else is blocked on them.
+
+**Open items (carried forward):**
+- Stop-hook citation audit (structural close of pattern-promotion path)
+- `kostadis/turbovecdb` PR #2 awaiting author review
+
+---
 
 ## Current state (2026-06-04) — upstream security contribution + new terse-reply skill
 
