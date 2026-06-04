@@ -13,7 +13,7 @@ Completed items age out after ~4 weeks.
 
 ## In Progress
 
-- **turbovecdb parallel eval** — plan written (`docs/superpowers/plans/2026-06-04-turbovecdb-parallel-eval.md`); 6 tasks not yet implemented; Task 1 (install) + Task 2 (migration) are the critical path
+- **turbovecdb parallel eval** — live as of 2026-06-04 (PR #23 merged); 296K drawers migrated, weekly benchmark + auto-report crons running; awaiting @kostadis response on recall@10 ef tuning
 
 ## Planned
 

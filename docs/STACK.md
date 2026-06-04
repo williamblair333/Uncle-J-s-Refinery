@@ -91,6 +91,8 @@ mempalace wake-up                                    # hydrate new session
 
 **SQLite version pin.** The uv-managed Python 3.11 statically embeds SQLite 3.50.4, which has a WAL-reset data race bug (present since SQLite 3.7.0, fixed in 3.51.3). `install.sh` step 2b builds `pysqlite3` from source against the SQLite 3.51.3 amalgamation and installs a `.pth` file in venv site-packages that swaps `stdlib sqlite3 → pysqlite3` at every process startup. Verify with: `.venv/bin/python3 -c "import sqlite3; print(sqlite3.sqlite_version, sqlite3.__name__)"` — should print `3.51.3 pysqlite3`.
 
+**turbovecdb (parallel eval — not production).** `turbovecdb==0.1.0` + `turbovec==0.7.0` installed from `williamblair333/turbovecdb@fix/security-findings` (commit `cf5eb6c`) via `uv pip`. Lives at `~/.turbovecdb-eval/` — completely separate from `~/.mempalace/`. ChromaDB stays production. Re-install via `bash scripts/turbovecdb-install.sh` (idempotent, called by `install-reliability.sh`).
+
 ---
 
 ## Serena (LSP-grade code intelligence — second opinion)
