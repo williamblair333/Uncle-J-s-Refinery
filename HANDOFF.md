@@ -1,6 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-03 (fix: pre-mortem rubber-stamp bypass closed)*
+*Last updated: 2026-06-04 (community: turbovecdb security review + PR; terse-reply skill)*
+
+## Current state (2026-06-04) — upstream security contribution + new terse-reply skill
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+- **turbovecdb security review** — cloned `kostadis/turbovecdb` to `review/turbovecdb/`, read all 5 source files + 4 test files, ran security-reviewer agent. Found 1 HIGH (path traversal), 1 MEDIUM (SQLITE_MAX_VARIABLE_NUMBER crash on large deletes), 2 LOWs (filter recursion DoS, silent ANN remove failure).
+- **PR #2 submitted** to `kostadis/turbovecdb` — all findings fixed, 7 new security tests, 46/46 passing. Fork at `williamblair333/turbovecdb`, branch `fix/security-findings`.
+- **Discussion comment** posted and tightened to `MemPalace/mempalace/discussions/1668` — architecture verified, scale test offer, security findings.
+- **`terse-reply` skill** added to `global-skills/` — strips verbosity on demand; invoked via `/terse-reply`.
+- **`.gitignore`** updated — added `review/` and `reviewed/`.
+
+**No blockers.** Stack unchanged. PR #2 awaiting author review.
+
+**Open item (carried forward):** Stop-hook citation audit — grep session JSONL for unverified URLs, cross-check against WebFetch/Bash tool uses; needed to structurally close pattern-promotion path (palace path and pattern-promotion still mitigated, not closed).
+
+**Open item (carried forward):** Scale test for turbovecdb at 290K drawers — committed to in the discussion post; no ETA, run when convenient.
+
+---
 
 ## Current state (2026-06-03) — pre-mortem bypass hardened
 

@@ -119,3 +119,5 @@ entities.json
 # Review folders (_review = active queue, _reviewed = processed/done)
 _review/
 _reviewed/
+review/
+reviewed/

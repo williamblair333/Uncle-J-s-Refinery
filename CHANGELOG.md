@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-04 — community: turbovecdb security review + PR; terse-reply skill
+
+### Added
+- **`global-skills/terse-reply/SKILL.md`** — new skill: strips verbosity from any draft reply (preamble, summaries, hedges, filler); invoked via `/terse-reply`
+- **`.gitignore`** — added `review/` and `reviewed/` to match existing `_review/`/`_reviewed/` entries
+- **turbovecdb PR #2** (`kostadis/turbovecdb`) — security fixes contributed upstream after full source review of the cloned repo (`review/turbovecdb/`):
+  - HIGH: path traversal in `database.collection(name)` — added `_SAFE_NAME` regex + `abspath` containment check
+  - MEDIUM: unbounded `uid IN (?,...)` lists in `delete()` and `_select_uids()` — chunked to ≤ 900 (SQLITE_MAX_VARIABLE_NUMBER safe on all builds); same cap on `$in`/`$nin` filter operands
+  - LOW: `where_to_sql()` recursion DoS — depth counter + `UnsupportedFilterError` above 10
+  - LOW: silent bare `except` on ANN index remove → `logging.warning()`
+  - 7 new security tests added to `tests/test_security.py`; 46/46 passing
+
+### Community
+- Posted analysis of turbovecdb to MemPalace/mempalace discussion #1668 — architecture verified correct from source, scale test offer (290K drawers), security findings listed
+- Comment tightened via `/terse-reply` after initial post
+
 ## 2026-06-03 — fix: close pre-mortem rubber-stamp bypass in edit-surface-guard
 
 ### Fixed
