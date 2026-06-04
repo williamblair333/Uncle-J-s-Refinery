@@ -2,6 +2,16 @@
 
 *Last updated: 2026-06-04 (plan: turbovecdb parallel evaluation rig)*
 
+## Current state (2026-06-04) — turbovecdb eval rig: Task 1 done, Tasks 2–6 in progress
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+- **Task 1 complete**: `scripts/turbovecdb-install.sh` written, turbovecdb 0.1.0 + turbovec 0.7.0 installed via uv. 3 crons registered (sync 3:30am daily, benchmark Sun 5am, report Sun 6am).
+- **In progress**: Tasks 2–6 (migration, sync, benchmark, report, healthcheck wiring).
+
+**Critical path:** Task 2 (migration, ~10–30 min runtime) unblocks 3–6.
+
 ## Current state (2026-06-04) — turbovecdb eval plan written, not yet implemented
 
 `HEALTHCHECK: ok`

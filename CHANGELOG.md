@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-06-04 — feat: turbovecdb parallel eval rig — Task 1 (install + crons)
+
+### Added
+- **`scripts/turbovecdb-install.sh`** — installs patched turbovecdb fork (`williamblair333/turbovecdb@fix/security-findings`) via `uv pip`, registers 3 crons: nightly sync (3:30am), weekly benchmark (Sun 5am), weekly report (Sun 6am). turbovecdb 0.1.0 + turbovec 0.7.0 installed at commit `cf5eb6c`.
+
 ## 2026-06-04 — plan: turbovecdb parallel evaluation rig
 
 ### Added
