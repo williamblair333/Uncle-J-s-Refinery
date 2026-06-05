@@ -156,11 +156,13 @@ LOW/MEDIUM findings logged as advisories when relevant. No transfer record requi
 9. **After STATUS is ✓ CLEAR TO PROCEED** (or after completing HIGH/CATASTROPHIC escalation
    with valid user reasoning): create the edit-surface-guard clearance token so the blocked
    edit can proceed. The token path appears in the guard error as "Token path (written by the skill)".
-   Write it with content — `touch` is blocked by Bash hook; use `printf` or the Write tool:
+   Call the authorized script — ALL direct write methods (printf, echo, tee, cat, touch, python3,
+   Write tool, > redirect, etc.) are blocked by token-guard.sh:
    ```bash
-   printf 'PRE-MORTEM-COMPLETE\n' > /tmp/premortem-cleared-SESSION_ID
+   bash /home/bill/.claude/hooks/pre-mortem-guard/write-clearance-token.sh /tmp/premortem-cleared-SESSION_ID
    ```
    Replace SESSION_ID with the ID from the blocked edit's error message.
+   Token is session-scoped (valid 2h) — one pre-mortem covers all related edits in the session.
    **Do NOT create this token before completing the analysis above.**
 
 ## Red Flags — STOP, Run Pre-Mortem

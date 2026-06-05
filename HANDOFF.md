@@ -1,6 +1,34 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-04 (plan: turbovecdb parallel evaluation rig)*
+*Last updated: 2026-06-05 — discipline controls hardened; red-team/blue-team cycle complete*
+
+## Current state (2026-06-05) — pre-mortem discipline controls hardened
+
+`HEALTHCHECK: fail (1) -- untracked-skills` (community-pr-stakeholder-response needs commit — handled this session)
+
+**What was done this session:**
+
+- **GitHub check** — MemPalace PR #1524 (geco's OpenCode plugin): ran deep code review, flagged `anyBins` bug + double MCP round-trip + KG over-recording; posted comment
+- **Pre-mortem bypass fixed (again)** — user flagged `printf` bypass (previous session fixed `touch`, but `printf` was still unblocked). Root cause: `token-guard.sh` only blocked `touch`. Fix: comprehensive allowlist-only approach
+- **Red-team skill created** — `~/.claude/skills/red-team/SKILL.md`; general offensive security skill with 22-category attack table
+- **Blue-team skill created** — `~/.claude/skills/blue-team/SKILL.md`; defensive security skill with STRIDE model
+- **Adversarial cycle run** — blue-team analysis → red-team adversarial pass → 5 findings (1 CRITICAL, 4 HIGH) → all patched and verified:
+  - RT-CRIT-1: Symlink + write-to-non-prefix-path full bypass (`ln -s /tmp/real-token /tmp/premortem-cleared-ID`)
+  - RT-H1: `rm` of guard scripts unblocked → all controls dead
+  - RT-H2: Perl/Ruby/Node file writes bypass `surface-write-guard.sh`
+  - RT-H3: Path traversal in `write-clearance-token.sh` TOKEN_PATH → overwrites settings.json
+  - RT-H4: `token_valid()` fallback `return 0` on JSON parse error
+- **`edit-surface-guard.sh`** — fail-closed SESSION_ID, TOKEN_MAX_AGE, symlink detection in `token_valid()`, fail-closed on parse error
+- **`write-clearance-token.sh`** — `realpath -m` canonicalization + symlink block
+- **`token-guard.sh`** — guard deletion block (`rm` of `/hooks/` paths denied)
+- **`surface-write-guard.sh`** — perl/ruby/node/awk write patterns added
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning before investigating
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- `kostadis/turbovecdb` security PR #2 awaiting author review
+- uv.lock has turbovecdb dependency change — committed this session
 
 ## Current state (2026-06-04) — turbovecdb eval rig live + community engaged
 

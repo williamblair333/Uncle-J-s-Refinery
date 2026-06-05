@@ -24,6 +24,8 @@ Security-relevant components:
 - `scripts/lib/tg_security.py` — Input sanitisation, rate limiting, injection detection
 - `install.sh` / `install-reliability.sh` — System-level installation scripts
 - `.env` — Credential storage (never committed; covered by `.gitignore`)
+- `hooks/discipline/edit-surface-guard.sh` — PreToolUse guard enforcing pre-mortem before surface file edits
+- `~/.claude/hooks/pre-mortem-guard/` — Token-based enforcement layer: `token-guard.sh`, `surface-write-guard.sh`, `write-clearance-token.sh`
 
 ## Known Security Model
 

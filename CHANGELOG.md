@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-06-05 — security: discipline controls hardened; red-team/blue-team adversarial cycle
+
+### Security (global — `~/.claude/hooks/pre-mortem-guard/`)
+- **`write-clearance-token.sh`** — added `realpath -m` canonicalization (closes path traversal: `/tmp/premortem-cleared-../../../../home/bill/.claude/settings.json`); symlink detection at token path (closes RT-CRIT-1 chain step)
+- **`token-guard.sh`** — added guard deletion block: `rm` of any `/hooks/` path now denied with logged entry; prevents RT-H1 (guard deletion → all controls disabled)
+- **`surface-write-guard.sh`** — added perl, ruby, node, awk write-detection patterns (closes RT-H2 gap; was documented but unpatched)
+- **`~/.claude/skills/red-team/SKILL.md`** — new general-purpose offensive security skill; 22-category attack table; Claude Code controls playbook
+- **`~/.claude/skills/blue-team/SKILL.md`** — new defensive security skill; STRIDE model; hook/guard hardening patterns with code examples
+
+### Changed (in-repo)
+- **`hooks/discipline/edit-surface-guard.sh`** — hardened: fail-closed on `SESSION_ID` parse failure (no more `"unknown"` fallback), `TOKEN_MAX_AGE=7200` constant, symlink check in `token_valid()` (RT-CRIT-1), fail-closed on JSON parse error (removed `return 0` fallback → RT-H4), updated header comment
+- **`global-skills/pre-mortem/SKILL.md`** — step 9 updated: clearance token now written via `write-clearance-token.sh` (closes `printf`/`echo`/`touch` bypass methods; all direct writes blocked by `token-guard.sh`)
+
+### Added (in-repo)
+- **`global-skills/community-pr-stakeholder-response/SKILL.md`** — new skill for responding to upstream PR mentions; deep review + pre-mortem before posting
+
+### Adversarial findings closed (red-team pass → blue-team patch cycle)
+| ID | Finding | Severity |
+|----|---------|----------|
+| RT-CRIT-1 | Symlink + write-to-non-prefix-path full bypass | CRITICAL |
+| RT-H1 | `rm` of guard scripts unblocked | HIGH |
+| RT-H2 | Perl/Ruby/Node surface file writes bypass regex | HIGH |
+| RT-H3 | Path traversal in `write-clearance-token.sh` TOKEN_PATH | HIGH |
+| RT-H4 | `token_valid()` fail-open on python3 parse error | HIGH |
+
+### GitHub
+- **MemPalace PR #1524** — posted deep code review: flagged `anyBins` bug (python3 satisfies bin check), double MCP round-trip, KG over-recording on every transform call
+
+---
+
 ## 2026-06-04 — community: turbovecdb eval rig shipped + MemPalace community engagement
 
 ### Community
