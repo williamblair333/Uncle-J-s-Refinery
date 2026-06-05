@@ -1,6 +1,37 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-05 — discipline controls hardened; red-team/blue-team cycle complete*
+*Last updated: 2026-06-05 — pre-mortem skill hardened; 3-cycle adversarial analysis complete*
+
+## Current state (2026-06-05) — pre-mortem skill hardened via 3-cycle red/blue-team
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+
+- **3-cycle adversarial red/blue-team on pre-mortem skill** — ran red-team → blue-team → red-team → blue-team → red-team against `global-skills/pre-mortem/SKILL.md`
+  - Cycle 1: 2 CRITICALs, 3 HIGHs, 3 MEDIUMs, 1 LOW found and patched
+  - Cycle 2: 4 HIGHs, 4 MEDIUMs, 1 LOW found and patched (all boundary conditions + definition gaps)
+  - Cycle 3: 3 MEDIUMs, 4 LOWs — confirmed convergence (no new CRITICALs or HIGHs)
+- **27 patches applied** to `global-skills/pre-mortem/SKILL.md` — key changes:
+  - Minimum stamp NEVER creates token
+  - Token requires 4 structural conditions (count dimension blocks, surface named, status, scope)
+  - Scope = specific absolute file paths only; categories prohibited
+  - Surface classification table with override test; Infrastructure is default
+  - Steelman must answer MECHANISM + CONDITION + CONSEQUENCE TIMELINE
+  - MEDIUM BUNDLE: 3+ MEDIUMs = BLOCKED
+  - WarGames W3 capped 2 retries + 10-exchange budget (concurrent)
+  - MemPalace audit fail-closed + local fallback log
+  - Cross-session DECLINED memory (future sessions start at W2)
+  - Non-arguable CATASTROPHIC list + regret test catch-all
+- **Pre-mortem run** on the SKILL.md edit itself — 3 MEDIUMs (complexity, cascade, human factors), all acceptable; ⚠ WARNINGS PRESENT, proceeded
+- **On main**, clean tree, committed and pushed
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning before investigating
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- `kostadis/turbovecdb` security PR #2 awaiting author review
+- Future hook-layer patch: embed token scope in token file, verify at edit time (documented as residual in skill)
 
 ## Current state (2026-06-05) — pre-mortem discipline controls hardened
 

@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-06-05 — security: pre-mortem skill hardened via 3-cycle red/blue-team adversarial analysis
+
+### Security / Discipline Controls
+- **`global-skills/pre-mortem/SKILL.md`** — comprehensive rewrite; 27 patches from three full red-team/blue-team cycles:
+  - **CRITICAL closed:** minimum stamp no longer creates clearance token (was: any non-consequential pre-mortem unlocked all surface edits for the session)
+  - **CRITICAL closed:** token creation now requires 4 structural conditions all verified against the output: (a) all required dimension blocks present, (b) surface named, (c) status CLEAR/escalation complete, (d) scope statement written with specific absolute file paths — category scopes prohibited
+  - **HIGH closed:** explicit surface classification table (Infrastructure → all 12 dims; Architecture decision → dims 1–8+; Minimum stamp → no analysis, no token); override test; hybrid actions always Infrastructure
+  - **HIGH closed:** steelman must explicitly answer MECHANISM + CONDITION + CONSEQUENCE TIMELINE — vague answers fail; rewrite required
+  - **HIGH closed:** WarGames Warning 3 capped at 2 retries; 10-exchange total budget from Warning 1 (concurrent — whichever fires first)
+  - **MEDIUM closed:** all 12 dimension blocks required for Infrastructure surfaces; CLEAR must name specific verifiable property; no silent omissions; unverified runtime claims not valid as CLEAR
+  - **MEDIUM closed:** MEDIUM BUNDLE rule — 3+ MEDIUM findings → ⛔ BLOCKED; rating independence rule prevents bundle-avoidance downrating
+  - **MEDIUM closed:** MemPalace audit fail-closed — diary write failure blocks transfer; fallback to `state/premortem-unaudited.log`; dual-failure = hard block; session-end-checklist reviews log
+  - **MEDIUM closed:** cross-session DECLINED memory — hard-declines logged to MemPalace audit room; future sessions start at Warning 2; elevated engagement standard for re-attempts; direct tag search supplements semantic query
+  - **Catch-all added:** non-arguable CATASTROPHIC list expanded (3 new entries including irreversible-deletion catch-all + regret test); tie-break rule (rate UP when ambiguous)
+  - **Hybrid action gap closed:** infrastructure component determines whole-action classification; no piecemeal split analysis
+  - **New attack patched (R3):** intentional budget exhaustion to launder a declined action — elevated W2 standard for previously-declined actions
+  - Rationalization Table expanded: 5 new entries covering bundle-avoidance, persistence-as-reasoning, scope creep, preparation advantage
+  - Residual risks documented at end of skill: self-assessed steelman quality, behavioral token scope (future hook-layer patch), cross-session retrieval quality, anchoring bias
+
 ## 2026-06-05 — security: discipline controls hardened; red-team/blue-team adversarial cycle
 
 ### Security (global — `~/.claude/hooks/pre-mortem-guard/`)
