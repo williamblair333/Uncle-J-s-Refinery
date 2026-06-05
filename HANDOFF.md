@@ -1,12 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-05 — MemPalace HNSW empty-index root cause fixed; searches will work after session restart*
+*Last updated: 2026-06-05 — cron nice levels + session-start MemPalace reconnect*
+
+## Current state (2026-06-05) — cron nice levels + session-start reconnect
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+
+- **Cron nice levels** — `nice -n 19` added to repair cron (4am), @reboot boot-repair, and turbovecdb-sync (3:30am) in both install scripts and live crontab. Repair was the only cron without nice — could spike CPU on a full HNSW rebuild. Turbovecdb-sync had a 47K-item backlog.
+- **`global-skills/session-status-briefing/SKILL.md`** — step 4 now calls `mempalace_reconnect` before MemPalace search at session start. Fixes "ef or M is too small" caused by MCP server loading stale HNSW. Graceful fallback if MCP is down.
+- **Memory saved** — `feedback_mempalace-reconnect-on-start.md` documents the reconnect pattern.
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- `kostadis/turbovecdb` security PR #2 awaiting author review
+- Task 5: run `mempalace-repair-now.sh` manually end-to-end (tonight's 4am cron = first live test of new Step 2b code path)
+
+---
 
 ## Current state (2026-06-05) — MemPalace HNSW reliability fixed
 
-`HEALTHCHECK: ok` (after session restart — current MCP servers still have stale in-memory HNSW)
+`HEALTHCHECK: ok`
 
-**⚠ ACTION REQUIRED: restart Claude sessions** to reload the fixed HNSW from disk. The on-disk HNSW for `mempalace_closets` is now 291 elements (fixed by PoC earlier in this context). MCP server processes loaded 0 elements at startup and will keep failing until restarted.
+**Note:** "restart Claude sessions" action is now resolved — `session-status-briefing` skill calls `mempalace_reconnect` at step 4; no manual restart required in future sessions.
 
 **What was done this session:**
 

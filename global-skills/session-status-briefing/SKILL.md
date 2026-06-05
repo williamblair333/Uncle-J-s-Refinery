@@ -47,13 +47,19 @@ Also call `mcp__jcodemunch__digest` if the index is fresh. If stale or unavailab
 
 ### 4. MemPalace prior-art check
 
-Only run after confirming HNSW health (step 2) passes. Search for any prior work on the session's topic.
+Only run after confirming HNSW health (step 2) passes.
+
+First, call `mempalace_reconnect` to ensure the MCP server has loaded the latest on-disk HNSW
+(the server can start with stale in-memory state even after a Claude restart — confirmed issue
+2026-06-05). If reconnect fails, note it and skip the search; do not block the briefing.
+
+Then search for any prior work on the session's topic:
 
 ```
 mempalace_search("session status OR digest OR health check", wing=<project>)
 ```
 
-If step 2 shows MemPalace is broken, skip this and note it in the output.
+If step 2 shows MemPalace is broken, or reconnect failed, skip this and note it in the output.
 
 ### 5. Risk surface (if doing code work)
 

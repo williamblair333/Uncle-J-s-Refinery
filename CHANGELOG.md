@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-05 — fix: cron nice levels + session-start MemPalace reconnect
+
+### Fixed
+- **`features/mempalace/install.sh`** — added `nice -n 19` to `CRON_REPAIR` (4am) and `CRON_BOOT_REPAIR` (@reboot) definitions; consistent with 3am mine crons which already had it; prevents CPU spike on full 300K-element rebuild
+- **`scripts/turbovecdb-install.sh`** — added `nice -n 19` to turbovecdb-sync cron (3:30am) before `.venv/bin/python3`; prevents CPU spike on large sync backlogs (47K-item backlog present)
+- Live crontab updated in-session for all three (repair, boot-repair, turbovecdb-sync)
+
+### Added
+- **`global-skills/session-status-briefing/SKILL.md`** — step 4 now calls `mempalace_reconnect` before MemPalace search at every session start; graceful fallback if reconnect fails; fixes recurring "ef or M is too small" on session start when MCP server loads stale in-memory HNSW
+
+---
+
 ## 2026-06-05 — fix: MemPalace HNSW empty-index reliability + healthcheck gaps
 
 ### Fixed

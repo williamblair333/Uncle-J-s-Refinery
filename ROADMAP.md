@@ -8,11 +8,6 @@ Completed items age out after ~4 weeks.
 ## In Progress
 
 - **Upstream MemPalace PR #1607** — FTS5 auto-rebuild before abort in `mempalace repair`; 5/6 CI jobs passing (Windows pending); awaiting maintainer review
-
----
-
-## In Progress
-
 - **turbovecdb parallel eval** — live as of 2026-06-04 (PR #23 merged); 296K drawers migrated, weekly benchmark + auto-report crons running; awaiting @kostadis response on recall@10 ef tuning
 
 ## Planned
