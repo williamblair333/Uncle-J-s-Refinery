@@ -154,13 +154,13 @@ step "Registering nightly repair cron (4am — HNSW rebuild)"
 # --skip-if-healthy: skip if HNSW >= 80% of SQLite count — avoids destroying a
 # healthy palace nightly (the compactor leaves HNSW at 0 after every unconditional
 # archive+rebuild, causing a permanent drift loop)
-CRON_REPAIR="0 4 * * * flock -w 7200 /tmp/mempalace-mine-project.lock flock -w 7200 /tmp/mempalace-mine-convos.lock flock -n /tmp/mempalace-repair.lock bash ${PROJ_ROOT}/mempalace-repair-now.sh --skip-if-healthy >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
+CRON_REPAIR="0 4 * * * nice -n 19 flock -w 7200 /tmp/mempalace-mine-project.lock flock -w 7200 /tmp/mempalace-mine-convos.lock flock -n /tmp/mempalace-repair.lock bash ${PROJ_ROOT}/mempalace-repair-now.sh --skip-if-healthy >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
 install_cron "$MARKER_CRON_REPAIR" "$CRON_REPAIR"
 ok "Cron installed: 0 4 * * * (waits for 3am mines, flock-guarded, skip-if-healthy)"
 
 step "Registering @reboot boot-repair cron"
 # Runs repair after power-on in case 3am/4am crons were missed; --skip-if-healthy is a no-op if palace is clean
-CRON_BOOT_REPAIR="@reboot sleep 120 && flock -n /tmp/mempalace-repair.lock bash ${PROJ_ROOT}/mempalace-repair-now.sh --skip-if-healthy >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
+CRON_BOOT_REPAIR="@reboot sleep 120 && nice -n 19 flock -n /tmp/mempalace-repair.lock bash ${PROJ_ROOT}/mempalace-repair-now.sh --skip-if-healthy >> ${PROJ_ROOT}/state/mempalace-repair.log 2>&1"
 install_cron "$MARKER_CRON_BOOT_REPAIR" "$CRON_BOOT_REPAIR"
 ok "Cron installed: @reboot (skip-if-healthy)"
 
