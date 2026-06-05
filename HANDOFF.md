@@ -1,6 +1,34 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-05 — design memory system live; durable MemPalace entries + skill wiring*
+*Last updated: 2026-06-05 — MemPalace HNSW empty-index root cause fixed; searches will work after session restart*
+
+## Current state (2026-06-05) — MemPalace HNSW reliability fixed
+
+`HEALTHCHECK: ok` (after session restart — current MCP servers still have stale in-memory HNSW)
+
+**⚠ ACTION REQUIRED: restart Claude sessions** to reload the fixed HNSW from disk. The on-disk HNSW for `mempalace_closets` is now 291 elements (fixed by PoC earlier in this context). MCP server processes loaded 0 elements at startup and will keep failing until restarted.
+
+**What was done this session:**
+
+Root cause found and fixed: `mempalace repair --mode from-sqlite` sets `hnsw:batch_size=50000` for all collections. `mempalace_closets` (286 items) never reaches this threshold, so its HNSW stays in-memory brute-force and is lost when `backend.close()` is called. `link_lists.bin` = 0 bytes after every nightly repair → "ef or M is too small" on every closets search.
+
+- **`mempalace-repair-now.sh` Step 2b** — post-repair force-flush: opens SegmentAPI, lowers batch/sync thresholds for small collections, rebuilds HNSW from most-recent archive if empty, calls `_apply_batch` + `_persist`. Prevents the problem permanently after each repair.
+- **`mempalace-repair-now.sh`** — writer-check fix: MCP server processes now excluded from the active-writer abort (they're read-only). Repair can run alongside a live session.
+- **`mempalace-repair-now.sh`** — HNSW header offset corrected in both `--skip-if-healthy` and post-repair count checks (uint32 at offset 20, not int64 at offset 0).
+- **`healthcheck.sh`** — now detects 0-byte `link_lists.bin` as HNSW-empty failure; triggers auto-background-repair; skips `.drift-*` backup dirs.
+- **`healthcheck.sh`** — sync check now per-collection (not global max). Fixes the core gap: 250K drawers HNSW was masking 0-element closets HNSW via `max()`. Also fixed `embeddings` join to use METADATA segment scope.
+- **`state/upstream-bug-report-hnsw-flush.md`** + **`state/upstream-pr-hnsw-flush.md`** — upstream issue + PR drafts ready for review and submission.
+
+**Known limitation:** force-flush uses private ChromaDB APIs (`seg._apply_batch`, `seg._curr_batch`, `seg._persist`) — will break on chromadb upgrade. Pin `chromadb==1.5.8` until upstream PR is accepted.
+
+**Still pending (Task 5):** run repair manually to test the full new code path end-to-end. Current palace is healthy (PoC fix holds); tonight's 4am cron will be the first live test.
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- `kostadis/turbovecdb` security PR #2 awaiting author review
+- Review + submit upstream bug report + PR to https://github.com/MemPalace/mempalace
 
 ## Current state (2026-06-05) — design memory system implemented
 
