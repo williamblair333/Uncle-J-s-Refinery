@@ -372,16 +372,30 @@ PYEOF
         hint "run: rmdir $REPO_ROOT/state/mempalace-mine-*.lock"
     fi
 
-    step "MemPalace — HNSW not corrupted"
+    step "MemPalace — HNSW not corrupted or empty"
     local corrupted=0
     for f in "$HOME/.mempalace/palace"/*/link_lists.bin; do
         [ -f "$f" ] || continue
-        local sz
+        # Skip drift backup directories (segment.drift-YYYYMMDD/link_lists.bin)
+        [[ "$(dirname "$f")" == *".drift-"* ]] && continue
+        local sz seg
+        seg=$(basename "$(dirname "$f")")
         sz=$(du -m "$f" 2>/dev/null | cut -f1)
         if [ "${sz:-0}" -gt 200 ]; then
             bad "HNSW corruption: $f is ${sz}MB (>200MB limit)"
             record_fail "mempalace-hnsw-corruption"
             corrupted=1
+        elif [ ! -s "$f" ]; then
+            bad "HNSW empty: ${seg:0:8} link_lists.bin is 0 bytes — searches fail ('ef or M is too small')"
+            record_fail "mempalace-hnsw-empty"
+            corrupted=1
+            # Auto-repair in background so session start is not blocked.
+            # Repair can now run alongside MCP servers (writer-check excludes mcp_server).
+            # MCP server must be restarted after repair to reload the rebuilt HNSW.
+            log "  Auto-repair: starting mempalace-repair-now.sh in background..."
+            nohup bash "$REPO_ROOT/mempalace-repair-now.sh" \
+                >> "$REPO_ROOT/state/mempalace-repair.log" 2>&1 &
+            log "  Repair PID $! started — restart MCP server (Claude session) when complete"
         fi
     done
     [ "$corrupted" -eq 0 ] && ok "HNSW link_lists.bin sizes normal"
@@ -448,7 +462,7 @@ PYEOF
             warn "HNSW pickle check error (unexpected output): ${pickle_result%%$'\n'*}" ;;
     esac
 
-    step "MemPalace — HNSW/SQLite drawer count sync"
+    step "MemPalace — HNSW/SQLite sync per collection"
     local drift_result
     drift_result=$( "$REPO_ROOT/.venv/bin/python3" - "$HOME/.mempalace/palace" <<'PYEOF'
 import sys, sqlite3, struct, pathlib
@@ -459,26 +473,51 @@ if not db.exists():
     print("SKIP")
     sys.exit(0)
 
+def hnsw_elements(seg_id):
+    # uint32 at offset 20 = high 32 bits of (cur_elements * 2^32) in chroma-hnswlib 0.7.6
+    hdr = palace / seg_id / "header.bin"
+    if not hdr.exists():
+        return 0
+    try:
+        data = hdr.read_bytes()
+        if len(data) >= 24:
+            n = struct.unpack_from("<I", data, 20)[0]
+            return n if 0 <= n <= 10_000_000 else 0
+    except Exception:
+        pass
+    return 0
+
 try:
+    # embeddings table uses METADATA segment IDs; join both scopes
     with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
-        sqlite_count = conn.execute(
-            "SELECT COUNT(*) FROM embedding_fulltext_search_content"
-        ).fetchone()[0]
+        rows = conn.execute("""
+            SELECT c.name, v.id, COUNT(e.id) as cnt
+            FROM collections c
+            JOIN segments v ON v.collection=c.id AND v.scope='VECTOR'
+            JOIN segments m ON m.collection=c.id AND m.scope='METADATA'
+            LEFT JOIN embeddings e ON e.segment_id=m.id
+            GROUP BY c.id
+        """).fetchall()
 except Exception as e:
     print(f"ERR:{e}")
     sys.exit(0)
 
-hnsw_count = 0
-for hdr_path in palace.glob("*/header.bin"):
-    try:
-        data = hdr_path.read_bytes()
-        if len(data) >= 24:
-            cur = struct.unpack_from("<I", data, 20)[0]
-            hnsw_count = max(hnsw_count, cur)
-    except Exception:
-        pass
+results = []
+overall = "OK"
+for col_name, seg_id, sqlite_n in rows:
+    hnsw_n = hnsw_elements(seg_id)
+    if sqlite_n > 0 and hnsw_n == 0:
+        tag = "EMPTY"
+        overall = "FAIL"
+    elif sqlite_n > 0 and hnsw_n < sqlite_n // 2:
+        tag = "DRIFT"
+        if overall != "FAIL":
+            overall = "WARN"
+    else:
+        tag = "OK"
+    results.append(f"{col_name}:{sqlite_n}:{hnsw_n}:{tag}")
 
-print(f"{sqlite_count}:{hnsw_count}")
+print(f"{overall}|{'|'.join(results)}")
 PYEOF
     )
 
@@ -487,17 +526,36 @@ PYEOF
             ok "HNSW drift check skipped (no palace db yet)" ;;
         ERR:*)
             warn "HNSW drift check error: ${drift_result#ERR:}" ;;
-        *:*)
-            local sqlite_n hnsw_n
-            sqlite_n="${drift_result%%:*}"
-            hnsw_n="${drift_result##*:}"
-            if [ "$sqlite_n" -gt 0 ] && [ "$hnsw_n" -lt "$((sqlite_n / 2))" ]; then
-                bad "HNSW/SQLite drift: HNSW has ${hnsw_n} elements, SQLite has ${sqlite_n} drawers"
-                hint "run: $REPO_ROOT/.venv/bin/mempalace repair --mode from-sqlite --yes --archive-existing"
-                record_fail "mempalace-hnsw-drift"
+        OK*|WARN*|FAIL*)
+            local _overall="${drift_result%%|*}"
+            local _cols="${drift_result#*|}"
+            local _any_bad=0
+            IFS='|' read -ra _col_stats <<< "$_cols"
+            for col_stat in "${_col_stats[@]}"; do
+                IFS=':' read -r _col_name _sq _hq _tag <<< "$col_stat"
+                case "$_tag" in
+                    EMPTY)
+                        bad "HNSW empty: $_col_name has 0 HNSW elements, $_sq in SQLite"
+                        record_fail "mempalace-hnsw-empty"
+                        _any_bad=1 ;;
+                    DRIFT)
+                        bad "HNSW drift: $_col_name has $_hq HNSW, $_sq in SQLite"
+                        record_fail "mempalace-hnsw-drift"
+                        _any_bad=1 ;;
+                esac
+            done
+            if [ "$_any_bad" -eq 0 ]; then
+                _summary=""
+                for col_stat in "${_col_stats[@]}"; do
+                    IFS=':' read -r _col_name _sq _hq _tag <<< "$col_stat"
+                    _summary="${_summary}${_col_name##*_}=${_hq}/${_sq} "
+                done
+                ok "HNSW/SQLite in sync: ${_summary% }"
             else
-                ok "HNSW/SQLite in sync (HNSW=${hnsw_n}, SQLite=${sqlite_n})"
+                hint "run: bash $REPO_ROOT/mempalace-repair-now.sh"
             fi ;;
+        *)
+            warn "HNSW drift check: unexpected output: ${drift_result%%$'\n'*}" ;;
     esac
 }
 

@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-06-05 — fix: MemPalace HNSW empty-index reliability + healthcheck gaps
+
+### Fixed
+- **`mempalace-repair-now.sh`** — Step 2b added: post-repair HNSW force-flush. Opens SegmentAPI after `mempalace repair` exits, lowers `hnsw:batch_size`/`sync_threshold` for small collections (< 50K items), rebuilds HNSW from most-recent archive for segments with empty `link_lists.bin`, calls `_apply_batch` + `_persist`. Fixes "ef or M is too small" searches on `mempalace_closets` (286 items) after every nightly repair.
+- **`mempalace-repair-now.sh`** — Writer-check exclusion: `mcp_server` processes now excluded from the active-writer abort. Repair can run alongside a live Claude session. Previously all `mempalace` processes blocked repair, including read-only MCP servers.
+- **`mempalace-repair-now.sh`** — HNSW header offset bug: both the `--skip-if-healthy` check and post-repair count check read `struct.unpack('<q', b[:8])` (wrong offset). Fixed to `struct.unpack_from('<I', b, 20)` (correct: high uint32 of `cur_elements * 2^32` in chroma-hnswlib 0.7.6).
+- **`healthcheck.sh`** — HNSW empty detection: `link_lists.bin` size check now catches 0-byte files (previously only caught > 200MB corruption). Triggers auto-background-repair immediately on detection.
+- **`healthcheck.sh`** — Drift-backup skip: `.drift-*` segment directories skipped in `link_lists.bin` scan to prevent false positives.
+- **`healthcheck.sh`** — Sync check per-collection: HNSW/SQLite count check rewired from "global max across all segments" to per-collection comparison. Root bug: large drawers HNSW (250K) was masking empty closets HNSW (0) via `max()`. Also fixed `embeddings` table join to use METADATA segment scope (not VECTOR scope — embeddings rows use METADATA IDs).
+
+### Added
+- **`state/upstream-bug-report-hnsw-flush.md`** — GitHub issue draft for upstream `mempalace` repo: `rebuild_from_sqlite` leaves `link_lists.bin = 0` for small collections due to `hnsw:batch_size=50000` never triggering flush. Ready for review before submission.
+- **`state/upstream-pr-hnsw-flush.md`** — PR draft: proposed fix sets `hnsw:batch_size` and `hnsw:sync_threshold` to `max(100, expected_count)` per collection at creation time. Adds `extra_hnsw` param to `ChromaBackend.create_collection`. Ready for review.
+
 ## 2026-06-05 — feat: design memory system — durable MemPalace entries + skill wiring
 
 ### Added
