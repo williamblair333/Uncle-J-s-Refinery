@@ -390,6 +390,19 @@ LOW/MEDIUM findings logged as advisories when relevant. No transfer record requi
     Token valid 2h. **Do NOT create for minimum-stamp CLEARs. Do NOT create before
     completing conditions (a)–(d). Do NOT reuse for out-of-scope actions.**
 
+11. **Design memory — after token creation, for control/invariant changes only.**
+
+    If the action in this pre-mortem changed how a system enforces its invariants (controls,
+    gates, enforcement hooks, audit mechanisms, or the invariants themselves): invoke
+    `post-audit-mempalace-capture` for the affected component after the token is created.
+
+    **Triggers:** edits to any file under `hooks/`, `skills/pre-mortem/`,
+    `write-clearance-token.sh`, `edit-surface-guard.sh`, `surface-write-guard.sh`,
+    `token-guard.sh`, or any file that defines or enforces system-level invariants.
+
+    **Skip for:** infrastructure changes that don't alter control logic (cron entries,
+    config values, documentation).
+
 ## Red Flags — STOP, Run Pre-Mortem
 
 - User says "we're done" or "ship it" after a fix to the surface list

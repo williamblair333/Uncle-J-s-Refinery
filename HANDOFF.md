@@ -1,6 +1,30 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-05 — pre-mortem skill hardened; 3-cycle adversarial analysis complete*
+*Last updated: 2026-06-05 — design memory system live; durable MemPalace entries + skill wiring*
+
+## Current state (2026-06-05) — design memory system implemented
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+
+- **Design memory system** — answered "would you know if pre-mortem drifted in 6 weeks?" with a durable pattern: two MemPalace entries per hardened component (invariants + attack vectors), wired into pre-mortem (step 11) and session-end-checklist (Step 6b)
+- **5 MemPalace entries written** to `uncle_j_s_refinery/design_decisions`:
+  - Pre-mortem skill — 8 invariants + 3-cycle audit baseline (2026-06-05 certified)
+  - Pre-mortem enforcement hooks — 10 closed attack vectors (RT-CRIT-1 through RT-H4 + 6 more)
+  - Dreaming pipeline — closed/mitigated/acknowledged-open paths
+  - Telegram gateway — disclosure fix + 4 invariants
+  - HNSW/FTS5 + healthcheck — 7 silent failure modes now caught + 4 mitigations
+- **`post-audit-mempalace-capture` skill committed** — was untracked on disk; two-entry pattern for post-audit capture after adversarial/hardening passes
+- **`global-skills/pre-mortem/SKILL.md`** — step 11 added: invoke `post-audit-mempalace-capture` after token creation for control/invariant changes
+- **`global-skills/session-end-checklist/SKILL.md`** — Step 6b added: soft catch-net before commit
+- **On main**, clean tree after this commit
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning before investigating
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- `kostadis/turbovecdb` security PR #2 awaiting author review
 
 ## Current state (2026-06-05) — pre-mortem skill hardened via 3-cycle red/blue-team
 

@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-05 — feat: design memory system — durable MemPalace entries + skill wiring
+
+### Added
+- **MemPalace `uncle_j_s_refinery/design_decisions` room** — 5 design memory entries: pre-mortem invariants + audit baseline; enforcement hook attack vectors (10 closed); dreaming pipeline closed/mitigated paths; Telegram gateway disclosure fix + invariants; HNSW/FTS5 + healthcheck silent failure modes (7 fixed)
+- **`global-skills/post-audit-mempalace-capture/SKILL.md`** — committed (was untracked); two-entry pattern for post-audit MemPalace capture after any adversarial/hardening pass
+- **`global-skills/pre-mortem/SKILL.md`** — step 11 added: invoke `post-audit-mempalace-capture` after token creation when control/invariant changes were made
+- **`global-skills/session-end-checklist/SKILL.md`** — Step 6b added: soft design memory check before commit; catches hardening not covered by pre-mortem step 11
+
 ## 2026-06-05 — security: pre-mortem skill hardened via 3-cycle red/blue-team adversarial analysis
 
 ### Security / Discipline Controls

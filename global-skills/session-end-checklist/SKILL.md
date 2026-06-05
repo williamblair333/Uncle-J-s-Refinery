@@ -84,6 +84,17 @@ Review BLOCKED entries since last session. Ask:
 
 This step is **weekly** — skip if fewer than 7 days since last review (check log date of oldest unreviewed entry).
 
+### Step 6b — Design memory check (soft)
+
+Did this session include hardening work — adversarial analysis, security fixes, or invariant
+changes to any component — that wasn't followed by a `post-audit-mempalace-capture` invocation?
+
+- **Yes** → invoke `post-audit-mempalace-capture` for the affected component(s) before committing.
+- **No** → note "No hardening this session — design memory step skipped."
+
+This catches cases where step 11 of the pre-mortem was skipped or hardening happened without
+a pre-mortem clearance.
+
 ### Step 7 — Custom checks
 
 Run each `custom_checks` entry from `.session-end.yml`:
