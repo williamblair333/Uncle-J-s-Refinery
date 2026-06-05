@@ -35,6 +35,7 @@ if [[ $SKIP_IF_HEALTHY -eq 1 ]]; then
   # Check every segment has a non-empty link_lists.bin AND is below corruption threshold
   _found=0
   for _f in "$PALACE"/*/link_lists.bin; do
+    [[ "$_f" == *".drift-"* ]] && continue  # skip segment backup dirs
     _found=1
     if [[ ! -s "$_f" ]]; then
       log "  missing/empty HNSW: $_f"; _need_repair=1; break
@@ -57,6 +58,7 @@ print(sqlite3.connect(db).execute('SELECT COUNT(*) FROM embeddings').fetchone()[
 import pathlib, struct
 total=0
 for f in (pathlib.Path.home()/'.mempalace'/'palace').glob('*/header.bin'):
+  if '.drift-' in str(f): continue
   try:
     b=f.read_bytes()
     n=struct.unpack_from('<I',b,20)[0] if len(b)>=24 else 0
@@ -369,6 +371,8 @@ import pathlib, struct
 palace = pathlib.Path.home() / '.mempalace' / 'palace'
 total = 0
 for f in palace.glob('*/header.bin'):
+    if '.drift-' in str(f):
+        continue
     try:
         b = f.read_bytes()
         n = struct.unpack_from('<I', b, 20)[0] if len(b) >= 24 else 0

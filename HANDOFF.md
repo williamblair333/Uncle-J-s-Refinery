@@ -1,6 +1,37 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-05 — cron nice levels + session-start MemPalace reconnect*
+*Last updated: 2026-06-05 — exclude .drift-* dirs from repair health checks*
+
+## Current state (2026-06-05) — drift-dir exclusion fix + Step 2b root cause
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+
+- **Root cause found for HNSW=2 after repair** — Step 2b (HNSW force-flush) was committed at 11:18 AM on 2026-06-05, but the 4am cron ran at 04:00. The cron used the old script (Step 2b removed). Step 2b has **never executed**.
+- **Three fixes to `mempalace-repair-now.sh`:**
+  1. `--skip-if-healthy` bash loop: added `.drift-*` skip before `_found=1` — prevents 5 healthcheck-created drift backup dirs from falsely triggering full repair every session start
+  2. `--skip-if-healthy` Python HNSW count: filters `.drift-*` paths (fixes misleading element sums)
+  3. Post-repair HNSW count: same `.drift-*` filter (fixes `HNSW=2` in repair log)
+- **Stale drift dirs cleaned up** — 5 `.drift-*` segment backup dirs moved to `/tmp/palace-drift-cleanup/`; active segments confirmed healthy (drawers=350K, closets=291, both persisted on disk)
+- **turbovecdb security PR #2 confirmed MERGED** (merged 2026-06-05 01:27 UTC)
+- **MemPalace PR #1524** — still open; last update today was gemini-code-assist review comment, no SKILL.md push from geco yet
+
+**Current HNSW state:**
+- `mempalace_drawers` (`f3ed04d6`): 350,165 elements, link_lists.bin = 2.7MB ✓
+- `mempalace_closets` (`9113c11d`): 291 elements, link_lists.bin = 2796B ✓
+
+**Tonight's 4am cron:** Will correctly skip repair (HNSW healthy, no drift dirs remaining).
+
+**Step 2b first live test:** Pending next genuine HNSW drift. When repair next runs, Step 2b will execute for the first time — watch repair log for `"Force-flushing HNSW to disk"` and `"HNSW force-flush complete"` to confirm it worked.
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- Review + submit upstream HNSW flush bug report + PR (`state/upstream-bug-report-hnsw-flush.md` / `state/upstream-pr-hnsw-flush.md`)
+
+---
 
 ## Current state (2026-06-05) — cron nice levels + session-start reconnect
 

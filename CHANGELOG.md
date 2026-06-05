@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-05 — fix: exclude .drift-* segment backup dirs from repair health checks
+
+### Fixed
+- **`mempalace-repair-now.sh`** — `--skip-if-healthy` bash loop now skips `.drift-*` segment backup dirs before setting `_found=1`; prevents drift dirs (created by healthcheck auto-repair loop) from falsely triggering full nightly repair on every session start. Also moves `_found=1` to after the skip-continue so the "no link_lists.bin found" fallback correctly fires when all active segments are absent.
+- **`mempalace-repair-now.sh`** — HNSW element counts in `--skip-if-healthy` Python check and post-repair sanity check now filter `.drift-*` paths; fixes misleading `HNSW=2` in repair log (drift dirs' 0-element HNSW was diluting the sum)
+- **`~/.mempalace/palace/`** — 5 stale `.drift-*` segment backup dirs (created 07:28–10:18 on 2026-06-05 by false-positive healthcheck repair loop) moved to `/tmp/palace-drift-cleanup/`
+
+### Root Cause Note
+Step 2b (HNSW force-flush, commit `e49d09d`) was committed at 11:18 AM on 2026-06-05 — 7h after the 4am cron fired. Step 2b has therefore never executed. Tonight's cron will correctly skip repair (HNSW healthy). Step 2b first live test pending next genuine HNSW drift.
+
+---
+
 ## 2026-06-05 — fix: cron nice levels + session-start MemPalace reconnect
 
 ### Fixed
