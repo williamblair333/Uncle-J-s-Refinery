@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-06 — fix: correct malformed permission deny rules in global harness settings
+
+### Fixed
+- **`~/.claude/settings.json`** (global) — all 36 permission deny rules converted from invalid space-separated format (`"Edit ~/.bashrc"`) to correct parenthetical format (`"Edit(~/.bashrc)"`) per Claude Code schema regex `^(ToolName(\([^)]+\))?|mcp__.*)$`. All 36 rules were silently ineffective and producing "matches no known tool" warnings on every session start. Tilde expansion is supported in parenthetical patterns per schema.
+- **`.claude/settings.json`** (project) — added `CHROMA_API_IMPL: chromadb.api.segment.SegmentAPI` env var so project sessions always use the segment API backend.
+
+---
+
 ## 2026-06-05 — fix: exclude .drift-* segment backup dirs from repair health checks
 
 ### Fixed

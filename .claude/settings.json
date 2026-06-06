@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI"
+  },
   "permissions": {
     "allow": [
       "mcp__jcodemunch__search_text",

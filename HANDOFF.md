@@ -1,6 +1,26 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-05 — exclude .drift-* dirs from repair health checks*
+*Last updated: 2026-06-06 — fix global harness permission deny rule format*
+
+## Current state (2026-06-06) — permission deny rules corrected
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+
+- **`~/.claude/settings.json` permission rules fixed** — all 36 deny rules were silently ineffective (space-separated format not valid per schema). Converted to parenthetical format (`"Edit(~/.bashrc)"`) after pre-mortem clearance. "matches no known tool" warnings on session start are now resolved.
+- **`.claude/settings.json` (project)** — `CHROMA_API_IMPL` env var committed (was unstaged from prior session).
+
+**Next session:** Confirm no permission warnings on startup. Open items below are unchanged.
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- Review + submit upstream HNSW flush bug report + PR (`state/upstream-bug-report-hnsw-flush.md` / `state/upstream-pr-hnsw-flush.md`)
+- Step 2b first live test — watch for `"Force-flushing HNSW to disk"` in next repair log
+
+---
 
 ## Current state (2026-06-05) — drift-dir exclusion fix + Step 2b root cause
 
@@ -815,6 +835,7 @@ All items from all previous HANDOFFs are resolved.
 - **Telegram inline promote button**: `skill-suggest.sh` now sends skill draft notifications with an inline "✅ Promote Global" button; gateway polls for `callback_query` updates and handles button taps directly
 - **promote <id> defaults to global**: classify round-trip removed — `promote <id>` installs straight to global without asking
 - **Stop-hook dedup**: `session-end-check.sh` skips duplicate Telegram warnings within 15 seconds (fixes double-send when two sessions close simultaneously)
+- **mempalace breaking change**: Wing names with leading/trailing separators are now normalized on write (e.g., `-billing-` → `billing`); run `mempalace migrate-wings` to update any existing stored wings that used separator-padded names.
 
 ### 2026-05-21
 - **Design spec written**: two automation gaps identified and fully specced — skill auto-install (dynamic `global-skills/` scan + symlink in auto-maintain Part C) and post-upgrade evaluation for all 4 packages with breaking-change detection and HANDOFF/CLAUDE.md auto-update. Spec at `docs/superpowers/specs/2026-05-21-skill-auto-install-and-upgrade-eval-design.md`. Implementation plan is next.

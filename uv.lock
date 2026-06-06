@@ -1196,8 +1196,8 @@ wheels = [
 
 [[package]]
 name = "mempalace"
-version = "3.3.6"
-source = { git = "https://github.com/MemPalace/mempalace.git#02b8753d9759e7c17eca58ba5162e5d2a39ca3d2" }
+version = "3.4.0"
+source = { git = "https://github.com/MemPalace/mempalace.git#939a076baf0b349e1f5b3a7e27ad1d545364f18b" }
 dependencies = [
     { name = "chromadb" },
     { name = "huggingface-hub" },
