@@ -1,6 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-06 — fix global harness permission deny rule format*
+*Last updated: 2026-06-06 — dcup, adversarial-review, smart-review, review gates*
+
+## Current state (2026-06-06) — code review infrastructure complete
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+
+- **`dcup` Docker port registry** — `/opt/lib/docker-port-registry/`. SQLite registry, flock mutual exclusion, live-reality preflight, exception file. Bootstrap scan: 26 projects registered, 14 conflicts flagged. Sweeper service enabled (`docker-port-sweeper.service`). PreToolUse hook blocks `docker compose up` on conflict. `git worktree` hook-install fix: `[[ -e .git ]]` + `git rev-parse --git-common-dir`.
+- **`adversarial-review` skill + workflow** — 4-persona MAD framework (Paranoid/Archaeologist/Pedant/Cynic), 2 cross-attack rounds, judge synthesis. Lives at `~/.claude/skills/adversarial-review` and `~/.claude/workflows/adversarial-review.js`.
+- **`smart-review` skill** — auto-classifying router. Rules floor (deterministic) + shadow classifier (adversarial upward bias) + MAX resolution + MemPalace drift audit. Entry point for all code review; use `/smart-review` instead of picking effort level manually. Lives at `~/.claude/skills/smart-review`.
+- **Smart-review gates** — two PreToolUse hooks in `~/.claude/settings.json` block `git push` and `gh pr create` unless `/tmp/smart-review-cleared-{HEAD_SHA}` exists. New commit SHA = new review required.
+- **`ralph-harness.sh`** — synthesis output streams live (dynamic-logs fix).
+- **`uv.lock`** — jcodemunch bumped to 1.108.32.
+
+**Next session:** Run `/smart-review` before any push. Manual bypass if needed: `touch /tmp/smart-review-cleared-$(git rev-parse HEAD)`.
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- Review + submit upstream HNSW flush bug report + PR (`state/upstream-bug-report-hnsw-flush.md` / `state/upstream-pr-hnsw-flush.md`)
+- Step 2b first live test — watch for `"Force-flushing HNSW to disk"` in next repair log
+- `.bashrc` update still needed manually: `export PATH="$PATH:/opt/lib/docker-port-registry"` (dcup shortcut)
+- Port conflict resolution: kanka-ce vs proj-fog-of-chess both claim 5173 — add exception or change one port
+
+---
 
 ## Current state (2026-06-06) — permission deny rules corrected
 

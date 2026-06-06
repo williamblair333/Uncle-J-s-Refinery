@@ -210,10 +210,12 @@ check_langfuse_sdk() {
 }
 
 # ----- 8. skills installed --------------------------------------------------
+_REQUIRED_SKILLS=(dream-synthesizer outcomes orchestrator per-task-review-cycle post-upgrade-mcp-integration)
+
 check_skills() {
     step "skills — dreaming, outcomes, orchestrator installed"
     local missing=0
-    for skill in dream-synthesizer outcomes orchestrator per-task-review-cycle post-upgrade-mcp-integration; do
+    for skill in "${_REQUIRED_SKILLS[@]}"; do
         if [ -f "$HOME/.claude/skills/$skill/SKILL.md" ]; then
             ok "skill: $skill"
         else

@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-06-06 — feat: dcup port registry, adversarial-review, smart-review router + gates
+
+### Added (infrastructure — outside repo, documented here for continuity)
+- **`/opt/lib/docker-port-registry/dcup`** — Docker port conflict prevention. SQLite registry at `/opt/lib/docker-port-registry/ports.db`; `flock`-based mutual exclusion; live-reality preflight before `docker compose up`; fail-closed design. Bootstrap scan registered 26 projects, identified 14 conflicts.
+- **`/opt/lib/docker-port-registry/docker-port-sweeper.sh`** + **`docker-port-sweeper.service`** — liveness sweeper: listens to `docker events --filter event=start`, keeps `last_seen_running` fresh. Systemd user service enabled and running.
+- **`/opt/lib/docker-port-registry/dcup-pretooluse-hook.sh`** — PreToolUse hook for Claude Code: blocks `docker compose up` when port conflicts exist.
+- **`/opt/lib/docker-port-registry/port-exceptions.toml`** — exception file for known cross-project port overlaps.
+- **`~/.claude/skills/adversarial-review`** — MAD (Multi-Agent Debate) framework: 4 personas (Paranoid/Archaeologist/Pedant/Cynic), 2 cross-attack rounds, judge synthesis that merges the best elements from each review.
+- **`~/.claude/workflows/adversarial-review.js`** — workflow implementation for adversarial-review.
+- **`~/.claude/skills/smart-review`** — auto-classifying code review router. Three-layer system: (1) deterministic rules floor keyed on file paths and content patterns, (2) independent shadow classifier with adversarial upward bias, (3) resolved = MAX(floor, shadow). Dispatches to `code-review` (low/medium/high) or `adversarial-review` (critical). Logs every classification to MemPalace `review_audit` room for drift detection.
+- **`~/.claude/settings.json`** (global) — two PreToolUse hooks gate `git push` and `gh pr create` on `/tmp/smart-review-cleared-{HEAD_SHA}` marker; smart-review writes the marker at review completion.
+
+### Fixed
+- **`ralph-harness.sh`** — synthesis output now streams live instead of being captured into a variable; aligns with dynamic-logs feedback rule.
+- **`healthcheck.sh`** — extracted `_REQUIRED_SKILLS` array before the loop (minor refactor for readability).
+
+### Changed
+- **`uv.lock`** — jcodemunch-mcp bumped 1.108.29 → 1.108.32.
+
+---
+
 ## 2026-06-06 — fix: correct malformed permission deny rules in global harness settings
 
 ### Fixed

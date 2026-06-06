@@ -298,7 +298,7 @@ $(cat "$f")
 "
     done
 
-    local synth_tmp synth_output
+    local synth_tmp
     synth_tmp="$(mktemp --suffix=.md)"
     printf 'You are the synthesis agent. Your job has two parts:\n\n' > "$synth_tmp"
     printf '1. Merge the following sub-agent outputs into a single coherent deliverable.\n   Preserve all findings; resolve conflicts by noting them.\n\n' >> "$synth_tmp"
@@ -309,11 +309,9 @@ $(cat "$f")
     printf '     FIRST line of the Progress section. Do not remove prior progress lines.\n\n' >> "$synth_tmp"
     printf 'Sub-agent outputs:\n\n%s\n\nProduce the merged result, then write the updated PRD to disk.\n' \
         "$synth_parts" >> "$synth_tmp"
-    synth_output="$(cd "$repo" && claude -p "@$synth_tmp" --dangerously-skip-permissions 2>&1 || true)"
+    (cd "$repo" && claude -p "@$synth_tmp" --dangerously-skip-permissions 2>&1) || true
     rm -f "$synth_tmp"
     rm -rf "$decompose_dir"
-
-    printf '%s' "$synth_output"
 }
 
 iter=0
