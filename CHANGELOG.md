@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-07 — fix: upgrade jcodemunch-mcp, integrate check_edit_safe into routing
+
+### Changed
+- **`uv.lock`** — jcodemunch-mcp bumped to HEAD commit 6d461776 (same semver 1.108.32, new SHA).
+- **`CLAUDE.md`** (global + project) — added `check_edit_safe` to Refactoring & safety section; new tool added upstream in v1.108.32 (regression risk + signature impact preflight).
+
+---
+
 ## 2026-06-06 — feat: dcup port registry, adversarial-review, smart-review router + gates
 
 ### Added (infrastructure — outside repo, documented here for continuity)

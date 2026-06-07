@@ -1,6 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-06 — dcup, adversarial-review, smart-review, review gates*
+*Last updated: 2026-06-07 — jcodemunch upgrade + check_edit_safe integration*
+
+## Current state (2026-06-07) — routine upgrade + CLAUDE.md integration
+
+`HEALTHCHECK: ok`
+
+**What was done this session:**
+
+- **jcodemunch-mcp upgraded** — SHA fb3b4ea7 → 6d461776 (same semver 1.108.32; auto-fixed by session-start hook).
+- **`check_edit_safe` added to CLAUDE.md** — new upstream tool: composite preflight for symbol edits (regression risk + signature impact + test coverage + runtime traffic). Added to "Refactoring & safety" in both global and project CLAUDE.md. Use before editing any symbol alongside `check_rename_safe` / `check_delete_safe`.
+- **`state/post-upgrade-needed` flag cleared** — set by session-start autofix; consumed this session.
+
+**Next session:** No new blockers. Open items unchanged from 2026-06-06.
+
+**Open items (carried forward):**
+- recall@10=0.408 — wait for @kostadis response on `ef` tuning
+- MemPalace PR #1524 SKILL.md update awaiting geco push
+- Stop-hook citation audit (carried forward)
+- Review + submit upstream HNSW flush bug report + PR (`state/upstream-bug-report-hnsw-flush.md` / `state/upstream-pr-hnsw-flush.md`)
+- Step 2b first live test — watch for `"Force-flushing HNSW to disk"` in next repair log
+- `.bashrc` update still needed manually: `export PATH="$PATH:/opt/lib/docker-port-registry"` (dcup shortcut)
+- Port conflict resolution: kanka-ce vs proj-fog-of-chess both claim 5173 — add exception or change one port
+
+---
 
 ## Current state (2026-06-06) — code review infrastructure complete
 

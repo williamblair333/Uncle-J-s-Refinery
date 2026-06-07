@@ -67,7 +67,7 @@ tools can answer structurally.
 
 **Refactoring & safety**:
 - Before committing to a change, call `get_blast_radius` to see what else breaks. For PRs, `get_pr_risk_profile` produces a single composite score.
-- Before renaming a symbol: `check_rename_safe`. Before deleting: `check_delete_safe`. For multi-file rename/move/extract: `plan_refactoring` generates edit-ready blocks.
+- Before renaming a symbol: `check_rename_safe`. Before deleting: `check_delete_safe`. Before editing (regression risk + signature impact): `check_edit_safe`. For multi-file rename/move/extract: `plan_refactoring` generates edit-ready blocks.
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
