@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-07 — fix: adversarial-review round-2 regressions in review-check.sh + autofix flock
+
+### Fixed
+- **`scripts/review-check.sh`** — `|| continue` URL guard silently dropped non-GitHub items from pending list entirely; fixed to `|| { pending+=(...); continue; }` so items still appear as pending.
+- **`scripts/session-start-autofix.sh`** — `exec 9>` lock file had no error handler; if `/tmp` full the lock silently failed and logged a false "already running" message. Fixed with explicit `|| { log ...; exit 0; }`.
+
+---
+
 ## 2026-06-07 — fix: apply adversarial-review FIX_BEFORE_MERGE findings
 
 ### Fixed

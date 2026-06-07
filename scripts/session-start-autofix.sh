@@ -82,7 +82,7 @@ if echo "$HEALTH_OUT" | grep -q "stack-not-at-head"; then
     log "Stack packages behind HEAD — launching async upgrade"
     (
         # Guard against concurrent upgrade runs from simultaneous session starts
-        exec 9>/tmp/uncle-j-uv-upgrade.lock
+        exec 9>/tmp/uncle-j-uv-upgrade.lock || { log "Stack upgrade lock unavailable — skipping"; exit 0; }
         flock -n 9 || { log "Stack upgrade already running — skipping"; exit 0; }
         cd "$REPO_ROOT"
         if uv lock --upgrade-package jcodemunch-mcp \

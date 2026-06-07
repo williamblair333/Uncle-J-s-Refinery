@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-07 — adversarial-review fixes applied*
+*Last updated: 2026-06-07 — adversarial-review round-2 fixes + pushed to main*
 
 ## Current state (2026-06-07) — adversarial-review FIX_BEFORE_MERGE findings resolved
 
@@ -19,9 +19,12 @@
 - **Note:** `git add -u` in checkpoint hook means newly-created untracked files are NOT auto-staged by chk: commits. This is intentional (security > completeness). New files require explicit `git add`.
 
 **Deferred (require design, not quick fixes):**
-- `ARCHAEOLOGIST-R2-1` (HIGH): post-upgrade-needed flag lifecycle — flag is written in disowned subshell, no session reads it if upgrade completes after session ends. Fix: add `rm -f state/post-upgrade-needed` to post-upgrade-mcp-integration skill + add SessionStart stale-flag warning.
-- `PEDANT-R2-1` (HIGH): pyproject.toml [tool.uv.sources] has no `rev=` pins — accepted risk for single-developer tooling; add Telegram notification of upgrade commit range as mitigation.
-- `CYNIC-R2-1` / `CYNIC-R2-4` (MEDIUM): flock guards for jcodemunch-reindex.sh — same race pattern; add `flock -n /tmp/uncle-j-jcodemunch-reindex.lock`.
+- `ARCHAEOLOGIST-R2-1` (HIGH): post-upgrade-needed flag lifecycle — flag written in disowned subshell; if upgrade finishes after session ends, no future session reads it. Fix: `rm -f state/post-upgrade-needed` in post-upgrade-mcp-integration skill + SessionStart stale-flag warning.
+- `PEDANT-R2-1` (HIGH): pyproject.toml [tool.uv.sources] no `rev=` pins — accepted risk; add Telegram notification of upgrade commit range.
+- `F-03` (HIGH): smart-review gate block message and SKILL.md Step 6 both advertise the manual bypass command. Fix: remove bypass instruction from hook stderr + SKILL.md Step 6; say "Run /smart-review" instead.
+- `F-04` (HIGH): FTS5 health probe uses `PRAGMA quick_check` (B-tree only) — misses FTS5 inverted-index corruption. Fix: replace with `INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('integrity-check')`.
+- `F-05` (MEDIUM): `gh pr *` hook pattern too broad — blocks `gh pr list/view/status`. Fix: split into `gh pr create *` and `gh pr merge *` matchers only.
+- `CYNIC-R2-1` / `CYNIC-R2-4` (MEDIUM): add flock guard to `scripts/jcodemunch-reindex.sh`.
 
 **Next session:** push to origin/main. Run `/smart-review` first (token: `touch /tmp/smart-review-cleared-$(git rev-parse HEAD)`).
 
