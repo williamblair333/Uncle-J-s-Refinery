@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-06-07 — fix: apply adversarial-review FIX_BEFORE_MERGE findings
+
+### Fixed
+- **`.claude/settings.json`** — PostToolUse checkpoint hook: `git add -A` → `git add -u` to prevent accidental staging of untracked files (including secrets) in checkpoint commits. Trade-off: newly-created untracked files are no longer auto-staged by chk: commits; this is intentional.
+- **`.claude/settings.json`** — removed dead `fts5-guard.sh` entry from SessionStart hooks. The script was `exit 0` (stub); FTS5 repair lives entirely in `session-start-autofix.sh`. Removes misleading hook registration.
+- **`scripts/session-start-autofix.sh`** — added `flock -n /tmp/uncle-j-uv-upgrade.lock` guard inside the async uv lock/sync subshell to prevent concurrent upgrade races from simultaneous session starts.
+- **`scripts/session-start-autofix.sh`** — fixed log message: was "post-upgrade-mcp-integration flag set", now "state/post-upgrade-needed flag created" (matches actual file path).
+- **`scripts/review-check.sh`** — added `^https://github\.com/` URL validation before `gh issue view` to prevent SSRF via committed review files with malicious URLs.
+- **`CLAUDE.md`** (project + global) — expanded `check_edit_safe` description from 2 signals ("regression risk + signature impact") to full 5 signals ("regression risk + signature impact + complexity + test coverage + runtime traffic"). Added disambiguation note: `get_blast_radius` (transitive call-graph) AND `check_edit_safe` (per-symbol preflight) are complementary, not alternatives. Note: only project CLAUDE.md is git-tracked; global `/home/bill/.claude/CLAUDE.md` updated out-of-band.
+
+### Added
+- **`global-skills/smart-review/SKILL.md`** — committed to repo (was untracked since restructure from flat file).
+
+---
+
+## 2026-06-07 — fix: smart-review skill structure + hook over-match
+
+### Fixed
+- **`global-skills/smart-review/`** — skill was a flat file at `~/.claude/skills/smart-review`; restructured as proper `SKILL.md` directory so Skill tool can invoke it. Symlink updated.
+- **`~/.bashrc`** — `export PATH="$PATH:/opt/lib/docker-port-registry"` added (dcup shortcut; run by user via `!`).
+
+### Known issue (not yet fixed)
+- Smart-review PreToolUse hook in `~/.claude/settings.json` over-matches `gh pr list` — pattern should be narrowed to `gh pr create` only. Workaround: run `gh pr list` via `! gh pr list`.
+
+---
+
 ## 2026-06-07 — fix: upgrade jcodemunch-mcp, integrate check_edit_safe into routing
 
 ### Changed

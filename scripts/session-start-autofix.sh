@@ -81,6 +81,9 @@ HEALTH_OUT=$(CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
 if echo "$HEALTH_OUT" | grep -q "stack-not-at-head"; then
     log "Stack packages behind HEAD — launching async upgrade"
     (
+        # Guard against concurrent upgrade runs from simultaneous session starts
+        exec 9>/tmp/uncle-j-uv-upgrade.lock
+        flock -n 9 || { log "Stack upgrade already running — skipping"; exit 0; }
         cd "$REPO_ROOT"
         if uv lock --upgrade-package jcodemunch-mcp \
                    --upgrade-package jdatamunch-mcp \
@@ -88,7 +91,7 @@ if echo "$HEALTH_OUT" | grep -q "stack-not-at-head"; then
                    --upgrade-package mempalace \
             && uv sync --inexact; then
             touch "$REPO_ROOT/state/post-upgrade-needed"
-            log "Stack upgrade: OK (post-upgrade-mcp-integration flag set)"
+            log "Stack upgrade: OK (state/post-upgrade-needed flag created)"
         else
             log "Stack upgrade: FAILED (network or resolution error)"
         fi

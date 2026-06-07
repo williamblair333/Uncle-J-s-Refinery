@@ -1,18 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-07 — jcodemunch upgrade + check_edit_safe integration*
+*Last updated: 2026-06-07 — adversarial-review fixes applied*
 
-## Current state (2026-06-07) — routine upgrade + CLAUDE.md integration
+## Current state (2026-06-07) — adversarial-review FIX_BEFORE_MERGE findings resolved
 
 `HEALTHCHECK: ok`
 
 **What was done this session:**
 
-- **jcodemunch-mcp upgraded** — SHA fb3b4ea7 → 6d461776 (same semver 1.108.32; auto-fixed by session-start hook).
-- **`check_edit_safe` added to CLAUDE.md** — new upstream tool: composite preflight for symbol edits (regression risk + signature impact + test coverage + runtime traffic). Added to "Refactoring & safety" in both global and project CLAUDE.md. Use before editing any symbol alongside `check_rename_safe` / `check_delete_safe`.
-- **`state/post-upgrade-needed` flag cleared** — set by session-start autofix; consumed this session.
+- **Adversarial review findings applied** (from review of commit 76a58eb):
+  - `.claude/settings.json`: `git add -A` → `git add -u` in PostToolUse checkpoint (prevents secret staging)
+  - `.claude/settings.json`: removed dead `fts5-guard.sh` SessionStart hook (stub `exit 0`, FTS5 repair is in `session-start-autofix.sh`)
+  - `scripts/session-start-autofix.sh`: added `flock -n /tmp/uncle-j-uv-upgrade.lock` guard to async uv upgrade (prevents concurrent upgrade races)
+  - `scripts/session-start-autofix.sh`: fixed log message — was "post-upgrade-mcp-integration flag set", now "state/post-upgrade-needed flag created"
+  - `scripts/review-check.sh`: added `^https://github\.com/` domain validation before `gh issue view` (prevents SSRF via committed review files)
+  - `CLAUDE.md` (both global + project): expanded `check_edit_safe` description from 2 signals to 5 (regression risk + signature impact + complexity + test coverage + runtime traffic); added disambiguation note vs `get_blast_radius` (complementary, not alternatives)
+- **`global-skills/smart-review/SKILL.md`** committed (was untracked)
+- **Note:** `git add -u` in checkpoint hook means newly-created untracked files are NOT auto-staged by chk: commits. This is intentional (security > completeness). New files require explicit `git add`.
 
-**Next session:** No new blockers. Open items unchanged from 2026-06-06.
+**Deferred (require design, not quick fixes):**
+- `ARCHAEOLOGIST-R2-1` (HIGH): post-upgrade-needed flag lifecycle — flag is written in disowned subshell, no session reads it if upgrade completes after session ends. Fix: add `rm -f state/post-upgrade-needed` to post-upgrade-mcp-integration skill + add SessionStart stale-flag warning.
+- `PEDANT-R2-1` (HIGH): pyproject.toml [tool.uv.sources] has no `rev=` pins — accepted risk for single-developer tooling; add Telegram notification of upgrade commit range as mitigation.
+- `CYNIC-R2-1` / `CYNIC-R2-4` (MEDIUM): flock guards for jcodemunch-reindex.sh — same race pattern; add `flock -n /tmp/uncle-j-jcodemunch-reindex.lock`.
+
+**Next session:** push to origin/main. Run `/smart-review` first (token: `touch /tmp/smart-review-cleared-$(git rev-parse HEAD)`).
 
 **Open items (carried forward):**
 - recall@10=0.408 — wait for @kostadis response on `ef` tuning
@@ -20,8 +31,8 @@
 - Stop-hook citation audit (carried forward)
 - Review + submit upstream HNSW flush bug report + PR (`state/upstream-bug-report-hnsw-flush.md` / `state/upstream-pr-hnsw-flush.md`)
 - Step 2b first live test — watch for `"Force-flushing HNSW to disk"` in next repair log
-- `.bashrc` update still needed manually: `export PATH="$PATH:/opt/lib/docker-port-registry"` (dcup shortcut)
 - Port conflict resolution: kanka-ce vs proj-fog-of-chess both claim 5173 — add exception or change one port
+- Add flock guard to `scripts/jcodemunch-reindex.sh` (CYNIC-R2-4)
 
 ---
 

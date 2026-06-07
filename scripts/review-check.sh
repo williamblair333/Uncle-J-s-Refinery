@@ -20,6 +20,7 @@ for f in "$REVIEW_DIR"/*.md; do
 
   # If filed and gh available, check if closed upstream
   if [[ "$status" == "filed" && -n "$issue_url" ]] && command -v gh &>/dev/null; then
+    [[ "$issue_url" =~ ^https://github\.com/ ]] || continue
     issue_state=$(gh issue view "$issue_url" --json state -q '.state' 2>/dev/null || echo "")
     if [[ "$issue_state" == "CLOSED" ]]; then
       # Update status in file
