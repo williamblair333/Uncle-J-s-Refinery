@@ -1,6 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — post-upgrade-mcp-integration complete; on main, clean*
+*Last updated: 2026-06-10 — stop-hook session mining wired; on main, clean*
+
+## Current state (2026-06-10) — stop-hook session mining complete
+
+`HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
+
+**Work log — 2026-06-10 (this session)**
+
+- **Stop-hook session mining done** (ROADMAP Planned → Completed): `.claude/settings.json`
+  Stop hook now routes through `scripts/mempalace-mine-convos.sh` instead of the raw
+  `mempalace mine` command. Adds HNSW guard, flock dedup, `--wing conversations`
+  consistency with 3am cron, and logging.
+  - LOW advisory: lock file mismatch with cron (`state/` vs `/tmp/`). Follow-up: add
+    `flock /tmp/mempalace-mine-convos.lock` to the script.
+  - `docs/RELIABILITY.md` Stop hooks list updated to show both global + project layers.
+
+**Still open:**
+- Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC: publishes to external repo). Requires ceremony. Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
+- recall@10=0.408 — awaiting @kostadis response on ef tuning
+- Stop-hook citation audit (structural close of Dreaming pattern-promotion path)
+
+**Most important thing for next session:** On main, clean. Remaining ROADMAP Planned items: compressed `jcodemunch_guide` return value (~4,600–5,100 tokens/session savings), jragmunch-cli evaluation, CI test for session-end-check.sh. Pick any.
+
+---
 
 ## Current state (2026-06-10) — post-upgrade integration complete
 

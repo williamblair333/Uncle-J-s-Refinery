@@ -66,9 +66,12 @@ response to user
 
 ── SESSION END ────────────────────────────────────────────────────────
 Stop hooks (in order)
-   ├── Langfuse trace submitted
-   ├── session-notify.sh  (Telegram — opt-in: CLAUDE_NOTIFY_ON_STOP=1)
-   ├── mempalace-mine-convos.sh  (transcript → palace drawers)
+   ├── Langfuse trace submitted                       (global settings.json)
+   ├── mempalace hook run --hook stop                 (global — diary + ingest)
+   ├── session-end-check.sh --stop-hook               (global — doc gate)
+   ├── unpushed-warn.sh + pr-check.sh                 (global — reminders)
+   ├── session-notify.sh  (Telegram, opt-in)          (project settings.json)
+   ├── mempalace-mine-convos.sh  (all convos → --wing conversations)
    └── skill-suggest.sh + skill-link unlink
 ```
 

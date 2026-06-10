@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-06-10 — feat: stop-hook session mining wired to mempalace-mine-convos.sh
+
+### Changed
+- **`.claude/settings.json`**: Stop hook `uncle-j-mempalace-convos` replaced raw
+  `mempalace mine … --mode convos < /dev/null` with
+  `bash scripts/mempalace-mine-convos.sh`. The script adds:
+  - HNSW size guard pre- and post-mine (aborts if palace already corrupted)
+  - `mkdir`-based flock guard (prevents overlapping concurrent Stop fires)
+  - `--wing conversations` (now consistent with the 3:03am cron)
+  - Logging to `state/mempalace-mine.log`
+- **`docs/RELIABILITY.md`**: Stop hooks list updated to show both global and
+  project hook layers with accurate commands.
+
+### Advisory (LOW — not blocking)
+- `mempalace-mine-convos.sh` lock lives at `state/mempalace-mine-convos.lock`
+  (mkdir); the 3am cron uses `/tmp/mempalace-mine-convos.lock` (flock). The repair
+  cron waits for the cron lock but not the script lock — a session ending between
+  3:59–4:00am could overlap with the repair. WAL mode + pysqlite3 3.51.3 handles
+  this safely. Follow-up: add `flock /tmp/mempalace-mine-convos.lock` wrapper to
+  the script to achieve full cron coordination.
+
+---
+
 ## 2026-06-10 — feat: post-upgrade-mcp-integration (jdatamunch 1.13.0, jdocmunch 1.69.1, mempalace 3.4.0)
 
 ### Changed
