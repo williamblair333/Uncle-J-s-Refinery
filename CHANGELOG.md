@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — feat: CI test job for session-end-check.sh
+
+### Added
+- **`.github/workflows/ci.yml`**: new job `test-session-end-check` (CI job 5) —
+  runs `uv run pytest tests/test_session_end_check.py -v` on ubuntu-latest.
+  10 tests covering pre-commit mode (trigger/pass/block logic) and stop-hook
+  mode (always-exit-0 invariant). No API calls; pure bash subprocess tests.
+
+---
+
 ## 2026-06-10 — feat: stop-hook session mining wired to mempalace-mine-convos.sh
 
 ### Changed

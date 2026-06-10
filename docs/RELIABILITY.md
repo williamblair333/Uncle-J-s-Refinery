@@ -256,7 +256,9 @@ The `healthcheck.sh` also detects stale locks (>30 min) and reports `mempalace-s
 
 Check 9g additionally scans `MEMORY.md` for stale tracking entries (`pending`, `awaiting`, `needs <verb>`, etc.) and flags them at session start so they're verified before being reported as current fact.
 
-The lockfiles exist because `mempalace mine` has no built-in concurrency guard, and two Stop hooks (project + global settings) both invoke the convos miner on every session end.
+The lockfiles exist because `mempalace mine` has no built-in concurrency guard. The project Stop hook (`mempalace-mine-convos.sh`) uses a `mkdir`-based lock in `state/`; the 3am cron uses `flock /tmp/mempalace-mine-convos.lock`. These are separate locks — a session ending near 4am could briefly overlap the repair cron, which is safe under WAL mode + pysqlite3 3.51.3.
+
+`session-end-check.sh` behaviour is covered by `tests/test_session_end_check.py` (10 tests, job 5 in `ci.yml`).
 
 ---
 

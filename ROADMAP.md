@@ -18,9 +18,6 @@ Completed items age out after ~4 weeks.
 
 - **Submit upstream MemPalace HNSW flush fix** — review `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`, submit to https://github.com/MemPalace/mempalace; once merged, remove force-flush Step 2b from `mempalace-repair-now.sh` and unpin `chromadb==1.5.8`
 
-- **CI test job for `session-end-check.sh`** — add a pytest step to
-  `.github/workflows/ci.yml` now that the test file exists
-
 - **Telegram chat history persistence** — skill exists (`telegram-chat-history-persistence`)
   but implementation not yet started; would allow querying past bot conversations
 
@@ -43,6 +40,7 @@ Completed items age out after ~4 weeks.
 | 2026-06-10 | F-04 closed — `healthcheck.sh` `check_mempalace()` now runs both `PRAGMA quick_check` (B-tree) and FTS5 `integrity-check` (inverted-index data layer) as complementary probes |
 | 2026-06-10 | ARCHAEOLOGIST-R2-1 closed — post-upgrade SKILL.md step 8 clears `state/post-upgrade-needed`; `session-start-autofix.sh` section 0 warns if flag exists from a prior session |
 | 2026-06-10 | PEDANT-R2-1 closed — `auto-maintain.sh` Telegram notification now includes per-package commit range (e.g., `jcodemunch-mcp (abc1234→def5678)`) |
+| 2026-06-10 | CI test job for `session-end-check.sh` — `test-session-end-check` job added to `ci.yml`; 10 tests (pre-commit + stop-hook modes), 0 API calls, runs on ubuntu-latest |
 | 2026-06-10 | Stop-hook session mining — `.claude/settings.json` Stop hook now routes through `scripts/mempalace-mine-convos.sh`; adds HNSW pre/post guard, flock dedup, `--wing conversations` consistency with cron; eliminates dirty-context window |
 | 2026-06-10 | post-upgrade-mcp-integration jdatamunch 1.13.0 / jdocmunch 1.69.1 / mempalace 3.4.0 — 19 new tools routed in both CLAUDE.md files; stale `state/post-upgrade-needed` flag cleared |
 | 2026-06-10 | post-upgrade-mcp-integration v1.108.50 — `get_session_stats`, `analyze_perf`, `tune_weights`, `test_summarizer` added to jcodemunch Session & tier config in both CLAUDE.md files |

@@ -76,3 +76,22 @@ jobs:
 
       - name: pytest tests/test_skills.py
         run: uv run pytest tests/test_skills.py -v
+
+  # ── 5. session-end-check.sh behavioural tests ────────────────────────────
+  test-session-end-check:
+    name: session-end-check tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add ~/.local/bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dev dependencies
+        run: uv sync --inexact --only-group dev
+
+      - name: pytest tests/test_session_end_check.py
+        run: uv run pytest tests/test_session_end_check.py -v

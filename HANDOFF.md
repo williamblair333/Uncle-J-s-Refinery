@@ -1,8 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — stop-hook session mining wired; on main, clean*
+*Last updated: 2026-06-10 — CI test job for session-end-check.sh added; on main, clean*
 
-## Current state (2026-06-10) — stop-hook session mining complete
+## Current state (2026-06-10) — CI test job for session-end-check.sh
+
+`HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
+
+**Work log — 2026-06-10 (this session)**
+
+- **CI test job done** (ROADMAP Planned → Completed): `test-session-end-check` job added to `.github/workflows/ci.yml`. 10 tests, 0 API calls, ubuntu-latest. Covers pre-commit mode trigger/pass/block logic and stop-hook always-exit-0 invariant. All 10 passing locally.
+- **Stop-hook session mining done** (same session): see previous entry below.
+
+**Still open:**
+- Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC). Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
+- recall@10=0.408 — awaiting @kostadis response on ef tuning
+- Stop-hook citation audit (structural close of Dreaming pattern-promotion path)
+- LOW advisory from stop-hook mining: align `mempalace-mine-convos.sh` to also flock `/tmp/mempalace-mine-convos.lock` for full repair-cron coordination
+
+**Most important thing for next session:** On main, clean. Remaining ROADMAP Planned items: compressed `jcodemunch_guide` return value (~4,600–5,100 tokens/session savings), jragmunch-cli evaluation. Pick any.
+
+---
 
 `HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
 
