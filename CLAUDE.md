@@ -106,6 +106,9 @@ tools can answer structurally.
 - For ad-hoc SQL within a single indexed dataset: `plan_query` then
   `run_sql` — lighter than DuckDB for single-file queries.
 - Before deep analysis: `get_dataset_health` to catch schema issues early.
+- **Quality & risk:** `data_health_radar` (six-axis: null, type, cardinality, pk, semantic, stability + A-F grade) + `diff_data_health_radar` for snapshot deltas; mirrors jcm/jdoc health-radar pattern.
+- **Schema safety:** `check_column_drop_safe` before any column drop (fuses PK/FK/runtime signals); `get_schema_impact` for transitive blast-radius of a schema change; `get_schema_drift` to compare two indexed dataset versions.
+- **Discovery:** `find_similar_columns` for cross-dataset column dedup; `suggest_joins` for FK candidates; `find_unused_columns` (requires `ingest_sql_log` runtime data); `get_session_stats` for token savings.
 
 ### 3. Docs work — jDocMunch (mine), Context7 (theirs)
 - For project docs, runbooks, and internal markdown: **jdocmunch**. Ask for
@@ -118,12 +121,17 @@ tools can answer structurally.
   `section_neighbors` for prev/next/parent/first_child; `get_section_descendants` for
   full subtree BFS; `get_related_sections` for structural + semantic neighbors;
   `get_tutorial_path` for ordered tutorial chains; `get_section_diff` for
-  snapshot-vs-disk comparison.
-- **Doc quality checks:** `get_doc_health` (one-shot index diagnostics — run first);
-  `get_index_overview` (repo snapshot: counts, formats, top tags/roles); `get_orphan_sections`
-  (zero inbound links); `get_recent_changes` (disk-drifted sections — pre-flight before
-  re-index); `get_doc_coverage`, `get_backlinks`, `get_broken_links`, `get_stale_pages`,
-  `get_wiki_stats` — run before major doc updates or when doc quality is in question.
+  snapshot-vs-disk comparison; `get_section_blast_radius` for transitive change impact;
+  `check_section_delete_safe` before deleting a section.
+- **Doc quality checks:** `get_doc_health` (one-shot diagnostics); `doc_health_radar`
+  (six-axis: freshness, links, orphans, embeddings, roles, drift + A-F grade) +
+  `diff_doc_health_radar` for snapshot deltas; `get_doc_pr_risk_profile` for composite
+  PR risk across changed sections; `get_index_overview` (repo snapshot: counts, formats,
+  top tags/roles); `get_orphan_sections` (zero inbound links); `get_recent_changes`
+  (disk-drifted sections — pre-flight before re-index); `get_doc_coverage`, `get_backlinks`,
+  `get_broken_links`, `get_stale_pages`, `get_wiki_stats` — run before major doc updates
+  or when doc quality is in question; `find_similar_sections` for near-duplicate/
+  overlapping section detection; `count_sections` for fast headcount without ranking.
 - **Code ↔ doc bridges:** `get_undocumented_symbols` (code symbols absent from docs);
   `link_code_to_symbols` (doc code blocks → jcodemunch symbols); `find_code_examples`
   (search fenced code blocks by BM25).
@@ -146,8 +154,13 @@ tools can answer structurally.
 - On session close (or before compaction), snapshot the session into
   MemPalace so the next session starts with context.
 - Organize mines by wing (person/project) so scopes stay tight.
-- Use `mempalace_diary_write` for per-session notes — entries are now
-  scoped per-project automatically (mempalace 3.3.3+).
+- Use `mempalace_diary_write` for per-session notes; `mempalace_diary_read` to review
+  prior entries. Both scoped per-project automatically (mempalace 3.3.3+).
+- Call `mempalace_reconnect` at session start or when search returns "ef or M is too
+  small" — MCP server can load stale HNSW from disk on startup.
+- **Knowledge graph (mempalace 3.x):** `mempalace_kg_add` / `kg_query` / `kg_invalidate`
+  / `kg_timeline` — structured entity-relationship facts with temporal validity; use
+  when a free-text drawer isn't sufficient to express typed relations between entities.
 
 ### 5. Runtime traces (when available)
 - After ingesting OTel/SQL/stack traces via `import_runtime_signal`, use:
