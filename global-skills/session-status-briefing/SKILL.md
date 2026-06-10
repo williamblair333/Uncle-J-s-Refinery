@@ -65,9 +65,19 @@ If step 2 shows MemPalace is broken, or reconnect failed, skip this and note it 
 
 Call `mcp__jcodemunch__get_hotspots` (top 5) for complexity × churn scores.
 
+These are genuine — do not second-guess them. The score is complexity × log(1+churn) and reflects real maintenance risk.
+
 ### 6. Dead code candidates (if doing code work)
 
 Call `mcp__jcodemunch__get_dead_code_v2` (limit 5, confidence ≥ 0.9).
+
+**Then verify each candidate** — `get_dead_code_v2` has two known bash blind spots:
+1. Cross-file: jcodemunch cannot track `source lib/foo.sh` calls, so functions in sourced libraries appear to have zero importers.
+2. Within-file: jcodemunch does not track within-file bash function calls in its call graph, so helper functions defined and used in the same file appear to have no callers.
+
+Extract the bare function name from each symbol_id (e.g. `lib/notify.sh::notify_send_pitch#function` → `notify_send_pitch`). Pass all names in one batched call: `check_references(identifiers=[...], repo=<repo>)`. If `is_referenced: true` for a candidate, suppress it and note "false positive — referenced via bash source or within-file call". Caution: very short or generic names (`ok`, `step`, `run`, `check`) may return `is_referenced: true` from text matches in docs or YAML — treat those suppressions with skepticism and note the ambiguity rather than silently dropping.
+
+Only include candidates where `is_referenced: false` after this check.
 
 ## Output format
 
@@ -93,6 +103,7 @@ Call `mcp__jcodemunch__get_dead_code_v2` (limit 5, confidence ≥ 0.9).
 
 - HANDOFF and healthcheck are mandatory — do not skip them even if "just asking a question"
 - If healthcheck fails, fix it before searching MemPalace
-- If `digest` returns a full briefing, use it and skip steps 5–6
+- If `digest` returns a full briefing, use it; skip step 5 (hotspots already provided by digest) but still run the step 6 `check_references` verification pass on dead code candidates
 - Do not re-read source files to gather this data — use the retrieval stack
 - Trust symptoms over HANDOFF when they conflict
+- **Dead code false positive pattern (bash):** `get_dead_code_v2` cannot see bash `source` calls or within-file function calls. Always verify with `check_references` before reporting. Known affected files in this repo: `lib/notify.sh` (sourced in 15+ scripts), `prerequisites.sh` (functions called within the file itself).
