@@ -1,6 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — smart-review adversarial-review decoupled; GitHub community replies*
+*Last updated: 2026-06-10 — jGravelle full repo analysis + NEQ deep-dive*
+
+## Current state (2026-06-10) — jGravelle repo analysis complete; review/ populated
+
+`HEALTHCHECK: fail (1) -- mcp-servers-down(duckdb)` — expected (uvx cold start).
+
+**Work log — 2026-06-10 (this session)**
+
+Pure research session. No code changes to harness. Work product lives entirely in `review/`.
+
+- **NEQ analysis done** (`review/NEQ_Analysis_for_jGravelle_Tools_and_Refinery.md`): Two-part analysis. Part 1: always-on overhead measured at ~14,893 tokens/session at full tier; compressed `jcodemunch_guide` identified as primary lever (~4,600–5,100 tokens/session savings). Part 2: four Refinery harness findings (content-hash MemPalace compression, Stop-hook session mining, sub-agent context slicing, Dreaming pattern scoring). Three Gemini claims flagged incorrect.
+- **jGravelle full repo analysis done** (`review/jGravelle_Full_Repo_Analysis.md`): All 55 jgravelle GitHub repos analyzed. 4-tier priority table, 10-item consolidated recommendations. Most actionable items: (1) jOutputMunch rules — already cloned to `review/jOutputMunch/rules/`; paste `core.md` + `mcp.md` into CLAUDE.md for immediate output token reduction, zero install. (2) jragmunch-cli subscription billing pattern. (3) hermes-agent memory provider abstract interface.
+- **13 repos cloned** to `review/`: jragmunch-cli, jOutputMunch, jmunch-mcp, mcp-retrieval-spec, prefect-jcodemunch, hermes-agent, jcodemunch-observatory, Grompt, so_long_sucker, MCP-Universe, notion-code-mirror, jMunchWorkbench, TokenMyzer.
+- **smart-review/SKILL.md**: adversarial-review decoupled from Critical tier (committed this session alongside research).
+
+**Still open after this session:**
+- Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC: publishes to external repo). Requires ceremony. Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
+- recall@10=0.408 — awaiting @kostadis response
+- Stop-hook citation audit (structural close of pattern-promotion path)
+- jOutputMunch adoption — paste `review/jOutputMunch/rules/core.md` + `mcp.md` content into CLAUDE.md; measure output token delta before/after
+
+**Most important thing for next session:** jOutputMunch adoption is zero-effort and immediately actionable. Rules are at `review/jOutputMunch/rules/core.md` and `review/jOutputMunch/rules/mcp.md`. Paste both into CLAUDE.md under a new `## Output economy` section.
+
+---
 
 ## Current state (2026-06-10) — smart-review adversarial decoupled; community engagement
 

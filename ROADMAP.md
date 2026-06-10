@@ -12,6 +12,14 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **jOutputMunch adoption** — paste `review/jOutputMunch/rules/core.md` + `mcp.md` into CLAUDE.md under `## Output economy` section; zero install, ~41–76% output token reduction per jgravelle benchmarks; measure delta with `get_session_stats` before/after
+
+- **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model; benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
+
+- **Stop-hook session mining** — add `mempalace-mine-convos.sh` lightweight call to `Stop` hook so every clean session end mines before the next session starts; eliminates dirty-context window; cron stays as periodic catch-up
+
+- **jragmunch-cli evaluation** — `review/jragmunch-cli/` is cloned; evaluate subscription billing pattern (`_build_subprocess_env()` strips API keys) as a budget-control option for long automated runs
+
 - **Submit upstream MemPalace HNSW flush fix** — review `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`, submit to https://github.com/MemPalace/mempalace; once merged, remove force-flush Step 2b from `mempalace-repair-now.sh` and unpin `chromadb==1.5.8`
 
 - **CI test job for `session-end-check.sh`** — add a pytest step to

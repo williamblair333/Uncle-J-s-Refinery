@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-10 — research: jGravelle full repo analysis + NEQ deep-dive
+
+### Research
+- **`review/NEQ_Analysis_for_jGravelle_Tools_and_Refinery.md`** — Two-part analysis of NeverEndingQuest patterns. Part 1: measured always-on session overhead (~14,893 tokens/session at full tier); identified compressed `jcodemunch_guide` as primary lever (~4,600–5,100 tokens/session savings). Part 2: four Refinery harness findings — content-hash caching for MemPalace compression, Stop-hook session mining, sub-agent context slicing, pattern importance scoring for Dreaming. Three Gemini analysis claims flagged as incorrect.
+- **`review/jGravelle_Full_Repo_Analysis.md`** — Full analysis of all 55 jgravelle GitHub repos. 4-tier priority table, per-repo technical details, consolidated 10-item recommendation table. Most actionable: jOutputMunch rules (paste 2 files into CLAUDE.md, zero install), jragmunch-cli subscription billing pattern, hermes-agent memory provider interface.
+- **13 repos cloned to `review/`**: jragmunch-cli, jOutputMunch, jmunch-mcp, mcp-retrieval-spec, prefect-jcodemunch, hermes-agent, jcodemunch-observatory, Grompt, so_long_sucker, MCP-Universe, notion-code-mirror, jMunchWorkbench, TokenMyzer
+
+---
+
 ## 2026-06-10 — changed: smart-review adversarial-review decoupled; GitHub community replies
 
 ### Changed
