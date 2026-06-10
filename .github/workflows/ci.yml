@@ -57,3 +57,22 @@ jobs:
           for f in install-reliability.sh install-guardrails.sh install-langfuse.sh; do
             [ -f "$f" ] && bash -n "$f" && echo "OK  $f" || echo "FAIL  $f"
           done
+
+  # ── 4. Skill regression tests (static, no API calls) ─────────────────────
+  test-skills:
+    name: Skill frontmatter regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add ~/.local/bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dev dependencies
+        run: uv sync --inexact --only-group dev
+
+      - name: pytest tests/test_skills.py
+        run: uv run pytest tests/test_skills.py -v

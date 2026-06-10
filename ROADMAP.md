@@ -12,8 +12,6 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **MCP-Universe skill regression testing** — `review/MCP-Universe/` cloned; YAML task specs + evaluators cover `/smart-review`, `/session-end-checklist`, etc.; write regression tasks and integrate into CI; closes the missing quality gate for skill regressions (upgraded from Tier 3 per post-analysis review)
-
 - **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model; benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
 - **Stop-hook session mining** — add `mempalace-mine-convos.sh` lightweight call to `Stop` hook so every clean session end mines before the next session starts; eliminates dirty-context window; cron stays as periodic catch-up
@@ -48,6 +46,7 @@ Completed items age out after ~4 weeks.
 | 2026-06-10 | ARCHAEOLOGIST-R2-1 closed — post-upgrade SKILL.md step 8 clears `state/post-upgrade-needed`; `session-start-autofix.sh` section 0 warns if flag exists from a prior session |
 | 2026-06-10 | PEDANT-R2-1 closed — `auto-maintain.sh` Telegram notification now includes per-package commit range (e.g., `jcodemunch-mcp (abc1234→def5678)`) |
 | 2026-06-10 | post-upgrade-mcp-integration v1.108.50 — `get_session_stats`, `analyze_perf`, `tune_weights`, `test_summarizer` added to jcodemunch Session & tier config in both CLAUDE.md files |
+| 2026-06-10 | MCP-Universe skill regression gate — `tests/test_skills.py` (576 static tests, 0 API calls); CI job 4; 6 malformed SKILL.md files fixed (missing `---`, invalid YAML); PR #36 |
 | 2026-06-10 | Skill frontmatter standard — hermes-inspired YAML spec (platforms, category, tags, prerequisites, related_skills) written to `state/skill-frontmatter-standard.md`; pilot migration of pre-mortem, smart-review, session-end-checklist, prior-art-check; PR #35 |
 | 2026-06-10 | jOutputMunch adoption — `## Output Token Economy` section added to both CLAUDE.md files; adversarial-review ran (2 HIGH + 6 MEDIUM fixed); SHA-pinned citation, correct null-strip predicate, success:false clause restored; PR #33 |
 | 2026-06-10 | F-03 closed — bypass instruction removed from smart-review SKILL.md Step 6 and hook stderr; hook now says "Run /smart-review" |

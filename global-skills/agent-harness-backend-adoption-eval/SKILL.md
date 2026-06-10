@@ -1,6 +1,6 @@
 ---
 name: agent-harness-backend-adoption-eval
-description: Evaluate a proposed library or backend as a replacement for an existing one. Produces a structured assessment: architecture comparison, benchmark credibility, unproven risks, creative angles, and a staged recommendation. Use when a new library surfaces as a candidate to replace an embedded dependency (vector DB, cache, queue, etc.).
+description: "Evaluate a proposed library or backend as a replacement for an existing one. Produces a structured assessment: architecture comparison, benchmark credibility, unproven risks, creative angles, and a staged recommendation. Use when a new library surfaces as a candidate to replace an embedded dependency (vector DB, cache, queue, etc.)."
 ---
 
 ## When to use

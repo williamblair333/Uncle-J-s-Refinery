@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-10 — feat: skill regression tests (MCP-Universe quality gate)
+
+### Added
+- **`tests/test_skills.py`** — 576 static regression tests across all 48 global-skills: frontmatter YAML parseable, required fields (name, description), name matches directory, category/platforms/version/tags validated, prerequisites.skills exist in global-skills/. Zero API calls, ~0.5s runtime.
+- **`.github/workflows/ci.yml`** job 4 `test-skills` — runs skill regression tests on every push/PR; catches malformed skill SKILL.md before it reaches main.
+
+### Fixed (skill YAML conformance found by tests)
+- **`fog-of-chess-engine-mode-implementation/SKILL.md`** — missing closing `---` for frontmatter
+- **`polling-bot-backlog-diagnosis/SKILL.md`** — missing closing `---` for frontmatter
+- **`agent-harness-backend-adoption-eval/SKILL.md`** — unquoted description containing `: ` (invalid YAML)
+- **`platform-removal-cleanup/SKILL.md`** — unquoted description containing `: ` (invalid YAML)
+- **`review-queue-triage/SKILL.md`** — unquoted description containing `: ` (invalid YAML)
+- **`telegram-gateway-security-audit/SKILL.md`** — unquoted description containing `: ` (invalid YAML)
+
+---
+
 ## 2026-06-10 — jGravelle analysis recommendations: jOutputMunch, ROADMAP, skill frontmatter, async prefetch
 
 ### Added

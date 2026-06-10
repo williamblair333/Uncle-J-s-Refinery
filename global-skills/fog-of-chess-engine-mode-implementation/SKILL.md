@@ -2,6 +2,7 @@
 ---
 name: fog-of-chess-engine-mode-implementation
 description: Implement a new engineMode variant end-to-end in Fog of Chess — types, UCI bridge, adapter, server polling, REST endpoint, and UI panel — following the validator mode pattern.
+---
 
 ## When to use
 

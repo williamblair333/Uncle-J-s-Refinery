@@ -1,6 +1,6 @@
 ---
 name: platform-removal-cleanup
-description: Use when dropping support for a platform (OS, runtime, environment) and need to scrub all artifacts: scripts, binaries, docs, template placeholders, config comments, and source code branches.
+description: "Use when dropping support for a platform (OS, runtime, environment) and need to scrub all artifacts: scripts, binaries, docs, template placeholders, config comments, and source code branches."
 ---
 
 # Platform Removal Cleanup
