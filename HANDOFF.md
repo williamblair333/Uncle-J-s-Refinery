@@ -1,22 +1,24 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — PR #36 merged; on main, clean*
+*Last updated: 2026-06-10 — post-upgrade-mcp-integration complete; on main, clean*
 
-## Current state (2026-06-10) — all planned work merged, on main
+## Current state (2026-06-10) — post-upgrade integration complete
 
-`HEALTHCHECK: fail (1) -- mcp-servers-down(duckdb)` — expected (uvx cold start).
+`HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected; (2) vs (1) anomaly noted but unblocking.
 
-**Work log — 2026-06-10 (continuation session)**
+**Work log — 2026-06-10 (this session)**
 
-- **GitHub OAuth `workflow` scope authorized** — user ran `gh auth refresh -h github.com -s workflow`; unblocked push of `feat/skill-regression-tests`
-- **PR #36 pushed, CI passed, merged** — all 4 CI jobs green (lint, install-smoke, aux-syntax, test-skills); branch deleted; on main at `8bda2da`
+- **post-upgrade-mcp-integration done** (jdatamunch 1.13.0, jdocmunch 1.69.1, mempalace 3.4.0): 19 new tool routing rules added to both CLAUDE.md files (global + project, verified in sync). Stale `state/post-upgrade-needed` flag cleared — prior session completed integration but skipped step 8.
+  - jDataMunch: quality/risk radar, schema safety, discovery tools
+  - jDocMunch: doc_health_radar, PR risk profile, section blast-radius + delete-safe, dedup
+  - mempalace: diary_read, reconnect, knowledge-graph tools
 
 **Still open:**
 - Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC: publishes to external repo). Requires ceremony. Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
 - recall@10=0.408 — awaiting @kostadis response on ef tuning
 - Stop-hook citation audit (structural close of Dreaming pattern-promotion path)
 
-**Most important thing for next session:** On main, clean. Remaining ROADMAP Planned items: compressed `jcodemunch_guide` return value, Stop-hook session mining, jragmunch-cli evaluation. Pick any.
+**Most important thing for next session:** On main, clean. Remaining ROADMAP Planned items: compressed `jcodemunch_guide` return value (~4,600–5,100 tokens/session savings), Stop-hook session mining, jragmunch-cli evaluation. Pick any.
 
 ---
 

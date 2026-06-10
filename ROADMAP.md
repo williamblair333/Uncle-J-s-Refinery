@@ -45,6 +45,7 @@ Completed items age out after ~4 weeks.
 | 2026-06-10 | F-04 closed — `healthcheck.sh` `check_mempalace()` now runs both `PRAGMA quick_check` (B-tree) and FTS5 `integrity-check` (inverted-index data layer) as complementary probes |
 | 2026-06-10 | ARCHAEOLOGIST-R2-1 closed — post-upgrade SKILL.md step 8 clears `state/post-upgrade-needed`; `session-start-autofix.sh` section 0 warns if flag exists from a prior session |
 | 2026-06-10 | PEDANT-R2-1 closed — `auto-maintain.sh` Telegram notification now includes per-package commit range (e.g., `jcodemunch-mcp (abc1234→def5678)`) |
+| 2026-06-10 | post-upgrade-mcp-integration jdatamunch 1.13.0 / jdocmunch 1.69.1 / mempalace 3.4.0 — 19 new tools routed in both CLAUDE.md files; stale `state/post-upgrade-needed` flag cleared |
 | 2026-06-10 | post-upgrade-mcp-integration v1.108.50 — `get_session_stats`, `analyze_perf`, `tune_weights`, `test_summarizer` added to jcodemunch Session & tier config in both CLAUDE.md files |
 | 2026-06-10 | MCP-Universe skill regression gate — `tests/test_skills.py` (576 static tests, 0 API calls); CI job 4; 6 malformed SKILL.md files fixed (missing `---`, invalid YAML); PR #36 |
 | 2026-06-10 | Skill frontmatter standard — hermes-inspired YAML spec (platforms, category, tags, prerequisites, related_skills) written to `state/skill-frontmatter-standard.md`; pilot migration of pre-mortem, smart-review, session-end-checklist, prior-art-check; PR #35 |
