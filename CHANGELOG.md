@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-06-10 — fix: duckdb retry, smart-review bypass leak, reindex flock, uv.lock upgrades
+
+### Fixed
+- **`healthcheck.sh`** — `check_mcp_connected()` now retries duckdb once after 3s when it is the sole missing server (uvx cold-start false-positive). Repair hint: `install.sh --auto-register`.
+- **`global-skills/smart-review/SKILL.md`** — removed manual bypass instruction from Step 6 (F-03 partial). Hook stderr message still requires `~/.claude/settings.json` fix.
+- **`scripts/jcodemunch-reindex.sh`** — flock guard added to prevent concurrent cron+session-start reindex runs (CYNIC-R2-4). Exec failure handled explicitly: disk-full now logs as ERROR rather than masquerading as a concurrency skip.
+
+### Changed
+- **`uv.lock`** — jcodemunch 1.108.32→1.108.49 (17 versions), jdocmunch 1.69.0→1.69.1 (async upgrade that ran during prior Gemini CLI session).
+
+### Out-of-repo fix (same session, applied to `~/.claude/settings.json`)
+- **F-03 complete**: removed "Manual bypass: touch /tmp/..." from both smart-review gate hook stderr messages. Hook now says "Run /smart-review to generate the clearance marker."
+- **F-05 complete**: split `Bash(gh pr *)` into `Bash(gh pr create *)` + `Bash(gh pr merge *)`. `gh pr list/view/status` are no longer blocked by the smart-review gate.
+- F-04: add `integrity-check` as second FTS5 check alongside `PRAGMA quick_check` (not a replacement).
+- `post-upgrade-mcp-integration` for jcodemunch 1.108.49 jump — run next session.
+
+---
+
 ## 2026-06-10 — feat: Gemini CLI Integration (Passive Observer)
 
 ### Added

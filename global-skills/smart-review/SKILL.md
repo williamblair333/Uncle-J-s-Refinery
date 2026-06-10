@@ -30,7 +30,8 @@ Match `FILES_CHANGED` against the table below. The HIGHEST matching tier is the 
 | `auth`, `session`, `token`, `password`, `credential`, `secret`, `permission`, `oauth`, `jwt`, `api_key`, `.env` | **Critical** |
 | `hooks/`, `.claude/`, `settings.json`, `CLAUDE.md`, `*.service`, `cron`, `systemd`, `@reboot` | **Critical** |
 | `migration`, `schema`, `ALTER TABLE`, `DROP TABLE`, `DROP COLUMN` | **Critical** |
-| Any file the pre-mortem fired on in this session | **Critical** (floor enforced by collision) |
+| Any file the pre-mortem fired on in this session, AND the change goes beyond what the pre-mortem cleared | **Critical** (floor enforced by collision) |
+| Any file the pre-mortem fired on in this session, AND the change IS exactly what the pre-mortem cleared | **High** (collision floor; pre-mortem already covered the risk) |
 | New function or class added (diff contains `^+.*def ` or `^+.*class ` or `^+.*function `) | **High** |
 | API route added or changed (diff contains `@app.`, `@router.`, `router.get`, `router.post`, `app.use`) | **High** |
 | Diff > 150 lines changed | **High** |
@@ -130,7 +131,7 @@ touch "/tmp/smart-review-cleared-${HEAD_SHA}"
 echo "[SMART-REVIEW] Clearance marker written: /tmp/smart-review-cleared-${HEAD_SHA}"
 ```
 
-This marker is consumed by the PreToolUse hook on `git push` and `gh pr create`. Without it those commands are blocked. The marker is scoped to the current HEAD SHA — a new commit invalidates it. **Manual bypass if needed:** `touch /tmp/smart-review-cleared-$(git rev-parse HEAD)`
+This marker is consumed by the PreToolUse hook on `git push` and `gh pr create`. Without it those commands are blocked. The marker is scoped to the current HEAD SHA — a new commit invalidates it.
 
 ---
 
