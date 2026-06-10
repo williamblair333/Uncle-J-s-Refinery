@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-10 — chore: PR #36 pushed and merged (workflow OAuth scope authorized)
+
+### Changed
+- **GitHub OAuth** — authorized `workflow` scope via `gh auth refresh`; unblocked push of `feat/skill-regression-tests` branch
+- **PR #36 merged** — all 4 CI jobs passed (lint, install-smoke, aux-syntax, test-skills); branch deleted; on main
+
+---
+
 ## 2026-06-10 — feat: skill regression tests (MCP-Universe quality gate)
 
 ### Added
