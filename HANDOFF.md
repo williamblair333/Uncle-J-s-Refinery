@@ -8,10 +8,11 @@ Successfully implemented the `features/gemini-integration/` package. The system 
 
 **Work log — 2026-06-10**
 - **Research**: Conducted full repository analysis and architectural mapping.
-- **Documentation**: Created `review/LLM_ARCHITECTURE_BRIEF.md` for AI agent onboarding.
-- **Implementation**: Created `features/gemini-integration/` (installer, startup probe, README).
-- **Integration**: Injected mandates into `GEMINI.md` to enforce Munch-stack priority and context synchronization.
-- **Verification**: Verified via manual `startup-probe.sh` execution and healthcheck monitoring.
+- **Documentation**: Created \`review/LLM_ARCHITECTURE_BRIEF.md\` for AI agent onboarding.
+- **Implementation**: Created \`features/gemini-integration/\` (installer, startup probe, README, and native **gemini-auto-skill**).
+- **Integration**: Injected mandates into \`GEMINI.md\` to enforce Munch-stack priority, context synchronization, **Research First**, and autonomous **Auto-Skill** drafting.
+- **Verification**: Verified via manual \`startup-probe.sh\` execution and healthcheck monitoring.
+
 
 ## Current state (2026-06-07) — PR #27 open, awaiting adversarial-review + merge
 
