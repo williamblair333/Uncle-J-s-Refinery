@@ -3,6 +3,7 @@ name: polling-bot-backlog-diagnosis
 description: Diagnose and fix message backlog and notification-spam issues in cron-based polling bots — covers per-run deduplication flags and stale-message age filters
 metadata:
   type: feedback
+---
 
 ## When to use
 

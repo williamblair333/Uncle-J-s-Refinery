@@ -1,6 +1,6 @@
 ---
 name: telegram-gateway-security-audit
-description: Diagnose and harden a Telegram → Claude CLI gateway: fix update_id deduplication failures that spawn duplicate sessions, and inject a disclosure-restriction system prompt so the bot never leaks OS/infra details over the channel.
+description: "Diagnose and harden a Telegram → Claude CLI gateway: fix update_id deduplication failures that spawn duplicate sessions, and inject a disclosure-restriction system prompt so the bot never leaks OS/infra details over the channel."
 ---
 
 ## When to use

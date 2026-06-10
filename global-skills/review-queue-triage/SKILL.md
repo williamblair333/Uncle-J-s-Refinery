@@ -1,6 +1,6 @@
 ---
 name: review-queue-triage
-description: Audit _review/ items, classify by completion signals (status: resolved, REPO-ASSESSMENT + landing commit), auto-move resolved items to _reviewed/, leave uncertain items for user decision.
+description: "Audit _review/ items, classify by completion signals (status: resolved, REPO-ASSESSMENT + landing commit), auto-move resolved items to _reviewed/, leave uncertain items for user decision."
 ---
 
 ## When to Use

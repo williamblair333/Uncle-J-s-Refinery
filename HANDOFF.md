@@ -1,6 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — jGravelle analysis recommendations carried out (PRs #33–#35)*
+*Last updated: 2026-06-10 — skill regression tests + CI job (PR #36)*
+
+## Current state (2026-06-10) — MCP-Universe quality gate implemented
+
+`HEALTHCHECK: fail (1) -- mcp-servers-down(duckdb)` — expected (uvx cold start).
+
+**Work log — 2026-06-10 (this session, continued)**
+
+- **`tests/test_skills.py`** — 576 static regression tests for all 48 global-skills. Tests: YAML frontmatter parseable, required fields (name/description), name matches directory, category/platforms/version/tags validated, prerequisites.skills exist in global-skills/. Zero API calls, ~0.5s.
+- **`.github/workflows/ci.yml`** — job 4 `test-skills` added; runs on every push/PR.
+- **6 SKILL.md files fixed** by the new tests: 2 missing closing `---`, 4 with unquoted descriptions containing `: ` (invalid bare YAML).
+
+**Still open after this session:**
+- Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC: publishes to external repo). Requires ceremony. Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
+- recall@10=0.408 — awaiting @kostadis response on ef tuning
+- Stop-hook citation audit (structural close of Dreaming pattern-promotion path)
+
+**Most important thing for next session:** Skill regression gate is live. The remaining ROADMAP Planned items are: compressed jcodemunch_guide, Stop-hook session mining, jragmunch-cli evaluation. Pick any.
+
+---
 
 ## Current state (2026-06-10) — jGravelle recommendations applied; 4 tasks complete
 
