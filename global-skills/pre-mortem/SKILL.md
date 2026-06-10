@@ -1,6 +1,14 @@
 ---
 name: pre-mortem
-description: Use when about to finalize any consequential action — fixes, features, config changes, architecture decisions, deployments, crons, daemons, third-party integrations, gh pr create, gh issue create, or git push to a remote. Also triggers when the action affects systems that run unattended, cannot be trivially reversed, or persists beyond this session.
+description: Adversarial failure analysis across 12 dimensions before any consequential action — hooks, scripts, crons, config changes, deployments, gh pr create, git push. Blocks on HIGH/CATASTROPHIC until addressed.
+version: 2.0.0
+platforms: [linux, macos]
+category: security
+tags: [safety, deployment, hooks, infrastructure, git-push, review, blocking]
+prerequisites:
+  commands: [git]
+  skills: []
+related_skills: [blue-team, session-end-checklist, smart-review]
 ---
 
 # Pre-Mortem: Adversarial Failure Analysis

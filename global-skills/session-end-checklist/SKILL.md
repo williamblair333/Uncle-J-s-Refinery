@@ -1,6 +1,14 @@
 ---
 name: session-end-checklist
-description: Run the session-end documentation checklist — updates CHANGELOG, HANDOFF, and considers README/ROADMAP before committing. Invoke when wrapping up a session, or when the pre-commit hook blocks a commit.
+description: Session wrap-up checklist — updates CHANGELOG, HANDOFF, considers ROADMAP/README, then commits. Invoke at session end or when the pre-commit hook blocks on missing docs.
+version: 1.0.0
+platforms: [linux, macos]
+category: git
+tags: [session, documentation, CHANGELOG, HANDOFF, ROADMAP, git, wrap-up]
+prerequisites:
+  commands: [git, gh]
+  skills: [pre-mortem]
+related_skills: [smart-review, catch-up-pull, post-audit-mempalace-capture]
 ---
 
 ## When to use

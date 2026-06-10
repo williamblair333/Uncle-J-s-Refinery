@@ -1,6 +1,14 @@
 ---
 name: prior-art-check
-description: Before doing any non-trivial task, check MemPalace for prior work on the same topic. Triggers on any request involving coding, design decisions, debugging, architecture, or "how did we" / "why did we" / "what about" phrasing. Always run before the first substantive tool call.
+description: MemPalace search before any non-trivial task — "have we solved this before?" Fires before any coding, design, or architecture work; runs before the first substantive retrieval tool call.
+version: 1.0.0
+platforms: [linux, macos]
+category: memory
+tags: [MemPalace, search, session-start, context, prior-work, cold-start]
+prerequisites:
+  commands: []
+  skills: []
+related_skills: [session-status-briefing, post-audit-mempalace-capture, stale-pending-memory-guard]
 ---
 
 # Prior-art check
