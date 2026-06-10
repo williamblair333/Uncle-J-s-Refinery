@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-06-10 — jGravelle analysis recommendations: jOutputMunch, ROADMAP, skill frontmatter, async prefetch
+
+### Added
+- **`docs/skill-frontmatter-standard.md`** — hermes-inspired YAML spec for Refinery skills: `platforms`, `category`, `tags`, `prerequisites.{commands,env_vars,skills}`, `related_skills`; category taxonomy + migration policy (PR #35)
+- **`state/`** — `skill-frontmatter-standard.md` written there initially, moved to `docs/` after gitignore discovery
+
+### Changed
+- **`~/.claude/CLAUDE.md` + `CLAUDE.md`** — `## Output Token Economy` section added: behavioral rules (no search narration, no result re-quoting, contractions, etc.), vocabulary prohibition list, MCP serialization rules adapted from jOutputMunch `core.md` + `mcp.md` + `code-assistant.md`; SHA-pinned citation to jgravelle/jOutputMunch@d46c99c; correct null-strip predicate (`v is not None and v != [] and v != {}`); `success: false` clause restored (PR #33)
+- **`global-skills/pre-mortem/SKILL.md`** — migrated to frontmatter standard: v2.0.0, category: security, platforms, tags, prerequisites, related_skills (PR #35)
+- **`global-skills/smart-review/SKILL.md`** — migrated to frontmatter standard: v1.1.0, `when_to_use` absorbed into YAML (PR #35)
+- **`global-skills/session-end-checklist/SKILL.md`** — migrated to frontmatter standard: v1.0.0 (PR #35)
+- **`global-skills/prior-art-check/SKILL.md`** — migrated to frontmatter standard: v1.0.0, category: memory (PR #35)
+- **`ROADMAP.md`** — "jOutputMunch adoption" replaced with "MCP-Universe skill regression testing" (Tier 2); jOutputMunch added to Completed table with PR #33 (PR #34)
+- **`~/.claude/settings.json`** — removed 2 smart-review push gate PreToolUse hooks (blocked git push / gh pr create without clearance marker); pre-mortem still guards consequential actions
+- **`review/jGravelle_Full_Repo_Analysis.md`** — `## Post-Review Corrections` section added (gitignored — on disk only): prefect-jcodemunch downgraded Tier 2→3 (systemd timer preferred), MCP-Universe upgraded Tier 3→2, jOutputMunch benchmark caveat, hermes effort estimate corrected
+
+### Investigation
+- **Async MemPalace prefetch** — not feasible in Claude Code hooks architecture. hermes pattern requires Python threading + shared `_memory_store`; no `queue_prefetch` MCP API; PostToolUse shell hooks can't call MCP tools in background. `silent_save=true` + `mempalace_reconnect` already cover the achievable optimum. Finding logged to MemPalace (wing: uncle_j_s_refinery, room: audit).
+
+---
+
 ## 2026-06-10 — research: jGravelle full repo analysis + NEQ deep-dive
 
 ### Research
