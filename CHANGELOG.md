@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-06-10 — fix: session-status-briefing dead code verification accuracy
+
+### Fixed
+- **`global-skills/session-status-briefing/SKILL.md`** — step 6 dead code verification rewritten:
+  - Uses `identifiers[]` batch call (1 round-trip instead of 5 sequential)
+  - Specifies extracting bare function name from symbol_id before calling `check_references`
+  - Adds collision caveat for short/generic bash names (`ok`, `step`, `run`) — text matches in docs/YAML inflate `is_referenced`
+  - Restores "skip step 5 when digest provides hotspots" note (was silently dropped in a previous edit)
+  - Documents two jcodemunch bash blind spots: `source` call tracking and within-file call graph
+
+### Added
+- **`memory/feedback_bash-dead-code-false-positives.md`** — durable record of both bash dead-code blind spots; referenced from SKILL.md Notes
+
+---
+
 ## 2026-06-10 — fix: duckdb retry, smart-review bypass leak, reindex flock, uv.lock upgrades
 
 ### Fixed

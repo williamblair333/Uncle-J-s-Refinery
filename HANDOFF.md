@@ -1,6 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — deferred items batch: duckdb retry, F-03 partial, CYNIC-R2-4*
+*Last updated: 2026-06-10 — session-status-briefing dead code fix; F-04 still open*
+
+## Current state (2026-06-10) — session-status-briefing dead code verification fixed (PR #31)
+
+`HEALTHCHECK: fail (1) -- mcp-servers-down(duckdb)` at session open — expected (uvx cold start); retry fix already in place from prior session.
+
+**Work log — 2026-06-10 (this session)**
+- **session-status-briefing SKILL.md** (PR #31): step 6 dead code verification rewritten — batch `check_references` call (1 round-trip), name extraction from symbol_id, generic-name collision caveat, skip-step-5 note restored, two jcodemunch bash blind spots documented
+- **Memory**: `feedback_bash-dead-code-false-positives.md` — durable record of bash dead-code false-positive pattern (source + within-file call graph blind spots)
+
+**Still open after this session:**
+- `F-04` (HIGH): Add `integrity-check` as second FTS5 check in `check_mempalace()` alongside `PRAGMA quick_check` (NOT replacing it). Target: `healthcheck.sh`. Pre-mortem required.
+- `post-upgrade-mcp-integration`: jcodemunch jumped 1.108.32→1.108.49 (17 versions). Run this skill.
+- `ARCHAEOLOGIST-R2-1`, `PEDANT-R2-1`: carried forward (see sections below)
+- Upstream HNSW flush bug report + PR — still unsubmitted
+- Port conflict: kanka-ce vs proj-fog-of-chess both claim 5173
+- recall@10=0.408 — awaiting @kostadis response
+- Stop-hook citation audit (structural close of pattern-promotion path)
+
+---
 
 ## Current state (2026-06-10) — deferred items batch applied
 
