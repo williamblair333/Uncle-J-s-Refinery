@@ -1,6 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-07 — adversarial-review round-2 fixes + pushed to main*
+*Last updated: 2026-06-10 — Gemini CLI Integration Complete*
+
+## Current state (2026-06-10) — Gemini CLI Integration Package Delivered
+
+Successfully implemented the `features/gemini-integration/` package. The system is now "Passive Observer" ready for Gemini CLI agents.
+
+**Work log — 2026-06-10**
+- **Research**: Conducted full repository analysis and architectural mapping.
+- **Documentation**: Created `review/LLM_ARCHITECTURE_BRIEF.md` for AI agent onboarding.
+- **Implementation**: Created `features/gemini-integration/` (installer, startup probe, README).
+- **Integration**: Injected mandates into `GEMINI.md` to enforce Munch-stack priority and context synchronization.
+- **Verification**: Verified via manual `startup-probe.sh` execution and healthcheck monitoring.
+
+## Current state (2026-06-07) — PR #27 open, awaiting adversarial-review + merge
+
+`HEALTHCHECK: fail (1) -- stack-not-at-head` at session start → async upgrade ran → jcodemunch-mcp 1.108.35 installed.
+
+**PR #27: fix/adversarial-review-findings → main**
+- 4 commits: 76a58eb, 0ec538d, ee0409e, dc13778
+- All adversarial-review findings applied (2 rounds)
+- uv.lock pinned to jcodemunch-mcp 1.108.35
+- Smart-review clearance: run `/smart-review` or `touch /tmp/smart-review-cleared-$(git rev-parse HEAD)` after any new commit
+- `post-upgrade-mcp-integration` not run for 1.108.35 — first task next session
+
+**Smart-review calibration issue (new this session):**
+- Pre-mortem collision rule (uv.lock in TOKEN SCOPE) escalated a 4-line lock file bump to Critical → adversarial-review dispatched on a lock file. No new findings expected.
+- **Proposed rule addition for next session**: lock files (uv.lock, poetry.lock) where pre-mortem STATUS was CLEAR should cap at Medium.
 
 ## Current state (2026-06-07) — adversarial-review FIX_BEFORE_MERGE findings resolved
 
@@ -26,7 +52,7 @@
 - `F-05` (MEDIUM): `gh pr *` hook pattern too broad — blocks `gh pr list/view/status`. Fix: split into `gh pr create *` and `gh pr merge *` matchers only.
 - `CYNIC-R2-1` / `CYNIC-R2-4` (MEDIUM): add flock guard to `scripts/jcodemunch-reindex.sh`.
 
-**Next session:** push to origin/main. Run `/smart-review` first (token: `touch /tmp/smart-review-cleared-$(git rev-parse HEAD)`).
+**Next session:** PR #27 merged to main (see top section). Run `post-upgrade-mcp-integration` for jcodemunch-mcp 1.108.35. Fix deferred items below (F-03 first).
 
 **Open items (carried forward):**
 - recall@10=0.408 — wait for @kostadis response on `ef` tuning

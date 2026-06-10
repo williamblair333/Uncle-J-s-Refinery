@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-06-10 — feat: Gemini CLI Integration (Passive Observer)
+
+### Added
+- **\`features/gemini-integration/\`** — Modular feature package enabling native Gemini CLI support.
+  - \`install.sh\`: Idempotent mandate injector for \`GEMINI.md\`.
+  - \`startup-probe.sh\`: Read-only context synchronization tool (Git, Doctor, Dreaming).
+  - \`README.md\`: Architecture and usage guide.
+- **\`review/LLM_ARCHITECTURE_BRIEF.md\`** — High-level architectural map for LLMs and autonomous agents.
+
+### Changed
+- **\`GEMINI.md\`** — Injected operational mandates for Gemini CLI (Munch-stack priority, Passive Observation).
+
+---
+
+## 2026-06-07 — fix: pin jcodemunch-mcp 1.108.35 (session-start async upgrade artifact)
+
+### Changed
+- **`uv.lock`** — jcodemunch-mcp bumped from 1.108.32 → 1.108.35 (SHA `8c6f85b`); automated by session-start async upgrade subshell.
+
+### Deferred
+- `post-upgrade-mcp-integration` not yet run for 1.108.35 — carry to next session.
+- `PEDANT-R2-1`: add `rev=` pins to `[tool.uv.sources]` in pyproject.toml — future upgrades not SHA-constrained.
+
+---
+
 ## 2026-06-07 — fix: adversarial-review round-2 regressions in review-check.sh + autofix flock
 
 ### Fixed
