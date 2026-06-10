@@ -130,7 +130,7 @@ touch "/tmp/smart-review-cleared-${HEAD_SHA}"
 echo "[SMART-REVIEW] Clearance marker written: /tmp/smart-review-cleared-${HEAD_SHA}"
 ```
 
-This marker is consumed by the PreToolUse hook on `git push` and `gh pr create`. Without it those commands are blocked. The marker is scoped to the current HEAD SHA — a new commit invalidates it. **Manual bypass if needed:** `touch /tmp/smart-review-cleared-$(git rev-parse HEAD)`
+This marker is consumed by the PreToolUse hook on `git push` and `gh pr create`. Without it those commands are blocked. The marker is scoped to the current HEAD SHA — a new commit invalidates it.
 
 ---
 

@@ -99,6 +99,20 @@ check_mcp_connected() {
             missing+=("$name")
         fi
     done
+    # duckdb uses uvx (slow cold start — ~3s on this machine). Retry once before
+    # declaring failure to avoid false-positives at session open.
+    if [[ ${#missing[@]} -eq 1 && "${missing[0]}" == "duckdb" ]]; then
+        sleep 3
+        output="$(claude mcp list 2>&1)"
+        if printf '%s\n' "$output" | grep -qE "^duckdb: .*✓ Connected"; then
+            ok "all 7 stack servers Connected (duckdb needed 1 retry — uvx cold start)"
+            return
+        fi
+        bad "duckdb not Connected after retry"
+        hint "run: $REPO_ROOT/install.sh --auto-register"
+        record_fail "mcp-servers-down(duckdb)"
+        return
+    fi
     if [ ${#missing[@]} -eq 0 ]; then
         ok "all 7 stack servers Connected"
     else

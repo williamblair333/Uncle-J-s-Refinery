@@ -13,6 +13,13 @@ LOG="$PROJ_ROOT/state/jcodemunch-reindex.log"
 mkdir -p "$PROJ_ROOT/state"
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; }
 
+# Prevent concurrent reindex runs (cron + session-start can overlap).
+# exec failure (disk full, /tmp not writable) is an error — log and bail rather
+# than silently masquerading as a concurrency skip.
+LOCK="/tmp/uncle-j-jcodemunch-reindex.lock"
+exec 9>"$LOCK" || { log "ERROR: cannot create lock file $LOCK (disk full or /tmp not writable)"; exit 1; }
+flock -n 9 || { log "Reindex already running — skipping."; exit 0; }
+
 if [[ ! -x "$JCODEMUNCH" ]]; then
     log "ERROR: jcodemunch-mcp not found at $JCODEMUNCH"
     exit 1
