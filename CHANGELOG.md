@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-10 — changed: smart-review adversarial-review decoupled; GitHub community replies
+
+### Changed
+- **`global-skills/smart-review/SKILL.md`** — Critical tier no longer auto-invokes `adversarial-review`. Step 4 dispatch table updated: Critical now reports classification, suggests `/adversarial-review`, and waits for explicit user approval. Notes updated to document manual-approval requirement.
+
+### Community
+- **campaign-forge issue #6** — posted deep technical review of @kostadis's ensemble pipeline: temporal lens rationale, nomic-embed-text-v1.5 threshold note (MiniLM requires recalibration), scabard_manifest pattern carries to kanka_sync, facts_to_state.py as intermediate compression layer.
+- **MemPalace PR #1524** — approved @geco's v1.3.2 fixes (allBins gate, double round-trip note, KG quality-over-quantity language).
+
+---
+
 ## 2026-06-10 — fix: F-04 FTS5 dual-probe, ARCHAEOLOGIST-R2-1 flag lifecycle, PEDANT-R2-1 commit range, post-upgrade CLAUDE.md
 
 ### Fixed

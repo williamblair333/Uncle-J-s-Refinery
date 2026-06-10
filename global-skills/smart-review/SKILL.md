@@ -81,9 +81,9 @@ If they disagree: log the discrepancy (see Step 5), use the higher.
 | **Low** | Invoke `code-review` skill with `--effort low` argument |
 | **Medium** | Invoke `code-review` skill with `--effort medium` argument (default) |
 | **High** | Invoke `code-review` skill with `--effort high` argument |
-| **Critical** | Invoke `adversarial-review` skill — pass the diff/target as args |
+| **Critical** | **Do NOT auto-invoke adversarial-review.** Report the classification and suggest it: "[SMART-REVIEW] Floor: {FLOOR_TIER} | Shadow: {SHADOW_TIER} | Resolved: **Critical** — I recommend running `/adversarial-review` before proceeding. Say yes to proceed." Then **stop and wait** for explicit user approval before invoking the skill. |
 
-Tell the user: `"[SMART-REVIEW] Floor: {FLOOR_TIER} | Shadow: {SHADOW_TIER} | Resolved: {RESOLVED_TIER} → dispatching {tool}"`
+Tell the user: `"[SMART-REVIEW] Floor: {FLOOR_TIER} | Shadow: {SHADOW_TIER} | Resolved: {RESOLVED_TIER} → dispatching {tool}"` (for Low/Medium/High). For Critical, omit the dispatching suffix and instead show the recommendation prompt above.
 
 ---
 
@@ -139,5 +139,6 @@ This marker is consumed by the PreToolUse hook on `git push` and `gh pr create`.
 
 - This skill is the default entry point. Users and Claude should call `/smart-review` instead of manually picking `/code-review --effort X`.
 - Shadow classifier result is advisory only if floor is Critical — Critical cannot be downgraded by shadow.
+- **adversarial-review is NOT auto-dispatched.** When tier resolves Critical, smart-review stops, reports the classification, and suggests `/adversarial-review`. The user must explicitly approve before it runs.
 - The shadow agent has upward bias by prompt design. If it says Medium and floor says Low, Medium wins. If it says Low and floor says Medium, Medium wins. Low can only come from unanimous agreement.
 - `verification-before-completion` (`superpowers:verification-before-completion`) checks functional correctness. This skill checks code quality and safety. They are complementary — run both before merging anything High or Critical.

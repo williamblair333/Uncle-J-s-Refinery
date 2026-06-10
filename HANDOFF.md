@@ -1,6 +1,24 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — open items batch: F-04, ARCHAEOLOGIST-R2-1, PEDANT-R2-1, post-upgrade CLAUDE.md*
+*Last updated: 2026-06-10 — smart-review adversarial-review decoupled; GitHub community replies*
+
+## Current state (2026-06-10) — smart-review adversarial decoupled; community engagement
+
+`HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` at session open — expected (uvx cold start). Second failure likely MemPalace HNSW (ef/M too small after reconnect — known issue; see open items).
+
+**Work log — 2026-06-10 (this session)**
+- **smart-review SKILL.md** (`global-skills/smart-review/SKILL.md`): adversarial-review disconnected from auto-dispatch. Critical tier now: reports classification, says "I recommend running `/adversarial-review` before proceeding. Say yes to proceed," and stops. Step 4 table + Notes section updated.
+- **MemPalace PR #1524**: approved @geco's v1.3.2 fixes (allBins gate correctness, double MCP round-trip note, KG quality-over-quantity language). PR approved from our side.
+- **campaign-forge issue #6**: posted deep technical review of @kostadis's ensemble pipeline — temporal lens rationale, nomic-embed-text-v1.5 threshold note (0.93 calibrated for nomic; MiniLM requires recalibration), scabard_manifest.json → kanka_sync.py pattern, facts_to_state.py as intermediate compression layer (Phase 1 complete, Phase 5 kanka_sync not yet built).
+
+**Still open after this session:**
+- Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC: publishes to external repo). Requires ceremony. Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
+- MemPalace HNSW ef/M issue — search failing after reconnect; `fail (2)` on healthcheck. May need `/mempalace-hnsw-corruption-fix`.
+- recall@10=0.408 — awaiting @kostadis response on ef tuning
+- Stop-hook citation audit (structural close of pattern-promotion path)
+- campaign-forge #4, #5; CampaignGenerator #82 — awaiting @kostadis response
+
+---
 
 ## Current state (2026-06-10) — open items batch applied
 
