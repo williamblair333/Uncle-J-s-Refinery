@@ -123,7 +123,7 @@ tools can answer structurally.
   `get_tutorial_path` for ordered tutorial chains; `get_section_diff` for
   snapshot-vs-disk comparison; `get_section_blast_radius` for transitive change impact;
   `check_section_delete_safe` before deleting a section.
-- **Doc quality checks:** `get_doc_health` (one-shot diagnostics); `doc_health_radar`
+- **Doc quality checks:** `get_doc_health` (one-shot index diagnostics — run first); `doc_health_radar`
   (six-axis: freshness, links, orphans, embeddings, roles, drift + A-F grade) +
   `diff_doc_health_radar` for snapshot deltas; `get_doc_pr_risk_profile` for composite
   PR risk across changed sections; `get_index_overview` (repo snapshot: counts, formats,
@@ -158,9 +158,10 @@ tools can answer structurally.
   prior entries. Both scoped per-project automatically (mempalace 3.3.3+).
 - Call `mempalace_reconnect` at session start or when search returns "ef or M is too
   small" — MCP server can load stale HNSW from disk on startup.
-- **Knowledge graph (mempalace 3.x):** `mempalace_kg_add` / `kg_query` / `kg_invalidate`
-  / `kg_timeline` — structured entity-relationship facts with temporal validity; use
-  when a free-text drawer isn't sufficient to express typed relations between entities.
+- **Knowledge graph (mempalace 3.x):** `mempalace_kg_add` / `mempalace_kg_query` / `mempalace_kg_invalidate`
+  / `mempalace_kg_timeline` — structured entity-relationship facts with temporal validity; use
+  when a free-text drawer isn't sufficient (typed entity-relation with time bounds). `mempalace_kg_stats`
+  for KG usage/health.
 
 ### 5. Runtime traces (when available)
 - After ingesting OTel/SQL/stack traces via `import_runtime_signal`, use:

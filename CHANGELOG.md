@@ -5,10 +5,10 @@
 ## 2026-06-10 — feat: post-upgrade-mcp-integration (jdatamunch 1.13.0, jdocmunch 1.69.1, mempalace 3.4.0)
 
 ### Changed
-- **`CLAUDE.md`** (both global + project, verified in sync) — added routing rules for 19 new tools:
-  - jDataMunch: `data_health_radar` + `diff_data_health_radar`, `check_column_drop_safe`, `get_schema_impact`, `get_schema_drift`, `find_similar_columns`, `suggest_joins`, `find_unused_columns`, `get_session_stats`
-  - jDocMunch: `doc_health_radar` + `diff_doc_health_radar`, `get_doc_pr_risk_profile`, `get_section_blast_radius`, `check_section_delete_safe`, `find_similar_sections`, `count_sections`
-  - mempalace: `mempalace_diary_read`, `mempalace_reconnect`, `mempalace_kg_add`/`kg_query`/`kg_invalidate`/`kg_timeline`
+- **`CLAUDE.md`** (both global + project, verified in sync) — added routing rules for 22 new tools:
+  - jDataMunch (9): `data_health_radar`, `diff_data_health_radar`, `check_column_drop_safe`, `get_schema_impact`, `get_schema_drift`, `find_similar_columns`, `suggest_joins`, `find_unused_columns`, `get_session_stats`
+  - jDocMunch (7): `doc_health_radar`, `diff_doc_health_radar`, `get_doc_pr_risk_profile`, `get_section_blast_radius`, `check_section_delete_safe`, `find_similar_sections`, `count_sections`
+  - mempalace (6): `mempalace_diary_read`, `mempalace_reconnect`, `mempalace_kg_add`, `mempalace_kg_query`, `mempalace_kg_invalidate`, `mempalace_kg_timeline`
 - Cleared stale `state/post-upgrade-needed` flag (prior session completed integration but skipped step 8)
 
 ---
