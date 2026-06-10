@@ -1,7 +1,14 @@
 ---
 name: smart-review
-description: Auto-classifying code review router. Applies a deterministic rules floor + independent shadow classifier to pick the right review depth, then dispatches to code-review (low/medium/high) or adversarial-review (critical). Logs every classification decision to MemPalace for drift audit.
-when_to_use: Whenever code has changed and needs review — replaces manually picking an effort level. Default entry point for all code review.
+description: Auto-classifying code review router — rules floor + shadow classifier → dispatches code-review (low/medium/high) or adversarial-review (critical). Logs every classification to MemPalace for drift audit.
+version: 1.1.0
+platforms: [linux, macos]
+category: review
+tags: [code-review, classification, adversarial, MemPalace, git, quality-gate]
+prerequisites:
+  commands: [git, gh]
+  skills: []
+related_skills: [adversarial-review, pre-mortem, prior-art-check]
 ---
 
 # Smart Review — Auto-Classifying Router
