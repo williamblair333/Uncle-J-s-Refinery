@@ -11,6 +11,15 @@ CHROMA_DB="$HOME/.mempalace/palace/chroma.sqlite3"
 ts()  { date '+%Y-%m-%d %H:%M:%S'; }
 log() { printf '%s %s\n' "$(ts)" "$*" >> "$LOG" 2>/dev/null; }
 
+# ── 0. Post-upgrade integration pending? ─────────────────────────────────────
+# Flag written by async upgrade subshell (section 4 below). If the upgrade
+# completed after the previous session ended, the flag will persist here.
+# The post-upgrade-mcp-integration skill clears it (step 8) when done.
+if [[ -f "$REPO_ROOT/state/post-upgrade-needed" ]]; then
+    log "post-upgrade-needed flag found — MCP stack upgraded in a prior session, integration pending"
+    printf '    NOTICE      MCP stack was upgraded in a prior session — run /post-upgrade-mcp-integration\n'
+fi
+
 # ── 1. FTS5 direct check + auto-repair (fast, no healthcheck needed) ─────────
 # CRITICAL: use venv Python (SQLite 3.50.x), NOT system python3/sqlite3 (3.46.1).
 # System SQLite 3.46 reading/writing FTS5 structures created by 3.50 silently corrupts

@@ -90,6 +90,10 @@ tools can answer structurally.
 
 **Session & tier config**:
 - `set_tool_tier` — explicit tier override (core/standard/full) when you hit a capability-gated failure mid-task. `announce_model` — self-report active model for automatic tier selection (idempotent; call plan_turn instead for routine per-task use).
+- `get_session_stats` — token savings stats for the current session; quantify retrieval-stack cost reduction before/after routing changes.
+- `analyze_perf` — per-tool latency telemetry; identify slow tools and cold caches.
+- `tune_weights` — learn per-repo BM25 retrieval weights from the ranking ledger; run after search-quality changes to recalibrate relevance.
+- `test_summarizer` — verify AI summarizer connectivity and output; debug missing or stale symbol summaries.
 
 ### 2. Data work — jDataMunch for CSVs, DuckDB for real SQL
 - For any CSV / TSV: `describe_dataset` first, `get_rows` with filters next,

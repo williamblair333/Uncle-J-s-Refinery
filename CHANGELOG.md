@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-06-10 — fix: F-04 FTS5 dual-probe, ARCHAEOLOGIST-R2-1 flag lifecycle, PEDANT-R2-1 commit range, post-upgrade CLAUDE.md
+
+### Fixed
+- **`healthcheck.sh`** (F-04): `check_mempalace()` now runs both `PRAGMA quick_check` (B-tree structural) and FTS5 `integrity-check` (inverted-index data layer) as complementary probes. Comment updated to explain why both are required. Success message updated: "SQLite quick_check + FTS5 integrity-check: ok".
+- **`scripts/session-start-autofix.sh`** (ARCHAEOLOGIST-R2-1): new section 0 checks for `state/post-upgrade-needed` flag at startup; prints NOTICE if flag exists from a prior session's async upgrade, prompting the user to run `/post-upgrade-mcp-integration`.
+- **`/home/bill/.claude/skills/post-upgrade-mcp-integration/SKILL.md`** (ARCHAEOLOGIST-R2-1): step 8 added — `rm -f state/post-upgrade-needed` after integration is complete, closing the flag lifecycle.
+
+### Changed
+- **`scripts/auto-maintain.sh`** (PEDANT-R2-1): `UPGRADE_RANGES` accumulator built per-package during Part B evaluation loop; Telegram summary now includes per-package commit range (e.g., `jcodemunch-mcp (abc1234→def5678)`).
+- **`~/.claude/CLAUDE.md`** + **`CLAUDE.md`** (post-upgrade-mcp-integration v1.108.50): added 4 tools to "Session & tier config" section: `get_session_stats`, `analyze_perf`, `tune_weights`, `test_summarizer`.
+
+---
+
 ## 2026-06-10 — fix: session-status-briefing dead code verification accuracy
 
 ### Fixed

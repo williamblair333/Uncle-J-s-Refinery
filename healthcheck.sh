@@ -342,29 +342,37 @@ check_mempalace() {
     local result
     local py="$REPO_ROOT/.venv/bin/python3"
     if [ -x "$py" ]; then
-        # Use venv Python (SQLite 3.50.x) + PRAGMA quick_check.
-        # IMPORTANT: FTS5 'integrity-check' INSERT only verifies data consistency,
-        # NOT the B-tree structure. It gives false-ok on "malformed inverted index"
-        # corruption. PRAGMA quick_check catches the actual B-tree malformation.
+        # Two complementary checks — neither alone is sufficient:
+        #   PRAGMA quick_check    — catches B-tree structural malformation (the corruption
+        #                           that manifests as "malformed inverted index" errors);
+        #                           FTS5 integrity-check gives false-ok on this layer.
+        #   FTS5 integrity-check  — catches FTS5 inverted-index data inconsistencies
+        #                           (row/docid mismatches, corrupt posting lists);
+        #                           quick_check gives false-ok on this layer.
         result="$("$py" - "$db" <<'PYEOF' 2>&1
 import sqlite3, sys
 db = sys.argv[1]
 try:
     c = sqlite3.connect(db, timeout=10)
-    r = c.execute('PRAGMA quick_check').fetchone()[0]
-    c.close()
-    print('ok' if r == 'ok' else r)
+    qc = c.execute('PRAGMA quick_check').fetchone()[0]
+    if qc != 'ok':
+        c.close()
+        print('quick_check: ' + qc)
+    else:
+        c.execute("INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('integrity-check')")
+        c.close()
+        print('ok')
 except Exception as e:
     print(str(e))
 PYEOF
 )"
     else
-        # Venv not built yet (pre-install) — fall back to system sqlite3.
+        # Venv not built yet (pre-install) — fall back to system sqlite3 (quick_check only).
         # May produce false positives when system sqlite3 < Python's sqlite3 version.
         result="$(sqlite3 "$db" 'PRAGMA quick_check;' 2>&1 | head -1)"
     fi
     if [ "$result" = "ok" ]; then
-        ok "SQLite quick_check: ok"
+        ok "SQLite quick_check + FTS5 integrity-check: ok"
     else
         bad "SQLite corruption: $result"
         hint "run: $REPO_ROOT/.venv/bin/python3 -c \"import sqlite3; c=sqlite3.connect('$db'); c.execute(\\\"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')\\\"); c.commit()\""
