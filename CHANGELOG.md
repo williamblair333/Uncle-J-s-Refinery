@@ -12,8 +12,9 @@
 ### Changed
 - **`uv.lock`** — jcodemunch 1.108.32→1.108.49 (17 versions), jdocmunch 1.69.0→1.69.1 (async upgrade that ran during prior Gemini CLI session).
 
-### Deferred
-- F-03 hook message fix + F-05 hook scope narrowing: requires `~/.claude/settings.json` access (denied directory).
+### Out-of-repo fix (same session, applied to `~/.claude/settings.json`)
+- **F-03 complete**: removed "Manual bypass: touch /tmp/..." from both smart-review gate hook stderr messages. Hook now says "Run /smart-review to generate the clearance marker."
+- **F-05 complete**: split `Bash(gh pr *)` into `Bash(gh pr create *)` + `Bash(gh pr merge *)`. `gh pr list/view/status` are no longer blocked by the smart-review gate.
 - F-04: add `integrity-check` as second FTS5 check alongside `PRAGMA quick_check` (not a replacement).
 - `post-upgrade-mcp-integration` for jcodemunch 1.108.49 jump — run next session.
 

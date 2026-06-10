@@ -15,8 +15,8 @@
 - **Dead code audit**: `lib/notify.sh` dead-code candidates confirmed false positives (bash `source` not tracked by jcodemunch). No removal needed.
 
 **Still open after this session:**
-- `F-03` (HIGH, partial): hook stderr message still says "Manual bypass: touch /tmp/smart-review-cleared-…". Needs `~/.claude/settings.json` update — denied directory. User must edit directly.
-- `F-05` (MEDIUM): `gh pr *` hook pattern still blocks `gh pr list/view/status`. Same file as F-03.
+- ~~`F-03`~~ **DONE**: bypass leak removed from both hook messages (SKILL.md Step 6 + hook stderr). `~/.claude/settings.json` updated 2026-06-10.
+- ~~`F-05`~~ **DONE**: `gh pr *` split into `gh pr create *` + `gh pr merge *`. `gh pr list/view/status` no longer blocked. `~/.claude/settings.json` updated 2026-06-10.
 - `F-04` (revised): Do NOT replace `PRAGMA quick_check` with `integrity-check` — they test different things. Correct fix: ADD `integrity-check` as a second check in `check_mempalace()` alongside existing quick_check. Pre-mortem token from prior session may still be valid (2h).
 - `post-upgrade-mcp-integration`: jcodemunch jumped 1.108.32→1.108.49 (17 versions). Run this skill.
 - `ARCHAEOLOGIST-R2-1`, `PEDANT-R2-1`: carried forward from prior session.
