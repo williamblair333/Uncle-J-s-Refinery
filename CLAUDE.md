@@ -187,5 +187,39 @@ everything else, pick the first-choice tool and proceed.
 
 ---
 
+## Output Token Economy
+<!-- user-added: preserve this section manually during upgrades — no automated enforcement -->
+<!-- source: jgravelle/jOutputMunch@d46c99c — rules/core.md + rules/code-assistant.md + rules/mcp.md -->
+<!-- partial adaptation: filler-opener and closer-phrase rules omitted (covered by existing project guidelines) -->
+
+Rules adapted from jOutputMunch. TODO: propagate relevant rules to prose-generating skills (see Task #3).
+
+### Response behavior
+- Don't narrate the search process. "First I looked at X, then Y" → just say "It's in Z:42."
+- Don't re-quote tool results in the response. Reference line numbers or function names.
+- Don't summarize what a tool returned before answering — respond to the actual question.
+- Don't repeat the user's request before acting on it. Act.
+- One qualifier per claim maximum. Pick the most accurate one; drop the rest.
+- Use contractions. "It is" → "It's".
+- Prefer short sentences. Each clause after a comma costs tokens. A sentence with three commas should usually be two sentences.
+- Don't restate what was just established. If the previous sentence said X, the next sentence should not rephrase X before adding Y. Just add Y.
+
+### Vocabulary — avoid these (add tokens, subtract clarity)
+`delve` `tapestry` `leverage` `multifaceted` `groundbreaking` `seamless` `utilize`
+`harness` (vague-verb sense only — technical noun permitted) `foster` `bolster` `elevate`
+`reimagine` `revolutionize` `spearhead` `navigate` `illuminate` `transcend` `resonate`
+`showcase` `entwine` `amplify` `augment` `maximize` `champion` `uncover` `unveil`
+
+### MCP tool responses (for MCP server authors)
+Tool descriptions teach (read once). Tool results report (read per-call).
+Keep usage hints in the description, not result payloads.
+Return structured data (`{"error":"not_found"}`), not apologetic prose.
+Omit `success: true` — absence of error implies success. Use `success: false` for non-exception failures.
+Strip nulls and empty collections before serializing — use an explicit predicate, not truthiness:
+`result = {k: v for k, v in result.items() if v is not None and v != [] and v != {}}`
+Then serialize: `json.dumps(result, separators=(',',':'))` (no indent; whitespace only).
+
+---
+
 *Stack installed from `C:\Users\wblair\Downloads\claude\_stack_setup\` —
 see `README.md` there for install / verify / re-register instructions.*
