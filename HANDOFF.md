@@ -1,6 +1,24 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — session-status-briefing dead code fix; F-04 still open*
+*Last updated: 2026-06-10 — open items batch: F-04, ARCHAEOLOGIST-R2-1, PEDANT-R2-1, post-upgrade CLAUDE.md*
+
+## Current state (2026-06-10) — open items batch applied
+
+`HEALTHCHECK: fail (1) -- mcp-servers-down(duckdb)` — expected (uvx cold start).
+
+**Work log — 2026-06-10 (this session)**
+- **F-04 done** (`healthcheck.sh`): `check_mempalace()` now runs both PRAGMA quick_check (B-tree) AND FTS5 integrity-check (inverted-index data layer) as complementary probes. Comment updated to explain why both are needed. Success message: "SQLite quick_check + FTS5 integrity-check: ok".
+- **post-upgrade-mcp-integration done** (jcodemunch 1.108.50): added `get_session_stats`, `analyze_perf`, `tune_weights`, `test_summarizer` to "Session & tier config" in both `~/.claude/CLAUDE.md` and `CLAUDE.md`. MemPalace snapshot written.
+- **ARCHAEOLOGIST-R2-1 done**: (a) `post-upgrade-mcp-integration/SKILL.md` step 8 added — `rm -f state/post-upgrade-needed` after integration; (b) `scripts/session-start-autofix.sh` section 0 added — prints NOTICE if post-upgrade-needed flag exists from a prior session.
+- **PEDANT-R2-1 done** (`scripts/auto-maintain.sh`): `UPGRADE_RANGES` accumulator built per-package in Part B loop; Telegram summary now shows `upgraded: pkg (old→new), ...` with commit ranges.
+- **Port conflict kanka-ce/fog-of-chess**: was already resolved — fog-of-chess uses host port 5275 → container 5173. HANDOFF entry was stale. Closed.
+
+**Still open after this session:**
+- Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC: publishes to external repo). Requires ceremony. Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
+- recall@10=0.408 — awaiting @kostadis response
+- Stop-hook citation audit (structural close of pattern-promotion path)
+
+---
 
 ## Current state (2026-06-10) — session-status-briefing dead code verification fixed (PR #31)
 

@@ -36,6 +36,10 @@ Completed items age out after ~4 weeks.
 | 2026-06-06 | `dcup` Docker port registry — SQLite registry, flock mutual exclusion, live-reality preflight, sweeper service, PreToolUse hook; 26 projects registered |
 | 2026-06-06 | `adversarial-review` skill + workflow — MAD framework (Paranoid/Archaeologist/Pedant/Cynic), 2 debate rounds, judge synthesis |
 | 2026-06-06 | `smart-review` skill — rules floor + shadow classifier + drift audit; replaces manual effort-level selection |
+| 2026-06-10 | F-04 closed — `healthcheck.sh` `check_mempalace()` now runs both `PRAGMA quick_check` (B-tree) and FTS5 `integrity-check` (inverted-index data layer) as complementary probes |
+| 2026-06-10 | ARCHAEOLOGIST-R2-1 closed — post-upgrade SKILL.md step 8 clears `state/post-upgrade-needed`; `session-start-autofix.sh` section 0 warns if flag exists from a prior session |
+| 2026-06-10 | PEDANT-R2-1 closed — `auto-maintain.sh` Telegram notification now includes per-package commit range (e.g., `jcodemunch-mcp (abc1234→def5678)`) |
+| 2026-06-10 | post-upgrade-mcp-integration v1.108.50 — `get_session_stats`, `analyze_perf`, `tune_weights`, `test_summarizer` added to jcodemunch Session & tier config in both CLAUDE.md files |
 | 2026-06-10 | F-03 closed — bypass instruction removed from smart-review SKILL.md Step 6 and hook stderr; hook now says "Run /smart-review" |
 | 2026-06-10 | F-05 closed — `gh pr *` hook split into `gh pr create *` + `gh pr merge *`; `gh pr list/view/status` no longer blocked |
 | 2026-06-10 | CYNIC-R2-4 closed — flock guard + explicit exec error handling in `scripts/jcodemunch-reindex.sh` |

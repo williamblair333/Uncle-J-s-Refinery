@@ -35,6 +35,13 @@ If a MemPalace memory covers behavior now captured in a skill or CLAUDE.md rule,
 ### 7. Snapshot
 mempalace_diary_write("Integrated <tool> vX.Y — added N tools across K categories")
 
+### 8. Clear post-upgrade flag
+```bash
+rm -f /opt/proj/Uncle-J-s-Refinery/state/post-upgrade-needed
+```
+This flag is written by the async upgrade in session-start-autofix.sh. Removing it after
+integration completes prevents stale-flag warnings at future session starts.
+
 ## Rules
 - Do this proactively. Don't wait for the user to ask "did you update the routing?"
 - Both CLAUDE.md files (global + project) must stay in sync.

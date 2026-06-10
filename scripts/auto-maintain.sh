@@ -109,6 +109,7 @@ for pkg in jcodemunch-mcp jdatamunch-mcp jdocmunch-mcp mempalace; do
 done
 
 UPGRADED=0
+UPGRADE_RANGES=""
 BREAKING_FLAGS=()
 declare -A OLD_SHAS
 if [[ "${#PACKAGES_TO_UPGRADE[@]}" -gt 0 ]]; then
@@ -152,6 +153,7 @@ if [[ "$UPGRADED" -eq 1 || ( "$DRY_RUN" -eq 1 && "${#PACKAGES_TO_UPGRADE[@]}" -g
         fi
 
         info "$pkg: evaluating upgrade ${old_sha}→${new_sha}"
+        UPGRADE_RANGES+="$pkg (${old_sha}→${new_sha}), "
 
         commits=$(fetch_commit_log "$pkg" "$old_sha" "$new_sha")
         if [[ -z "$commits" ]]; then
@@ -284,7 +286,11 @@ fi
 if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" && "$DRY_RUN" -eq 0 ]]; then
     SUMMARY="auto-maintain: "
     if [[ "$UPGRADED" -eq 1 ]]; then
-        SUMMARY+="upgraded ${PACKAGES_TO_UPGRADE[*]}. "
+        if [[ -n "${UPGRADE_RANGES:-}" ]]; then
+            SUMMARY+="upgraded: ${UPGRADE_RANGES%, }. "
+        else
+            SUMMARY+="upgraded ${PACKAGES_TO_UPGRADE[*]}. "
+        fi
         [[ "${#BREAKING_FLAGS[@]}" -gt 0 ]] && SUMMARY+="⚠️ breaking changes in ${BREAKING_FLAGS[*]} — see HANDOFF.md. "
     fi
     [[ "${#SKILL_NAMES[@]:-0}" -gt 0 ]] && SUMMARY+="drafted ${#SKILL_NAMES[@]} skill(s) for approval. "
