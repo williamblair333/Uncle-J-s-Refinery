@@ -6,8 +6,9 @@
 
 ### Added
 - **\`features/gemini-integration/\`** — Modular feature package enabling native Gemini CLI support.
-  - \`install.sh\`: Idempotent mandate injector for \`GEMINI.md\`.
+  - \`install.sh\`: Idempotent mandate injector for \`GEMINI.md\`; now includes **Research First** and **Auto-Skill** mandates by default.
   - \`startup-probe.sh\`: Read-only context synchronization tool (Git, Doctor, Dreaming).
+  - \`skills/gemini-auto-skill/\`: Native Gemini skill for autonomous skill drafting.
   - \`README.md\`: Architecture and usage guide.
 - **\`review/LLM_ARCHITECTURE_BRIEF.md\`** — High-level architectural map for LLMs and autonomous agents.
 
