@@ -54,10 +54,13 @@ def distinctive_phrase(text, n_words=4):
 
 
 def build_probe_record(idx, query, source_file, chunk_index):
+    # chunk_index is accepted for dedup bookkeeping but the expect key is ALWAYS
+    # file-level (::0): mempalace's search_memories strips _chunk_index from hits
+    # (searcher.py _finalize_candidate_hits), so chunk-precise keys can never match.
     return {
         "id": f"seed-{idx:04d}",
         "query": query,
-        "expect": [recall_lib.drawer_key(source_file, chunk_index)],
+        "expect": [recall_lib.drawer_key(source_file, 0)],
         "origin": "seed",
     }
 

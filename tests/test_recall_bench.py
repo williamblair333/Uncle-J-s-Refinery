@@ -92,12 +92,14 @@ def test_distinctive_phrase_is_deterministic():
 
 
 def test_build_probe_record_shape():
+    # expect keys are ALWAYS file-level (::0): live search strips chunk indices,
+    # so chunk-precise keys could never match (see seed_probes.build_probe_record).
     rec = seed_probes.build_probe_record(
         idx=2, query="quantum flux capacitor calibration",
         source_file="/x/notes.md", chunk_index=1)
     assert rec["id"] == "seed-0002"
     assert rec["query"] == "quantum flux capacitor calibration"
-    assert rec["expect"] == ["notes.md::1"]
+    assert rec["expect"] == ["notes.md::0"]
     assert rec["origin"] == "seed"
 
 
