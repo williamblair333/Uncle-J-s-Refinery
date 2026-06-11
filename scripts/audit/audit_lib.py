@@ -31,9 +31,17 @@ def match_components(components, subject="", files=()):
 
 
 def write_json(path, payload):
+    """Write payload as pretty JSON, creating parent dirs.
+
+    Strips top-level None/empty-collection values EXCEPT 'missing', which is
+    always preserved (empty list = 'collector ran with no gaps' — a meaningful
+    signal, distinct from the key being absent). Stripping is top-level only;
+    nested empties survive.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Strip empty collections explicitly (CLAUDE.md MCP response rule).
     clean = {k: v for k, v in payload.items() if v is not None and v != [] and v != {}}
+    if "missing" in payload:
+        clean["missing"] = payload["missing"]
     path.write_text(json.dumps(clean, indent=1, ensure_ascii=False))
     return path

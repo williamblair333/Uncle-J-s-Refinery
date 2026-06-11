@@ -16,11 +16,11 @@
     {"id": "telegram",
      "claude_md_headings": [],
      "file_patterns": ["features/telegram*", "config/telegram-agents.toml"],
-     "commit_keywords": ["telegram", "gateway", "notify"]},
+     "commit_keywords": ["telegram", "gateway"]},
     {"id": "guardrails-discipline",
      "claude_md_headings": [],
      "file_patterns": ["hooks/*", "global-skills/pre-mortem/*", "global-skills/smart-review/*"],
-     "commit_keywords": ["guard", "pre-mortem", "premortem", "smart-review", "bypass", "hook"]},
+     "commit_keywords": ["guard", "pre-mortem", "premortem", "smart-review", "bypass"]},
     {"id": "routing-policy",
      "claude_md_headings": ["Retrieval Stack Routing Policy", "Output Token Economy", "Docker Port Registry"],
      "file_patterns": ["CLAUDE.md"],
@@ -28,7 +28,7 @@
     {"id": "reliability",
      "claude_md_headings": [],
      "file_patterns": ["healthcheck.sh", "scripts/session-start-autofix.sh", "scripts/auto-maintain.sh", "scripts/session-end-check.sh", "install*.sh", "lib/*"],
-     "commit_keywords": ["healthcheck", "autofix", "auto-maintain", "cron", "install", "session-end"]},
+     "commit_keywords": ["healthcheck", "autofix", "auto-maintain", "cron", "session-end"]},
     {"id": "skills-ecosystem",
      "claude_md_headings": [],
      "file_patterns": ["global-skills/*", "tests/test_skills.py"],
@@ -40,6 +40,6 @@
     {"id": "langfuse-observability",
      "claude_md_headings": [],
      "file_patterns": ["features/langfuse/*", "docker-compose*"],
-     "commit_keywords": ["langfuse", "observability", "trace"]}
+     "commit_keywords": ["langfuse", "observability"]}
   ]
 }

@@ -26,3 +26,20 @@ def test_match_component_by_keyword_and_file():
     assert "mempalace" in hit
     miss = audit_lib.match_components(comps, subject="docs: typo", files=["README.md"])
     assert miss == set()
+
+def test_write_json_strips_empties_but_preserves_missing(tmp_path):
+    out = audit_lib.write_json(tmp_path / "sub/out.json",
+                               {"a": 1, "b": [], "c": None, "missing": []})
+    data = json.loads(out.read_text())
+    assert data["a"] == 1
+    assert "b" not in data and "c" not in data
+    assert data["missing"] == []          # preserved: "ran clean" signal
+
+def test_match_components_logic_inline_fixture():
+    fixture = [{"id": "x", "commit_keywords": ["hnsw"],
+                "file_patterns": ["scripts/mempalace-*"]}]
+    assert audit_lib.match_components(fixture, subject="fix: hnsw repair") == {"x"}
+    assert audit_lib.match_components(fixture, subject="zzz",
+                                      files=["scripts/mempalace-repair-now.sh"]) == {"x"}
+    assert audit_lib.match_components(fixture, subject="docs: typo",
+                                      files=["README.md"]) == set()
