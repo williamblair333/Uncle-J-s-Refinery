@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-11 — fix(audit): fence-aware md split, hooks type guard, routing-policy heading coverage
+
+### Fixed
+- **`collect_token_cost.py`**: `strip_fences` helper strips fenced code blocks before section splitting so `## ` lines inside backtick fences no longer create phantom sections.
+- **`collect_token_cost.py`**: `hook_payload_tokens` type-guards `hooks` value with `isinstance(hooks_raw, dict)` to prevent crashes on non-dict payloads.
+- **`collect_token_cost.py`**: `skill_descriptions_tokens` uses a space separator between skill name and description, plus a clarifying comment.
+- **`components.json`**: `routing-policy` `claude_md_headings` expanded to 7 entries to capture all major CLAUDE.md sections; `_unmapped` now only preamble/Contents-level text (~234 tokens vs thousands before).
+- **`tests/test_audit.py`**: `import collect_token_cost` moved to top import block; new `test_split_sections_ignores_fenced_headings` test; integration test comment added. 8 tests total.
+
+---
+
 ## 2026-06-11 — feat(audit): collector A — always-on token cost per component
 
 ### Added

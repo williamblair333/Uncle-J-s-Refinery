@@ -22,9 +22,22 @@ HOME = Path.home()
 REPO = Path(__file__).resolve().parents[2]
 
 
+def strip_fences(md_text):
+    """Drop fenced code blocks so '## ' lines inside them can't split sections."""
+    out, in_fence = [], False
+    for line in md_text.splitlines(keepends=True):
+        if line.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            out.append(line)
+    return "".join(out)
+
+
 def split_sections(md_text):
-    """Return [(heading, body), ...] for ## headings; text before the first ## is (preamble)."""
-    parts = re.split(r"^## +(.+)$", md_text, flags=re.M)
+    """Return [(heading, body), ...] for ## headings; text before the first ## is (preamble).
+    Fenced code blocks are excluded from measurement before splitting."""
+    parts = re.split(r"^## +(.+)$", strip_fences(md_text), flags=re.M)
     sections = [("(preamble)", parts[0])]
     for i in range(1, len(parts), 2):
         sections.append((parts[i].strip(), parts[i + 1]))
@@ -55,7 +68,8 @@ def hook_payload_tokens(settings_path):
     except (json.JSONDecodeError, OSError):
         return 0
     total = 0
-    for hook_list in (data.get("hooks") or {}).values():
+    hooks_raw = data.get("hooks")
+    for hook_list in (hooks_raw.values() if isinstance(hooks_raw, dict) else []):
         total += audit_lib.est_tokens(json.dumps(hook_list).encode())
     return total
 
@@ -70,7 +84,8 @@ def skill_descriptions_tokens(skills_dirs):
                 continue
             m = re.search(r"^description:\s*(.+)$", head, flags=re.M)
             if m:
-                total += audit_lib.est_tokens((sk.parent.name + m.group(1)).encode())
+                # counts only skills WITH a description: line; others contribute nothing
+                total += audit_lib.est_tokens((sk.parent.name + " " + m.group(1)).encode())
                 count += 1
     return total, count
 

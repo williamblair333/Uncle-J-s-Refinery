@@ -22,7 +22,7 @@
      "file_patterns": ["hooks/*", "global-skills/pre-mortem/*", "global-skills/smart-review/*"],
      "commit_keywords": ["guard", "pre-mortem", "premortem", "smart-review", "bypass"]},
     {"id": "routing-policy",
-     "claude_md_headings": ["Retrieval Stack Routing Policy", "Output Token Economy", "Docker Port Registry"],
+     "claude_md_headings": ["Retrieval Stack Routing Policy", "Output Token Economy", "Docker Port Registry", "Operating rules", "When to fall back", "When to stop and ask", "Tools by modality"],
      "file_patterns": ["CLAUDE.md"],
      "commit_keywords": ["claude.md", "routing"]},
     {"id": "reliability",

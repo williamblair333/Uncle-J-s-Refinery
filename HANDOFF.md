@@ -1,13 +1,14 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — pay-for-itself audit Task 2 done; on feat/payoff-audit*
+*Last updated: 2026-06-11 — code-review fixes for Task 2 applied; on feat/payoff-audit*
 
-## Current state (2026-06-11) — pay-for-itself audit Task 2 complete
+## Current state (2026-06-11) — pay-for-itself audit Task 2 fixed
 
-Branch: `feat/payoff-audit`. Tasks 1–2 committed. Tasks 3–7 pending.
+Branch: `feat/payoff-audit`. Tasks 1–2 committed (with fixes). Tasks 3–7 pending.
 
-**Work log — 2026-06-11 (this session — pay-for-itself audit)**
+**Work log — 2026-06-11 (this session — pay-for-itself audit code-review fixes)**
 
+- **Task 2 fixes done**: fence-aware `strip_fences` helper, `hook_payload_tokens` type guard, `skill_descriptions_tokens` space separator, `components.json` routing-policy heading expansion (7 headings), `test_split_sections_ignores_fenced_headings` new test. New token numbers: `routing-policy`=9041 tok (largest), `_unmapped`=234 tok (preamble only), `skills-ecosystem`=3233 tok, `guardrails-discipline`=1878 tok, `jmunch-retrieval`=714 tok. 8 tests passing.
 - **Task 2 done**: `scripts/audit/collect_token_cost.py` (Collector A — static token cost), 2 new tests (7 total). Real run: `_unmapped`=7744 tok (largest; `## Operating rules` + `## When to fall back` headings unmapped), `skills-ecosystem`=3224 tok (52 skills), `guardrails-discipline`=1878 tok, `routing-policy`=1531 tok, `jmunch-retrieval`=714 tok. Concern: `_unmapped` dominates because `components.json` lacks headings for `Operating rules`/`When to fall back`/`When to stop and ask`.
 - **Task 1 done**: `scripts/audit/components.json` (10-component manifest), `scripts/audit/audit_lib.py` (stdlib-only helpers), `tests/test_audit.py` (3 passing tests). All tests green.
 

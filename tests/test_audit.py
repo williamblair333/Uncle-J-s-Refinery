@@ -4,6 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts" / "audit"))
 import audit_lib
+import collect_token_cost
 
 REPO = Path(__file__).parent.parent
 
@@ -45,8 +46,6 @@ def test_match_components_logic_inline_fixture():
                                       files=["README.md"]) == set()
 
 
-import collect_token_cost
-
 def test_split_md_sections():
     md = "# Title\nintro\n## Alpha\naaaa\n## Beta\nbbbb\nbbbb\n"
     sections = collect_token_cost.split_sections(md)
@@ -54,6 +53,12 @@ def test_split_md_sections():
     assert names == ["(preamble)", "Alpha", "Beta"]
     assert sections[2][1].count("bbbb") == 2
 
+def test_split_sections_ignores_fenced_headings():
+    md = "## Real\ntext\n```bash\n## not a heading\n```\nmore\n"
+    names = [s[0] for s in collect_token_cost.split_sections(md)]
+    assert names == ["(preamble)", "Real"]
+
+# Integration test: intentionally coupled to the live manifest's routing-policy entry.
 def test_map_sections_to_components():
     comps = audit_lib.load_components(REPO / "scripts/audit/components.json")
     out = collect_token_cost.map_sections(comps,
