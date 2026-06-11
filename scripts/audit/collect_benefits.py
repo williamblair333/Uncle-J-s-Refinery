@@ -54,6 +54,21 @@ def jcodemunch_saved_tokens():
     return best
 
 
+def count_corrections(text):
+    """Count correction-ledger events per component. Tolerates non-JSON lines
+    (counted under _unparsed) so a truncated ledger never crashes the audit."""
+    import json
+    counts = {}
+    for line in filter(str.strip, text.splitlines()):
+        try:
+            ev = json.loads(line)
+            comp = ev.get("component") or "_uncategorized"
+        except (ValueError, AttributeError):
+            comp = "_unparsed"
+        counts[comp] = counts.get(comp, 0) + 1
+    return counts
+
+
 def mempalace_counts(db_path):
     if not db_path.exists():
         return None
@@ -71,10 +86,19 @@ def main():
 
     blocks_path = REPO / "state/hook-blocks.log"
     if blocks_path.exists():
-        result["components"]["guardrails-discipline"] = {
-            "hook_blocks": count_blocks(blocks_path.read_text(errors="replace"))}
+        result["components"].setdefault("guardrails-discipline", {})
+        result["components"]["guardrails-discipline"]["hook_blocks"] = \
+            count_blocks(blocks_path.read_text(errors="replace"))
     else:
         missing.append(str(blocks_path))
+
+    corr_path = REPO / "state/corrections.jsonl"
+    if corr_path.exists():
+        result["components"].setdefault("guardrails-discipline", {})
+        result["components"]["guardrails-discipline"]["corrections"] = \
+            count_corrections(corr_path.read_text(errors="replace"))
+    else:
+        missing.append(str(corr_path))
 
     saved = jcodemunch_saved_tokens()
     if saved is not None:

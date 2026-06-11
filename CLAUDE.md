@@ -235,5 +235,18 @@ Then serialize: `json.dumps(result, separators=(',',':'))` (no indent; whitespac
 
 ---
 
+### Correction ledger
+
+When the user corrects a *factual* error you made (wrong path, stale claim, bad
+number, fabricated detail), immediately run:
+
+    bash scripts/log-correction.sh <component> "<one-line summary of the correction>"
+
+Use a component id from `scripts/audit/components.json` (e.g. mempalace, telegram,
+routing-policy). This is deterministic capture only — log first, then continue.
+The correction count feeds the pay-for-itself scorecard's right-answer trend.
+
+---
+
 *Stack installed from `C:\Users\wblair\Downloads\claude\_stack_setup\` —
 see `README.md` there for install / verify / re-register instructions.*

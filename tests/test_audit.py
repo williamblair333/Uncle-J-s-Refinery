@@ -137,3 +137,17 @@ def test_scorecard_renders_all_components_and_flags_gaps():
     assert "0.9" in md
     assert "benefits source" in md          # missing data surfaced, not hidden
     assert "Verdict" in md                  # column exists, left blank for judgment pass
+
+
+def test_count_corrections_parses_jsonl_and_buckets_by_component():
+    import collect_benefits
+    sample = (
+        '{"ts":"2026-06-11T10:00:00Z","component":"mempalace","summary":"wrong path"}\n'
+        '{"ts":"2026-06-11T11:00:00Z","component":"mempalace","summary":"stale fact"}\n'
+        '{"ts":"2026-06-11T12:00:00Z","component":"telegram","summary":"bad offset claim"}\n'
+        'not json — tolerated\n'
+    )
+    counts = collect_benefits.count_corrections(sample)
+    assert counts["mempalace"] == 2
+    assert counts["telegram"] == 1
+    assert counts["_unparsed"] == 1
