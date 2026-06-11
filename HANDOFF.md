@@ -4,6 +4,9 @@
 
 ## Current state (2026-06-11) — Improvement Program Phase 1 closed
 
+**Work log — Phase 2 Task 1 (feat/phase2-bench)**
+- Created `scripts/bench/__init__.py` + `scripts/bench/recall_lib.py` (pure stdlib recall@k + probe-schema functions); 7 tests in `tests/test_recall_bench.py`, passing on both venv (3.11) and system python3.
+
 **Work log — 2026-06-11 (this session, continued)**
 
 - **Phase 1 judgment pass done**: verdicts in `state/payoff-judgment-2026-06-11.md`; Bill signed off D1/D2/D3. ROADMAP updated (Phase 1 → Completed; Phase 2 NEXT).

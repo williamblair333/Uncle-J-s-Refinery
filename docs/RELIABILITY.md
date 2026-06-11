@@ -271,6 +271,12 @@ The `auto-maintain-commit-and-deploy` skill documents the pattern: dynamic glob 
 
 ---
 
+## Phase 2 accuracy instrumentation
+
+`scripts/bench/recall_lib.py` — pure stdlib module (no heavy deps). CI-tested via `tests/test_recall_bench.py` (`pip install pytest` only). Provides `recall_at_k`, `validate_probe`, `load_probes`, `aggregate`, `drawer_key` used by the recall harness in later Phase 2 tasks.
+
+---
+
 ## Disable / uninstall
 
 ```bash

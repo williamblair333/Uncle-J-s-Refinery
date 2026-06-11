@@ -2,6 +2,12 @@
 
 ---
 
+## Phase 2 — Accuracy Instrumentation
+
+- **Task 1**: `scripts/bench/recall_lib.py` — pure stdlib recall@k + probe-schema functions; CI-testable with `pip install pytest` only. 7 tests in `tests/test_recall_bench.py`.
+
+---
+
 ## 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired
 
 ### Changed
