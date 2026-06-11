@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-11 — feat(audit): component manifest + shared lib for pay-for-itself audit
+
+### Added
+- **`scripts/audit/components.json`**: 10-component manifest — single source of truth for the pay-for-itself audit. Defines `id`, `file_patterns` (fnmatch globs), and `commit_keywords` per component.
+- **`scripts/audit/audit_lib.py`**: Shared stdlib-only helpers (`load_components`, `est_tokens`, `match_components`, `write_json`) consumed by all audit collectors.
+- **`tests/test_audit.py`**: 3 tests covering manifest schema, token estimation, and keyword+file matching (including the `README.md` / "typo" miss case).
+
+---
+
 ## 2026-06-11 — feat: improvement program spec + ROADMAP phases
 
 ### Added

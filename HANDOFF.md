@@ -1,8 +1,18 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — /tmp flock alignment fix; on main, clean*
+*Last updated: 2026-06-11 — pay-for-itself audit Task 1 done; on feat/payoff-audit*
 
-## Current state (2026-06-11) — /tmp flock alignment fixed
+## Current state (2026-06-11) — pay-for-itself audit Task 1 complete
+
+Branch: `feat/payoff-audit`. Task 1 (component manifest + shared lib) committed. Tasks 2–7 pending.
+
+**Work log — 2026-06-11 (this session — pay-for-itself audit)**
+
+- **Task 1 done**: `scripts/audit/components.json` (10-component manifest), `scripts/audit/audit_lib.py` (stdlib-only helpers), `tests/test_audit.py` (3 passing tests). All tests green.
+
+---
+
+## Prior state (2026-06-11) — /tmp flock alignment fixed
 
 `HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
 
