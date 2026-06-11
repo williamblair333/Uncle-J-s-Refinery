@@ -1,5 +1,27 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired; Phase 2 next*
+
+## Current state (2026-06-11) — Improvement Program Phase 1 closed
+
+**Work log — 2026-06-11 (this session, continued)**
+
+- **Phase 1 judgment pass done**: verdicts in `state/payoff-judgment-2026-06-11.md`; Bill signed off D1/D2/D3. ROADMAP updated (Phase 1 → Completed; Phase 2 NEXT).
+- **D1 executed**: 55GB stale palace copies staged to `~/.mempalace-trash-D1-20260611/` (guard-compliant; user purges that dir manually when ready). Transfer in `state/premortem-unaudited.log`.
+- **FTS5 malformed index repaired** on live palace (456s rebuild, quick_check ok, 316,084 embeddings). Found during D1 verification — backups inherit the fix as rotation cycles.
+- **Phase 2 plan**: drafting via background Plan agent; review + commit pending.
+
+**Still open:**
+- venv SQLite at 3.51.1 (expected 3.51.3 source build) — pysqlite3 WAL-race patch may have regressed; re-run install.sh step 2b
+- MemPalace MCP search returned "cand error" earlier today post-reconnect — may clear after FTS5 rebuild + MCP restart; verify next session
+- Two mempalace MCP server processes running (347624, 4110532) — one likely stale from a prior session
+- Upstream HNSW flush bug report + PR — BLOCKED (CATASTROPHIC). Drafts in state/.
+- ralph-harness env-strip unlocks 2026-06-15
+
+**Most important thing for next session:** Phase 2 execution (recall benchmark → backend selection). Plan at `docs/superpowers/plans/` once committed.
+
+---
+
 *Scorecard polish committed (granularity note + db_path cell drop).*
 
 *Last updated: 2026-06-11 — Task 6: CI job + scorecard hardening; on feat/payoff-audit*

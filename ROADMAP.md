@@ -14,10 +14,9 @@ Completed items age out after ~4 weeks.
 
 **Improvement Program** (spec: `docs/superpowers/specs/2026-06-11-refinery-improvement-program-design.md` — phases in order; principles: deterministic-first, local-canonical):
 
-- **Phase 1 — Pay-for-itself audit** — first run of the mission's standing test; script collectors (token cost, maintenance burden from git/HANDOFF, benefit counters) + one LLM synthesis pass → `state/payoff-scorecard.md` + keep/fix/delete list. Re-ranks everything below.
-- **Phase 2 — Accuracy instrumentation** — memory recall benchmark (ground-truth probes, weekly cron, ChromaDB baseline), correction ledger hook, citation audit; then **backend selection**: turbovecdb / sqlite-vec / roll-our-own / keep — nothing sacred incl. MemPalace app layer; winner deletes the ChromaDB repair apparatus
+- **Phase 2 — Accuracy instrumentation** (NEXT) — memory recall benchmark (ground-truth probes, weekly cron, ChromaDB baseline), correction ledger hook, citation audit, usage counters for dreaming/ralph/telegram (audit gap); then **backend selection**: turbovecdb / sqlite-vec / roll-our-own / keep — nothing sacred incl. MemPalace app layer; winner triggers D2
 - **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dual-track dreaming (MemPalace canonical → native memory mirror); pattern-importance scoring as pure script
-- **Phase 4 — Subtraction & absorption** — execute audit delete list; CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
+- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; **D2** ChromaDB repair apparatus (repair crons, force-flush, ~12 repair skills) — fires on Phase 2 backend swap; **D3** ralph — only if Phase 2 usage counter confirms idle. Plus: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
 
 - **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
@@ -41,6 +40,7 @@ Completed items age out after ~4 weeks.
 
 | Date | Item |
 |------|------|
+| 2026-06-11 | Improvement Program Phase 1 — pay-for-itself audit (PR #38): deterministic collectors + scorecard + judgment. KEEP: jmunch-retrieval (5,300:1 payoff), guardrails (315 blocks), langfuse, telegram. FIX: routing-policy (9k tok/session), mempalace storage (0.32 maint share), reliability, skills (prune), dreaming + ralph (instrument). D1–D3 deletions signed off. |
 | 2026-06-06 | `dcup` Docker port registry — SQLite registry, flock mutual exclusion, live-reality preflight, sweeper service, PreToolUse hook; 26 projects registered |
 | 2026-06-06 | `adversarial-review` skill + workflow — MAD framework (Paranoid/Archaeologist/Pedant/Cynic), 2 debate rounds, judge synthesis |
 | 2026-06-06 | `smart-review` skill — rules floor + shadow classifier + drift audit; replaces manual effort-level selection |

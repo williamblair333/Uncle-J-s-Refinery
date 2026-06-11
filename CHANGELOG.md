@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired
+
+### Changed
+- **ROADMAP**: Phase 1 (pay-for-itself audit) moved to Completed with verdicts —
+  KEEP jmunch-retrieval/guardrails/langfuse/telegram; FIX routing-policy, mempalace
+  storage, reliability, skills, dreaming, ralph. D1–D3 deletions signed off by Bill.
+  Phase 2 (accuracy instrumentation + backend selection) marked NEXT.
+- **D1 executed**: 55GB of stale palace copies (19 `palace.pre-rebuild-*` dirs,
+  `palace.partial-20260527`, `palace.backup`, orphaned `~/.mempalace/chroma.sqlite3`
+  stub) staged to `~/.mempalace-trash-D1-20260611/` after integrity verification
+  (live palace quick_check ok, 316,084 embeddings, 3 rotating backups intact).
+  Destructive-rm guard honored: purge is one user command —
+  `rm -rf ~/.mempalace-trash-D1-20260611`. Transfer logged to
+  `state/premortem-unaudited.log` (diary_write unavailable).
+
+### Fixed
+- **Live palace FTS5 malformed inverted index** — discovered during D1 verification
+  (quick_check on live + backup-0600). Rebuilt in 456s via venv SQLite under the
+  mine flock; quick_check now ok, 316,084 embeddings intact. Rotating backups
+  self-heal as the 6-hourly rotation cycles post-repair.
+
+### Known issue
+- venv SQLite reports **3.51.1**, not the source-built 3.51.3 the install step
+  targets — the pysqlite3 WAL-race patch may have regressed during a `uv` upgrade.
+  Follow-up: re-run install.sh step 2b or verify `.pth` patch still active.
+
+---
+
 ## 2026-06-11 — feat: pay-for-itself audit (Improvement Program Phase 1)
 
 ### Added
