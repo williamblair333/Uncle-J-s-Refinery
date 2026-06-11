@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-06-10 — research: jragmunch-cli evaluation
+
+### Decision
+Adopt the `_build_subprocess_env()` billing pattern (strip `ANTHROPIC_API_KEY` +
+`ANTHROPIC_AUTH_TOKEN` from subprocess env) in `ralph-harness.sh` and Telegram
+gateway **after 2026-06-15** when Anthropic's Agent SDK credit goes live (Pro=$20/mo,
+Max5x=$100/mo credit). Before June 15: API-key-less `claude -p` still consumes
+session quota — do not strip early.
+
+Verbs (`review`, `sweep`, `changelog`, fan-out) skipped — redundant with existing
+`/smart-review`, `/adversarial-review`, and workflow scripts. No package install needed.
+
+ROADMAP updated: `jragmunch-cli evaluation` closed, `ralph-harness env-strip` added as
+a timed Planned item (not before 2026-06-15).
+
+---
+
 ## 2026-06-10 — feat: CI test job for session-end-check.sh
 
 ### Added

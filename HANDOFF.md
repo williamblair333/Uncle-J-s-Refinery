@@ -1,8 +1,26 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — CI test job for session-end-check.sh added; on main, clean*
+*Last updated: 2026-06-10 — jragmunch-cli evaluation complete; on main, clean*
 
-## Current state (2026-06-10) — CI test job for session-end-check.sh
+## Current state (2026-06-10) — jragmunch-cli evaluation complete
+
+`HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
+
+**Work log — 2026-06-10 (this session)**
+
+- **jragmunch-cli evaluation done** (ROADMAP Planned → Completed): Read all source files. Verdict: adopt only the `_build_subprocess_env()` billing pattern (strip API key from subprocess env to use subscription auth). After 2026-06-15 (Agent SDK credit launch): apply to `ralph-harness.sh` + Telegram gateway. ROADMAP updated with timed follow-up item.
+- **CI test job done**: see previous entry below.
+- **Stop-hook session mining done**: see previous entry below.
+
+**Still open:**
+- Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC). Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
+- recall@10=0.408 — awaiting @kostadis response on ef tuning
+- Stop-hook citation audit (structural close of Dreaming pattern-promotion path)
+- ralph-harness env-strip (after 2026-06-15): strip `ANTHROPIC_API_KEY` from subprocess env in ralph-harness.sh + Telegram gateway
+
+**Most important thing for next session:** On main, clean. Remaining ROADMAP Planned items: compressed `jcodemunch_guide` (~4,600–5,100 tokens/session savings — upstream contribution), ralph-harness env-strip (after 2026-06-15). The env-strip is now the simplest item if the date has passed.
+
+---
 
 `HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
 
