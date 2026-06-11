@@ -5,25 +5,42 @@
 [![Requires Claude Code](https://img.shields.io/badge/Requires-Claude%20Code-blueviolet.svg)](https://claude.ai/code)
 [![Stack: Self-healing](https://img.shields.io/badge/Stack-Self--healing-brightgreen.svg)](docs/RELIABILITY.md)
 
+**Uncle J's Refinery turns AI sessions into compounding work — every session more correct, cheaper, and smarter than the last.**
+
 *Claude Code forgets everything when you close the terminal. This doesn't.*
 
-Seven MCP servers, a self-healing retrieval stack, and a nightly loop that mines your own sessions for mistakes. One install — automatically active in every Claude Code project on the machine.
+## Mission
 
-- **Remembers** — ChromaDB palace stores decisions and prior art with semantic search; "what did we decide about auth?" pulls sessions from months ago by topic, not by scroll
-- **Navigates code** — Tree-sitter symbol index means Claude queries your codebase structurally instead of reading whole files; ~80% token reduction on real code tasks
-- **Self-heals** — daily healthcheck detects HNSW corruption, FTS5 drift, and SQLite version mismatches; targeted repair skills run automatically before a broken index silently degrades your session
-- **Learns overnight** — nightly cron replays Langfuse traces, extracts recurring mistakes and proven playbooks via `dream-synthesizer`, and patches Claude's operating instructions without you lifting a finger
-- **Guards** — four guardrail layers block destructive commands, credential leaks, and prompt injection before they land
-- **Reports** — Telegram channel handles approval flows and monitoring alerts; session-end notifications land in your pocket without staying in front of a terminal
+Priorities in order; when they conflict, the higher one wins:
+
+1. **Right.** Accuracy outranks all savings. Answers are grounded and verifiable, and the stack is trustworthy enough to act unwatched — a wrong or fabricated answer is the most expensive thing it can produce.
+2. **Cheap — in total.** Minimize cost per correct answer: tokens, dollars, *and operator attention*. A layer that saves tokens but consumes maintenance hours hasn't paid for itself.
+3. **Inventive.** Explore alternatives before converging; surface non-obvious solutions; serve creative work as a first-class use case alongside code; let the stack improve itself overnight.
+4. **Local.** Prefer offline/local components wherever they don't sacrifice #1 or #2 — for cost, independence, privacy, and resilience.
+
+Memory is the mechanism, not the mission: remembering everything is how sessions compound.
+
+**Standing test:** every component must pay for itself against these four, measurably — or be removed.
+
+## What that looks like in practice
+
+Seven MCP servers, a self-healing retrieval stack, and a nightly loop that mines your own sessions for mistakes. One install — automatically active in every Claude Code project on the machine. Every piece maps to a priority:
+
+- **Right** — four guardrail layers block destructive commands, credential leaks, and prompt injection before they land; a daily healthcheck catches HNSW corruption, FTS5 drift, and SQLite mismatches before a broken index silently degrades answers
+- **Cheap** — Tree-sitter symbol index queries your codebase structurally instead of reading whole files (~80% token reduction on real code tasks); jOutputMunch trims output 25–40%; Telegram approval flows and alerts spend less of *your* attention at a terminal
+- **Inventive** — nightly cron replays Langfuse traces, extracts recurring mistakes and proven playbooks via `dream-synthesizer`, and patches Claude's operating instructions without you lifting a finger; auto-skill drafts new skills from workflows you demonstrate
+- **Local** — the ChromaDB memory palace, MiniLM embeddings, and Langfuse observability all run on your machine; "what did we decide about auth?" pulls sessions from months ago without the question ever leaving the box
 
 Install once. The retrieval routing, hooks, and guardrails apply to every Claude Code project on the machine automatically.
 
 **Linux (Debian/Ubuntu).** Built and tested on Debian with apt-based package management.
+
 ---
 
 ## Contents
 
 - [Mission](#mission)
+- [What that looks like in practice](#what-that-looks-like-in-practice)
 - [What you get](#what-you-get)
 - [The namesake](#the-namesake)
 - [What's in the box](#whats-in-the-box)
@@ -60,23 +77,6 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
 - [Provenance](#provenance)
 - [Uninstall](#uninstall)
 - [License and credits](#license--credits)
-
----
-
-## Mission
-
-**Uncle J's Refinery turns AI sessions into compounding work — every session more correct, cheaper, and smarter than the last.**
-
-Priorities in order; when they conflict, the higher one wins:
-
-1. **Right.** Accuracy outranks all savings. Answers are grounded and verifiable, and the stack is trustworthy enough to act unwatched — a wrong or fabricated answer is the most expensive thing it can produce.
-2. **Cheap — in total.** Minimize cost per correct answer: tokens, dollars, *and operator attention*. A layer that saves tokens but consumes maintenance hours hasn't paid for itself.
-3. **Inventive.** Explore alternatives before converging; surface non-obvious solutions; serve creative work as a first-class use case alongside code; let the stack improve itself overnight.
-4. **Local.** Prefer offline/local components wherever they don't sacrifice #1 or #2 — for cost, independence, privacy, and resilience.
-
-Memory is the mechanism, not the mission: remembering everything is how sessions compound.
-
-**Standing test:** every component must pay for itself against these four, measurably — or be removed.
 
 ---
 

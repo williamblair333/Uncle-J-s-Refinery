@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-06-11 — docs: mission-first README restructure + repo About/topics
+
+### Changed
+- **`README.md`**: mission promoted to the first line (bold one-liner above the old
+  tagline) and the `## Mission` section moved to the very top, before Contents. The
+  six pitch bullets (Remembers/Navigates/Self-heals/Learns/Guards/Reports) replaced
+  by a `## What that looks like in practice` section mapping every component to its
+  mission priority (Right / Cheap / Inventive / Local).
+- **GitHub repo About**: description rewritten to lead with the mission one-liner;
+  topics added (previously none).
+
+---
+
 ## 2026-06-11 — docs: mission statement added to README
 
 ### Added
