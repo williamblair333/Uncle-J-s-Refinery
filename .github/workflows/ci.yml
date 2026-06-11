@@ -95,3 +95,21 @@ jobs:
 
       - name: pytest tests/test_session_end_check.py
         run: uv run pytest tests/test_session_end_check.py -v
+
+  # ── 6. Pay-for-itself audit unit tests ───────────────────────────────────
+  test-audit:
+    name: Audit pipeline tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_audit.py
+        run: python -m pytest tests/test_audit.py -v

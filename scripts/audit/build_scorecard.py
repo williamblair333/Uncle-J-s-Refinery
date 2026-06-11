@@ -22,8 +22,10 @@ def _fmt_bsig(b: dict) -> str:
     parts = []
     for k, v in b.items():
         if isinstance(v, dict):
-            total = sum(v.values()) if v else 0
-            parts.append(f"{k}_total={total}")
+            if v and all(isinstance(x, (int, float)) for x in v.values()):
+                parts.append(f"{k}_total={sum(v.values())}")
+            else:
+                parts.append(f"{k}={v}")
         else:
             parts.append(f"{k}={v}")
     return "; ".join(parts) or "—"

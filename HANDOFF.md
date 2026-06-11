@@ -1,19 +1,20 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — Task 5: scorecard synthesizer + run-audit.sh; on feat/payoff-audit*
+*Last updated: 2026-06-11 — Task 6: CI job + scorecard hardening; on feat/payoff-audit*
 
-## Current state (2026-06-11) — Task 5 done (scorecard synthesizer)
+## Current state (2026-06-11) — Task 6 done (CI job + hardening)
 
-Branch: `feat/payoff-audit`. Tasks 1–5 committed. Tasks 6–7 pending.
+Branch: `feat/payoff-audit`. Tasks 1–6 committed. Task 7 pending.
 
-**Work log — 2026-06-11 (this session — Task 5: scorecard synthesizer + runner)**
+**Work log — 2026-06-11 (this session — Task 6: CI job + scorecard hardening + consolidated changelog)**
 
-- **Task 5 done**: `scripts/audit/build_scorecard.py` renders 3 collector JSONs → `state/payoff-scorecard.md`. Nested-dict benefit fields summarised as `key_total=N` (e.g. `hook_blocks_total=314`). Verdicts column present but blank for judgment pass.
-- **`scripts/audit/run-audit.sh`**: Runs all 4 scripts in sequence. Executable. Deterministic.
-- **Test added**: `test_scorecard_renders_all_components_and_flags_gaps` — 14/14 passing.
-- **Real scorecard**: 12 rows (10 components + `_unmapped` + `_unmatched`). routing-policy 9041 tokens, mempalace maint share 0.32, jmunch tokens_saved_best=3,812,967, hook_blocks_total=314. No Missing-data section (benefits ran clean).
+- **CI job added**: `test-audit` (job 6 in ci.yml) — `setup-python@v5` + `pip install pytest` + `python -m pytest tests/test_audit.py -v`. Mirrors `test-session-end-check` structure. YAML validates.
+- **`_fmt_bsig` hardened**: non-numeric nested dicts now render as `key={v}` instead of crashing on `sum()`. New test: `test_scorecard_handles_non_numeric_nested_dict`.
+- **`run-audit.sh` hardened**: `readlink -f` for symlink-safe cd; explicit Python guard with install.sh hint before loop.
+- **15/15 tests pass** with both `python3 -m pytest` (system, 3.13.5) and `.venv/bin/python -m pytest` (3.11.15). No hermetic fixes needed — all tests use inline fixtures or `tmp_path`; no machine-path dependencies.
+- **CHANGELOG**: 9 per-task audit bullets consolidated into one Phase 1 entry.
 
-**Next session:** Task 6 — CI job + changelog integration. Task 7 — judgment pass (human + LLM, in-session).
+**Next session:** Task 7 — judgment pass (human + LLM, in-session).
 
 ---
 

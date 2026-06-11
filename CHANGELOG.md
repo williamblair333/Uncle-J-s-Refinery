@@ -2,87 +2,14 @@
 
 ---
 
-## 2026-06-11 — feat(audit): scorecard synthesizer + run-audit.sh runner
+## 2026-06-11 — feat: pay-for-itself audit (Improvement Program Phase 1)
 
 ### Added
-- **`scripts/audit/build_scorecard.py`**: Joins token-cost, maintenance, and benefits JSONs into `state/payoff-scorecard.md`. Nested-dict benefit fields (e.g. `hook_blocks`) are summarised as `key_total=N` for readable table cells. Verdicts intentionally blank — filled by judgment pass.
-- **`scripts/audit/run-audit.sh`**: Runs all four audit scripts in sequence; deterministic, no LLM calls, safe to re-run.
-- **`tests/test_audit.py`**: `test_scorecard_renders_all_components_and_flags_gaps` — 14/14 tests passing.
-
----
-
-## 2026-06-11 — fix(audit): count BLOCKED guard events only + docstring accuracy
-
-### Fixed
-- **`scripts/audit/collect_benefits.py`**: `count_blocks` now skips non-BLOCKED lines (ALLOWED events and bare log chatter). Fixes ~2.4x overcount (756 → 314 total). `_unparsed` redefined as "BLOCKED line with no recognisable guard name". Module docstring source 2 corrected to reflect `~/.code-index/**/*.json` scan for max `tokens_saved`.
-- **`tests/test_audit.py`**: SAMPLE_BLOCKS updated — ALLOWED fixture line added; garbage line replaced with a BLOCKED-but-no-guard-name line so `_unparsed==1` still holds. 13/13 tests pass.
-
----
-
-## 2026-06-11 — fix(audit): point benefits collector at live palace DB + zero-plausibility guard
-
-### Fixed
-- **`scripts/audit/collect_benefits.py`**: DB path corrected from stale stub `~/.mempalace/chroma.sqlite3` (188KB, May 25, 0 embeddings) to live palace `~/.mempalace/palace/chroma.sqlite3` (~315K embeddings rows). Added zero-plausibility guard: a readable-but-empty DB goes to `missing[]` rather than reporting a confident `embeddings_rows: 0` to the scorecard.
-- **`tests/test_audit.py`**: Added `test_mempalace_counts_missing_db` — 13 tests total, all pass.
-
----
-
-## 2026-06-11 — feat(audit): collector C — benefit counters (guards, retrieval savings, palace size)
-
-### Added
-- **`scripts/audit/collect_benefits.py`**: Collector C — reads `state/hook-blocks.log` (guard catch counts), `~/.code-index/_savings.json` (`total_tokens_saved`), and `~/.mempalace/chroma.sqlite3` (embeddings row count, read-only mode=ro). Writes `state/payoff-audit/benefits.json`. Real run: 756 guard catches (508 edit-surface, 153 grep, 17 surface-write, 5 token, 2 pre-mortem, 1 install), 69 unparsed; 3,793,811 tokens saved by jmunch-retrieval; mempalace embeddings_rows=0 (chroma.sqlite3 tables present but empty — likely turbovecdb migration artifact).
-- **`tests/test_audit.py`** (1 new test): `test_count_hook_blocks` with SAMPLE_BLOCKS fixture — 12 tests total.
-
-### Changed
-- **GUARD_RE**: Spec regex `([a-z0-9_-]*guard[a-z0-9_-]*)` matched bare word "guard" (garbage lines scored as "_unparsed" should have been NO MATCH). Fixed to require a hyphenated prefix: `([a-z0-9][a-z0-9_]*(?:-[a-z0-9_]+)*-guard(?:-[a-z0-9_]+)*)`.
-- **DB path**: Spec had `~/.mempalace/chroma/chroma.sqlite3`; real path is `~/.mempalace/chroma.sqlite3`. Adjusted in collector.
-
----
-
-## 2026-06-11 — fix(audit): subject-anchored maintenance classifier + multi-count docs + git error handling
-
-### Fixed
-- **`scripts/audit/collect_maintenance.py`**: `MAINT_RE` changed from `^(fix|hotfix|revert)\b|repair|corrupt` to `^(fix|hotfix|revert|repair|corrupt)\b` — subject must *start* with a fix/repair verb; mid-subject mentions (feat/docs/merge subjects referencing repair) are no longer mis-classified as maintenance. Kills ~18% false positives.
-- **`scripts/audit/collect_maintenance.py`**: `main()` `total_commits` comment added; docstring updated with multi-count semantics note.
-- **`scripts/audit/collect_maintenance.py`**: `subprocess.run` wrapped in try/except for `FileNotFoundError` and `CalledProcessError` with diagnosable exit messages.
-- **`tests/test_audit.py`**: `test_classify_maintenance` extended with 3 new false-positive cases; `test_aggregate_by_component` extended with `maintenance_share` and `reliability` bucket assertions.
-- **Real run (525 commits)**: mempalace maintenance_share dropped 0.46 → 0.31; top-3 by maint_commits: reliability (28), mempalace (22), skills-ecosystem (16).
-
----
-
-## 2026-06-11 — feat(audit): collector B — maintenance burden from 90-day git history
-
-### Added
-- **`scripts/audit/collect_maintenance.py`**: Collector B — parses 90-day `git log --name-only` output, classifies commits as maintenance (fix/repair/corrupt/hotfix/revert) vs. capability, aggregates by component using manifest keywords + file globs. Writes `state/payoff-audit/maintenance.json`. Real run: 524 commits; mempalace 46% maintenance share (highest), reliability 37 maint commits (most by volume).
-- **`tests/test_audit.py`** (3 new tests): `test_parse_git_log`, `test_classify_maintenance`, `test_aggregate_by_component` — 11 tests total.
-
----
-
-## 2026-06-11 — fix(audit): fence-aware md split, hooks type guard, routing-policy heading coverage
-
-### Fixed
-- **`collect_token_cost.py`**: `strip_fences` helper strips fenced code blocks before section splitting so `## ` lines inside backtick fences no longer create phantom sections.
-- **`collect_token_cost.py`**: `hook_payload_tokens` type-guards `hooks` value with `isinstance(hooks_raw, dict)` to prevent crashes on non-dict payloads.
-- **`collect_token_cost.py`**: `skill_descriptions_tokens` uses a space separator between skill name and description, plus a clarifying comment.
-- **`components.json`**: `routing-policy` `claude_md_headings` expanded to 7 entries to capture all major CLAUDE.md sections; `_unmapped` now only preamble/Contents-level text (~234 tokens vs thousands before).
-- **`tests/test_audit.py`**: `import collect_token_cost` moved to top import block; new `test_split_sections_ignores_fenced_headings` test; integration test comment added. 8 tests total.
-
----
-
-## 2026-06-11 — feat(audit): collector A — always-on token cost per component
-
-### Added
-- **`scripts/audit/collect_token_cost.py`**: Collector A — measures per-session static token cost from global + project CLAUDE.md (split by `##` heading, mapped to components), settings.json hook strings, and skill `description` frontmatter. Unmapped sections land in `_unmapped`. Writes `state/payoff-audit/token-cost.json`.
-- **`tests/test_audit.py`** (2 new tests): `test_split_md_sections`, `test_map_sections_to_components` — 7 tests total.
-
----
-
-## 2026-06-11 — feat(audit): component manifest + shared lib for pay-for-itself audit
-
-### Added
-- **`scripts/audit/components.json`**: 10-component manifest — single source of truth for the pay-for-itself audit. Defines `id`, `file_patterns` (fnmatch globs), and `commit_keywords` per component.
-- **`scripts/audit/audit_lib.py`**: Shared stdlib-only helpers (`load_components`, `est_tokens`, `match_components`, `write_json`) consumed by all audit collectors.
-- **`tests/test_audit.py`**: 3 tests covering manifest schema, token estimation, and keyword+file matching (including the `README.md` / "typo" miss case).
+- **`scripts/audit/`**: component manifest + three deterministic collectors
+  (token cost, 90-day maintenance burden, benefit counters) + scorecard
+  synthesizer + `run-audit.sh`. Output: `state/payoff-scorecard.md`. No LLM
+  calls in the pipeline; missing data reported explicitly.
+- **`tests/test_audit.py`** + `test-audit` CI job (15 tests, 0 API calls).
 
 ---
 

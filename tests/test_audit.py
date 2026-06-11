@@ -121,6 +121,12 @@ def test_count_hook_blocks():
 def test_mempalace_counts_missing_db(tmp_path):
     assert collect_benefits.mempalace_counts(tmp_path / "nope.sqlite3") is None
 
+def test_scorecard_handles_non_numeric_nested_dict():
+    bene = {"components": {"mempalace": {"weird": {"a": "x"}}}, "missing": []}
+    md = build_scorecard.render({"components": {}}, {"components": {}}, bene)
+    assert "weird=" in md   # rendered, not crashed
+
+
 def test_scorecard_renders_all_components_and_flags_gaps():
     token = {"components": {"mempalace": {"est_tokens": 100, "sources": ["x"]}}}
     maint = {"components": {"mempalace": {"commits": 10, "maintenance_commits": 9,
