@@ -1,10 +1,16 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — Task 4 done + live-palace DB fix; on feat/payoff-audit*
+*Last updated: 2026-06-11 — count_blocks BLOCKED-only fix; on feat/payoff-audit*
 
-## Current state (2026-06-11) — pay-for-itself audit Task 4 done (Collector C) + DB path fix
+## Current state (2026-06-11) — count_blocks fix (BLOCKED-only, 756 → 314)
 
-Branch: `feat/payoff-audit`. Tasks 1–4 committed. Tasks 5–7 pending.
+Branch: `feat/payoff-audit`. Tasks 1–4 committed (with review fixes). Tasks 5–7 pending.
+
+**Work log — 2026-06-11 (this session — fix: count_blocks BLOCKED-only + docstring accuracy)**
+
+- **Bug fixed**: `count_blocks` was counting every log line (BLOCKED + ALLOWED + bare chatter), overcounting ~2.4x. Now skips any line without `BLOCKED`. Real run: 314 total (153 grep-guard, 137 edit-surface-guard, 17 surface-write-guard, 5 token-guard, 2 pre-mortem-guard; no _unparsed).
+- **Docstring fixed**: source 2 now says `~/.code-index/**/*.json scanned for the maximum tokens_saved value`.
+- **Tests**: SAMPLE_BLOCKS gets an ALLOWED line + a BLOCKED-no-guard-name line; `_unparsed==1` still holds; 13/13 passing.
 
 **Work log — 2026-06-11 (this session — fix: live palace DB path + zero-plausibility guard)**
 

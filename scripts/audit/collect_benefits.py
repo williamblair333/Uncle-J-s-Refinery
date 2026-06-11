@@ -4,7 +4,7 @@ is listed in `missing` — explicit gaps, no guesses.
 
 Sources:
   1. state/hook-blocks.log                  -> guard catches (guardrails-discipline)
-  2. ~/.code-index/_savings.json            -> jcodemunch tokens_saved (total_tokens_saved key)
+  2. ~/.code-index/**/*.json scanned for the maximum tokens_saved value
   3. MemPalace SQLite (~/.mempalace/palace/chroma.sqlite3) -> embedding row count (read-only)
 """
 import re
@@ -21,8 +21,17 @@ GUARD_RE = re.compile(r"([a-z0-9][a-z0-9_]*(?:-[a-z0-9_]+)*-guard(?:-[a-z0-9_]+)
 
 
 def count_blocks(text):
+    """Count BLOCKED guard events by guard name.
+
+    Only lines containing the word BLOCKED are counted; ALLOWED lines and
+    other non-BLOCKED log entries are silently skipped.  Lines that are
+    BLOCKED but contain no recognisable guard name token are tallied under
+    ``_unparsed``.
+    """
     counts = {}
     for line in filter(str.strip, text.splitlines()):
+        if "BLOCKED" not in line:
+            continue
         m = GUARD_RE.search(line)
         key = m.group(1).lower() if m else "_unparsed"
         counts[key] = counts.get(key, 0) + 1

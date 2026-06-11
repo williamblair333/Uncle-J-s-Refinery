@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-11 — fix(audit): count BLOCKED guard events only + docstring accuracy
+
+### Fixed
+- **`scripts/audit/collect_benefits.py`**: `count_blocks` now skips non-BLOCKED lines (ALLOWED events and bare log chatter). Fixes ~2.4x overcount (756 → 314 total). `_unparsed` redefined as "BLOCKED line with no recognisable guard name". Module docstring source 2 corrected to reflect `~/.code-index/**/*.json` scan for max `tokens_saved`.
+- **`tests/test_audit.py`**: SAMPLE_BLOCKS updated — ALLOWED fixture line added; garbage line replaced with a BLOCKED-but-no-guard-name line so `_unparsed==1` still holds. 13/13 tests pass.
+
+---
+
 ## 2026-06-11 — fix(audit): point benefits collector at live palace DB + zero-plausibility guard
 
 ### Fixed

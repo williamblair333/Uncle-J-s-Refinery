@@ -107,14 +107,15 @@ def test_map_sections_to_components():
 SAMPLE_BLOCKS = """2026-06-10T10:00:00 grep-guard BLOCKED grep -r foo
 2026-06-10T11:00:00 edit-surface-guard BLOCKED settings.json
 2026-06-11T05:00:00 grep-guard BLOCKED grep -rn bar
-garbage line without a guard
+2026-06-11T06:00:00 grep-guard ALLOWED grep foo
+2026-06-11T07:00:00 BLOCKED something with no guardname token
 """
 
 def test_count_hook_blocks():
     counts = collect_benefits.count_blocks(SAMPLE_BLOCKS)
-    assert counts["grep-guard"] == 2
+    assert counts["grep-guard"] == 2          # ALLOWED line not counted
     assert counts["edit-surface-guard"] == 1
-    assert counts["_unparsed"] == 1
+    assert counts["_unparsed"] == 1           # BLOCKED but no recognisable guard name
 
 def test_mempalace_counts_missing_db(tmp_path):
     assert collect_benefits.mempalace_counts(tmp_path / "nope.sqlite3") is None
