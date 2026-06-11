@@ -23,6 +23,7 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
 
 ## Contents
 
+- [Mission](#mission)
 - [What you get](#what-you-get)
 - [The namesake](#the-namesake)
 - [What's in the box](#whats-in-the-box)
@@ -59,6 +60,23 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
 - [Provenance](#provenance)
 - [Uninstall](#uninstall)
 - [License and credits](#license--credits)
+
+---
+
+## Mission
+
+**Uncle J's Refinery turns AI sessions into compounding work — every session more correct, cheaper, and smarter than the last.**
+
+Priorities in order; when they conflict, the higher one wins:
+
+1. **Right.** Accuracy outranks all savings. Answers are grounded and verifiable, and the stack is trustworthy enough to act unwatched — a wrong or fabricated answer is the most expensive thing it can produce.
+2. **Cheap — in total.** Minimize cost per correct answer: tokens, dollars, *and operator attention*. A layer that saves tokens but consumes maintenance hours hasn't paid for itself.
+3. **Inventive.** Explore alternatives before converging; surface non-obvious solutions; serve creative work as a first-class use case alongside code; let the stack improve itself overnight.
+4. **Local.** Prefer offline/local components wherever they don't sacrifice #1 or #2 — for cost, independence, privacy, and resilience.
+
+Memory is the mechanism, not the mission: remembering everything is how sessions compound.
+
+**Standing test:** every component must pay for itself against these four, measurably — or be removed.
 
 ---
 

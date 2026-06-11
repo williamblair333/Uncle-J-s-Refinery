@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-11 — docs: mission statement added to README
+
+### Added
+- **`README.md` `## Mission` section**: four ranked priorities (Right > Cheap-in-total >
+  Inventive > Local) with explicit conflict-resolution order, memory-is-the-mechanism
+  framing, and the standing test ("every component must pay for itself against these
+  four, measurably — or be removed"). Drafted collaboratively 2026-06-11; "cheap"
+  explicitly includes operator attention/maintenance time, "right" includes
+  trustworthy-enough-to-act-unwatched.
+
+---
+
 ## 2026-06-11 — fix: code-review findings on mempalace-mine-convos.sh
 
 ### Fixed
