@@ -80,6 +80,9 @@ def test_classify_maintenance():
     assert collect_maintenance.is_maintenance("fix: hnsw corruption repair") is True
     assert collect_maintenance.is_maintenance("feat: telegram inline button") is False
     assert collect_maintenance.is_maintenance("repair cron dedup") is True
+    assert collect_maintenance.is_maintenance("feat: add nightly repair cron") is False
+    assert collect_maintenance.is_maintenance("docs: session-end — FTS5 repair notes") is False
+    assert collect_maintenance.is_maintenance("Merge pull request #19 from fix/mempalace-repair") is False
 
 def test_aggregate_by_component():
     comps = audit_lib.load_components(REPO / "scripts/audit/components.json")
@@ -87,6 +90,8 @@ def test_aggregate_by_component():
     assert agg["mempalace"]["commits"] == 1
     assert agg["mempalace"]["maintenance_commits"] == 1
     assert agg["telegram"]["maintenance_commits"] == 0
+    assert agg["mempalace"]["maintenance_share"] == 1.0
+    assert agg["reliability"]["commits"] == 2   # "fix: hnsw ... cron" (cron keyword) + "docs: session-end notes" (session-end keyword)
 
 
 # Integration test: intentionally coupled to the live manifest's routing-policy entry.

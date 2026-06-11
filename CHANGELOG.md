@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-11 — fix(audit): subject-anchored maintenance classifier + multi-count docs + git error handling
+
+### Fixed
+- **`scripts/audit/collect_maintenance.py`**: `MAINT_RE` changed from `^(fix|hotfix|revert)\b|repair|corrupt` to `^(fix|hotfix|revert|repair|corrupt)\b` — subject must *start* with a fix/repair verb; mid-subject mentions (feat/docs/merge subjects referencing repair) are no longer mis-classified as maintenance. Kills ~18% false positives.
+- **`scripts/audit/collect_maintenance.py`**: `main()` `total_commits` comment added; docstring updated with multi-count semantics note.
+- **`scripts/audit/collect_maintenance.py`**: `subprocess.run` wrapped in try/except for `FileNotFoundError` and `CalledProcessError` with diagnosable exit messages.
+- **`tests/test_audit.py`**: `test_classify_maintenance` extended with 3 new false-positive cases; `test_aggregate_by_component` extended with `maintenance_share` and `reliability` bucket assertions.
+- **Real run (525 commits)**: mempalace maintenance_share dropped 0.46 → 0.31; top-3 by maint_commits: reliability (28), mempalace (22), skills-ecosystem (16).
+
+---
+
 ## 2026-06-11 — feat(audit): collector B — maintenance burden from 90-day git history
 
 ### Added

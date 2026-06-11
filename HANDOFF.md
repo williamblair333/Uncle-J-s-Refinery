@@ -1,10 +1,19 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — Task 3 (Collector B) committed; on feat/payoff-audit*
+*Last updated: 2026-06-11 — Task 3 code-review fixes committed; on feat/payoff-audit*
 
-## Current state (2026-06-11) — pay-for-itself audit Task 3 done
+## Current state (2026-06-11) — pay-for-itself audit Task 3 review fixes done
 
-Branch: `feat/payoff-audit`. Tasks 1–3 committed. Tasks 4–7 pending.
+Branch: `feat/payoff-audit`. Tasks 1–3 committed (with review fixes). Tasks 4–7 pending.
+
+**Work log — 2026-06-11 (this session — Task 3: Collector B review fixes)**
+
+- **Subject-anchored classifier**: `MAINT_RE` tightened to `^(fix|hotfix|revert|repair|corrupt)\b` — mid-subject "repair" no longer triggers; kills ~18% false positives.
+- **Multi-count semantics**: `total_commits` comment + docstring line added.
+- **Git error handling**: `subprocess.run` wrapped with `FileNotFoundError` + `CalledProcessError` exits.
+- **Tests extended**: `test_classify_maintenance` +3 false-positive cases; `test_aggregate_by_component` +`maintenance_share` + `reliability` bucket (2 commits via "cron" + "session-end" keywords). 11/11 passing.
+- **Real run (525 commits)**: mempalace 0.46 → 0.31; top-3 by maint_commits: reliability=28, mempalace=22, skills-ecosystem=16.
+- **Fixture routing**: `docs: session-end notes` landed in `reliability` (not `_unmatched`) — "session-end" is a reliability keyword.
 
 **Work log — 2026-06-11 (this session — Task 3: Collector B)**
 
