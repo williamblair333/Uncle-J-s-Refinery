@@ -1,8 +1,23 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — Task 3 code-review fixes committed; on feat/payoff-audit*
+*Last updated: 2026-06-11 — Task 4 done; on feat/payoff-audit*
 
-## Current state (2026-06-11) — pay-for-itself audit Task 3 review fixes done
+## Current state (2026-06-11) — pay-for-itself audit Task 4 done (Collector C)
+
+Branch: `feat/payoff-audit`. Tasks 1–4 committed. Tasks 5–7 pending.
+
+**Work log — 2026-06-11 (this session — Task 4: Collector C)**
+
+- **Task 4 done**: `scripts/audit/collect_benefits.py` (Collector C — benefit signals). Sources: `state/hook-blocks.log` (guard catches by name), `~/.code-index/_savings.json` (jcodemunch `total_tokens_saved`), `~/.mempalace/chroma.sqlite3` (embeddings count, read-only). Writes `state/payoff-audit/benefits.json`. 12/12 tests passing.
+- **GUARD_RE deviation**: spec regex matched bare word "guard" in lines like "garbage line without a guard". Fixed to require hyphenated prefix. Test fixture kept as-is (spec's sample is representative — compound guard names + one garbage line).
+- **DB path deviation**: spec assumed `~/.mempalace/chroma/chroma.sqlite3`; real path is `~/.mempalace/chroma.sqlite3`. Corrected in collector.
+- **Real run**: missing=[] (all 3 sources resolved). 756 total guard blocks (508 edit-surface-guard, 153 grep-guard, 17 surface-write-guard, 5 token-guard, 2 pre-mortem-guard, 1 install-guard, 69 unparsed). 3,793,811 tokens saved. embeddings_rows=0 (chroma.sqlite3 tables present but empty — likely turbovecdb migration artifact; mempalace search runs via turbovecdb path; not a collector bug).
+
+**Next session:** Task 5 — scorecard synthesizer + runner. Reads all three `state/payoff-audit/` JSON files, computes per-component ROI summary.
+
+---
+
+## Prior state (2026-06-11) — Task 3 code-review fixes committed
 
 Branch: `feat/payoff-audit`. Tasks 1–3 committed (with review fixes). Tasks 4–7 pending.
 

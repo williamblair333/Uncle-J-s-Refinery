@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-11 — feat(audit): collector C — benefit counters (guards, retrieval savings, palace size)
+
+### Added
+- **`scripts/audit/collect_benefits.py`**: Collector C — reads `state/hook-blocks.log` (guard catch counts), `~/.code-index/_savings.json` (`total_tokens_saved`), and `~/.mempalace/chroma.sqlite3` (embeddings row count, read-only mode=ro). Writes `state/payoff-audit/benefits.json`. Real run: 756 guard catches (508 edit-surface, 153 grep, 17 surface-write, 5 token, 2 pre-mortem, 1 install), 69 unparsed; 3,793,811 tokens saved by jmunch-retrieval; mempalace embeddings_rows=0 (chroma.sqlite3 tables present but empty — likely turbovecdb migration artifact).
+- **`tests/test_audit.py`** (1 new test): `test_count_hook_blocks` with SAMPLE_BLOCKS fixture — 12 tests total.
+
+### Changed
+- **GUARD_RE**: Spec regex `([a-z0-9_-]*guard[a-z0-9_-]*)` matched bare word "guard" (garbage lines scored as "_unparsed" should have been NO MATCH). Fixed to require a hyphenated prefix: `([a-z0-9][a-z0-9_]*(?:-[a-z0-9_]+)*-guard(?:-[a-z0-9_]+)*)`.
+- **DB path**: Spec had `~/.mempalace/chroma/chroma.sqlite3`; real path is `~/.mempalace/chroma.sqlite3`. Adjusted in collector.
+
+---
+
 ## 2026-06-11 — fix(audit): subject-anchored maintenance classifier + multi-count docs + git error handling
 
 ### Fixed

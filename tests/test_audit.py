@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts" / "audit"))
 import audit_lib
 import collect_token_cost
 import collect_maintenance
+import collect_benefits
 
 REPO = Path(__file__).parent.parent
 
@@ -101,3 +102,16 @@ def test_map_sections_to_components():
         [("Retrieval Stack Routing Policy", "x" * 400), ("Unknown Heading", "y" * 400)])
     assert out["routing-policy"]["est_tokens"] == 100
     assert out["_unmapped"]["est_tokens"] == 100
+
+
+SAMPLE_BLOCKS = """2026-06-10T10:00:00 grep-guard BLOCKED grep -r foo
+2026-06-10T11:00:00 edit-surface-guard BLOCKED settings.json
+2026-06-11T05:00:00 grep-guard BLOCKED grep -rn bar
+garbage line without a guard
+"""
+
+def test_count_hook_blocks():
+    counts = collect_benefits.count_blocks(SAMPLE_BLOCKS)
+    assert counts["grep-guard"] == 2
+    assert counts["edit-surface-guard"] == 1
+    assert counts["_unparsed"] == 1
