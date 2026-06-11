@@ -1,24 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-10 — jragmunch-cli evaluation complete; on main, clean*
+*Last updated: 2026-06-11 — /tmp flock alignment fix; on main, clean*
 
-## Current state (2026-06-10) — jragmunch-cli evaluation complete
+## Current state (2026-06-11) — /tmp flock alignment fixed
 
 `HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
 
-**Work log — 2026-06-10 (this session)**
+**Work log — 2026-06-11 (this session)**
 
-- **jragmunch-cli evaluation done** (ROADMAP Planned → Completed): Read all source files. Verdict: adopt only the `_build_subprocess_env()` billing pattern (strip API key from subprocess env to use subscription auth). After 2026-06-15 (Agent SDK credit launch): apply to `ralph-harness.sh` + Telegram gateway. ROADMAP updated with timed follow-up item.
-- **CI test job done**: see previous entry below.
-- **Stop-hook session mining done**: see previous entry below.
+- **mempalace-mine-convos.sh flock alignment done**: `scripts/mempalace-mine-convos.sh` now
+  holds `/tmp/mempalace-mine-convos.lock` (FD 200, flock -n) while mining so the 4am repair
+  cron (`flock -w 7200`) properly waits for Stop-hook-triggered mines. Closes the LOW advisory
+  from the stop-hook session mining session. CHANGELOG updated.
 
 **Still open:**
 - Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC). Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
 - recall@10=0.408 — awaiting @kostadis response on ef tuning
-- Stop-hook citation audit (structural close of Dreaming pattern-promotion path)
-- ralph-harness env-strip (after 2026-06-15): strip `ANTHROPIC_API_KEY` from subprocess env in ralph-harness.sh + Telegram gateway
+- Stop-hook citation audit (structural close of Dreaming pattern-promotion path) — complex multi-component (Stop hook → metadata store → synthesizer); skip until planned properly
+- ralph-harness env-strip: unlocks **2026-06-15** (4 days) — strip `ANTHROPIC_API_KEY` from subprocess env in ralph-harness.sh + Telegram gateway
 
-**Most important thing for next session:** On main, clean. Remaining ROADMAP Planned items: compressed `jcodemunch_guide` (~4,600–5,100 tokens/session savings — upstream contribution), ralph-harness env-strip (after 2026-06-15). The env-strip is now the simplest item if the date has passed.
+**Most important thing for next session:** ralph-harness env-strip unlocks on 2026-06-15 — if date has passed, that's the simplest next item. Otherwise: compressed `jcodemunch_guide` (~4,600–5,100 tokens/session savings — upstream contribution).
 
 ---
 

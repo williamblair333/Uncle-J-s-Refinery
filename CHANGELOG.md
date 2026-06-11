@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-06-11 — fix: mempalace-mine-convos.sh /tmp flock alignment
+
+### Fixed
+- **`scripts/mempalace-mine-convos.sh`**: now also holds
+  `flock -n 200 /tmp/mempalace-mine-convos.lock` while mining, in addition to
+  the existing `state/` directory lock. Closes the coordination gap where the
+  4am repair cron (`flock -w 7200 /tmp/mempalace-mine-convos.lock`) could not
+  wait for a Stop-hook-triggered mine because the two used independent lock
+  namespaces. Added log line for the /tmp-lock-held skip path and comment
+  explaining the two-lock split (dir-lock = dup Stop-hook guard; /tmp flock =
+  repair-cron coordination).
+
+---
+
 ## 2026-06-10 — research: jragmunch-cli evaluation
 
 ### Decision
