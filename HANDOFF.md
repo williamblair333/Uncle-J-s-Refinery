@@ -1,8 +1,23 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — count_blocks BLOCKED-only fix; on feat/payoff-audit*
+*Last updated: 2026-06-11 — Task 5: scorecard synthesizer + run-audit.sh; on feat/payoff-audit*
 
-## Current state (2026-06-11) — count_blocks fix (BLOCKED-only, 756 → 314)
+## Current state (2026-06-11) — Task 5 done (scorecard synthesizer)
+
+Branch: `feat/payoff-audit`. Tasks 1–5 committed. Tasks 6–7 pending.
+
+**Work log — 2026-06-11 (this session — Task 5: scorecard synthesizer + runner)**
+
+- **Task 5 done**: `scripts/audit/build_scorecard.py` renders 3 collector JSONs → `state/payoff-scorecard.md`. Nested-dict benefit fields summarised as `key_total=N` (e.g. `hook_blocks_total=314`). Verdicts column present but blank for judgment pass.
+- **`scripts/audit/run-audit.sh`**: Runs all 4 scripts in sequence. Executable. Deterministic.
+- **Test added**: `test_scorecard_renders_all_components_and_flags_gaps` — 14/14 passing.
+- **Real scorecard**: 12 rows (10 components + `_unmapped` + `_unmatched`). routing-policy 9041 tokens, mempalace maint share 0.32, jmunch tokens_saved_best=3,812,967, hook_blocks_total=314. No Missing-data section (benefits ran clean).
+
+**Next session:** Task 6 — CI job + changelog integration. Task 7 — judgment pass (human + LLM, in-session).
+
+---
+
+## 2026-06-11 — count_blocks fix (BLOCKED-only, 756 → 314)
 
 Branch: `feat/payoff-audit`. Tasks 1–4 committed (with review fixes). Tasks 5–7 pending.
 

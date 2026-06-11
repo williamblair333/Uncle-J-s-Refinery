@@ -7,6 +7,7 @@ import audit_lib
 import collect_token_cost
 import collect_maintenance
 import collect_benefits
+import build_scorecard
 
 REPO = Path(__file__).parent.parent
 
@@ -119,3 +120,14 @@ def test_count_hook_blocks():
 
 def test_mempalace_counts_missing_db(tmp_path):
     assert collect_benefits.mempalace_counts(tmp_path / "nope.sqlite3") is None
+
+def test_scorecard_renders_all_components_and_flags_gaps():
+    token = {"components": {"mempalace": {"est_tokens": 100, "sources": ["x"]}}}
+    maint = {"components": {"mempalace": {"commits": 10, "maintenance_commits": 9,
+                                          "maintenance_share": 0.9}}}
+    bene = {"components": {}, "missing": ["benefits source"]}
+    md = build_scorecard.render(token, maint, bene)
+    assert "| mempalace |" in md
+    assert "0.9" in md
+    assert "benefits source" in md          # missing data surfaced, not hidden
+    assert "Verdict" in md                  # column exists, left blank for judgment pass

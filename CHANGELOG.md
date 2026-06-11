@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-11 — feat(audit): scorecard synthesizer + run-audit.sh runner
+
+### Added
+- **`scripts/audit/build_scorecard.py`**: Joins token-cost, maintenance, and benefits JSONs into `state/payoff-scorecard.md`. Nested-dict benefit fields (e.g. `hook_blocks`) are summarised as `key_total=N` for readable table cells. Verdicts intentionally blank — filled by judgment pass.
+- **`scripts/audit/run-audit.sh`**: Runs all four audit scripts in sequence; deterministic, no LLM calls, safe to re-run.
+- **`tests/test_audit.py`**: `test_scorecard_renders_all_components_and_flags_gaps` — 14/14 tests passing.
+
+---
+
 ## 2026-06-11 — fix(audit): count BLOCKED guard events only + docstring accuracy
 
 ### Fixed
