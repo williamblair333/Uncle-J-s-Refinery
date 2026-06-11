@@ -21,6 +21,8 @@ def _fmt_bsig(b: dict) -> str:
     """
     parts = []
     for k, v in b.items():
+        if k == "db_path":  # provenance lives in the JSON; noise in the table cell
+            continue
         if isinstance(v, dict):
             if v and all(isinstance(x, (int, float)) for x in v.values()):
                 parts.append(f"{k}_total={sum(v.values())}")
@@ -40,6 +42,9 @@ def render(token, maint, bene):
         "Mission test: every component must pay for itself against "
         "Right > Cheap-in-total > Inventive > Local — or be removed.",
         "Token figures are estimates (bytes/4). Verdicts are filled by the judgment pass.",
+        "CLAUDE.md token cost is attributed at `##`-heading granularity: routing-policy's",
+        "figure includes the Operating-rules body whose `###` subsections serve other",
+        "components (mempalace, jmunch) — read it as 'cost of the routing document'.",
         "",
         "| Component | Always-on est. tokens/session | Commits (90d) | Maint. share | Benefit signals | Verdict |",
         "|---|---|---|---|---|---|",

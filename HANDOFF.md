@@ -1,5 +1,7 @@
 # Handoff — Uncle J's Refinery
 
+*Scorecard polish committed (granularity note + db_path cell drop).*
+
 *Last updated: 2026-06-11 — Task 6: CI job + scorecard hardening; on feat/payoff-audit*
 
 ## Current state (2026-06-11) — Task 6 done (CI job + hardening)

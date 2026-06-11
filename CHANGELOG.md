@@ -9,6 +9,8 @@
   (token cost, 90-day maintenance burden, benefit counters) + scorecard
   synthesizer + `run-audit.sh`. Output: `state/payoff-scorecard.md`. No LLM
   calls in the pipeline; missing data reported explicitly.
+- **scorecard polish**: `##`-granularity attribution note in preamble; `db_path`
+  dropped from rendered benefit cell (kept in JSON).
 - **`tests/test_audit.py`** + `test-audit` CI job (15 tests, 0 API calls).
 
 ---
