@@ -103,9 +103,12 @@ if [ "$_need_build" = "yes" ]; then
   TMP_SRC=$(mktemp -d)
   curl -sL "$SQLITE_AMALG_URL" -o "$TMP_SRC/amalg.zip"
   unzip -j "$TMP_SRC/amalg.zip" "*/sqlite3.c" "*/sqlite3.h" -d "$TMP_SRC/"
-  uv pip download "pysqlite3==0.6.0" --no-binary :all: -d "$TMP_SRC" \
-    --python "$STACK_ROOT/.venv/bin/python3" -q
-  tar xz -C "$TMP_SRC" -f "$TMP_SRC"/pysqlite3-*.tar.gz
+  # `uv pip download` was removed in a uv upgrade (bitrot found 2026-06-11);
+  # fetch the sdist straight from PyPI's JSON API instead.
+  SDIST_URL=$(curl -s https://pypi.org/pypi/pysqlite3/0.6.0/json | "$STACK_ROOT/.venv/bin/python3" -c \
+    "import json,sys; print(next(u['url'] for u in json.load(sys.stdin)['urls'] if u['packagetype']=='sdist'))")
+  curl -sL "$SDIST_URL" -o "$TMP_SRC/pysqlite3.tar.gz"
+  tar xz -C "$TMP_SRC" -f "$TMP_SRC/pysqlite3.tar.gz"
   cp "$TMP_SRC/sqlite3.c" "$TMP_SRC/sqlite3.h" "$TMP_SRC/pysqlite3-0.6.0/"
   uv pip install "$TMP_SRC/pysqlite3-0.6.0/" --python "$STACK_ROOT/.venv/bin/python3" --force-reinstall
   rm -rf "$TMP_SRC"
