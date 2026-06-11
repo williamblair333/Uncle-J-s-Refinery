@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-06-11 — feat: improvement program spec + ROADMAP phases
+
+### Added
+- **`docs/superpowers/specs/2026-06-11-refinery-improvement-program-design.md`**:
+  four-phase program evaluated against the mission — (1) pay-for-itself audit,
+  (2) accuracy instrumentation + backend selection (turbovecdb / sqlite-vec /
+  roll-our-own / keep; MemPalace app layer evaluated separately from storage),
+  (3) local rail (Ollama batch pipelines, dual-track dreaming with local-canonical
+  store), (4) subtraction & absorption. Two cross-cutting principles:
+  deterministic-first (scripts over LLM judgment) and local-canonical, API-optional.
+- **`ROADMAP.md`**: Improvement Program phases added to Planned, linked to spec.
+
+---
+
 ## 2026-06-11 — docs: mission-first README restructure + repo About/topics
 
 ### Changed

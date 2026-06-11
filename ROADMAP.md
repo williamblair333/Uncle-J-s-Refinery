@@ -12,7 +12,14 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model; benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
+**Improvement Program** (spec: `docs/superpowers/specs/2026-06-11-refinery-improvement-program-design.md` — phases in order; principles: deterministic-first, local-canonical):
+
+- **Phase 1 — Pay-for-itself audit** — first run of the mission's standing test; script collectors (token cost, maintenance burden from git/HANDOFF, benefit counters) + one LLM synthesis pass → `state/payoff-scorecard.md` + keep/fix/delete list. Re-ranks everything below.
+- **Phase 2 — Accuracy instrumentation** — memory recall benchmark (ground-truth probes, weekly cron, ChromaDB baseline), correction ledger hook, citation audit; then **backend selection**: turbovecdb / sqlite-vec / roll-our-own / keep — nothing sacred incl. MemPalace app layer; winner deletes the ChromaDB repair apparatus
+- **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dual-track dreaming (MemPalace canonical → native memory mirror); pattern-importance scoring as pure script
+- **Phase 4 — Subtraction & absorption** — execute audit delete list; CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
+
+- **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
 - **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
 
