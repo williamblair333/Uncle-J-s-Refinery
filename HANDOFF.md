@@ -1,8 +1,78 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — /tmp flock alignment fix; on main, clean*
+*Scorecard polish committed (granularity note + db_path cell drop).*
 
-## Current state (2026-06-11) — /tmp flock alignment fixed
+*Last updated: 2026-06-11 — Task 6: CI job + scorecard hardening; on feat/payoff-audit*
+
+## Current state (2026-06-11) — Task 6 done (CI job + hardening)
+
+Branch: `feat/payoff-audit`. Tasks 1–6 committed. Task 7 pending.
+
+**Work log — 2026-06-11 (this session — Task 6: CI job + scorecard hardening + consolidated changelog)**
+
+- **CI job added**: `test-audit` (job 6 in ci.yml) — `setup-python@v5` + `pip install pytest` + `python -m pytest tests/test_audit.py -v`. Mirrors `test-session-end-check` structure. YAML validates.
+- **`_fmt_bsig` hardened**: non-numeric nested dicts now render as `key={v}` instead of crashing on `sum()`. New test: `test_scorecard_handles_non_numeric_nested_dict`.
+- **`run-audit.sh` hardened**: `readlink -f` for symlink-safe cd; explicit Python guard with install.sh hint before loop.
+- **15/15 tests pass** with both `python3 -m pytest` (system, 3.13.5) and `.venv/bin/python -m pytest` (3.11.15). No hermetic fixes needed — all tests use inline fixtures or `tmp_path`; no machine-path dependencies.
+- **CHANGELOG**: 9 per-task audit bullets consolidated into one Phase 1 entry.
+
+**Next session:** Task 7 — judgment pass (human + LLM, in-session).
+
+---
+
+## 2026-06-11 — count_blocks fix (BLOCKED-only, 756 → 314)
+
+Branch: `feat/payoff-audit`. Tasks 1–4 committed (with review fixes). Tasks 5–7 pending.
+
+**Work log — 2026-06-11 (this session — fix: count_blocks BLOCKED-only + docstring accuracy)**
+
+- **Bug fixed**: `count_blocks` was counting every log line (BLOCKED + ALLOWED + bare chatter), overcounting ~2.4x. Now skips any line without `BLOCKED`. Real run: 314 total (153 grep-guard, 137 edit-surface-guard, 17 surface-write-guard, 5 token-guard, 2 pre-mortem-guard; no _unparsed).
+- **Docstring fixed**: source 2 now says `~/.code-index/**/*.json scanned for the maximum tokens_saved value`.
+- **Tests**: SAMPLE_BLOCKS gets an ALLOWED line + a BLOCKED-no-guard-name line; `_unparsed==1` still holds; 13/13 passing.
+
+**Work log — 2026-06-11 (this session — fix: live palace DB path + zero-plausibility guard)**
+
+- **Bug fixed**: `collect_benefits.py` was pointing at `~/.mempalace/chroma.sqlite3` (188KB stale stub from May 25, 0 embeddings). Corrected to `~/.mempalace/palace/chroma.sqlite3` (live DB). Real run now shows `embeddings_rows=315128`.
+- **Zero-plausibility guard added**: readable-but-empty DB writes to `missing[]` rather than reporting `embeddings_rows: 0` to scorecard. Prevents false confident-zero from feeding downstream.
+- **Test added**: `test_mempalace_counts_missing_db` — 13/13 tests passing.
+
+**Work log — 2026-06-11 (this session — Task 4: Collector C)**
+
+- **Task 4 done**: `scripts/audit/collect_benefits.py` (Collector C — benefit signals). Sources: `state/hook-blocks.log` (guard catches by name), `~/.code-index/_savings.json` (jcodemunch `total_tokens_saved`), `~/.mempalace/palace/chroma.sqlite3` (embeddings count, read-only). Writes `state/payoff-audit/benefits.json`. 13/13 tests passing.
+- **GUARD_RE deviation**: spec regex matched bare word "guard" in lines like "garbage line without a guard". Fixed to require hyphenated prefix.
+- **Real run**: missing=[] (all 3 sources resolved). 756 total guard blocks (508 edit-surface-guard, 153 grep-guard, 17 surface-write-guard, 5 token-guard, 2 pre-mortem-guard, 1 install-guard, 69 unparsed). 3,793,811 tokens saved. embeddings_rows=315128, db_path shown.
+
+**Next session:** Task 5 — scorecard synthesizer + runner. Reads all three `state/payoff-audit/` JSON files, computes per-component ROI summary.
+
+---
+
+## Prior state (2026-06-11) — Task 3 code-review fixes committed
+
+Branch: `feat/payoff-audit`. Tasks 1–3 committed (with review fixes). Tasks 4–7 pending.
+
+**Work log — 2026-06-11 (this session — Task 3: Collector B review fixes)**
+
+- **Subject-anchored classifier**: `MAINT_RE` tightened to `^(fix|hotfix|revert|repair|corrupt)\b` — mid-subject "repair" no longer triggers; kills ~18% false positives.
+- **Multi-count semantics**: `total_commits` comment + docstring line added.
+- **Git error handling**: `subprocess.run` wrapped with `FileNotFoundError` + `CalledProcessError` exits.
+- **Tests extended**: `test_classify_maintenance` +3 false-positive cases; `test_aggregate_by_component` +`maintenance_share` + `reliability` bucket (2 commits via "cron" + "session-end" keywords). 11/11 passing.
+- **Real run (525 commits)**: mempalace 0.46 → 0.31; top-3 by maint_commits: reliability=28, mempalace=22, skills-ecosystem=16.
+- **Fixture routing**: `docs: session-end notes` landed in `reliability` (not `_unmatched`) — "session-end" is a reliability keyword.
+
+**Work log — 2026-06-11 (this session — Task 3: Collector B)**
+
+- **Task 3 done**: `scripts/audit/collect_maintenance.py` (Collector B — 90-day maintenance burden), 3 new tests (11 total). Real run on 524 commits: top by maint_commits — reliability (37), mempalace (33), skills-ecosystem (19). Highest maint_share: mempalace (0.46), guardrails-discipline (0.35), jmunch-retrieval (0.29). `_unmatched` = 206 commits (39% of total) — coverage gap to note for Task 7 judgment.
+- One deviation from spec: `parse_log` uses block-split approach — the spec's regex `^[0-9a-f]{4,40}\|` can't match test fixture hashes like `ghi3` (contains non-hex chars). Replaced with `\S+\|\d{4}-\d{2}-\d{2}\|` which handles both real git output and test fixtures. Also handles the blank-line gap git inserts between header and file list.
+
+**Work log — 2026-06-11 (this session — pay-for-itself audit code-review fixes)**
+
+- **Task 2 fixes done**: fence-aware `strip_fences` helper, `hook_payload_tokens` type guard, `skill_descriptions_tokens` space separator, `components.json` routing-policy heading expansion (7 headings), `test_split_sections_ignores_fenced_headings` new test. New token numbers: `routing-policy`=9041 tok (largest), `_unmapped`=234 tok (preamble only), `skills-ecosystem`=3233 tok, `guardrails-discipline`=1878 tok, `jmunch-retrieval`=714 tok. 8 tests passing.
+- **Task 2 done**: `scripts/audit/collect_token_cost.py` (Collector A — static token cost), 2 new tests (7 total). Real run: `_unmapped`=7744 tok (largest; `## Operating rules` + `## When to fall back` headings unmapped), `skills-ecosystem`=3224 tok (52 skills), `guardrails-discipline`=1878 tok, `routing-policy`=1531 tok, `jmunch-retrieval`=714 tok. Concern: `_unmapped` dominates because `components.json` lacks headings for `Operating rules`/`When to fall back`/`When to stop and ask`.
+- **Task 1 done**: `scripts/audit/components.json` (10-component manifest), `scripts/audit/audit_lib.py` (stdlib-only helpers), `tests/test_audit.py` (3 passing tests). All tests green.
+
+---
+
+## Prior state (2026-06-11) — /tmp flock alignment fixed
 
 `HEALTHCHECK: fail (2) -- mcp-servers-down(duckdb)` — duckdb cold-start expected.
 
