@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-11 — fix: code-review findings on mempalace-mine-convos.sh
+
+### Fixed
+- **`scripts/mempalace-mine-convos.sh` line 59**: `exec 200>/tmp/...` failure under
+  `set -e` previously exited silently. Added `|| { log "..."; exit 1; }` guard so
+  `/tmp`-full or permission-denied errors appear in the mine log.
+- **`scripts/mempalace-mine-convos.sh` line 61**: skip message hardcoded
+  `"held by cron mine"` — changed to `"held (cron mine or repair cron)"` since the
+  4am repair cron also holds this lock while running.
+
+---
+
 ## 2026-06-11 — fix: mempalace-mine-convos.sh /tmp flock alignment
 
 ### Fixed

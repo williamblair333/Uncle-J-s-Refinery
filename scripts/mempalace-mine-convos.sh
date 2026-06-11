@@ -56,9 +56,9 @@ trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 # Also hold the /tmp flock so the 4am repair cron (flock -w 7200) waits for this mine.
 # Dir-lock above prevents duplicate Stop hooks; /tmp flock coordinates with repair cron.
-exec 200>/tmp/mempalace-mine-convos.lock
+exec 200>/tmp/mempalace-mine-convos.lock || { log "mine-convos: failed to open /tmp flock fd (exec 200>)"; exit 1; }
 if ! flock -n 200; then
-  log "mine-convos skipped: /tmp/mempalace-mine-convos.lock held by cron mine"
+  log "mine-convos skipped: /tmp/mempalace-mine-convos.lock held (cron mine or repair cron)"
   exit 0
 fi
 

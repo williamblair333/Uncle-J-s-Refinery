@@ -12,6 +12,9 @@
   holds `/tmp/mempalace-mine-convos.lock` (FD 200, flock -n) while mining so the 4am repair
   cron (`flock -w 7200`) properly waits for Stop-hook-triggered mines. Closes the LOW advisory
   from the stop-hook session mining session. CHANGELOG updated.
+- **code-review fixes (High effort)**: two confirmed findings applied — exec 200 silent failure
+  gap (added `|| log + exit 1` guard), misleading skip log (changed "cron mine" → "cron mine or
+  repair cron").
 
 **Still open:**
 - Upstream HNSW flush bug report + PR — ⛔ BLOCKED (CATASTROPHIC). Drafts at `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`.
