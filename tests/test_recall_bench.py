@@ -99,3 +99,10 @@ def test_build_probe_record_shape():
     assert rec["query"] == "quantum flux capacitor calibration"
     assert rec["expect"] == ["notes.md::1"]
     assert rec["origin"] == "seed"
+
+
+def test_seeder_skips_unsatisfiable_sourceless_drawer_keys():
+    # A drawer with no source_file yields key "?::N" — main() must skip these
+    # (a probe expecting "?::N" can never be satisfied by any retrieval).
+    assert recall_lib.drawer_key("", 0).startswith("?::")
+    assert not recall_lib.drawer_key("/x/a.txt", 0).startswith("?::")

@@ -103,6 +103,8 @@ def main():
         if not phrase:
             continue
         key = recall_lib.drawer_key(meta.get("source_file", ""), meta.get("chunk_index"))
+        if key.startswith("?::"):  # drawer lacks source_file — probe could never be satisfied
+            continue
         if key in seen_keys:  # one probe per drawer
             continue
         seen_keys.add(key)
