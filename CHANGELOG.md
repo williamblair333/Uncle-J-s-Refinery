@@ -2,11 +2,39 @@
 
 ---
 
-## Phase 2 — Accuracy Instrumentation
+## 2026-06-11 — Phase 2 accuracy instrumentation: Tasks 1–7 of 9 (paused, resuming tonight)
 
-- **Task 6**: `collect_benefits.py` — `iso_age_days`, `count_matching`, `dreaming_run_stats` added; dreaming block (last-run age + run/skip counts) + telegram block (poll count) wired into `main()`; ralph gap surfaced explicitly in `missing`. 3 new tests, suite now 19.
-- **Task 2**: `scripts/bench/seed_probes.py` — by-construction ground-truth probe seeder; samples live palace drawers via chromadb read-only, extracts distinctive phrases deterministically, emits `scripts/bench/probes.jsonl` (25 seed probes checked in). `recall_lib.load_probes` amended with line-number context in JSON parse errors and named-duplicate reporting. 4 new tests appended (total 11 in `tests/test_recall_bench.py`).
-- **Task 1**: `scripts/bench/recall_lib.py` — pure stdlib recall@k + probe-schema functions; CI-testable with `pip install pytest` only. 7 tests in `tests/test_recall_bench.py`.
+### Added (branch `feat/phase2-bench`, unmerged)
+- **`scripts/bench/`**: `recall_lib.py` (pure recall@k + probe schema, 15 tests),
+  `seed_probes.py` (by-construction ground truth; file-level `::0` keys; skips
+  sourceless drawers), `probes.jsonl` (25 seed probes), `run_recall_bench.py`
+  (in-process labeled harness), `run-recall-bench.sh`.
+- **Correction ledger**: `scripts/log-correction.sh` + counter in `collect_benefits.py`
+  + project-CLAUDE.md instruction snippet.
+- **Usage counters** (audit gap): dreaming last-run age + run/skip, telegram poll
+  count; ralph gap explicit. `tests/test_audit.py` now 19.
+- **Citation audit**: `scripts/citation_audit.py` + `scripts/citation-audit.sh` Stop
+  hook (registered in `.claude/settings.json`, pre-mortem cleared, exit-0-always).
+  6 tests. Flags assistant-stated URLs unverified against WebFetch/gh evidence →
+  `state/citation-audit.jsonl`.
+
+### Fixed
+- **pysqlite3 WAL-race patch restored**: a `uv` upgrade had replaced the source-built
+  SQLite 3.51.3 with the PyPI 3.51.1 wheel — the version-mismatch class that
+  originally corrupted FTS5. Rebuilt from source; `install.sh` step 2b bitrot fixed
+  (`uv pip download` removed upstream → PyPI sdist fetch).
+- **Live palace FTS5 rebuilt twice**: morning rebuild re-corrupted within ~30 min by
+  3.51.1 writers; post-patch rebuild (520s) holds — quick_check ok, 316,332 embeddings.
+- **Repair-script failure discovered**: full `mempalace-repair-now.sh` rebuild dies on
+  `hnsw:batch_size = 2` (chromadb upsert ValueError), leaving a partial palace;
+  original auto-archived and restored by hand. Repair apparatus is BROKEN for full
+  rebuilds — Task 9 memo evidence + upstream candidate.
+
+### Finding (headline, for the Task 9 backend memo)
+- **Ground-truth recall@5 = 0.36** (chroma-baseline, degraded mode): 16/25
+  by-construction probes return zero. Causes: searcher HNSW-divergence fallback to
+  BM25 + FTS5 not indexing conversation-JSONL chunks.
+  `state/recall-bench/results-chroma-baseline.json`.
 
 ---
 

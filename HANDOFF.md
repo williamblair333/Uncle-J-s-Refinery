@@ -1,8 +1,34 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired; Phase 2 next*
+*Last updated: 2026-06-11 (morning) — Phase 2 Tasks 1–7 of 9 done on feat/phase2-bench; PAUSED, resuming tonight*
 
-## Current state (2026-06-11) — Improvement Program Phase 1 closed
+## Current state (2026-06-11) — Phase 2 paused at Task 8
+
+**RESUME HERE TONIGHT:**
+1. `git checkout feat/phase2-bench` (pushed; 13 commits ahead of main; workspace was returned to main per standing rule).
+2. **Task 8** (cron + CI + docs): an interrupted agent left `scripts/bench/install-bench-cron.sh` UNTRACKED and UNREVIEWED in the working tree — verify it against the plan section "### Task 8" (check `lib/feature-helpers.sh` for install_cron helper first) rather than trusting it; the partial ci.yml edit was reverted. Then Task 8 steps 2–6 per `docs/superpowers/plans/2026-06-11-phase2-accuracy-instrumentation.md`.
+3. **Task 9** (backend memo): re-run `bash scripts/bench/run-recall-bench.sh chroma-baseline 5` first — the palace FTS5 is now clean (rebuilt under 3.51.3) so the healthy-state number may beat 0.36; HNSW divergence persists (searcher still falls back to BM25; full repair is BROKEN — see below). Then turbovecdb-labeled run + memo per plan.
+4. Open PR for the branch after Task 8 (review trail in this session's per-task subagent reviews).
+
+**Hard-won state to know (all from this session):**
+- **recall@5 = 0.36 ground truth** (chroma, degraded): 16/25 zero. `state/recall-bench/results-chroma-baseline.json` is memo-ready.
+- **pysqlite3 3.51.3 restored** (uv upgrade had silently downgraded to 3.51.1 wheel — the FTS5-corruptor class). `install.sh` step 2b bitrot fixed (`uv pip download` gone upstream). Verify after any future uv upgrade: `.venv/bin/python -c "import sqlite3; print(sqlite3.sqlite_version)"` must say 3.51.3.
+- **FTS5 clean as of ~09:10** (520s rebuild post-patch; earlier rebuild was re-corrupted in 30 min by 3.51.1 writers — that loop is closed).
+- **`mempalace-repair-now.sh` FULL rebuild is BROKEN**: dies on `hnsw:batch_size = 2` chromadb ValueError after archiving; leaves a partial palace at the live path (restored by hand this session — data safe, 316,332 embeddings). `--skip-if-healthy` path still works. Do NOT run a forced full repair until the batch_size bug is found. The 4am cron uses --skip-if-healthy → safe.
+- **D1 staged**: 55GB in `~/.mempalace-trash-D1-20260611/` (+ the failed-repair partial palace added) — Bill purges manually when ready.
+- Unaudited pre-mortem transfer (D1) in `state/premortem-unaudited.log` — retro-log to MemPalace when diary works.
+
+**Still open (carried):**
+- MemPalace MCP "cand error" on search — restart MCP servers (two running: 347624, 4110532 — one stale) now that FTS5+sqlite are fixed; verify search works
+- Upstream HNSW flush bug report + PR — BLOCKED (CATASTROPHIC). Drafts in state/. NEW: add the batch_size=2 repair failure as a second upstream item.
+- ralph-harness env-strip unlocks 2026-06-15
+
+**Work log — Phase 2 Task 7 (feat/phase2-bench)**
+- `scripts/citation_audit.py` + `scripts/citation-audit.sh` + 6 tests; Stop hook registered in `.claude/settings.json` (pre-mortem cleared, 12 dims, 1 LOW). Smoke on live transcript: flags search-result URLs cited-but-never-fetched as unverified — working as designed.
+
+**Work log — Phase 2 Tasks 3–5 (feat/phase2-bench)**
+- Task 3: `run_recall_bench.py` in-process harness; discovered search_memories strips chunk ids → file-level `::0` ground truth (documented); MEMPALACE_BACKEND env honored unless config.json overrides; first baseline run = the 0.36 finding.
+- Task 4: `run-recall-bench.sh` + state/ gitignore verified. Task 5: correction ledger (script + counter + CLAUDE.md snippet); smoke-tested.
 
 **Work log — Phase 2 Task 6 (feat/phase2-bench)**
 - `collect_benefits.py` gains `iso_age_days`, `count_matching`, `dreaming_run_stats`; dreaming block (last_run_age_days + runs/skips) + telegram block (poll_count) wired into `main()`; ralph gap added to `missing` explicitly. 3 new tests; suite 19 passed on both pythons. Real run: dreaming={'last_run_age_days': 1.0, 'runs': 0, 'skips': 1}, telegram={'poll_count': 19823}. Reality check: all 3 log files present, formats matched plan exactly.
