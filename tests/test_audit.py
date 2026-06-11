@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts" / "audit"))
 import audit_lib
 import collect_token_cost
+import collect_maintenance
 
 REPO = Path(__file__).parent.parent
 
@@ -57,6 +58,36 @@ def test_split_sections_ignores_fenced_headings():
     md = "## Real\ntext\n```bash\n## not a heading\n```\nmore\n"
     names = [s[0] for s in collect_token_cost.split_sections(md)]
     assert names == ["(preamble)", "Real"]
+
+SAMPLE_LOG = """abc1|2026-06-10|fix: hnsw corruption repair in nightly cron
+scripts/mempalace-repair-now.sh
+
+def2|2026-06-09|feat: telegram inline button
+features/telegram-gateway/bot.py
+
+ghi3|2026-06-08|docs: session-end notes
+HANDOFF.md
+"""
+
+def test_parse_git_log():
+    commits = collect_maintenance.parse_log(SAMPLE_LOG)
+    assert len(commits) == 3
+    assert commits[0] == ("abc1", "2026-06-10",
+                          "fix: hnsw corruption repair in nightly cron",
+                          ["scripts/mempalace-repair-now.sh"])
+
+def test_classify_maintenance():
+    assert collect_maintenance.is_maintenance("fix: hnsw corruption repair") is True
+    assert collect_maintenance.is_maintenance("feat: telegram inline button") is False
+    assert collect_maintenance.is_maintenance("repair cron dedup") is True
+
+def test_aggregate_by_component():
+    comps = audit_lib.load_components(REPO / "scripts/audit/components.json")
+    agg = collect_maintenance.aggregate(comps, collect_maintenance.parse_log(SAMPLE_LOG))
+    assert agg["mempalace"]["commits"] == 1
+    assert agg["mempalace"]["maintenance_commits"] == 1
+    assert agg["telegram"]["maintenance_commits"] == 0
+
 
 # Integration test: intentionally coupled to the live manifest's routing-policy entry.
 def test_map_sections_to_components():

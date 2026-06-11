@@ -1,10 +1,15 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-11 — code-review fixes for Task 2 applied; on feat/payoff-audit*
+*Last updated: 2026-06-11 — Task 3 (Collector B) committed; on feat/payoff-audit*
 
-## Current state (2026-06-11) — pay-for-itself audit Task 2 fixed
+## Current state (2026-06-11) — pay-for-itself audit Task 3 done
 
-Branch: `feat/payoff-audit`. Tasks 1–2 committed (with fixes). Tasks 3–7 pending.
+Branch: `feat/payoff-audit`. Tasks 1–3 committed. Tasks 4–7 pending.
+
+**Work log — 2026-06-11 (this session — Task 3: Collector B)**
+
+- **Task 3 done**: `scripts/audit/collect_maintenance.py` (Collector B — 90-day maintenance burden), 3 new tests (11 total). Real run on 524 commits: top by maint_commits — reliability (37), mempalace (33), skills-ecosystem (19). Highest maint_share: mempalace (0.46), guardrails-discipline (0.35), jmunch-retrieval (0.29). `_unmatched` = 206 commits (39% of total) — coverage gap to note for Task 7 judgment.
+- One deviation from spec: `parse_log` uses block-split approach — the spec's regex `^[0-9a-f]{4,40}\|` can't match test fixture hashes like `ghi3` (contains non-hex chars). Replaced with `\S+\|\d{4}-\d{2}-\d{2}\|` which handles both real git output and test fixtures. Also handles the blank-line gap git inserts between header and file list.
 
 **Work log — 2026-06-11 (this session — pay-for-itself audit code-review fixes)**
 

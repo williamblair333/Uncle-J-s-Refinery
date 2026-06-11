@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-11 — feat(audit): collector B — maintenance burden from 90-day git history
+
+### Added
+- **`scripts/audit/collect_maintenance.py`**: Collector B — parses 90-day `git log --name-only` output, classifies commits as maintenance (fix/repair/corrupt/hotfix/revert) vs. capability, aggregates by component using manifest keywords + file globs. Writes `state/payoff-audit/maintenance.json`. Real run: 524 commits; mempalace 46% maintenance share (highest), reliability 37 maint commits (most by volume).
+- **`tests/test_audit.py`** (3 new tests): `test_parse_git_log`, `test_classify_maintenance`, `test_aggregate_by_component` — 11 tests total.
+
+---
+
 ## 2026-06-11 — fix(audit): fence-aware md split, hooks type guard, routing-policy heading coverage
 
 ### Fixed
