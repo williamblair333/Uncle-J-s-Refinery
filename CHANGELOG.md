@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-11 — fix(audit): point benefits collector at live palace DB + zero-plausibility guard
+
+### Fixed
+- **`scripts/audit/collect_benefits.py`**: DB path corrected from stale stub `~/.mempalace/chroma.sqlite3` (188KB, May 25, 0 embeddings) to live palace `~/.mempalace/palace/chroma.sqlite3` (~315K embeddings rows). Added zero-plausibility guard: a readable-but-empty DB goes to `missing[]` rather than reporting a confident `embeddings_rows: 0` to the scorecard.
+- **`tests/test_audit.py`**: Added `test_mempalace_counts_missing_db` — 13 tests total, all pass.
+
+---
+
 ## 2026-06-11 — feat(audit): collector C — benefit counters (guards, retrieval savings, palace size)
 
 ### Added

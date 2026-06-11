@@ -5,7 +5,7 @@ is listed in `missing` — explicit gaps, no guesses.
 Sources:
   1. state/hook-blocks.log                  -> guard catches (guardrails-discipline)
   2. ~/.code-index/_savings.json            -> jcodemunch tokens_saved (total_tokens_saved key)
-  3. MemPalace SQLite (~/.mempalace/chroma.sqlite3) -> embedding row count (read-only)
+  3. MemPalace SQLite (~/.mempalace/palace/chroma.sqlite3) -> embedding row count (read-only)
 """
 import re
 import sqlite3
@@ -73,11 +73,13 @@ def main():
     else:
         missing.append("~/.code-index tokens_saved")
 
-    # Real path: ~/.mempalace/chroma.sqlite3 (not chroma/chroma.sqlite3)
-    db = HOME / ".mempalace/chroma.sqlite3"
+    # Live palace (verified 2026-06-11). ~/.mempalace/chroma.sqlite3 is a stale stub — do not use.
+    db = HOME / ".mempalace/palace/chroma.sqlite3"
     mp = mempalace_counts(db)
-    if mp:
-        result["components"]["mempalace"] = mp
+    if mp and mp["embeddings_rows"] > 0:
+        result["components"]["mempalace"] = {**mp, "db_path": str(db)}
+    elif mp:  # readable but empty — suspicious for a live palace; flag, don't report a confident 0
+        missing.append(f"{db}: readable but 0 embeddings — likely wrong/stale DB, verify path")
     else:
         missing.append(str(db))
 

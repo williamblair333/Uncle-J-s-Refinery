@@ -115,3 +115,6 @@ def test_count_hook_blocks():
     assert counts["grep-guard"] == 2
     assert counts["edit-surface-guard"] == 1
     assert counts["_unparsed"] == 1
+
+def test_mempalace_counts_missing_db(tmp_path):
+    assert collect_benefits.mempalace_counts(tmp_path / "nope.sqlite3") is None
