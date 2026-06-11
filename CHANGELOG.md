@@ -4,6 +4,7 @@
 
 ## Phase 2 — Accuracy Instrumentation
 
+- **Task 2**: `scripts/bench/seed_probes.py` — by-construction ground-truth probe seeder; samples live palace drawers via chromadb read-only, extracts distinctive phrases deterministically, emits `scripts/bench/probes.jsonl` (25 seed probes checked in). `recall_lib.load_probes` amended with line-number context in JSON parse errors and named-duplicate reporting. 4 new tests appended (total 11 in `tests/test_recall_bench.py`).
 - **Task 1**: `scripts/bench/recall_lib.py` — pure stdlib recall@k + probe-schema functions; CI-testable with `pip install pytest` only. 7 tests in `tests/test_recall_bench.py`.
 
 ---

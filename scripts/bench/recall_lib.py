@@ -48,16 +48,22 @@ def validate_probe(p) -> None:
 
 def load_probes(path):
     probes = []
-    for line in Path(path).read_text().splitlines():
+    for lineno, line in enumerate(Path(path).read_text().splitlines(), 1):
         line = line.strip()
         if not line:
             continue
-        p = json.loads(line)
+        try:
+            p = json.loads(line)
+        except ValueError as exc:
+            raise ProbeError(f"line {lineno}: invalid JSON — {exc}") from exc
         validate_probe(p)
         probes.append(p)
     ids = [p["id"] for p in probes]
-    if len(ids) != len(set(ids)):
-        raise ProbeError("duplicate probe ids in file")
+    seen, dups = set(), set()
+    for i in ids:
+        (dups if i in seen else seen).add(i)
+    if dups:
+        raise ProbeError(f"duplicate probe ids: {sorted(dups)}")
     return probes
 
 

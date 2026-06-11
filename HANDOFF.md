@@ -4,6 +4,10 @@
 
 ## Current state (2026-06-11) — Improvement Program Phase 1 closed
 
+**Work log — Phase 2 Task 2 (feat/phase2-bench)**
+- `scripts/bench/seed_probes.py` written — by-construction ground-truth probe seeder. Samples palace via chromadb read-only (deterministic evenly-spaced offsets), extracts first all-content-word 4-gram from each drawer's text. 25 probes written to `scripts/bench/probes.jsonl` (checked in). `recall_lib.load_probes` amended: JSON parse errors now include line number, duplicate-id error now names the duplicates. 4 new tests pass on both venv (3.11) and system python3 (3.13.5); total 11 tests.
+- Note: seed-0001 expect is `?::0` (drawer metadata lacked source_file) — 1 drawer had empty metadata; all others resolved normally.
+
 **Work log — Phase 2 Task 1 (feat/phase2-bench)**
 - Created `scripts/bench/__init__.py` + `scripts/bench/recall_lib.py` (pure stdlib recall@k + probe-schema functions); 7 tests in `tests/test_recall_bench.py`, passing on both venv (3.11) and system python3.
 
