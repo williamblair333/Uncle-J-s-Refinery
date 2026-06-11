@@ -106,3 +106,44 @@ def test_seeder_skips_unsatisfiable_sourceless_drawer_keys():
     # (a probe expecting "?::N" can never be satisfied by any retrieval).
     assert recall_lib.drawer_key("", 0).startswith("?::")
     assert not recall_lib.drawer_key("/x/a.txt", 0).startswith("?::")
+
+
+import run_recall_bench
+
+
+def test_keys_from_hits_uses_full_path_and_chunk():
+    hits = [
+        {"_source_file_full": "/x/a.txt", "_chunk_index": 2},
+        {"_source_file_full": "/y/b.md", "_chunk_index": None},
+        {"source_file": "c.txt"},  # fallback: only basename present
+    ]
+    keys = run_recall_bench.keys_from_hits(hits)
+    assert keys == ["a.txt::2", "b.md::0", "c.txt::0"]
+
+
+def test_score_probes_with_fake_searcher():
+    probes = [
+        {"id": "p1", "query": "find a", "expect": ["a.txt::0"], "origin": "seed"},
+        {"id": "p2", "query": "find z", "expect": ["z.txt::0"], "origin": "seed"},
+    ]
+
+    def fake_search(query, k):
+        if "a" in query:
+            return [{"_source_file_full": "/d/a.txt", "_chunk_index": 0}]
+        return [{"_source_file_full": "/d/x.txt", "_chunk_index": 0}]
+
+    per_probe = run_recall_bench.score_probes(probes, fake_search, k=5)
+    assert per_probe[0]["recall"] == 1.0
+    assert per_probe[1]["recall"] == 0.0
+    assert per_probe[0]["retrieved"] == ["a.txt::0"]
+
+
+def test_build_result_payload_shape():
+    per_probe = [{"id": "p1", "recall": 1.0, "k": 5, "expect": ["a::0"], "retrieved": ["a::0"]}]
+    payload = run_recall_bench.build_payload(per_probe, label="chroma-baseline",
+                                             k=5, palace="/p", n_probes_loaded=1)
+    assert payload["label"] == "chroma-baseline"
+    assert payload["k"] == 5
+    assert payload["aggregate"]["recall_at_k_mean"] == 1.0
+    assert payload["per_probe"][0]["id"] == "p1"
+    assert "timestamp" in payload
