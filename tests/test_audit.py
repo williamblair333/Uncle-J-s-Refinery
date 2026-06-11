@@ -151,3 +151,29 @@ def test_count_corrections_parses_jsonl_and_buckets_by_component():
     assert counts["mempalace"] == 2
     assert counts["telegram"] == 1
     assert counts["_unparsed"] == 1
+
+
+def test_last_run_age_days_from_iso():
+    import collect_benefits, datetime
+    now = datetime.datetime(2026, 6, 11, tzinfo=datetime.timezone.utc)
+    age = collect_benefits.iso_age_days("2026-06-09T13:03:17Z", now=now)
+    assert age == 2.0
+    assert collect_benefits.iso_age_days("garbage", now=now) is None
+
+
+def test_count_log_lines_matching():
+    import collect_benefits
+    log = ("[2026-06-11 08:20:01] Polling Telegram (offset=1)\n"
+           "[2026-06-11 08:20:01] getUpdates returned ok=false\n"
+           "[2026-06-11 08:21:01] Polling Telegram (offset=2)\n")
+    assert collect_benefits.count_matching(log, "Polling Telegram") == 2
+
+
+def test_count_dreaming_runs_vs_skips():
+    import collect_benefits
+    log = ("2026-06-10T13:03:17Z skip: no traces since ...\n"
+           "2026-06-09T02:00:00Z dreamed: wrote 3 playbooks\n"
+           "2026-06-08T02:00:00Z skip: no traces\n")
+    stats = collect_benefits.dreaming_run_stats(log)
+    assert stats["skips"] == 2
+    assert stats["runs"] == 1
