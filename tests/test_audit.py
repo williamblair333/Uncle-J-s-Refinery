@@ -43,3 +43,20 @@ def test_match_components_logic_inline_fixture():
                                       files=["scripts/mempalace-repair-now.sh"]) == {"x"}
     assert audit_lib.match_components(fixture, subject="docs: typo",
                                       files=["README.md"]) == set()
+
+
+import collect_token_cost
+
+def test_split_md_sections():
+    md = "# Title\nintro\n## Alpha\naaaa\n## Beta\nbbbb\nbbbb\n"
+    sections = collect_token_cost.split_sections(md)
+    names = [s[0] for s in sections]
+    assert names == ["(preamble)", "Alpha", "Beta"]
+    assert sections[2][1].count("bbbb") == 2
+
+def test_map_sections_to_components():
+    comps = audit_lib.load_components(REPO / "scripts/audit/components.json")
+    out = collect_token_cost.map_sections(comps,
+        [("Retrieval Stack Routing Policy", "x" * 400), ("Unknown Heading", "y" * 400)])
+    assert out["routing-policy"]["est_tokens"] == 100
+    assert out["_unmapped"]["est_tokens"] == 100

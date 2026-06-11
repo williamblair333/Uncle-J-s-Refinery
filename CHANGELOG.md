@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-11 — feat(audit): collector A — always-on token cost per component
+
+### Added
+- **`scripts/audit/collect_token_cost.py`**: Collector A — measures per-session static token cost from global + project CLAUDE.md (split by `##` heading, mapped to components), settings.json hook strings, and skill `description` frontmatter. Unmapped sections land in `_unmapped`. Writes `state/payoff-audit/token-cost.json`.
+- **`tests/test_audit.py`** (2 new tests): `test_split_md_sections`, `test_map_sections_to_components` — 7 tests total.
+
+---
+
 ## 2026-06-11 — feat(audit): component manifest + shared lib for pay-for-itself audit
 
 ### Added
