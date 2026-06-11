@@ -4,6 +4,7 @@
 
 ## Phase 2 — Accuracy Instrumentation
 
+- **Task 6**: `collect_benefits.py` — `iso_age_days`, `count_matching`, `dreaming_run_stats` added; dreaming block (last-run age + run/skip counts) + telegram block (poll count) wired into `main()`; ralph gap surfaced explicitly in `missing`. 3 new tests, suite now 19.
 - **Task 2**: `scripts/bench/seed_probes.py` — by-construction ground-truth probe seeder; samples live palace drawers via chromadb read-only, extracts distinctive phrases deterministically, emits `scripts/bench/probes.jsonl` (25 seed probes checked in). `recall_lib.load_probes` amended with line-number context in JSON parse errors and named-duplicate reporting. 4 new tests appended (total 11 in `tests/test_recall_bench.py`).
 - **Task 1**: `scripts/bench/recall_lib.py` — pure stdlib recall@k + probe-schema functions; CI-testable with `pip install pytest` only. 7 tests in `tests/test_recall_bench.py`.
 

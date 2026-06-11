@@ -4,6 +4,9 @@
 
 ## Current state (2026-06-11) — Improvement Program Phase 1 closed
 
+**Work log — Phase 2 Task 6 (feat/phase2-bench)**
+- `collect_benefits.py` gains `iso_age_days`, `count_matching`, `dreaming_run_stats`; dreaming block (last_run_age_days + runs/skips) + telegram block (poll_count) wired into `main()`; ralph gap added to `missing` explicitly. 3 new tests; suite 19 passed on both pythons. Real run: dreaming={'last_run_age_days': 1.0, 'runs': 0, 'skips': 1}, telegram={'poll_count': 19823}. Reality check: all 3 log files present, formats matched plan exactly.
+
 **Work log — Phase 2 Task 2 (feat/phase2-bench)**
 - `scripts/bench/seed_probes.py` written — by-construction ground-truth probe seeder. Samples palace via chromadb read-only (deterministic evenly-spaced offsets), extracts first all-content-word 4-gram from each drawer's text. 25 probes written to `scripts/bench/probes.jsonl` (checked in). `recall_lib.load_probes` amended: JSON parse errors now include line number, duplicate-id error now names the duplicates. 4 new tests pass on both venv (3.11) and system python3 (3.13.5); total 11 tests.
 - Note: seed-0001 expect is `?::0` (drawer metadata lacked source_file) — 1 drawer had empty metadata; all others resolved normally.

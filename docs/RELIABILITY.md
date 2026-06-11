@@ -91,6 +91,19 @@ MemPalace uses chromadb's embedded Rust HNSW bindings for vector search. The bin
 
 Run `./healthcheck.sh --fixall` to detect and auto-fix all repairable issues in one pass.
 
+## Usage counters (Phase 2 audit gap fill)
+
+`scripts/audit/collect_benefits.py` now reads dreaming and telegram logs to fill rows that were `missing` in the Phase 1 scorecard:
+
+| Source | File | Metric |
+|--------|------|--------|
+| Dreaming last-run | `state/dreaming-last-run.txt` | `last_run_age_days` (calendar days since last run) |
+| Dreaming log | `state/dreaming.log` | `runs` (lines containing `dreamed:`), `skips` (lines containing `skip:`) |
+| Telegram gateway | `state/telegram-gateway.log` | `poll_count` (lines containing `Polling Telegram`) |
+| Ralph | no log in `state/` | explicit `missing` entry — never guessed |
+
+Ralph has no run log in `state/` (verified 2026-06-11). The gap is surfaced explicitly in `benefits.json["missing"]`; it is never silently omitted.
+
 ## What each component buys you
 
 ### prior-art-check
