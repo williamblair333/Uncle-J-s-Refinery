@@ -1,8 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — DIRECTION CHANGE: replacing mempalace with memweave. Phase 1 (memweave offline standup) DONE.*
+*Last updated: 2026-06-12 — Replacing mempalace with memweave. Phase 1 (offline standup) + Phase 2 first increment (corpus exporter, proven on real data) DONE.*
 
-## Current state (2026-06-12) — memweave Phase 1 complete (branch `feat/phase2-memweave-offline-standup`)
+## Current state (2026-06-12) — memweave Phase 2 first increment (branch `feat/phase2-memweave-corpus-exporter`)
+
+**Phase 1 merged to main (PR #45, commit `d807ae1`).** Phase 2 corpus path now built + proven on
+real Refinery transcripts.
+
+**Phase 2 increment DONE (this branch):**
+- `scripts/memweave/export_transcripts.py` — `~/.claude/projects/<project>/*.jsonl` → per-session
+  markdown. Keeps human + assistant **prose**; drops tool_use/tool_result/thinking/metadata +
+  `<system-reminder>` spans (the noise that killed mempalace mining). 12 unit tests.
+- `scripts/memweave/index_workspace.py` — index a workspace with the ONNX provider + query it.
+- **Bug found+fixed by running on real data (not the toy PoC):** workspace must NOT sit under a
+  `.memweave`-named dir — memweave's `list_memory_files` excludes any path containing `.memweave`
+  in its parts → 0 files indexed. **Default workspace = `~/.uncle-j-memory`** (regression test added).
+- **Proof:** 40-session slice → 28 md files → **1235 chunks indexed offline (27.6s)**; real queries
+  retrieve correct specific memories on the pure semantic path (bm25=0.000).
+- Run: `.venv-memweave/bin/python scripts/memweave/export_transcripts.py --project=-opt-proj-Uncle-J-s-Refinery --limit 40`
+  then `.venv-memweave/bin/python scripts/memweave/index_workspace.py --query "..."`.
+
+**Phase 2 REMAINDER (next):** full-corpus load (1347 transcripts / 373 MB, or scope to this
+project's 857) + a freshness cron to keep the store current — **both are infrastructure → own
+pre-mortem.** The live store at `~/.uncle-j-memory` currently holds only the 40-session slice.
+
+---
+
+## Prior — memweave Phase 1 complete (branch `feat/phase2-memweave-offline-standup`, MERGED PR #45)
 
 **Bill's call, executed: get rid of mempalace, replace it with memweave.** The recall A/B against
 ChromaDB's 0.18 is **abandoned** — mempalace is done; we no longer spend time benchmarking it. The
