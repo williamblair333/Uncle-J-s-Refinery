@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-06-12 — Phase 2 Task 2.7 + memory-backend eval (M1 dead / M2 pass)
+
+### Changed
+- **`scripts/bench/recall_lib.py`** — `recall_at_k` now dedups retrieved keys to **distinct drawers** (preserving first-seen rank order) **before** the top-k cut, instead of `set(retrieved_keys[:k])` (cut-then-dedup). Without this, giant mined files whose many chunks collapse to one drawer key monopolize the top-k and push the real target past the cut. Backward-compatible (existing tests use all-distinct inputs).
+- **`tests/test_recall_bench.py`** — two new tests pin the mega-file regression and the over-credit guard. 23/23 pass under system + venv python. code-review: APPROVE, 0 findings.
+
+### Findings (review/memory-backend-eval.md M1/M2; not code, captured in memory)
+- **M1 — fix MemPalace in place (HNSW ef-tuning) = NO-GO.** The 5 main vector failures throw "ef or M is too small" at **every k incl. k=1** while 20 other queries succeed at k=5 — so ef is not globally short; it's **query-region HNSW corruption** ef-tuning can't touch. The fix channel `collection.modify(configuration=...)` is **broken at the pinned chromadb 1.5.8** (`Schema is missing defaults.float_list.vector_index`), so mempalace's own `num_threads` pin is silently dead too. 2/7 failures are a separate uint64 bug. Evidence: `scripts/bench/_ef_experiment.py` (untracked).
+- **M2 — memweave crash-recovery = PASS.** On a copy of our real `memory/*.md`: deleted the entire SQLite index → byte-identical rebuild from `.md` → identical results, source untouched. Proven fully **offline with our on-disk all-MiniLM-L6-v2 (ONNX, onnxruntime+tokenizers — no torch/Ollama/docker/network)**; hybrid search 4/5 dead-on.
+- **Task 2.7 metric fix is correct but the live recall stays 0.0** — empirically confirmed every probe fails to retrieve its own source file (near-duplicate transcripts + garbage queries). The blocker is **broken-by-construction probes (review M0.5), not the metric.** A real recall A/B needs the probe set rebuilt.
+
+---
+
 ## 2026-06-12 — Phase 2 Task 2.6: probe re-diversification (one probe per drawer)
 
 ### Changed

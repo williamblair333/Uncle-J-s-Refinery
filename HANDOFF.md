@@ -1,5 +1,24 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-12 — MemPalace verdict: DONE. M1 in-place fix dead, M2 memweave passed, Task 2.7 metric fixed*
+
+## Current state (2026-06-12) — memory-backend decision resolved (branch `feat/phase2-task2.7-distinct-drawer-recall`)
+
+Bill's standing call: "do the in-place fix; if it doesn't work we're done with MemPalace." **It doesn't work. MemPalace is done; memweave is the target.** Full read of `review/memory-backend-eval.md` + `deterministic-vs-naive-memory.md` (the latter is fact-checked-wrong; correction banner). Findings in memory `[[project_memory-backend-m1-m2]]`.
+
+- **M1 (fix MemPalace in place) = NO-GO, proven.** The 5 "ef or M too small" failures throw at **every k incl. k=1** (3-candidate over-fetch) while the other 20 queries succeed at k=5 (15 candidates) → ef is NOT globally short; it's **query-region HNSW corruption** ef-tuning can't fix. The clean fix channel `collection.modify(configuration=...)` is **broken at the pinned chromadb 1.5.8** (`Schema is missing defaults.float_list.vector_index`) → mempalace's own `num_threads` pin is silently dead too. 2/7 failures are a separate uint64 bug. chromadb is pinned at 1.5.8 *for* the corruption workaround, so unpinning collides with it. Evidence: `scripts/bench/_ef_experiment.py` (untracked) + `state/recall-bench/results-chroma-ef128.json`.
+- **M2 (memweave crash-recovery) = PASS.** rm the entire SQLite index → byte-identical rebuild from `.md` → identical results, source untouched. **Proven fully offline** with our on-disk `all-MiniLM-L6-v2` (ONNX via onnxruntime+tokenizers — no torch/Ollama/docker/network). Hybrid search 4/5 dead-on. Harness: `/tmp/onnx_embedder.py` + `/tmp/mw_m2_real.py` (throwaway). memweave 0.2.1 caveat: it embeds at index() time regardless of `vector.enabled` → needs a real local embedder (ONNX path solves this).
+- **Task 2.7 DONE (this branch):** `recall_at_k` dedups to distinct drawers before the top-k cut. 23/23 tests green, code-review APPROVE. **But live recall is still 0.0** — empirically confirmed **every probe fails to retrieve its own source file** (near-duplicate transcripts + garbage queries). Metric fix is correct; the blocker is the **probe set (review M0.5)**, not the metric.
+
+**Next-session order:**
+1. **M0.5 / probe rebuild** (now the real gate for any recall A/B): drop high-entropy/generic queries (seed-0002 generic, seed-0003 random token), handle near-duplicate transcripts (accept any sibling containing the phrase OR curate distinct-fact probes), fix `?::0` slots. Until this lands, NO recall number (memweave OR mempalace) is trustworthy.
+2. **memweave recall A/B** — needs the conversation transcripts exported to markdown for memweave to index (the 20-file hand-memory corpus is too small). This is a migration-scope decision.
+3. **MCP wrapper** for memweave (ships none) — the adoption cost; build only after A/B confirms parity on our data.
+
+**Untracked in tree:** `scripts/bench/_ef_experiment.py` (M1 evidence), `scripts/bench/install-bench-cron.sh` (Task 8 stub).
+
+---
+
 *Last updated: 2026-06-12 — Phase 2 Task 2.6 done; diverse probes expose ChromaDB recall@5 = 0.0*
 
 ## Current state (2026-06-12) — Phase 2 Task 2.6 complete (branch `feat/phase2-task2.6-probe-diversity`)
