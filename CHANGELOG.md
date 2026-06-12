@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-12 — Phase 2 session-end: recall methodology decision (Option A)
+
+### Decided
+- The recall harness surfaced that the live `chroma-baseline` is not a clean ChromaDB measurement: chunk-level ground truth is unobservable (the `mempalace` upgrade in the uncommitted `uv.lock` strips `_source_file_full`/`_chunk_index`), and ChromaDB vector search fails on multiple probes (HNSW ef-too-small at 316k drawers) and silently falls back to BM25. Even chunk-agnostic file-level recall is only 8/25 = 0.32.
+- **Decision (Bill-delegated): Option A** — measure the stack as it actually runs. Re-key probes to drawer/file level (`::0`), make the BM25 fallback loud (record per-probe engine + a `vector_failure_rate`), and treat ChromaDB's vector failure at scale as the headline finding for the Task 9 backend memo. Execution deferred to next session.
+
+---
+
 ## 2026-06-12 — Phase 2 Task 3: recall benchmark harness
 
 ### Added

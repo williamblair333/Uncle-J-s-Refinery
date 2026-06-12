@@ -1,8 +1,30 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — Phase 2 Task 3 done: recall benchmark harness*
+*Last updated: 2026-06-12 — Phase 2 session end: Tasks 1–3 done; recall methodology decided (Option A)*
 
-## Current state (2026-06-12) — Phase 2 Task 3 complete
+## Current state (2026-06-12) — Phase 2 session end (Tasks 1–3 committed; methodology decided)
+
+Workspace returned to **main**. Phase 2 work lives on branch `feat/phase2-accuracy-instrumentation` (3 commits: `800bd13` recall_lib, `9572861` seeder+probes, `aa17d11` harness). 14 tests pass under CI-style system-python.
+
+**The single most important thing for next session:** the live `chroma-baseline` recall number (`0.04`) is **not a clean ChromaDB measurement**, and the prior Task-3 log below understates why. Three compounding issues, all verified from `state/recall-bench/results-chroma-baseline.json`:
+1. **Chunk identity is unobservable now.** The `mempalace` upgrade sitting in the **uncommitted `uv.lock`** (`f124bd2` → `7e45720`) makes `search_memories` strip `_source_file_full`/`_chunk_index`. Probes key ground truth as `file::N`; the harness can only ever see `file::0`. This is the root cause of most of the 0.04.
+2. **Even file-level recall is poor: 8/25 = 0.32.** Scoring chunk-agnostic (right *drawer*, ignore chunk), most distinctive-phrase queries still do not retrieve their own source drawer. Do **not** re-key to `::0` and report ~0.32 as a clean ChromaDB number.
+3. **The baseline is contaminated by a silent BM25 fallback.** ChromaDB vector search throws on several probes (HNSW ef-too-small at 316k drawers — the open `@kostadis` ef item) and the harness falls back to BM25 without recording it. So "chroma-baseline" is partly BM25.
+
+**Decision made this session (Bill delegated it): Option A — measure the stack as it actually runs.** Next session executes:
+- Re-key probes to drawer/file level (`::0`) and drop the malformed `seed-0001` (`?::0`); add the `if key.startswith("?::"): continue` seeder guard. (This is the queued **Task 2.5**.)
+- Make the BM25 fallback **loud**: tag each probe with the engine that served it and emit a `vector_failure_rate` in the payload. A re-keyed number is only citable alongside that rate.
+- Frame ChromaDB's vector failure at 316k drawers as the **headline finding** for the Task 9 backend memo — it's the strongest evidence for the turbovecdb/sqlite-vec evaluation.
+
+**Next-session task order:** Task 2.5 (re-key + loud fallback) → re-run baseline → Task 4 (runner; `state/` already gitignored) → **Tasks 5, 6, 7 are independent of the recall track** (correction ledger, dreaming/telegram usage counters, citation Stop-hook) and can run anytime → Task 8 (cron + CI + docs) → **Task 9 (backend memo — SWITCH TO FABLE; the single judgment step; no ChromaDB deletion without Bill's sign-off).**
+
+**Stack note:** the consequential `uv.lock` mempalace bump is **uncommitted** and is what changed `search_memories`' return shape. Decide whether to commit it (accept Option-A framing) or pin back before relying on the number.
+
+**Untouched in tree:** `uv.lock` (M), `scripts/bench/install-bench-cron.sh` (untracked — a Task 8 stub from a prior session).
+
+---
+
+## Prior state (2026-06-12) — Phase 2 Task 3 complete
 
 Branch: `feat/phase2-accuracy-instrumentation`.
 
