@@ -1,5 +1,44 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-12 — M0.5 probe rebuild DONE; first trustworthy recall number: ChromaDB recall@5 = 0.18*
+
+## Current state (2026-06-12) — M0.5 probe rebuild complete (branch `feat/phase2-m0.5-probe-rebuild`)
+
+The recall benchmark finally produces a **meaningful number**. The prior 0.0 was a broken-benchmark
+artifact, confirmed. **ChromaDB recall@5 = 0.1818** (4/22 hits) over clean, content-defined,
+engine-neutral ground truth.
+
+- **What landed (all TDD, 36/36 tests, code-review APPROVE):**
+  - `recall_lib.py`: `hit_at_k` (sibling-accept), `phrase_is_clean` (drops hash/uuid/random/dup-word
+    garbage queries), shared `_distinct_topk`.
+  - `seed_probes.py`: **sibling-set ground truth** — one read-only full scan computes, per phrase,
+    every drawer containing it as a contiguous **token run**. Distinctiveness gate (`--max-siblings`
+    4) + greedy **disjoint** acceptance → near-unique, one-cluster-per-probe. Boundary-word trim.
+    Curated `HAND_PHRASES` through the same scan. Re-seed is DELIBERATE (re-samples the live palace);
+    the committed `probes.jsonl` is the frozen A/B artifact.
+  - `run_recall_bench.py`: **per-probe subprocess isolation** (`--isolate`, default on) so a ChromaDB
+    hnswlib **SIGSEGV** is a recorded vector failure, not a dead run. `score_probes` → `hit_at_k`.
+    `--backend` forwarded into children (needed for the memweave A/B).
+  - `probes.jsonl`: 20 seed + 2 hand over 41 distinct drawers.
+- **The number (`state/recall-bench/results-chroma-m0_5.json`, gitignored):** recall@5 **0.1818**,
+  **vector_failure_rate 0.36** (8/22 → BM25), **1 SIGSEGV** (`"deleted entire SQLite index
+  byte-identical rebuild"` crashes hnswlib, exit -11). **Strongest Task 9 evidence yet:** even with
+  clean known-item ground truth, ChromaDB at 316k drawers barely retrieves (4/22), errors the vector
+  path on a third of probes, and outright crashes on one. Cite the number WITH the failure rate +
+  segfault (Option-A "stack as it runs" framing).
+
+**Next-session order (memweave migration is now unblocked):**
+1. **memweave recall A/B** — the gate is cleared. Needs the 316k transcripts exported to markdown
+   for memweave to index (migration-scope decision), then `run_recall_bench.py --label memweave
+   --backend memweave` (isolation + `--backend` forwarding already in place). Compare to the 0.18.
+2. **memweave MCP wrapper** (it ships none) — build only after A/B confirms parity on our data.
+3. Tasks 5–7 (correction ledger, usage counters, citation Stop-hook) are independent and can run
+   anytime; Task 8 (cron + CI test-bench).
+
+**Untracked in tree:** `scripts/bench/_ef_experiment.py` (M1 evidence), `scripts/bench/install-bench-cron.sh` (Task 8 stub). Throwaway harness `/tmp/m0_5_isolated.py` (superseded by the `--isolate` flag).
+
+---
+
 *Last updated: 2026-06-12 — MemPalace verdict: DONE. M1 in-place fix dead, M2 memweave passed, Task 2.7 metric fixed*
 
 ## Current state (2026-06-12) — memory-backend decision resolved (branch `feat/phase2-task2.7-distinct-drawer-recall`)
