@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-12 — Phase 2 Task 2: probe seeder (by-construction ground truth)
+
+### Added
+- **`scripts/bench/seed_probes.py`** — seeds `probes.jsonl` from live palace via read-only chromadb; `distinctive_phrase` + `build_probe_record` are stdlib-only and unit-tested.
+- **`scripts/bench/probes.jsonl`** — 25 by-construction seed probes (24/25 with real source-file keys; 1 diary-entry drawer has no `source_file`).
+- **`tests/test_recall_bench.py`** — 4 new tests for `seed_probes`; 11/11 passing.
+
+---
+
 ## 2026-06-12 — Phase 2 Task 1: recall_lib pure functions
 
 ### Added

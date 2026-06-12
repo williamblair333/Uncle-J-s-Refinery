@@ -1,10 +1,21 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — Phase 2 Task 1 done: recall_lib pure functions*
+*Last updated: 2026-06-12 — Phase 2 Task 2 done: probe seeder + probes.jsonl*
 
-## Current state (2026-06-12) — Phase 2 Task 1 complete
+## Current state (2026-06-12) — Phase 2 Task 2 complete
 
 Branch: `feat/phase2-accuracy-instrumentation`.
+
+**Work log — 2026-06-12 (Task 2: probe seeder)**
+
+- Created `scripts/bench/seed_probes.py` — reads live palace via chromadb PersistentClient (read-only), extracts distinctive 4-word phrases, writes `probes.jsonl`. `--append` preserves hand-written probes across re-seeds.
+- Generated `scripts/bench/probes.jsonl` — 25 seed probes. 24/25 have real basename::chunk keys; 1 diary-entry drawer has no `source_file` (expected, not a bug).
+- Appended 4 tests to `tests/test_recall_bench.py` — 11/11 passing.
+- TDD: red (ModuleNotFoundError) → green (11/11) → committed.
+
+**Next task:** Task 3 — recall benchmark harness.
+
+---
 
 **Work log — 2026-06-12 (Task 1: recall_lib pure functions)**
 

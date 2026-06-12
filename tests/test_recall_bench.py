@@ -63,3 +63,40 @@ def test_load_probes_roundtrip(tmp_path):
                  '{"id":"p2","query":"q2","expect":["b::0"],"origin":"hand"}\n')
     probes = recall_lib.load_probes(f)
     assert [p["id"] for p in probes] == ["p1", "p2"]
+
+
+# append to tests/test_recall_bench.py
+import seed_probes
+
+
+def test_distinctive_phrase_picks_rare_multiword_run():
+    # 'quantum flux capacitor' is rare; stopwords/common words avoided.
+    text = ("the the the and of to a in\n"
+            "quantum flux capacitor calibration sequence\n"
+            "the and of to in a the and")
+    phrase = seed_probes.distinctive_phrase(text, n_words=4)
+    assert phrase is not None
+    assert "quantum" in phrase
+    # phrase is a contiguous run drawn from the text
+    assert phrase in " ".join(text.split())
+
+
+def test_distinctive_phrase_none_for_too_short():
+    assert seed_probes.distinctive_phrase("hi there", n_words=4) is None
+
+
+def test_distinctive_phrase_is_deterministic():
+    text = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda"
+    a = seed_probes.distinctive_phrase(text, n_words=4)
+    b = seed_probes.distinctive_phrase(text, n_words=4)
+    assert a == b
+
+
+def test_build_probe_record_shape():
+    rec = seed_probes.build_probe_record(
+        idx=2, query="quantum flux capacitor calibration",
+        source_file="/x/notes.md", chunk_index=1)
+    assert rec["id"] == "seed-0002"
+    assert rec["query"] == "quantum flux capacitor calibration"
+    assert rec["expect"] == ["notes.md::1"]
+    assert rec["origin"] == "seed"
