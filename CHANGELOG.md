@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-12 — Phase 2 Task 3: recall benchmark harness
+
+### Added
+- **`scripts/bench/run_recall_bench.py`** — in-process recall@k harness; scores `probes.jsonl` against live palace via `search_memories`; BM25 fallback for ChromaDB 1.5.8 HNSW compat bugs; outputs `state/recall-bench/results-<label>.json`.
+- **`tests/test_recall_bench.py`** — 3 new tests (keys_from_hits, score_probes with fake searcher, build_payload shape); 14/14 passing.
+
+### Baseline result
+- `chroma-baseline k=5`: mean=0.04, perfect=1/25, zero=24. Zeros are chunk-index mismatch (right file retrieved, wrong chunk in expect key) — probe cleanup in Task 2.5.
+
+---
+
 ## 2026-06-12 — Phase 2 Task 2: probe seeder (by-construction ground truth)
 
 ### Added

@@ -1,19 +1,21 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — Phase 2 Task 2 done: probe seeder + probes.jsonl*
+*Last updated: 2026-06-12 — Phase 2 Task 3 done: recall benchmark harness*
 
-## Current state (2026-06-12) — Phase 2 Task 2 complete
+## Current state (2026-06-12) — Phase 2 Task 3 complete
 
 Branch: `feat/phase2-accuracy-instrumentation`.
 
-**Work log — 2026-06-12 (Task 2: probe seeder)**
+**Work log — 2026-06-12 (Task 3: recall benchmark harness)**
 
-- Created `scripts/bench/seed_probes.py` — reads live palace via chromadb PersistentClient (read-only), extracts distinctive 4-word phrases, writes `probes.jsonl`. `--append` preserves hand-written probes across re-seeds.
-- Generated `scripts/bench/probes.jsonl` — 25 seed probes. 24/25 have real basename::chunk keys; 1 diary-entry drawer has no `source_file` (expected, not a bug).
-- Appended 4 tests to `tests/test_recall_bench.py` — 11/11 passing.
-- TDD: red (ModuleNotFoundError) → green (11/11) → committed.
+- Created `scripts/bench/run_recall_bench.py` — in-process recall@k harness. Scores `probes.jsonl` against live palace via `mempalace.searcher.search_memories`. BM25 fallback adapted for two ChromaDB 1.5.8 bugs (HNSW ef-too-small, np.uint64 pin-thread failure). Pure functions (keys_from_hits, score_probes, build_payload) are injected-searcher-testable.
+- Appended 3 tests to `tests/test_recall_bench.py` — 14/14 passing.
+- Ran baseline: `chroma-baseline k=5` → mean=0.04, perfect=1/25, zero=24. All 24 zeros are chunk-index mismatch (probe expects `filename::N`, harness sees `filename::0` because `_chunk_index` stripped by `_finalize_candidate_hits`). Harness is correct; probe set needs cleanup (Task 2.5).
+- Key finding: `_source_file_full` and `_chunk_index` are stripped from `search_memories` results by `_finalize_candidate_hits`; harness uses `source_file` basename with chunk=0 fallback.
 
-**Next task:** Task 3 — recall benchmark harness.
+**Next task:** Task 2.5 — probe cleanup (drop seed-0001 `?::0`, normalize chunk indices to `::0`, add hand probes).
+
+**Next task after 2.5:** Task 4 — gitignore + bench runner script (already partly done — `state/` gitignored).
 
 ---
 
