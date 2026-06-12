@@ -1,8 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — Replacing mempalace with memweave. Phases 1, 2, 2b-1 DONE & merged. memweave holds the full this-project memory (5742 chunks, offline).*
+*Last updated: 2026-06-12 — Replacing mempalace with memweave. Phases 1, 2, 2b-1, 3a DONE & merged. memweave is a usable standalone memory system (ingest + retrieve, fully offline).*
 
-## Current state (2026-06-12) — memweave Phase 2b-1 (full corpus loaded; branch `feat/phase2b-memweave-full-load`)
+## Current state (2026-06-12) — memweave usable end-to-end (branch `feat/phase3a-memweave-search-cli`)
+
+**Merged to main:** Phase 1 (PR #45 provider), Phase 2 (PR #46 exporter), Phase 2b-1 (PR #47 full
+load). **This branch:** the read-only search CLI.
+
+memweave now does both halves offline:
+- **Ingest:** `scripts/memweave/sync_memory.sh` (flock-guarded export+index). Store `~/.uncle-j-memory`
+  = 399 md files / 5742 chunks / 153 MB.
+- **Retrieve:** `scripts/memweave/mw_search.py "query" [--k N] [--json]` — fast query-only path (no
+  re-index). The stable entry point for harness/hook integration. 22 memweave tests green.
+
+**NEXT (recommended order — from here it gets into live-infra / destructive territory):**
+1. **Phase 2b-2 — freshness cron + Stop-hook** (scheduled/unattended infra → own pre-mortem):
+   schedule `sync_memory.sh` (flock already in it) + a Stop-hook to ingest the just-ended session.
+   Decide whether to widen to the full 1347-transcript cross-project corpus.
+2. **Phase 3b — harness wiring**: repoint CLAUDE.md memory routing from mempalace to `mw_search.py`
+   (CLAUDE.md = Critical surface; do close to Phase 4 so routing and decommission land together).
+3. **Phase 4 — decommission mempalace** (DESTRUCTIVE, pre-mortem + **Bill sign-off required**): 7
+   mempalace + 3 turbovecdb crons, MCP server, `scripts/mempalace-*.sh` + root `mempalace-*.{sh,py}`,
+   healthcheck probes, session-start autofix, Stop-hook mining, CLAUDE.md rules, then ~55 GB palace data.
+
+---
+
+## Prior — memweave Phase 2b-1 (full corpus loaded; branch `feat/phase2b-memweave-full-load`, MERGED PR #47)
 
 **Merged to main:** Phase 1 (PR #45, offline ONNX provider), Phase 2 (PR #46, corpus exporter).
 **This branch:** the full this-project corpus load + the ingest seam.
