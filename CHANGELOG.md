@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-06-12 — memweave Phase 3a: read-only memory search CLI
+
+memweave is now a usable standalone memory system end to end (ingest + retrieve).
+
+### Added
+- **`scripts/memweave/mw_search.py`** — fast, **query-only** memory search over `~/.uncle-j-memory`
+  (opens the existing index, searches via the offline ONNX provider; no `index()`, no writes — unlike
+  `index_workspace.py`). Human + `--json` output, `--k`/`--min-score`/`--workspace`. Guards a missing
+  index with a clear message + nonzero exit. The stable retrieval entry point for Phase-3 harness/hook
+  integration.
+- **`tests/test_memweave_search.py`** — 3 tests (model-gated query-path integration + missing-store
+  + empty-query guards). Full memweave suite now 22 green.
+
+---
+
 ## 2026-06-12 — memweave Phase 2b (increment 1): sync wrapper + full this-project corpus load
 
 memweave now holds the full this-project memory. Added the ingest seam the freshness cron and
