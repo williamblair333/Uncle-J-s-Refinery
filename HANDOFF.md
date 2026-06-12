@@ -4,7 +4,7 @@
 
 ## Current state (2026-06-12) — Phase 2 session end (Tasks 1–3 committed; methodology decided)
 
-Workspace returned to **main**. Phase 2 work lives on branch `feat/phase2-accuracy-instrumentation` (3 commits: `800bd13` recall_lib, `9572861` seeder+probes, `aa17d11` harness). 14 tests pass under CI-style system-python.
+Phase 2 Tasks 1–3 are **merged to main** via PR #40 (merge commit `b9c32e3`; CI 6/6 green; branch `feat/phase2-accuracy-instrumentation` deleted). 14 tests pass under CI-style system-python. Next session branches fresh from main for Task 2.5 onward.
 
 **The single most important thing for next session:** the live `chroma-baseline` recall number (`0.04`) is **not a clean ChromaDB measurement**, and the prior Task-3 log below understates why. Three compounding issues, all verified from `state/recall-bench/results-chroma-baseline.json`:
 1. **Chunk identity is unobservable now.** The `mempalace` upgrade sitting in the **uncommitted `uv.lock`** (`f124bd2` → `7e45720`) makes `search_memories` strip `_source_file_full`/`_chunk_index`. Probes key ground truth as `file::N`; the harness can only ever see `file::0`. This is the root cause of most of the 0.04.
