@@ -2,6 +2,44 @@
 
 ---
 
+## 2026-06-12 — Phase 2 M0.5: probe rebuild → first trustworthy recall number (0.18)
+
+Rebuilt the recall probe set so the number is finally meaningful. The prior 0.0 was a
+**broken-benchmark artifact** (unembeddable garbage queries + exact-one-file ground truth over
+near-duplicate transcripts), confirmed. Clean, content-defined, engine-neutral ground truth now
+yields **ChromaDB recall@5 = 0.1818** (4/22 hits), vector_failure_rate 0.36 (8/22 → BM25), and —
+new evidence — **1 probe SIGSEGVs hnswlib** at 316k drawers.
+
+### Added
+- **`scripts/bench/recall_lib.py`** — `hit_at_k` (sibling-accept known-item: 1.0 if ANY expected
+  drawer key is in the top-k DISTINCT drawers); `phrase_is_clean`/`_token_is_garbage` (reject
+  hash/uuid/random-token + adjacent-duplicate-word queries); `_distinct_topk` factored out and
+  shared with `recall_at_k`.
+- **`scripts/bench/seed_probes.py`** — content-defined **sibling-set ground truth**: one read-only
+  full scan over all drawers computes, per phrase, every drawer containing it as a contiguous
+  **token run** (`_contains_token_run`/`_tokens`, robust to punctuation). Distinctiveness gate
+  (`--max-siblings`, default 4) + greedy **disjoint** acceptance keep probes near-unique and one
+  cluster per probe. Boundary-word trim drops chunk-edge fragments. Curated `HAND_PHRASES` run
+  through the same scan (reported separately as `origin:hand`).
+- **`scripts/bench/run_recall_bench.py`** — **per-probe subprocess isolation** (`--isolate`,
+  default on): a ChromaDB hnswlib SIGSEGV on one query is recorded as a vector failure
+  (`n_segfault`) instead of killing the run. Query passed as argv (no `shell=True`). `--backend`
+  forwarded into each child.
+
+### Changed
+- **`run_recall_bench.score_probes`** — now scores with `hit_at_k` (sibling-accept), not
+  `recall_at_k` (fractional), so retrieving one of N near-dup siblings is a full hit.
+- **`scripts/bench/probes.jsonl`** — regenerated: 20 seed + 2 hand probes over 41 distinct drawers
+  (was 25 garbage-laden, all-zero probes).
+
+### Verified
+- 36/36 tests pass under system + venv python. code-review: **APPROVE** (1 MEDIUM + 2 LOW, all
+  fixed: `--backend` now forwarded into isolated children; `_parse_child` tolerates stray
+  `RESULT`-prefixed lines; hand-drop reasons split). Result JSON lands in gitignored
+  `state/recall-bench/`.
+
+---
+
 ## 2026-06-12 — Phase 2 Task 2.7 + memory-backend eval (M1 dead / M2 pass)
 
 ### Changed

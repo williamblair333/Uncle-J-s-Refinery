@@ -9,6 +9,7 @@ sqlite-vec, which is what makes one probe set comparable across backends.
 """
 from pathlib import Path
 import json
+import string
 
 
 class ProbeError(ValueError):
@@ -25,27 +26,93 @@ def drawer_key(source_file, chunk_index) -> str:
     return f"{name}::{ci}"
 
 
-def recall_at_k(expected: set, retrieved_keys, k: int) -> float:
-    """Fraction of expected drawer keys present in the first k DISTINCT drawers.
+def _distinct_topk(retrieved_keys, k: int) -> set:
+    """Top-k DISTINCT drawer keys, first-seen rank order preserved.
 
-    Task 2.7: dedup retrieved keys to distinct drawers (preserving first-seen
-    rank order) BEFORE applying the top-k cut. Without this, a few giant mined
-    files whose many chunks collapse to one drawer key monopolize the top-k and
-    push the real target past the cut, making recall degenerate (~0). The metric
-    answers "is the target among the top-k distinct drawers retrieved", which is
-    the right question once chunks collapse to drawers.
+    Task 2.7: dedup BEFORE the cut. A few giant mined files whose many chunks
+    collapse to one drawer key would otherwise monopolize the top-k and push the
+    real target past the cut, making recall degenerate (~0).
     """
-    if not expected:
-        raise ProbeError("expected set is empty")
     distinct = []
     seen = set()
     for key in retrieved_keys:
         if key not in seen:
             seen.add(key)
             distinct.append(key)
-    top = set(distinct[:k])
-    found = len(expected & top)
+    return set(distinct[:k])
+
+
+def recall_at_k(expected: set, retrieved_keys, k: int) -> float:
+    """Fraction of expected drawer keys present in the first k DISTINCT drawers.
+
+    The metric answers "is the target among the top-k distinct drawers retrieved",
+    which is the right question once chunks collapse to drawers. For multi-target
+    expect sets this is fractional; for sibling-accept known-item scoring use
+    hit_at_k instead.
+    """
+    if not expected:
+        raise ProbeError("expected set is empty")
+    found = len(expected & _distinct_topk(retrieved_keys, k))
     return round(found / len(expected), 4)
+
+
+def hit_at_k(expected: set, retrieved_keys, k: int) -> float:
+    """1.0 if ANY expected drawer key is among the top-k distinct drawers, else 0.0.
+
+    M0.5 sibling-accept: `expected` is an equivalence class of near-duplicate
+    drawers that all contain the probe's distinctive phrase. Retrieving any one
+    of them is a success — they hold the same content, so fractional credit would
+    penalize the engine for picking a different-but-equally-correct copy. This is
+    standard known-item recall with the relevant item generalized to its
+    duplicate-set.
+    """
+    if not expected:
+        raise ProbeError("expected set is empty")
+    return 1.0 if expected & _distinct_topk(retrieved_keys, k) else 0.0
+
+
+# Tokens that are unembeddable garbage in a probe query: hash/uuid/session-id
+# fragments and random high-entropy strings. A distinctive PHRASE made of real
+# words survives; an id smuggled in as a "word" does not.
+_HEXSET = set(string.hexdigits.lower())
+
+
+def _token_is_garbage(tok: str) -> bool:
+    t = tok.strip().lower()
+    if not t:
+        return False
+    # Random long token (no English word reaches 20 chars); kills base64-ish ids.
+    if len(t) >= 20:
+        return True
+    # Hash/uuid fragment: hex (hyphens allowed) with at least one digit, len>=6.
+    # The digit requirement spares real all-hex words like "facade"/"decade".
+    h = t.replace("-", "")
+    if len(h) >= 6 and h and all(c in _HEXSET for c in h) and any(c.isdigit() for c in h):
+        return True
+    # Id-like token: mostly digits (e.g. "48c8", "0061"). Short tech tokens with a
+    # single trailing digit (sqlite3, minilm6) stay under the 0.4 ratio.
+    digits = sum(c.isdigit() for c in t)
+    if len(t) >= 4 and digits / len(t) > 0.4:
+        return True
+    return False
+
+
+def phrase_is_clean(phrase: str) -> bool:
+    """True if the phrase is a usable probe query: real multi-word content with
+    no hash/uuid/random-token garbage and no adjacent duplicate words.
+
+    Drops the exact failure classes that produced the live recall 0.0:
+    session-id/uuid fragments, hex hashes, random base64 tokens, and
+    low-information repeats like "command command".
+    """
+    words = phrase.split()
+    if len(words) < 2:
+        return False
+    lowered = [w.lower() for w in words]
+    for a, b in zip(lowered, lowered[1:]):
+        if a == b:  # adjacent duplicate -> low information
+            return False
+    return not any(_token_is_garbage(w) for w in words)
 
 
 def validate_probe(p) -> None:

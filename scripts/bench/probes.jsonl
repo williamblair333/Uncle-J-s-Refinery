@@ -1,25 +1,22 @@
-{"id": "seed-0001", "query": "verdict best_of_n INFO BestOfNVerifier", "expect": ["agent-acompact-b61a74be53d4322a.jsonl::0"], "origin": "seed"}
-{"id": "seed-0002", "query": "hooks type command command", "expect": ["708b1496-8155-4a4c-9711-0ccdb9a3bc89.jsonl::0"], "origin": "seed"}
-{"id": "seed-0003", "query": "V31raVqWGNx2dkGbYVPLC7kF uefrmYVuthSeLiqMbvEIwEWtAgbuiSG2e96PacAq5rCUV2zwXwmvZYiMTqS OxU3uaFTfDSNIrKhF hV7IdOmJkW3jg5Dsjq9dhzhDOiQLXy7z1DvA5vV3iTnYoSiY", "expect": ["8e7c6cbf-6086-4657-b50e-e987ce82559f.jsonl::0"], "origin": "seed"}
-{"id": "seed-0004", "query": "text has well-documented black", "expect": ["f1d9eb11-315e-496b-ad1b-889e7cd9645e.jsonl::0"], "origin": "seed"}
-{"id": "seed-0005", "query": "ome bill sessionId f7bc35-b681-48c8-8d32-a195d62f3c5f", "expect": ["34f7bc35-b681-48c8-8d32-a195d62f3c5f.jsonl::0"], "origin": "seed"}
-{"id": "seed-0006", "query": "ome bill sessionId c05b0-2d30-4061-8cb3-70a9ee1ca6c0", "expect": ["198c05b0-2d30-4061-8cb3-70a9ee1ca6c0.jsonl::0"], "origin": "seed"}
-{"id": "seed-0007", "query": "mcp__jcodemunch__get_class_hierarchy mcp__jcodemunch__get_context_bundle mcp__jcodemunch__get_coupling_metrics mcp__jcodemunch__get_cross_repo_map", "expect": ["7a76a6e5-ddd8-4a23-ad9f-395ee80ed1c4.jsonl::0"], "origin": "seed"}
-{"id": "seed-0008", "query": "external entrypoint cli cwd", "expect": ["a3b9624a-14ef-457e-9252-1d46c92ca2de.jsonl::0"], "origin": "seed"}
-{"id": "seed-0009", "query": "ype attachment uuid efb33e-bbac-46b8-b5c7-612583b5914d", "expect": ["97c96c52-916b-4f97-aa8f-173fd21a0905.jsonl::0"], "origin": "seed"}
-{"id": "seed-0010", "query": "hness_output bash SCRIPT_DIR check-stack-freshness", "expect": ["fe5177f4-31af-468e-9b40-41db6983d475.jsonl::0"], "origin": "seed"}
-{"id": "seed-0011", "query": "J-s-Refinery docs superpowers plans", "expect": ["868f91a2-7052-4850-8a00-35f23dd57cae.jsonl::0"], "origin": "seed"}
-{"id": "seed-0012", "query": "issues Minor since notify_send_text", "expect": ["agent-adbb27ffc3c3955f3.jsonl::0"], "origin": "seed"}
-{"id": "seed-0013", "query": "e_geo not_available requestId req_011CaJtyNEXbb9cM5wXXLber", "expect": ["agent-a423f29a06aa39f4d.jsonl::0"], "origin": "seed"}
-{"id": "seed-0014", "query": "troubleshooting PRD u2014 dropped", "expect": ["a6de4129-ae9d-4192-b610-c241d9da585a.jsonl::0"], "origin": "seed"}
-{"id": "seed-0015", "query": "multi-task subagent development Use", "expect": ["f96c4ff0-5aae-4da0-916e-bfbf98cbd6dd.jsonl::0"], "origin": "seed"}
-{"id": "seed-0016", "query": "ssion-mode permissionMode bypassPermissions sessionId", "expect": ["7241f6c2-0136-4600-8197-b92059309605.jsonl::0"], "origin": "seed"}
-{"id": "seed-0017", "query": "bash aux grep mcp", "expect": ["09fbf016-3b94-41fa-978b-109b19fb8b96.jsonl::0"], "origin": "seed"}
-{"id": "seed-0018", "query": "Reference material Tables lists", "expect": ["5f9adda6-a7f4-4618-b562-d896ea0cd63d.jsonl::0"], "origin": "seed"}
-{"id": "seed-0019", "query": "palace directory mempalace palace", "expect": ["d4735e53-d45f-4665-98a3-79664111a4ad.jsonl::0"], "origin": "seed"}
-{"id": "seed-0020", "query": "nexisting embedding drawer_-opt-proj-proj-fog-of-chess_general_36d1636dc644158c3a0e2341 Delete", "expect": ["btnfc7f45.txt::0"], "origin": "seed"}
-{"id": "seed-0021", "query": "Open HANDOFF Replace update", "expect": ["agent-a1d622cbbc021f612.jsonl::0"], "origin": "seed"}
-{"id": "seed-0022", "query": "bash python toml index_version", "expect": ["e301cdc0-399c-40ec-b53a-6bc8b401c620.jsonl::0"], "origin": "seed"}
-{"id": "seed-0023", "query": "per-army piece type definitions", "expect": ["36306678-46a2-4ea7-a4e0-b2435ff180d8.jsonl::0"], "origin": "seed"}
-{"id": "seed-0024", "query": "sync class only exported", "expect": ["agent-aside_question-5647d89a62f3f4e0.jsonl::0"], "origin": "seed"}
-{"id": "seed-0025", "query": "Pawns attack diagonally forward", "expect": ["toolu_019im4a6o9JzWJZWdhYrxyMT.txt::0"], "origin": "seed"}
+{"id": "seed-0001", "query": "verdict INFO Logged pipeline", "expect": ["034a7c80-2a6e-47f3-8dc6-d46491510bfa.jsonl::0", "4fb602ac-7c74-4500-982c-50684bcfa5bc.jsonl::0", "agent-acompact-b61a74be53d4322a.jsonl::0"], "origin": "seed"}
+{"id": "seed-0002", "query": "GRUB_FILE info GRUB nvidia-drm", "expect": ["2492c561-26c6-4255-939b-4abcda26a580.jsonl::0", "f1d9eb11-315e-496b-ad1b-889e7cd9645e.jsonl::0"], "origin": "seed"}
+{"id": "seed-0003", "query": "nvi wing home-bill room", "expect": ["34f7bc35-b681-48c8-8d32-a195d62f3c5f.jsonl::0"], "origin": "seed"}
+{"id": "seed-0004", "query": "int cli cwd home", "expect": ["2d74ebca-f005-41ab-b77c-98372991e515.jsonl::0", "dab5900a-3cd3-4944-a7a9-e3e8b33002c4.jsonl::0"], "origin": "seed"}
+{"id": "seed-0005", "query": "sys datetime nsent_at_str expiry_min", "expect": ["7a76a6e5-ddd8-4a23-ad9f-395ee80ed1c4.jsonl::0", "agent-a0f39053cdf868007.jsonl::0", "agent-a44aa562861afd8de.jsonl::0", "fe5177f4-31af-468e-9b40-41db6983d475.jsonl::0"], "origin": "seed"}
+{"id": "seed-0006", "query": "standard health check skips", "expect": ["09fbf016-3b94-41fa-978b-109b19fb8b96.jsonl::0"], "origin": "seed"}
+{"id": "seed-0007", "query": "Admin Dashboard chars Landing", "expect": ["35fdc350-742c-474e-bd9a-4169abc17e9a.jsonl::0"], "origin": "seed"}
+{"id": "seed-0008", "query": "subsequently captured within half-moves", "expect": ["8117935a-dbfb-4925-9bc1-01aae7c8b9c9.jsonl::0"], "origin": "seed"}
+{"id": "seed-0009", "query": "knight infiltrating Final position", "expect": ["82e63c55-971a-4a8b-a713-29df9ab839ac.jsonl::0"], "origin": "seed"}
+{"id": "seed-0010", "query": "blocks forEach block opt", "expect": ["toolu_01LvNgh7ffB7xQWPV2eef2kF.txt::0"], "origin": "seed"}
+{"id": "seed-0011", "query": "exist cat returns nothing", "expect": ["854c1160-c67f-4cb8-a2ea-96da7cbb276b.jsonl::0", "agent-ae00a7e3a90b1ad1c.jsonl::0"], "origin": "seed"}
+{"id": "seed-0012", "query": "restarted claude code fix", "expect": ["35fcb492-d743-43d7-9e12-f730f1eafb4b.jsonl::0", "4e356fdd-9199-4799-8ac1-617eee3aadbf.jsonl::0"], "origin": "seed"}
+{"id": "seed-0013", "query": "Web Searcher practitioner community", "expect": ["agent-a9e91ece762ceadc1.jsonl::0", "wf_55ba0d51-184.json::0"], "origin": "seed"}
+{"id": "seed-0014", "query": "change regression without relying", "expect": ["46f66b90-a84f-4921-bd81-05566d9e8a94.jsonl::0", "SKILL.md::0", "ad01a178-d447-4030-87af-46c4c90d4c47.jsonl::0"], "origin": "seed"}
+{"id": "seed-0015", "query": "confirmed Updated accurate safety", "expect": ["HANDOFF.md::0", "bljgte5j5.txt::0"], "origin": "seed"}
+{"id": "seed-0016", "query": "lines password length validation", "expect": ["agent-ab809615de35d19b8.jsonl::0", "wf_377920e0-20b.json::0"], "origin": "seed"}
+{"id": "seed-0017", "query": "MEDIUM lock pyproject toml", "expect": ["agent-a49dbf534d0453234.jsonl::0", "agent-ab7ab2aecdf66447d.jsonl::0", "agent-aba64acdc7af62094.jsonl::0", "agent-acaa9d4bcad84e2ed.jsonl::0"], "origin": "seed"}
+{"id": "seed-0018", "query": "CLAUDE lines lists mempalace", "expect": ["agent-a42048e53b1b66594.jsonl::0", "wf_484c8a24-c9b.json::0"], "origin": "seed"}
+{"id": "seed-0019", "query": "implementing Task correction ledger", "expect": ["agent-a03f17146e7006584.jsonl::0"], "origin": "seed"}
+{"id": "seed-0020", "query": "metric reads catastrophically recall", "expect": ["3e460492-a060-4ee2-9175-d0ce6e4d78be.jsonl::0"], "origin": "seed"}
+{"id": "hand-0001", "query": "Bootstrap scan registered 26 projects identified 14 conflicts", "expect": ["CHANGELOG.md::0", "agent-ad22b0325e3470c3a.jsonl::0"], "origin": "hand"}
+{"id": "hand-0002", "query": "deleted entire SQLite index byte-identical rebuild", "expect": ["session-2026-06-12-backend-decision.md::0"], "origin": "hand"}

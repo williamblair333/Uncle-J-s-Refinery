@@ -42,6 +42,48 @@ def test_recall_at_k_distinct_cut_still_excludes_far_target():
     assert recall_lib.recall_at_k({"t::0"}, keys, k=3) == 0.0
 
 
+def test_hit_at_k_any_sibling_in_topk_is_a_hit():
+    # Sibling-accept (M0.5): expect is an equivalence class of near-duplicate
+    # drawers. Retrieving ANY one of them within k is a hit (1.0), not a
+    # fractional score — the siblings hold the same content.
+    assert recall_lib.hit_at_k({"a::0", "b::0"}, ["x::0", "b::0"], k=3) == 1.0
+    assert recall_lib.hit_at_k({"a::0", "b::0"}, ["x::0", "y::0"], k=3) == 0.0
+
+
+def test_hit_at_k_dedups_distinct_drawers_before_cut():
+    # Task 2.7 dedup carries over: mega-file chunks collapse to one key and must
+    # not crowd the cut. Target is the 2nd DISTINCT drawer, so k=3 finds it.
+    keys = ["mega::0", "mega::0", "mega::0", "target::0"]
+    assert recall_lib.hit_at_k({"target::0"}, keys, k=3) == 1.0
+
+
+def test_hit_at_k_respects_distinct_k_cutoff():
+    # Three distinct non-targets ahead -> target at the 4th distinct slot misses.
+    keys = ["a::0", "a::0", "b::0", "c::0", "t::0"]
+    assert recall_lib.hit_at_k({"t::0"}, keys, k=3) == 0.0
+
+
+def test_phrase_is_clean_rejects_hash_uuid_and_random_tokens():
+    # uuid/session-id fragments, hex hashes, and random high-entropy tokens are
+    # unembeddable garbage — the live recall 0.0 was full of these.
+    assert recall_lib.phrase_is_clean("ome bill sessionId f7bc35-b681-48c8") is False
+    assert recall_lib.phrase_is_clean("ype attachment uuid efb33e-bbac-46b8") is False
+    assert recall_lib.phrase_is_clean(
+        "V31raVqWGNx2dkGbYVPLC7kF uefrmYVuthSeLiqMbvEIwEWtAgbuiSG2e96PacAq5rCUV2zwXwmvZYiMTqS") is False
+
+
+def test_phrase_is_clean_rejects_adjacent_duplicate_words():
+    # "hooks type command command" — repeated word signals low-information text.
+    assert recall_lib.phrase_is_clean("hooks type command command") is False
+
+
+def test_phrase_is_clean_accepts_real_multiword_phrase():
+    # Real content words (incl. tech tokens with digits like chromadb/sqlite3)
+    # must pass — the filter targets ids/hashes, not legitimate vocabulary.
+    assert recall_lib.phrase_is_clean("distinct drawer recall benchmark") is True
+    assert recall_lib.phrase_is_clean("chromadb sqlite3 vector backend") is True
+
+
 def test_validate_probe_accepts_well_formed():
     p = {"id": "p1", "query": "foo bar", "expect": ["a.txt::0"], "origin": "seed"}
     recall_lib.validate_probe(p)  # no raise
@@ -107,13 +149,33 @@ def test_distinctive_phrase_is_deterministic():
     assert a == b
 
 
+def test_contains_token_run_matches_across_punctuation():
+    # distinctive_phrase joins tokens with single spaces; the source doc has
+    # commas/newlines between them. The sibling scan must match on TOKEN runs,
+    # not raw substrings, or it misses the very drawer the phrase came from.
+    doc = "alpha, beta\ngamma; delta epsilon"
+    assert seed_probes._contains_token_run(
+        seed_probes._tokens(doc), ["beta", "gamma", "delta"]) is True
+    assert seed_probes._contains_token_run(
+        seed_probes._tokens(doc), ["beta", "delta"]) is False  # not contiguous
+
+
+def test_trim_boundary_words_drops_truncated_edges():
+    # Chunk edges are cut mid-word ("...ome", "ype..."). Trimming the first/last
+    # whitespace token removes the fragment before phrase extraction.
+    assert seed_probes._trim_boundary_words("ome bill sessionId data ype") == "bill sessionId data"
+    # too short to trim safely -> returned unchanged
+    assert seed_probes._trim_boundary_words("only two") == "only two"
+
+
 def test_build_probe_record_shape():
+    # M0.5: expect is now a sibling-set (list of drawer keys), supplied directly.
     rec = seed_probes.build_probe_record(
         idx=2, query="quantum flux capacitor calibration",
-        source_file="/x/notes.md", chunk_index=1)
+        expect=["notes.md::0", "notes-copy.md::0"], origin="seed")
     assert rec["id"] == "seed-0002"
     assert rec["query"] == "quantum flux capacitor calibration"
-    assert rec["expect"] == ["notes.md::1"]
+    assert rec["expect"] == ["notes.md::0", "notes-copy.md::0"]
     assert rec["origin"] == "seed"
 
 
@@ -146,6 +208,50 @@ def test_score_probes_with_fake_searcher():
     assert per_probe[0]["recall"] == 1.0
     assert per_probe[1]["recall"] == 0.0
     assert per_probe[0]["retrieved"] == ["a.txt::0"]
+
+
+def test_parse_child_reads_result_line():
+    hits, engine = run_recall_bench._parse_child(
+        0, 'noise\nRESULT{"hits":[{"source_file":"a.txt"}],"engine":"vector"}\n')
+    assert hits == [{"source_file": "a.txt"}]
+    assert engine == "vector"
+
+
+def test_parse_child_nonzero_exit_is_segfault():
+    # A ChromaDB hnswlib SIGSEGV kills the child (exit != 0). It must become a
+    # recorded vector failure, never crash the parent run.
+    assert run_recall_bench._parse_child(-11, "") == ([], "segfault")
+
+
+def test_parse_child_missing_result_line_is_failure():
+    assert run_recall_bench._parse_child(0, "warnings but no result") == ([], "bm25")
+
+
+def test_run_child_passes_query_as_argv_not_shell(tmp_path):
+    # Injection safety: the probe query is arbitrary drawer text. It must reach
+    # the child as argv[1], never interpolated into a shell. A query full of
+    # shell metacharacters must NOT execute anything.
+    canary = tmp_path / "PWNED"
+    child = ('import sys, json; '
+             'print("RESULT" + json.dumps({"hits": [{"source_file": sys.argv[1]}], '
+             '"engine": "vector"}))')
+    evil = f'"; touch {canary} #'
+    hits, engine = run_recall_bench._run_child(evil, 5, child_src=child)
+    assert hits[0]["source_file"] == evil      # query arrived literally
+    assert not canary.exists()                  # nothing executed
+
+
+def test_score_probes_uses_sibling_accept_hit_semantics():
+    # M0.5: expect is a sibling equivalence class. Retrieving ANY one sibling is
+    # a full hit (1.0) — not fractional credit for finding 1 of 3.
+    probes = [{"id": "p1", "query": "q",
+               "expect": ["a::0", "b::0", "c::0"], "origin": "seed"}]
+
+    def fake_search(query, k):
+        return [{"source_file": "b", "_chunk_index": 0}], "vector"  # 1 of 3 siblings
+
+    per_probe = run_recall_bench.score_probes(probes, fake_search, k=5)
+    assert per_probe[0]["recall"] == 1.0
 
 
 def test_build_result_payload_shape():
