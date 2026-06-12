@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-12 — Phase 2 Task 1: recall_lib pure functions
+
+### Added
+- **`scripts/bench/recall_lib.py`** — stdlib-only recall benchmark library:
+  `drawer_key`, `recall_at_k`, `validate_probe`, `load_probes`, `aggregate`.
+- **`scripts/bench/__init__.py`** — package marker (empty).
+- **`tests/test_recall_bench.py`** — 7 pytest tests covering all public functions.
+  All 7 pass with `.venv/bin/python -m pytest`.
+
+---
+
 ## 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired
 
 ### Changed

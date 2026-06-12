@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-12 — Phase 2 Task 1 done: recall_lib pure functions*
+
+## Current state (2026-06-12) — Phase 2 Task 1 complete
+
+Branch: `feat/phase2-accuracy-instrumentation`.
+
+**Work log — 2026-06-12 (Task 1: recall_lib pure functions)**
+
+- Created `scripts/bench/__init__.py` (empty package marker).
+- Created `scripts/bench/recall_lib.py` — stdlib-only library with `drawer_key`, `recall_at_k`, `validate_probe`, `load_probes`, `aggregate`, `ProbeError`.
+- Created `tests/test_recall_bench.py` — 7 tests, all passing via `.venv/bin/python -m pytest`.
+- TDD: red (ModuleNotFoundError confirmed) → green (7/7) → committed.
+
+**Next task:** Task 2 — probe seeder (by-construction ground truth).
+
+---
+
 *Last updated: 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired; Phase 2 next*
 
 ## Current state (2026-06-11) — Improvement Program Phase 1 closed

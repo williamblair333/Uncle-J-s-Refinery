@@ -1,0 +1,73 @@
+# scripts/bench/recall_lib.py
+"""Pure functions for the recall benchmark. STDLIB ONLY — no chromadb/mempalace
+imports here, so CI can test this module with `pip install pytest` alone.
+
+A drawer is identified for ground-truth purposes by (source_file basename,
+chunk_index) -> "basename::chunk". This is stable across backends: the same
+drawer keeps the same key whether retrieved via ChromaDB, turbovecdb, or
+sqlite-vec, which is what makes one probe set comparable across backends.
+"""
+from pathlib import Path
+import json
+
+
+class ProbeError(ValueError):
+    """A probe record is malformed."""
+
+
+def drawer_key(source_file, chunk_index) -> str:
+    """Stable identity for a drawer: '<basename>::<chunk_index>'.
+
+    chunk_index None/missing -> 0 (single-chunk drawer). Empty source -> '?'.
+    """
+    name = Path(source_file).name if source_file else "?"
+    ci = chunk_index if isinstance(chunk_index, int) else 0
+    return f"{name}::{ci}"
+
+
+def recall_at_k(expected: set, retrieved_keys, k: int) -> float:
+    """Fraction of expected drawer keys present in the first k retrieved keys."""
+    if not expected:
+        raise ProbeError("expected set is empty")
+    top = set(retrieved_keys[:k])
+    found = len(expected & top)
+    return round(found / len(expected), 4)
+
+
+def validate_probe(p) -> None:
+    if not isinstance(p, dict):
+        raise ProbeError(f"probe is not an object: {p!r}")
+    if not p.get("id"):
+        raise ProbeError(f"probe missing id: {p!r}")
+    if not p.get("query"):
+        raise ProbeError(f"probe {p.get('id')} missing query")
+    expect = p.get("expect")
+    if not isinstance(expect, list) or not expect:
+        raise ProbeError(f"probe {p.get('id')} expect must be a non-empty list")
+
+
+def load_probes(path):
+    probes = []
+    for line in Path(path).read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        p = json.loads(line)
+        validate_probe(p)
+        probes.append(p)
+    ids = [p["id"] for p in probes]
+    if len(ids) != len(set(ids)):
+        raise ProbeError("duplicate probe ids in file")
+    return probes
+
+
+def aggregate(per_probe):
+    recalls = [r["recall"] for r in per_probe]
+    n = len(recalls)
+    return {
+        "n_probes": n,
+        "recall_at_k_mean": round(sum(recalls) / n, 4) if n else 0.0,
+        "recall_at_k_min": round(min(recalls), 4) if n else 0.0,
+        "n_perfect": sum(1 for r in recalls if r == 1.0),
+        "n_zero": sum(1 for r in recalls if r == 0.0),
+    }
