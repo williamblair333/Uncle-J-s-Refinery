@@ -1,8 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — Replacing mempalace with memweave. Phase 1 (offline standup) + Phase 2 first increment (corpus exporter, proven on real data) DONE.*
+*Last updated: 2026-06-12 — Replacing mempalace with memweave. Phases 1, 2, 2b-1 DONE & merged. memweave holds the full this-project memory (5742 chunks, offline).*
 
-## Current state (2026-06-12) — memweave Phase 2 first increment (branch `feat/phase2-memweave-corpus-exporter`)
+## Current state (2026-06-12) — memweave Phase 2b-1 (full corpus loaded; branch `feat/phase2b-memweave-full-load`)
+
+**Merged to main:** Phase 1 (PR #45, offline ONNX provider), Phase 2 (PR #46, corpus exporter).
+**This branch:** the full this-project corpus load + the ingest seam.
+
+- `scripts/memweave/sync_memory.sh` — idempotent, `flock -n`-guarded export+index wrapper; the
+  single seam the freshness cron + Stop-hook will both call. Logs to `state/memweave-sync.log`.
+- **Live store `~/.uncle-j-memory`: 399 md files / 5742 chunks / 153 MB**, embedded offline in 104s.
+  Idempotent re-index (399 skipped / 94ms). Out-of-slice queries now hit (dcup, pre-mortem token,
+  telegram dedup); hybrid vec+BM25 fires at scale. Run: `bash scripts/memweave/sync_memory.sh`.
+
+**NEXT (recommended order):**
+1. **Phase 2b-2 — freshness cron + Stop-hook** (infra, own pre-mortem): schedule `sync_memory.sh`
+   (the flock guard is already in it) + a Stop-hook to ingest the just-ended session. Decide whether
+   to widen beyond this project (full 1347-transcript / 373 MB cross-project corpus).
+2. **Phase 3 — harness wiring**: memweave ships no MCP server, so memory routing needs a search CLI
+   wrapper (seed: `index_workspace.py --query`). Repoint CLAUDE.md memory rules off mempalace.
+3. **Phase 4 — decommission mempalace** (destructive, pre-mortem + Bill sign-off): 7 mempalace + 3
+   turbovecdb crons, MCP server, `scripts/mempalace-*.sh` + root `mempalace-*.{sh,py}`, healthcheck
+   probes, session-start autofix, Stop-hook mining, CLAUDE.md rules, then the ~55 GB palace data.
+
+---
+
+## Prior — memweave Phase 2 first increment (branch `feat/phase2-memweave-corpus-exporter`, MERGED PR #46)
 
 **Phase 1 merged to main (PR #45, commit `d807ae1`).** Phase 2 corpus path now built + proven on
 real Refinery transcripts.

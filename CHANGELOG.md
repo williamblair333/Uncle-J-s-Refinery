@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-06-12 — memweave Phase 2b (increment 1): sync wrapper + full this-project corpus load
+
+memweave now holds the full this-project memory. Added the ingest seam the freshness cron and
+Stop-hook will share, and loaded the whole corpus through it.
+
+### Added
+- **`scripts/memweave/sync_memory.sh`** — export + index in one idempotent, `flock -n`-guarded
+  command (the single-writer sqlite index must not be raced once cron + Stop-hook both call it).
+  Logs to `state/memweave-sync.log`. `sync_memory.sh [PROJECT] [LIMIT]`.
+
+### Loaded
+- Full this-project corpus into `~/.uncle-j-memory`: 399 markdown files (231 trivial skipped) →
+  **5742 chunks embedded offline in 104s** (153 MB store). Re-index is idempotent (hash-compared:
+  399 skipped / 0 re-embedded / 94ms). Out-of-slice queries that missed on the 40-session slice now
+  hit (dcup port registry, pre-mortem token, telegram dedup) — the hybrid vector+BM25 path fires at
+  scale.
+
+### Deferred (own pre-mortem)
+- Freshness cron + Stop-hook ingestion (Phase 2b-2). The `flock` guard is already in the wrapper.
+
+---
+
 ## 2026-06-12 — memweave Phase 2 (first increment): transcript→markdown corpus, proven on real data
 
 Build the corpus path: export Claude session transcripts to clean markdown, index with the
