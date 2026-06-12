@@ -13,9 +13,13 @@ Option A executed. The recall number is now meaningful and the BM25 fallback is 
 
 **Headline for Task 9 memo:** ChromaDB's vector path fails on ~17% of probes at 316k drawers; drawer-level ground-truth recall@5 is 0.33. Strongest evidence yet for the turbovecdb/sqlite-vec evaluation.
 
+**Code-review (high) applied this session:** fixed `engine_of([])` undercount — `score_probes` now reads engine from the search call's `(hits, engine)` return, so a vector failure with an empty BM25 fallback counts as `bm25` (was miscounted as a clean vector miss); sanitized `--label` against path traversal. Both fixed + tested before merge.
+
+**⚠ Caveat on the 0.33 (→ Task 2.6):** the `::N`→`::0` re-key collapsed 24 probes onto **14 distinct drawers** — `bbl2v06xc.txt::0` is the target for 8 probes, `btnfc7f45.txt::0` for 4. So 0.3333 (=8/24) is dominated by ~2 drawers and is fragile (one drawer in/out of top-k ≈ ±33 pts). It's an honest drawer-level number but not a diverse population estimate. **Task 2.6** = re-seed/dedup probes to one per drawer for a trustworthy headline before the Task 9 memo leans on it.
+
 **Run a backend-labeled bench:** `bash scripts/bench/run-recall-bench.sh <label> <k>` (default `chroma-baseline 5`); alternate backend `.venv/bin/python scripts/bench/run_recall_bench.py --label turbovecdb --backend turbovecdb --k 5`.
 
-**Next-session task order:** Tasks **5, 6, 7** (correction ledger, dreaming/telegram usage counters, citation Stop-hook — all independent of the recall track) → Task 8 (cron + CI `test-bench` job + docs) → **Task 9 (backend memo — SWITCH TO FABLE; single judgment step; no ChromaDB deletion without Bill's sign-off).** This branch is unmerged — open a PR or continue on it.
+**Next-session task order:** **Task 2.6** (probe re-diversification — one per drawer; see caveat above) → Tasks **5, 6, 7** (correction ledger, dreaming/telegram usage counters, citation Stop-hook — all independent of the recall track) → Task 8 (cron + CI `test-bench` job + docs) → **Task 9 (backend memo — SWITCH TO FABLE; single judgment step; no ChromaDB deletion without Bill's sign-off).**
 
 **Untouched in tree:** `scripts/bench/install-bench-cron.sh` (untracked — a Task 8 stub).
 

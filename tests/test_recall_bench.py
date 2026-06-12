@@ -124,8 +124,8 @@ def test_score_probes_with_fake_searcher():
 
     def fake_search(query, k):
         if "a" in query:
-            return [{"_source_file_full": "/d/a.txt", "_chunk_index": 0}]
-        return [{"_source_file_full": "/d/x.txt", "_chunk_index": 0}]
+            return [{"_source_file_full": "/d/a.txt", "_chunk_index": 0}], "vector"
+        return [{"_source_file_full": "/d/x.txt", "_chunk_index": 0}], "vector"
 
     per_probe = run_recall_bench.score_probes(probes, fake_search, k=5)
     assert per_probe[0]["recall"] == 1.0
@@ -171,16 +171,29 @@ def test_score_probes_records_serving_engine():
 
     def fake_search(query, k):
         if "back" in query:
-            # BM25-fallback hits carry _bench_fallback (set by the live searcher).
-            return [{"_source_file_full": "/d/b.txt", "_chunk_index": 0,
-                     "_bench_fallback": "bm25:ef or M is too small"}]
-        return [{"_source_file_full": "/d/a.txt", "_chunk_index": 0}]
+            return [{"_source_file_full": "/d/b.txt", "_chunk_index": 0}], "bm25"
+        return [{"_source_file_full": "/d/a.txt", "_chunk_index": 0}], "vector"
 
     per_probe = run_recall_bench.score_probes(probes, fake_search, k=5)
     assert per_probe[0]["engine"] == "vector"
     assert per_probe[1]["engine"] == "bm25"
     assert per_probe[0]["recall"] == 1.0  # recall still scored normally
     assert per_probe[1]["recall"] == 1.0
+
+
+def test_score_probes_counts_bm25_engine_even_when_fallback_returns_no_hits():
+    """The undercount fix: a vector failure whose BM25 fallback returns ZERO
+    hits must still read engine='bm25' (recall 0), not be miscounted as a clean
+    vector miss — that is the case vector_failure_rate exists to surface."""
+    probes = [{"id": "p1", "query": "empty fallback", "expect": ["z.txt::0"], "origin": "seed"}]
+
+    def fake_search(query, k):
+        return [], "bm25"  # vector errored, BM25 retry returned nothing
+
+    per_probe = run_recall_bench.score_probes(probes, fake_search, k=5)
+    assert per_probe[0]["engine"] == "bm25"
+    assert per_probe[0]["recall"] == 0.0
+    assert recall_lib.aggregate(per_probe)["vector_failure_rate"] == 1.0
 
 
 def test_aggregate_reports_vector_failure_rate():

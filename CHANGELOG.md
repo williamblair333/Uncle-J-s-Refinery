@@ -18,6 +18,11 @@
 - `chroma-baseline k=5`: mean **0.3333** (was 0.04), perfect 8/24, zero 16, **vector_failure_rate 0.1667** (4/24 probes errored on ChromaDB's vector path at 316k drawers and fell back to BM25 — all 4 missed). This vector-failure-at-scale is the headline evidence for the Task 9 backend memo.
 - `uv.lock` mempalace bump committed (accepts Option A — this bump is what strips `_chunk_index`).
 
+### Review fixes (code-review high)
+- **Fixed `engine_of([])` undercount** — `score_probes` now reads the serving engine from the search call's return (`(hits, engine)`) instead of inferring it from `_bench_fallback` hit tags. A vector failure whose BM25 fallback returns zero hits now correctly counts as `bm25`; previously it was miscounted as a clean vector miss, blinding `vector_failure_rate` to its own worst case. New test locks the empty-fallback path.
+- **`--label` sanitized** to `[A-Za-z0-9._-]+` (it names `results-<label>.json`) — blocks path traversal out of `state/recall-bench/`.
+- **Caveat (deferred to Task 2.6):** the `::N`→`::0` re-key collapsed 24 probes onto 14 distinct drawers — `bbl2v06xc.txt::0` is the target for 8 probes, `btnfc7f45.txt::0` for 4. The 0.3333 headline is dominated by ~2 drawers; it's an honest drawer-level number but not yet a diverse population estimate. Probe re-diversification (one probe per drawer) is **Task 2.6**.
+
 ---
 
 ## 2026-06-12 — Phase 2 session-end: recall methodology decision (Option A)

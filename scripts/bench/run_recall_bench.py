@@ -19,6 +19,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,18 +45,16 @@ def keys_from_hits(hits):
     return keys
 
 
-def engine_of(hits):
-    """Which engine served these hits: 'bm25' if any hit carries the
-    _bench_fallback tag set by the BM25 fallback path, else 'vector'.
-    Makes the silent ChromaDB->BM25 fallback observable per probe."""
-    return "bm25" if any(h.get("_bench_fallback") for h in hits) else "vector"
-
-
 def score_probes(probes, search_fn, k):
-    """search_fn(query, k) -> list of hit dicts (rank-ordered)."""
+    """search_fn(query, k) -> (hits, engine): a rank-ordered list of hit dicts
+    plus the engine that served them ('vector' | 'bm25').
+
+    Engine is reported BY the search call, not inferred from the hits — a vector
+    failure whose BM25 fallback returns zero hits must still read 'bm25', else
+    vector_failure_rate would undercount its own worst case."""
     out = []
     for p in probes:
-        hits = search_fn(p["query"], k)
+        hits, engine = search_fn(p["query"], k)
         retrieved = keys_from_hits(hits)
         out.append({
             "id": p["id"],
@@ -63,7 +62,7 @@ def score_probes(probes, search_fn, k):
             "k": k,
             "expect": p["expect"],
             "retrieved": retrieved,
-            "engine": engine_of(hits),
+            "engine": engine,
             "recall": recall_lib.recall_at_k(set(p["expect"]), retrieved, k),
         })
     return out
@@ -107,7 +106,9 @@ def _make_live_searcher(backend):
         res = search_memories(query=query, palace_path=PALACE, n_results=k)
         if isinstance(res, dict) and res.get("error"):
             err = res["error"]
-            # Any vector-path error: retry with BM25-only fallback.
+            # Any vector-path error: retry with BM25-only fallback. Engine is
+            # reported as 'bm25' regardless of how many hits BM25 returns — even
+            # an empty fallback is a vector failure that must be counted.
             res = search_memories(
                 query=query, palace_path=PALACE, n_results=k, vector_disabled=True
             )
@@ -118,8 +119,8 @@ def _make_live_searcher(backend):
             hits = (res or {}).get("results", [])
             for h in hits:
                 h["_bench_fallback"] = f"bm25:{err}"
-            return hits
-        return (res or {}).get("results", [])
+            return hits, "bm25"
+        return (res or {}).get("results", []), "vector"
 
     return search_fn
 
@@ -132,6 +133,11 @@ def main():
     ap.add_argument("--backend", default=None, help="passthrough to mempalace backend")
     ap.add_argument("--probes", default=str(DEFAULT_PROBES))
     args = ap.parse_args()
+
+    # Label becomes the output filename (results-<label>.json) — constrain it so
+    # a path separator / traversal can't write outside state/recall-bench/.
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", args.label):
+        ap.error("--label must match [A-Za-z0-9._-]+ (it names the output file)")
 
     probes = recall_lib.load_probes(args.probes)
     search_fn = _make_live_searcher(args.backend)
