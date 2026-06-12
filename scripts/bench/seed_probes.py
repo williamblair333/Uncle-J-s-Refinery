@@ -76,7 +76,10 @@ def _sample_drawers(n):
     total = col.count()
     if total == 0:
         raise SystemExit("palace empty — nothing to seed")
-    step = max(1, total // (n * 3))  # over-sample; many drawers yield no phrase
+    # Over-sample heavily: many offsets yield no phrase, and (post drawer-level
+    # dedup) many land in the same multi-chunk file, so we need far more than n
+    # raw samples to reach n distinct drawers.
+    step = max(1, total // (n * 8))
     offsets = list(range(0, total, step))
     out = []
     for off in offsets:
@@ -107,21 +110,25 @@ def main():
         phrase = distinctive_phrase(doc, args.n_words)
         if not phrase:
             continue
-        key = recall_lib.drawer_key(meta.get("source_file", ""), meta.get("chunk_index"))
+        # Dedup and key at DRAWER (file) level, not chunk level: mempalace strips
+        # _chunk_index, so chunk identity is unobservable and every chunk of one
+        # file collapses to <basename>::0. Forcing chunk 0 here means one probe
+        # per source file — distinct ground-truth targets, no drawer pile-up.
+        key = recall_lib.drawer_key(meta.get("source_file", ""), 0)
         if not is_seedable_key(key):  # unknown source -> unsatisfiable probe
             continue
-        if key in seen_keys:  # one probe per drawer
+        if key in seen_keys:  # one probe per drawer (file)
             continue
         seen_keys.add(key)
         records.append(build_probe_record(len(records) + 1, phrase,
-                                          meta.get("source_file", ""),
-                                          meta.get("chunk_index")))
+                                          meta.get("source_file", ""), 0))
         if len(records) >= args.n:
             break
 
     all_probes = records + kept
     out_path.write_text("".join(json.dumps(p, ensure_ascii=False) + "\n" for p in all_probes))
-    print(f"seed_probes: wrote {len(records)} seed + {len(kept)} kept probes -> {out_path}")
+    print(f"seed_probes: wrote {len(records)} seed ({len(seen_keys)} distinct drawers) "
+          f"+ {len(kept)} kept probes -> {out_path}")
 
 
 if __name__ == "__main__":

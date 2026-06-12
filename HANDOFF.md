@@ -1,5 +1,23 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-12 — Phase 2 Task 2.6 done; diverse probes expose ChromaDB recall@5 = 0.0*
+
+## Current state (2026-06-12) — Phase 2 Task 2.6 complete (branch `feat/phase2-task2.6-probe-diversity`)
+
+Probe set re-diversified to one-per-drawer; the honest diverse number is harsh and revealing.
+
+- **Task 2.6 done:** seeder now dedups + keys at drawer level (`drawer_key(source_file, 0)`), over-samples `total//(n*8)`. Re-seeded → **25 probes / 25 distinct drawers** (was 24/14). `test_checked_in_probes_one_per_drawer` locks the invariant. 21/21 tests pass under system python.
+- **New baseline:** `chroma-baseline k=5` → mean **0.0** (0/25), `vector_failure_rate` **0.28** (7/25). The earlier 0.33 was carried entirely by the 2 collapsed mega-file drawers.
+- **Verified finding (not a harness bug):** top-5 *chunks* are monopolized by a few giant mined-convo files (`b9nh6mm2c.txt`, `bbl2v06xc.txt` recur across unrelated queries), so small single-chunk `.jsonl` drawers are unretrievable at k=5. Keys are well-formed; retrieval genuinely returns the wrong drawers. **Strongest Task 9 evidence yet:** ChromaDB can't surface the long tail of small drawers at production scale.
+
+**⚠ Metric resolution gap → Task 2.7 (do before Task 9 leans on a number):** recall@5(chunks) is degenerate (always ~0) because mega-files crowd the top-k. Refine the metric: dedup retrieved hits to **distinct drawers** before the top-k cut, and/or raise k. Touches `recall_lib`/`run_recall_bench` — needs its own pre-mortem.
+
+**Run a bench:** `bash scripts/bench/run-recall-bench.sh <label> <k>` (default `chroma-baseline 5`).
+
+**Next-session task order:** **Task 2.7** (metric resolution — distinct-drawer recall) → Tasks **5, 6, 7** (correction ledger, dreaming/telegram usage counters, citation Stop-hook — independent of the recall track) → Task 8 (cron + CI `test-bench` job + docs) → **Task 9 (backend memo — SWITCH TO FABLE; no ChromaDB deletion without Bill's sign-off).**
+
+---
+
 *Last updated: 2026-06-12 — Phase 2 Tasks 2.5 + 4 done; Option-A baseline is now citable*
 
 ## Current state (2026-06-12) — Phase 2 Tasks 2.5 + 4 complete (branch `feat/phase2-task2.5-recall-rekey`)

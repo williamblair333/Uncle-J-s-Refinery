@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-06-12 — Phase 2 Task 2.6: probe re-diversification (one probe per drawer)
+
+### Changed
+- **`scripts/bench/seed_probes.py`** — seeder now dedups and keys at **drawer (file) level** (`drawer_key(source_file, 0)`), so one probe per source file instead of many probes collapsing onto one multi-chunk file after the `::0` re-key. Over-sampling raised to `total//(n*8)` to reach the target distinct-drawer count. Print line reports distinct-drawer count.
+- **`scripts/bench/probes.jsonl`** — re-seeded: 25 probes, **25 distinct drawers** (was 24 probes / 14 distinct, with `bbl2v06xc.txt::0` ×8 + `btnfc7f45.txt::0` ×4).
+- **`tests/test_recall_bench.py`** — `test_checked_in_probes_one_per_drawer` locks the distinct-drawer invariant.
+
+### Result — the diverse set exposes a real ChromaDB retrieval failure
+- `chroma-baseline k=5`: mean **0.0** (0/25), `vector_failure_rate` **0.28** (7/25). The prior 0.33 was carried *entirely* by the 2 collapsed mega-file drawers.
+- **Mechanism (verified, not a harness bug):** retrieval returns the right key shape but the wrong drawers — the top-5 *chunks* are monopolized by a handful of giant mined-convo files (`b9nh6mm2c.txt`, `bbl2v06xc.txt` recur across unrelated queries), so a small single-chunk `.jsonl` drawer is unretrievable at k=5. Strong evidence for the Task 9 backend memo: ChromaDB effectively cannot surface the long tail of small drawers.
+- **Follow-up → Task 2.7:** recall@5(chunks) has no resolution at drawer level (mega-files crowd top-k). Refine the metric — dedup retrieved hits to distinct drawers before the top-k cut, and/or raise k — so the benchmark yields a trackable non-degenerate number.
+
+---
+
 ## 2026-06-12 — Phase 2 Tasks 2.5 + 4: drawer-level re-key, loud BM25 fallback, bench runner
 
 ### Changed
