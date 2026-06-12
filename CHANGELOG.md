@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-06-12 — Memory backend: memweave stood up offline (Phase 1 of mempalace→memweave migration)
+
+Decision executed (Bill's call): **replace mempalace with memweave.** The recall A/B against
+ChromaDB's 0.18 is dropped — mempalace is done, no further effort spent benchmarking it. Phase 1
+proves memweave runs **fully offline** on the local all-MiniLM-L6-v2 ONNX model. New-before-old:
+mempalace is untouched until memweave is proven and integrated.
+
+### Added
+- **`scripts/memweave/onnx_provider.py`** — `OnnxMiniLMProvider`, a memweave `EmbeddingProvider`
+  backed by the on-disk all-MiniLM-L6-v2 ONNX model (WordPiece tokenize → ONNX → masked mean-pool
+  over non-pad tokens → L2-normalize → 384-dim). No litellm / OpenAI / Ollama / network at embed
+  time. Model dir overridable via `MEMWEAVE_ONNX_MODEL_DIR`; injected via memweave's
+  `embedding_provider=` seam.
+- **`tests/test_memweave_onnx_provider.py`** — 7 tests (run under the 3.12 memweave venv; skip
+  cleanly where deps/model absent). Includes a **pad-invariance** guard (a short text embedded
+  alone must equal it embedded in a padded batch — catches masked-pooling bugs) and a
+  semantic-ordering check.
+- **`scripts/memweave/poc_offline_search.py`** — end-to-end proof: index 4 distinct markdown
+  memory files, run paraphrase queries (zero keyword overlap → bm25=0.000), 4/4 resolve top-1 via
+  the local ONNX vector path. memweave's sqlite-vec + FTS5 hybrid search fires offline.
+- **`.venv-memweave/`** (gitignored) — dedicated py3.12 venv; memweave 0.2.1 pinned from PyPI
+  (requires py≥3.12, so isolated from the 3.11 project venv). memweave ships no MCP server, so a
+  separate-process boundary was needed regardless.
+
+---
+
 ## 2026-06-12 — Phase 2 M0.5: probe rebuild → first trustworthy recall number (0.18)
 
 Rebuilt the recall probe set so the number is finally meaningful. The prior 0.0 was a

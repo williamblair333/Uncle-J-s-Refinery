@@ -1,5 +1,41 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-12 — DIRECTION CHANGE: replacing mempalace with memweave. Phase 1 (memweave offline standup) DONE.*
+
+## Current state (2026-06-12) — memweave Phase 1 complete (branch `feat/phase2-memweave-offline-standup`)
+
+**Bill's call, executed: get rid of mempalace, replace it with memweave.** The recall A/B against
+ChromaDB's 0.18 is **abandoned** — mempalace is done; we no longer spend time benchmarking it. The
+prior "memweave recall A/B" framing in older entries below is superseded.
+
+**Phase 1 DONE — memweave runs fully offline, proven end-to-end.** All TDD, all pre-mortem MEDIUMs
+*fixed* not waived. Nothing in mempalace touched (new-before-old: kill the old only after the new is
+proven + integrated).
+- `scripts/memweave/onnx_provider.py` — `OnnxMiniLMProvider` (memweave `EmbeddingProvider` over the
+  on-disk all-MiniLM-L6-v2 ONNX model; masked mean-pool + L2-norm → 384-dim; no network/litellm/Ollama).
+- `tests/test_memweave_onnx_provider.py` — 7/7 pass incl. **pad-invariance** (masked-pool correctness)
+  + semantic ordering. Run: `.venv-memweave/bin/python -m pytest tests/test_memweave_onnx_provider.py`.
+- `scripts/memweave/poc_offline_search.py` — 4/4 paraphrase probes top-1, bm25=0.000 (pure ONNX
+  vector path). Run: `.venv-memweave/bin/python scripts/memweave/poc_offline_search.py`.
+- **memweave 0.2.1 pinned from PyPI into `.venv-memweave`** (py3.12; memweave requires ≥3.12, so it
+  can't live in the 3.11 project venv). memweave ships no MCP server → it's a separate-process tool.
+
+**Phase 2 (NEXT) — corpus. Decision made (Bill delegated): re-index the raw Claude transcripts under
+`~/.claude/projects`, bypassing the dead palace entirely (zero mempalace coupling).** Scope of the
+source: **1347 transcripts / 373 MB** (857 are this project), jsonl event-streams — real content is
+`type:user`/`type:assistant` messages; filter `queue-operation` + tool noise. Build a
+transcript→markdown exporter into a memweave workspace (suggest `~/.memweave/uncle-j`), index with the
+ONNX provider. Recommended first increment: prove on a bounded recent slice before the full load. A
+freshness cron + the full-history load are infrastructure → their own pre-mortem.
+
+**Phase 3** — wire memweave into the harness (Stop-hook flush, session-start search) + repoint
+CLAUDE.md memory routing off mempalace. **Phase 4 (destructive, pre-mortem + Bill sign-off)** —
+decommission mempalace: 7 mempalace + 3 turbovecdb crons, MCP server (pid was 1896523),
+`scripts/mempalace-*.sh` + root `mempalace-repair-now.sh`/`mempalace-backup.sh`/`mempalace-health.py`,
+healthcheck probes, session-start autofix, Stop-hook mining, CLAUDE.md rules, then the ~55GB palace data.
+
+---
+
 *Last updated: 2026-06-12 — M0.5 probe rebuild DONE; first trustworthy recall number: ChromaDB recall@5 = 0.18*
 
 ## Current state (2026-06-12) — M0.5 probe rebuild complete (branch `feat/phase2-m0.5-probe-rebuild`)
