@@ -163,6 +163,18 @@ def test_is_seedable_key_rejects_unknown_source():
     assert seed_probes.is_seedable_key("?::0") is False
 
 
+def test_checked_in_probes_one_per_drawer():
+    """Task 2.6: each probe must target a DISTINCT drawer. Chunk-level seeding
+    let many probes collapse onto one file after the ::0 re-key, making the
+    headline recall dominated by ~2 drawers. The seeder now dedups at drawer
+    level; this locks the diversity invariant so it can't silently regress."""
+    probes = recall_lib.load_probes(REPO / "scripts" / "bench" / "probes.jsonl")
+    assert probes, "probes.jsonl must not be empty"  # don't pass vacuously
+    keys = [k for p in probes for k in p["expect"]]
+    dupes = sorted({k for k in keys if keys.count(k) > 1})
+    assert not dupes, f"probes must target distinct drawers; collapsed drawers: {dupes}"
+
+
 def test_score_probes_records_serving_engine():
     probes = [
         {"id": "p1", "query": "vector ok", "expect": ["a.txt::0"], "origin": "seed"},
