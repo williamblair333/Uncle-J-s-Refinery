@@ -26,10 +26,24 @@ def drawer_key(source_file, chunk_index) -> str:
 
 
 def recall_at_k(expected: set, retrieved_keys, k: int) -> float:
-    """Fraction of expected drawer keys present in the first k retrieved keys."""
+    """Fraction of expected drawer keys present in the first k DISTINCT drawers.
+
+    Task 2.7: dedup retrieved keys to distinct drawers (preserving first-seen
+    rank order) BEFORE applying the top-k cut. Without this, a few giant mined
+    files whose many chunks collapse to one drawer key monopolize the top-k and
+    push the real target past the cut, making recall degenerate (~0). The metric
+    answers "is the target among the top-k distinct drawers retrieved", which is
+    the right question once chunks collapse to drawers.
+    """
     if not expected:
         raise ProbeError("expected set is empty")
-    top = set(retrieved_keys[:k])
+    distinct = []
+    seen = set()
+    for key in retrieved_keys:
+        if key not in seen:
+            seen.add(key)
+            distinct.append(key)
+    top = set(distinct[:k])
     found = len(expected & top)
     return round(found / len(expected), 4)
 

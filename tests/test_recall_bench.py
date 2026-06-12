@@ -27,6 +27,21 @@ def test_recall_at_k_respects_k_cutoff():
     assert recall_lib.recall_at_k({"t::0"}, ["a::0", "b::0", "c::0", "t::0"], k=3) == 0.0
 
 
+def test_recall_at_k_dedups_to_distinct_drawers_before_cut():
+    # Task 2.7: mega-file chunks collapse to ONE drawer key and must not crowd
+    # the top-k. Here 3 duplicate mega-file hits precede the target, which is the
+    # 2nd DISTINCT drawer — so at k=3 (distinct) the target counts as found.
+    keys = ["mega::0", "mega::0", "mega::0", "target::0"]
+    assert recall_lib.recall_at_k({"target::0"}, keys, k=3) == 1.0
+
+
+def test_recall_at_k_distinct_cut_still_excludes_far_target():
+    # Dedup must not over-credit: with 3 DISTINCT non-targets ahead, a target at
+    # the 4th distinct slot is still outside k=3.
+    keys = ["a::0", "a::0", "b::0", "c::0", "t::0"]
+    assert recall_lib.recall_at_k({"t::0"}, keys, k=3) == 0.0
+
+
 def test_validate_probe_accepts_well_formed():
     p = {"id": "p1", "query": "foo bar", "expect": ["a.txt::0"], "origin": "seed"}
     recall_lib.validate_probe(p)  # no raise
