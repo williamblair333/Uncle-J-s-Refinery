@@ -64,10 +64,17 @@ def load_probes(path):
 def aggregate(per_probe):
     recalls = [r["recall"] for r in per_probe]
     n = len(recalls)
+    # A probe served by the BM25 fallback (vector path errored) is tagged
+    # engine="bm25". A high rate means "chroma-baseline" is partly BM25 — the
+    # recall number is only citable alongside this rate. Legacy records with no
+    # engine key default to "vector" so they never inflate the rate.
+    n_bm25 = sum(1 for r in per_probe if r.get("engine", "vector") == "bm25")
     return {
         "n_probes": n,
         "recall_at_k_mean": round(sum(recalls) / n, 4) if n else 0.0,
         "recall_at_k_min": round(min(recalls), 4) if n else 0.0,
         "n_perfect": sum(1 for r in recalls if r == 1.0),
         "n_zero": sum(1 for r in recalls if r == 0.0),
+        "n_vector_fallback": n_bm25,
+        "vector_failure_rate": round(n_bm25 / n, 4) if n else 0.0,
     }
