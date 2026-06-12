@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-06-12 — Phase 2 Tasks 2.5 + 4: drawer-level re-key, loud BM25 fallback, bench runner
+
+### Changed
+- **`scripts/bench/probes.jsonl`** — re-keyed to drawer/file level (`::0`) and dropped malformed `seed-0001` (`?::0`). 25 → 24 probes. mempalace strips `_chunk_index`, so chunk-level (`::N`) ground truth is unobservable; drawer-level is the measurable unit (Option A).
+- **`scripts/bench/recall_lib.py`** — `aggregate` now emits `n_vector_fallback` + `vector_failure_rate`. Records with no `engine` key default to `vector` (legacy-safe).
+- **`scripts/bench/run_recall_bench.py`** — `score_probes` tags each probe with the serving engine (`vector`|`bm25`, from the `_bench_fallback` hit tag); the summary prints `vector_failure_rate` and a loud WARNING when nonzero. A recall number is only citable alongside that rate.
+- **`scripts/bench/seed_probes.py`** — added pure `is_seedable_key` + a `?::` guard in `main()` so unsatisfiable probes are never seeded again.
+
+### Added
+- **`scripts/bench/run-recall-bench.sh`** — deterministic recall runner (Task 4); results inherit the existing `state/` gitignore.
+- **`tests/test_recall_bench.py`** — 5 new tests (drawer-level invariant on the checked-in probes, seedable-key guard, per-probe engine, vector_failure_rate, legacy-engine default). 19/19 recall-bench + 34/34 with audit pass under system python (no heavy-dep leak).
+
+### Baseline result (Option A)
+- `chroma-baseline k=5`: mean **0.3333** (was 0.04), perfect 8/24, zero 16, **vector_failure_rate 0.1667** (4/24 probes errored on ChromaDB's vector path at 316k drawers and fell back to BM25 — all 4 missed). This vector-failure-at-scale is the headline evidence for the Task 9 backend memo.
+- `uv.lock` mempalace bump committed (accepts Option A — this bump is what strips `_chunk_index`).
+
+---
+
 ## 2026-06-12 — Phase 2 session-end: recall methodology decision (Option A)
 
 ### Decided

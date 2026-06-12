@@ -51,6 +51,13 @@ def distinctive_phrase(text, n_words=4):
     return None
 
 
+def is_seedable_key(key):
+    """Reject keys whose source file is unknown ('?::...'). Such a probe is
+    unsatisfiable by construction — live search results always carry a real
+    source file, so a '?::' expect can never be matched."""
+    return not key.startswith("?::")
+
+
 def build_probe_record(idx, query, source_file, chunk_index):
     return {
         "id": f"seed-{idx:04d}",
@@ -101,6 +108,8 @@ def main():
         if not phrase:
             continue
         key = recall_lib.drawer_key(meta.get("source_file", ""), meta.get("chunk_index"))
+        if not is_seedable_key(key):  # unknown source -> unsatisfiable probe
+            continue
         if key in seen_keys:  # one probe per drawer
             continue
         seen_keys.add(key)

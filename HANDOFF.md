@@ -1,5 +1,26 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-12 — Phase 2 Tasks 2.5 + 4 done; Option-A baseline is now citable*
+
+## Current state (2026-06-12) — Phase 2 Tasks 2.5 + 4 complete (branch `feat/phase2-task2.5-recall-rekey`)
+
+Option A executed. The recall number is now meaningful and the BM25 fallback is loud.
+
+- **Task 2.5 done:** `probes.jsonl` re-keyed to drawer level (`::0`), `seed-0001` (`?::0`) dropped → 24 probes. `seed_probes.is_seedable_key` + `?::` guard added. `score_probes` tags each probe's serving engine; `aggregate` emits `vector_failure_rate`; the runner prints a loud WARNING when nonzero.
+- **Task 4 done:** `scripts/bench/run-recall-bench.sh` added (results inherit `state/` gitignore — confirmed).
+- **uv.lock committed** (Option A accepted — the mempalace bump is what strips `_chunk_index`).
+- **Re-run baseline:** `chroma-baseline k=5` → mean **0.3333** (was 0.04), perfect 8/24, zero 16, **vector_failure_rate 0.1667** (4/24 probes errored on ChromaDB's vector path at 316k drawers, fell back to BM25, all 4 missed). 34/34 tests pass under system python.
+
+**Headline for Task 9 memo:** ChromaDB's vector path fails on ~17% of probes at 316k drawers; drawer-level ground-truth recall@5 is 0.33. Strongest evidence yet for the turbovecdb/sqlite-vec evaluation.
+
+**Run a backend-labeled bench:** `bash scripts/bench/run-recall-bench.sh <label> <k>` (default `chroma-baseline 5`); alternate backend `.venv/bin/python scripts/bench/run_recall_bench.py --label turbovecdb --backend turbovecdb --k 5`.
+
+**Next-session task order:** Tasks **5, 6, 7** (correction ledger, dreaming/telegram usage counters, citation Stop-hook — all independent of the recall track) → Task 8 (cron + CI `test-bench` job + docs) → **Task 9 (backend memo — SWITCH TO FABLE; single judgment step; no ChromaDB deletion without Bill's sign-off).** This branch is unmerged — open a PR or continue on it.
+
+**Untouched in tree:** `scripts/bench/install-bench-cron.sh` (untracked — a Task 8 stub).
+
+---
+
 *Last updated: 2026-06-12 — Phase 2 session end: Tasks 1–3 done; recall methodology decided (Option A)*
 
 ## Current state (2026-06-12) — Phase 2 session end (Tasks 1–3 committed; methodology decided)

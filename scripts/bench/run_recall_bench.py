@@ -44,6 +44,13 @@ def keys_from_hits(hits):
     return keys
 
 
+def engine_of(hits):
+    """Which engine served these hits: 'bm25' if any hit carries the
+    _bench_fallback tag set by the BM25 fallback path, else 'vector'.
+    Makes the silent ChromaDB->BM25 fallback observable per probe."""
+    return "bm25" if any(h.get("_bench_fallback") for h in hits) else "vector"
+
+
 def score_probes(probes, search_fn, k):
     """search_fn(query, k) -> list of hit dicts (rank-ordered)."""
     out = []
@@ -56,6 +63,7 @@ def score_probes(probes, search_fn, k):
             "k": k,
             "expect": p["expect"],
             "retrieved": retrieved,
+            "engine": engine_of(hits),
             "recall": recall_lib.recall_at_k(set(p["expect"]), retrieved, k),
         })
     return out
@@ -137,7 +145,12 @@ def main():
     agg = payload["aggregate"]
     print(f"recall-bench[{args.label}] k={args.k}: "
           f"mean={agg['recall_at_k_mean']} min={agg['recall_at_k_min']} "
-          f"perfect={agg['n_perfect']}/{agg['n_probes']} zero={agg['n_zero']} -> {out}")
+          f"perfect={agg['n_perfect']}/{agg['n_probes']} zero={agg['n_zero']} "
+          f"vector_failure_rate={agg['vector_failure_rate']} "
+          f"(bm25_served={agg['n_vector_fallback']}/{agg['n_probes']}) -> {out}")
+    if agg["vector_failure_rate"]:
+        print(f"  WARNING: {agg['n_vector_fallback']}/{agg['n_probes']} probes fell back to "
+              f"BM25 (vector path errored). '{args.label}' recall is NOT a clean vector number.")
 
 
 if __name__ == "__main__":

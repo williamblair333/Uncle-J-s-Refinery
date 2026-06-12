@@ -142,3 +142,61 @@ def test_build_result_payload_shape():
     assert payload["aggregate"]["recall_at_k_mean"] == 1.0
     assert payload["per_probe"][0]["id"] == "p1"
     assert "timestamp" in payload
+
+
+# --- Task 2.5: drawer-level re-key + loud BM25 fallback ---
+
+def test_checked_in_probes_are_drawer_level():
+    """Option A: probes key ground truth at drawer/file level (::0). mempalace
+    strips _chunk_index, so the harness can only ever see ::0; probes that key
+    a chunk (::N) or an unknown source (?::) are unsatisfiable by construction."""
+    probes = recall_lib.load_probes(REPO / "scripts" / "bench" / "probes.jsonl")
+    assert probes, "probes.jsonl must not be empty"
+    for p in probes:
+        for key in p["expect"]:
+            assert key.endswith("::0"), f"{p['id']} expect {key!r} is not drawer-level (::0)"
+            assert not key.startswith("?::"), f"{p['id']} has malformed key {key!r}"
+
+
+def test_is_seedable_key_rejects_unknown_source():
+    assert seed_probes.is_seedable_key("notes.md::0") is True
+    assert seed_probes.is_seedable_key("?::0") is False
+
+
+def test_score_probes_records_serving_engine():
+    probes = [
+        {"id": "p1", "query": "vector ok", "expect": ["a.txt::0"], "origin": "seed"},
+        {"id": "p2", "query": "fell back", "expect": ["b.txt::0"], "origin": "seed"},
+    ]
+
+    def fake_search(query, k):
+        if "back" in query:
+            # BM25-fallback hits carry _bench_fallback (set by the live searcher).
+            return [{"_source_file_full": "/d/b.txt", "_chunk_index": 0,
+                     "_bench_fallback": "bm25:ef or M is too small"}]
+        return [{"_source_file_full": "/d/a.txt", "_chunk_index": 0}]
+
+    per_probe = run_recall_bench.score_probes(probes, fake_search, k=5)
+    assert per_probe[0]["engine"] == "vector"
+    assert per_probe[1]["engine"] == "bm25"
+    assert per_probe[0]["recall"] == 1.0  # recall still scored normally
+    assert per_probe[1]["recall"] == 1.0
+
+
+def test_aggregate_reports_vector_failure_rate():
+    per_probe = [
+        {"id": "p1", "recall": 1.0, "k": 5, "engine": "vector"},
+        {"id": "p2", "recall": 0.0, "k": 5, "engine": "bm25"},
+        {"id": "p3", "recall": 1.0, "k": 5, "engine": "bm25"},
+        {"id": "p4", "recall": 0.0, "k": 5, "engine": "vector"},
+    ]
+    agg = recall_lib.aggregate(per_probe)
+    assert agg["n_vector_fallback"] == 2
+    assert agg["vector_failure_rate"] == 0.5
+
+
+def test_aggregate_defaults_engine_to_vector_when_absent():
+    # legacy per_probe records (no engine key) count as vector — no false alarm.
+    agg = recall_lib.aggregate([{"id": "p1", "recall": 1.0, "k": 5}])
+    assert agg["vector_failure_rate"] == 0.0
+    assert agg["n_vector_fallback"] == 0
