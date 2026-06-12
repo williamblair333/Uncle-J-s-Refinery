@@ -1,5 +1,57 @@
 # Handoff — Uncle J's Refinery
 
+*Last updated: 2026-06-12 — Phase 2 session end: Tasks 1–3 done; recall methodology decided (Option A)*
+
+## Current state (2026-06-12) — Phase 2 session end (Tasks 1–3 committed; methodology decided)
+
+Workspace returned to **main**. Phase 2 work lives on branch `feat/phase2-accuracy-instrumentation` (3 commits: `800bd13` recall_lib, `9572861` seeder+probes, `aa17d11` harness). 14 tests pass under CI-style system-python.
+
+**The single most important thing for next session:** the live `chroma-baseline` recall number (`0.04`) is **not a clean ChromaDB measurement**, and the prior Task-3 log below understates why. Three compounding issues, all verified from `state/recall-bench/results-chroma-baseline.json`:
+1. **Chunk identity is unobservable now.** The `mempalace` upgrade sitting in the **uncommitted `uv.lock`** (`f124bd2` → `7e45720`) makes `search_memories` strip `_source_file_full`/`_chunk_index`. Probes key ground truth as `file::N`; the harness can only ever see `file::0`. This is the root cause of most of the 0.04.
+2. **Even file-level recall is poor: 8/25 = 0.32.** Scoring chunk-agnostic (right *drawer*, ignore chunk), most distinctive-phrase queries still do not retrieve their own source drawer. Do **not** re-key to `::0` and report ~0.32 as a clean ChromaDB number.
+3. **The baseline is contaminated by a silent BM25 fallback.** ChromaDB vector search throws on several probes (HNSW ef-too-small at 316k drawers — the open `@kostadis` ef item) and the harness falls back to BM25 without recording it. So "chroma-baseline" is partly BM25.
+
+**Decision made this session (Bill delegated it): Option A — measure the stack as it actually runs.** Next session executes:
+- Re-key probes to drawer/file level (`::0`) and drop the malformed `seed-0001` (`?::0`); add the `if key.startswith("?::"): continue` seeder guard. (This is the queued **Task 2.5**.)
+- Make the BM25 fallback **loud**: tag each probe with the engine that served it and emit a `vector_failure_rate` in the payload. A re-keyed number is only citable alongside that rate.
+- Frame ChromaDB's vector failure at 316k drawers as the **headline finding** for the Task 9 backend memo — it's the strongest evidence for the turbovecdb/sqlite-vec evaluation.
+
+**Next-session task order:** Task 2.5 (re-key + loud fallback) → re-run baseline → Task 4 (runner; `state/` already gitignored) → **Tasks 5, 6, 7 are independent of the recall track** (correction ledger, dreaming/telegram usage counters, citation Stop-hook) and can run anytime → Task 8 (cron + CI + docs) → **Task 9 (backend memo — SWITCH TO FABLE; the single judgment step; no ChromaDB deletion without Bill's sign-off).**
+
+**Stack note:** the consequential `uv.lock` mempalace bump is **uncommitted** and is what changed `search_memories`' return shape. Decide whether to commit it (accept Option-A framing) or pin back before relying on the number.
+
+**Untouched in tree:** `uv.lock` (M), `scripts/bench/install-bench-cron.sh` (untracked — a Task 8 stub from a prior session).
+
+---
+
+## Prior state (2026-06-12) — Phase 2 Task 3 complete
+
+Branch: `feat/phase2-accuracy-instrumentation`.
+
+**Work log — 2026-06-12 (Task 3: recall benchmark harness)**
+
+- Created `scripts/bench/run_recall_bench.py` — in-process recall@k harness. Scores `probes.jsonl` against live palace via `mempalace.searcher.search_memories`. BM25 fallback adapted for two ChromaDB 1.5.8 bugs (HNSW ef-too-small, np.uint64 pin-thread failure). Pure functions (keys_from_hits, score_probes, build_payload) are injected-searcher-testable.
+- Appended 3 tests to `tests/test_recall_bench.py` — 14/14 passing.
+- Ran baseline: `chroma-baseline k=5` → mean=0.04, perfect=1/25, zero=24. All 24 zeros are chunk-index mismatch (probe expects `filename::N`, harness sees `filename::0` because `_chunk_index` stripped by `_finalize_candidate_hits`). Harness is correct; probe set needs cleanup (Task 2.5).
+- Key finding: `_source_file_full` and `_chunk_index` are stripped from `search_memories` results by `_finalize_candidate_hits`; harness uses `source_file` basename with chunk=0 fallback.
+
+**Next task:** Task 2.5 — probe cleanup (drop seed-0001 `?::0`, normalize chunk indices to `::0`, add hand probes).
+
+**Next task after 2.5:** Task 4 — gitignore + bench runner script (already partly done — `state/` gitignored).
+
+---
+
+**Work log — 2026-06-12 (Task 1: recall_lib pure functions)**
+
+- Created `scripts/bench/__init__.py` (empty package marker).
+- Created `scripts/bench/recall_lib.py` — stdlib-only library with `drawer_key`, `recall_at_k`, `validate_probe`, `load_probes`, `aggregate`, `ProbeError`.
+- Created `tests/test_recall_bench.py` — 7 tests, all passing via `.venv/bin/python -m pytest`.
+- TDD: red (ModuleNotFoundError confirmed) → green (7/7) → committed.
+
+**Next task:** Task 2 — probe seeder (by-construction ground truth).
+
+---
+
 *Last updated: 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired; Phase 2 next*
 
 ## Current state (2026-06-11) — Improvement Program Phase 1 closed

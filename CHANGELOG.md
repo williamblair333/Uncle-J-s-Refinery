@@ -2,6 +2,45 @@
 
 ---
 
+## 2026-06-12 — Phase 2 session-end: recall methodology decision (Option A)
+
+### Decided
+- The recall harness surfaced that the live `chroma-baseline` is not a clean ChromaDB measurement: chunk-level ground truth is unobservable (the `mempalace` upgrade in the uncommitted `uv.lock` strips `_source_file_full`/`_chunk_index`), and ChromaDB vector search fails on multiple probes (HNSW ef-too-small at 316k drawers) and silently falls back to BM25. Even chunk-agnostic file-level recall is only 8/25 = 0.32.
+- **Decision (Bill-delegated): Option A** — measure the stack as it actually runs. Re-key probes to drawer/file level (`::0`), make the BM25 fallback loud (record per-probe engine + a `vector_failure_rate`), and treat ChromaDB's vector failure at scale as the headline finding for the Task 9 backend memo. Execution deferred to next session.
+
+---
+
+## 2026-06-12 — Phase 2 Task 3: recall benchmark harness
+
+### Added
+- **`scripts/bench/run_recall_bench.py`** — in-process recall@k harness; scores `probes.jsonl` against live palace via `search_memories`; BM25 fallback for ChromaDB 1.5.8 HNSW compat bugs; outputs `state/recall-bench/results-<label>.json`.
+- **`tests/test_recall_bench.py`** — 3 new tests (keys_from_hits, score_probes with fake searcher, build_payload shape); 14/14 passing.
+
+### Baseline result
+- `chroma-baseline k=5`: mean=0.04, perfect=1/25, zero=24. Zeros are chunk-index mismatch (right file retrieved, wrong chunk in expect key) — probe cleanup in Task 2.5.
+
+---
+
+## 2026-06-12 — Phase 2 Task 2: probe seeder (by-construction ground truth)
+
+### Added
+- **`scripts/bench/seed_probes.py`** — seeds `probes.jsonl` from live palace via read-only chromadb; `distinctive_phrase` + `build_probe_record` are stdlib-only and unit-tested.
+- **`scripts/bench/probes.jsonl`** — 25 by-construction seed probes (24/25 with real source-file keys; 1 diary-entry drawer has no `source_file`).
+- **`tests/test_recall_bench.py`** — 4 new tests for `seed_probes`; 11/11 passing.
+
+---
+
+## 2026-06-12 — Phase 2 Task 1: recall_lib pure functions
+
+### Added
+- **`scripts/bench/recall_lib.py`** — stdlib-only recall benchmark library:
+  `drawer_key`, `recall_at_k`, `validate_probe`, `load_probes`, `aggregate`.
+- **`scripts/bench/__init__.py`** — package marker (empty).
+- **`tests/test_recall_bench.py`** — 7 pytest tests covering all public functions.
+  All 7 pass with `.venv/bin/python -m pytest`.
+
+---
+
 ## 2026-06-11 — Phase 1 judgment signed off; D1 executed; FTS5 repaired
 
 ### Changed
