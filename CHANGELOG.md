@@ -2,6 +2,35 @@
 
 ---
 
+## 2026-06-12 — memweave Phase 2 (first increment): transcript→markdown corpus, proven on real data
+
+Build the corpus path: export Claude session transcripts to clean markdown, index with the
+offline ONNX provider, retrieve real Refinery memory. Bounded slice first (40 recent this-project
+sessions) — full-history load + freshness cron deferred (own pre-mortem).
+
+### Added
+- **`scripts/memweave/export_transcripts.py`** — exports `~/.claude/projects/<project>/*.jsonl`
+  to per-session markdown. Keeps human prompts + assistant **prose**; drops `tool_use`/
+  `tool_result`/`thinking` blocks, metadata event types, and `<system-reminder>` spans — the
+  noise that tanked mempalace transcript-mining to ~0 recall. Pure functions unit-tested.
+- **`scripts/memweave/index_workspace.py`** — index a memweave workspace with the ONNX provider
+  and run a query; the Phase-2 proof harness and Phase-3 search seed.
+- **`tests/test_memweave_export.py`** — 12 stdlib-only tests for the extraction/render functions.
+
+### Fixed
+- **Workspace path collision** — `~/.memweave/uncle-j` indexed **0 files**: memweave's
+  `list_memory_files` skips any path containing `.memweave` in its parts (its internal index dir),
+  so a workspace under a `.memweave`-named parent excludes every file. Default workspace moved to
+  **`~/.uncle-j-memory`**; regression test added. (Caught only by running on real data, not the
+  toy PoC.)
+
+### Proven
+- 40-session slice → 28 markdown files (12 trivial skipped) → **1235 chunks indexed offline (27.6s)**.
+  Real queries retrieve correct, specific memories on the pure semantic path (bm25=0.000): the
+  mempalace→memweave decision, "FTS5 corruption decomposed into four root causes."
+
+---
+
 ## 2026-06-12 — Memory backend: memweave stood up offline (Phase 1 of mempalace→memweave migration)
 
 Decision executed (Bill's call): **replace mempalace with memweave.** The recall A/B against
