@@ -1,6 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — memweave Phase 4c (in-repo mempalace residue cleanup) on branch `feat/phase4c-mempalace-residue`. Phases 1–4b DONE & merged. memweave fully replaces mempalace.*
+*Last updated: 2026-06-13 — memweave Phase 4d (remove orphaned mempalace/chromadb deps) on branch `feat/phase4d-mempalace-deps`. Phases 1–4c DONE & merged. memweave fully replaces mempalace.*
+
+## Current state (2026-06-13) — mempalace deps removed (branch `feat/phase4d-mempalace-deps`)
+
+4d removed the dependency residue: the mempalace git-dep + the `chromadb==1.5.8`/`chroma-hnswlib`
+pin/override from `pyproject.toml`, regenerated `uv.lock` (chromadb was mempalace-only — verified;
+retrieval stack untouched), and dropped the mempalace check from `check-stack-freshness.sh` (kills
+the `stack-not-at-head` false-positive). `.venv` left as-is (no `uv sync` prune; harmless).
+
+**STILL DEFERRED (the genuinely-blocked / control-sensitive / irreversible items only):**
+1. **Global `~/.claude/` edits — harness denies me all writes there; run the `!python3` command
+   from earlier** to remove the mempalace Stop-hook + repoint the standing instruction. Then
+   `~/.claude/CLAUDE.md` routing (re-run `install.sh` propagates the repo copy) + `~/.claude.json`
+   mempalace MCP-server removal (HIGH — do at the keyboard).
+2. **Control-invariant repoint** (deliberately not rushed — discipline still fail-closes to
+   `state/premortem-unaudited.log`, so it works): the `pre-mortem` skill's audit sink
+   (`mempalace_diary_write`), `post-audit-mempalace-capture` skill (repoint to write capture md
+   into the memweave store), the pre-mortem step-11 trigger, and the `session-end-checklist`
+   `related_skills` name. Worth a careful, red-team-reviewed pass.
+3. **`.venv` prune (optional):** a routine `uv sync` will drop the now-unused mempalace/chromadb
+   packages still physically installed; harmless to leave.
+4. **Purge the staged trash** when satisfied: `~/.mempalace-trash-phase4-*` (2.4 G) +
+   `~/.mempalace-trash-D1-*` (55 G) + the `~/.mempalace-decommission-backups-*` dir.
+
+---
+
+*Earlier — memweave Phase 4c (in-repo mempalace residue cleanup) on branch `feat/phase4c-mempalace-residue`. Phases 1–4b DONE & merged. memweave fully replaces mempalace.*
 
 ## Current state (2026-06-13) — in-repo mempalace residue cleaned (branch `feat/phase4c-mempalace-residue`)
 

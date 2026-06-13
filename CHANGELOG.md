@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-06-13 — memweave Phase 4d: remove orphaned mempalace/chromadb deps
+
+The mempalace decommission's dependency residue, now verified safe to remove.
+
+### Removed
+- **`pyproject.toml`**: the `mempalace @ git+...` dep, the explicit `chroma-hnswlib==0.7.6` dep,
+  the `override-dependencies = ["chromadb==1.5.8", "chroma-hnswlib==0.7.6"]` pin (its sole purpose
+  was working around mempalace's chromadb HNSW-corruption bug), and the `[tool.uv.sources] mempalace`
+  entry. Description updated (MemPalace → memweave).
+- **`uv.lock`** regenerated: drops `mempalace`, `chromadb`, `chroma-hnswlib` and their transitive
+  tree (pypika, tokenizers, typer, watchfiles, websockets, …). **Verified:** chromadb was depended
+  on *only* by mempalace; jcodemunch/jdata/jdoc-mcp + pysqlite3 retained unchanged.
+- **`scripts/check-stack-freshness.sh`**: dropped the mempalace git-package freshness check + its
+  upgrade hint + GitHub-watch line — kills the recurring `stack-not-at-head` false-positive.
+
+### Notes
+- Did **not** run `uv sync` — the live `.venv` is left as-is (unused installed packages are
+  harmless; a routine `uv sync` prunes them later). So the running environment needed no rollback.
+
+### Pre-mortem
+- Infrastructure, all 12 dimensions: 0 HIGH/MEDIUM, 2 LOW (uv-upgrade-lock concurrency; uv-lock
+  network). CLEAR. Verified lock resolves with the retrieval stack intact.
+
+---
+
 ## 2026-06-13 — memweave Phase 4c: in-repo mempalace residue cleanup
 
 Follow-on to 4b — removes the dead in-repo residue the decommission left behind.
