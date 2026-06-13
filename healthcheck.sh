@@ -83,9 +83,9 @@ check_verify() {
     fi
 }
 
-# ----- 2. all 7 stack MCP servers connected ---------------------------------
+# ----- 2. all 6 stack MCP servers connected ---------------------------------
 check_mcp_connected() {
-    step "MCP servers — 7 stack servers connected"
+    step "MCP servers — 6 stack servers connected"
     local output
     output="$(claude mcp list 2>&1)" || {
         bad "claude mcp list failed"
@@ -105,7 +105,7 @@ check_mcp_connected() {
         sleep 3
         output="$(claude mcp list 2>&1)"
         if printf '%s\n' "$output" | grep -qE "^duckdb: .*✓ Connected"; then
-            ok "all 7 stack servers Connected (duckdb needed 1 retry — uvx cold start)"
+            ok "all 6 stack servers Connected (duckdb needed 1 retry — uvx cold start)"
             return
         fi
         bad "duckdb not Connected after retry"
@@ -114,7 +114,7 @@ check_mcp_connected() {
         return
     fi
     if [ ${#missing[@]} -eq 0 ]; then
-        ok "all 7 stack servers Connected"
+        ok "all 6 stack servers Connected"
     else
         bad "not Connected: ${missing[*]}"
         hint "run: $REPO_ROOT/install.sh --auto-register"
@@ -329,259 +329,6 @@ check_agents() {
     done
 }
 
-# ----- 9. MemPalace health: SQLite integrity + no stale mine locks ----------
-check_mempalace() {
-    step "MemPalace — SQLite FTS5 integrity"
-    local db="$HOME/.mempalace/palace/chroma.sqlite3"
-    if [ ! -f "$db" ]; then
-        bad "palace db not found at $db — MemPalace not initialised"
-        hint "run: $REPO_ROOT/.venv/bin/mempalace mine ~/.claude/projects/ --mode convos --wing conversations"
-        record_fail "mempalace-db-missing"
-        return
-    fi
-    local result
-    local py="$REPO_ROOT/.venv/bin/python3"
-    if [ -x "$py" ]; then
-        # Two complementary checks — neither alone is sufficient:
-        #   PRAGMA quick_check    — catches B-tree structural malformation (the corruption
-        #                           that manifests as "malformed inverted index" errors);
-        #                           FTS5 integrity-check gives false-ok on this layer.
-        #   FTS5 integrity-check  — catches FTS5 inverted-index data inconsistencies
-        #                           (row/docid mismatches, corrupt posting lists);
-        #                           quick_check gives false-ok on this layer.
-        result="$("$py" - "$db" <<'PYEOF' 2>&1
-import sqlite3, sys
-db = sys.argv[1]
-try:
-    c = sqlite3.connect(db, timeout=10)
-    qc = c.execute('PRAGMA quick_check').fetchone()[0]
-    if qc != 'ok':
-        c.close()
-        print('quick_check: ' + qc)
-    else:
-        c.execute("INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('integrity-check')")
-        c.close()
-        print('ok')
-except Exception as e:
-    print(str(e))
-PYEOF
-)"
-    else
-        # Venv not built yet (pre-install) — fall back to system sqlite3 (quick_check only).
-        # May produce false positives when system sqlite3 < Python's sqlite3 version.
-        result="$(sqlite3 "$db" 'PRAGMA quick_check;' 2>&1 | head -1)"
-    fi
-    if [ "$result" = "ok" ]; then
-        ok "SQLite quick_check + FTS5 integrity-check: ok"
-    else
-        bad "SQLite corruption: $result"
-        hint "run: $REPO_ROOT/.venv/bin/python3 -c \"import sqlite3; c=sqlite3.connect('$db'); c.execute(\\\"INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')\\\"); c.commit()\""
-        record_fail "mempalace-sqlite"
-    fi
-
-    step "MemPalace — no stale mine locks"
-    local stale=()
-    for lock in "$REPO_ROOT/state/mempalace-mine-convos.lock" "$REPO_ROOT/state/mempalace-mine-project.lock"; do
-        if [ -d "$lock" ]; then
-            local age=$(( $(date +%s) - $(stat -c %Y "$lock" 2>/dev/null || echo 0) ))
-            if [ "$age" -gt 1800 ]; then
-                stale+=("$(basename "$lock") (${age}s old)")
-            fi
-        fi
-    done
-    if [ ${#stale[@]} -eq 0 ]; then
-        ok "no stale mine locks"
-    else
-        warn "stale locks: ${stale[*]} (auto-clears on next mine run)"
-        hint "run: rmdir $REPO_ROOT/state/mempalace-mine-*.lock"
-    fi
-
-    step "MemPalace — HNSW not corrupted or empty"
-    local corrupted=0
-    for f in "$HOME/.mempalace/palace"/*/link_lists.bin; do
-        [ -f "$f" ] || continue
-        # Skip drift backup directories (segment.drift-YYYYMMDD/link_lists.bin)
-        [[ "$(dirname "$f")" == *".drift-"* ]] && continue
-        local sz seg
-        seg=$(basename "$(dirname "$f")")
-        sz=$(du -m "$f" 2>/dev/null | cut -f1)
-        if [ "${sz:-0}" -gt 200 ]; then
-            bad "HNSW corruption: $f is ${sz}MB (>200MB limit)"
-            record_fail "mempalace-hnsw-corruption"
-            corrupted=1
-        elif [ ! -s "$f" ]; then
-            bad "HNSW empty: ${seg:0:8} link_lists.bin is 0 bytes — searches fail ('ef or M is too small')"
-            record_fail "mempalace-hnsw-empty"
-            corrupted=1
-            # Auto-repair in background so session start is not blocked.
-            # Repair can now run alongside MCP servers (writer-check excludes mcp_server).
-            # MCP server must be restarted after repair to reload the rebuilt HNSW.
-            log "  Auto-repair: starting mempalace-repair-now.sh in background..."
-            nohup bash "$REPO_ROOT/mempalace-repair-now.sh" \
-                >> "$REPO_ROOT/state/mempalace-repair.log" 2>&1 &
-            log "  Repair PID $! started — restart MCP server (Claude session) when complete"
-        fi
-    done
-    [ "$corrupted" -eq 0 ] && ok "HNSW link_lists.bin sizes normal"
-
-    step "MemPalace — HNSW pickle format"
-    # Pure stdlib pickle inspection — no chromadb, no WAL contention.
-    # Detects segments where index_metadata.pickle is a raw dict instead of a
-    # PersistentData (or SimpleNamespace) object. SegmentAPI accesses .dimensionality
-    # as an attribute; dict has it as a key — this mismatch silently passes the
-    # healthcheck but breaks every MCP search query.
-    # $py is already declared at the top of check_mempalace().
-    local pickle_result=""
-    if [ -x "$py" ]; then
-        # tail -1: ensures a Python traceback never matches BAD:/ERR: patterns.
-        # Python always prints a known token as its last line.
-        # BAD: = dict-format (fixable by repair-now.sh)
-        # ERR: = unreadable pickle (fixable by rebuild from SQLite)
-        pickle_result=$( "$py" - "$HOME/.mempalace/palace" <<'PYEOF' 2>&1 | tail -1
-import pickle, pathlib, sys
-palace = pathlib.Path(sys.argv[1])
-if not palace.exists():
-    print("SKIP")
-    sys.exit(0)
-bad, errs = [], []
-for pkl in palace.glob("*/index_metadata.pickle"):
-    try:
-        with open(pkl, "rb") as f:
-            data = pickle.load(f)
-        if isinstance(data, dict):
-            bad.append(pkl.parent.name[:8])
-    except Exception:
-        errs.append(pkl.parent.name[:8])
-parts = []
-if bad:  parts.append("BAD:"  + ",".join(bad))
-if errs: parts.append("ERR:"  + ",".join(errs))
-print("|".join(parts) if parts else "OK")
-PYEOF
-        )
-    else
-        pickle_result="SKIP"
-    fi
-    case "$pickle_result" in
-        OK)
-            ok "HNSW pickle format: ok (PersistentData/SimpleNamespace)" ;;
-        SKIP|"")
-            ok "HNSW pickle format: skipped (no palace or no venv yet)" ;;
-        *BAD:*)
-            _bad_segs="${pickle_result##*BAD:}"; _bad_segs="${_bad_segs%%|*}"
-            bad "HNSW pickle: dict-format in segment(s): $_bad_segs"
-            hint "run: bash $REPO_ROOT/mempalace-repair-now.sh"
-            record_fail "mempalace-pickle-format"
-            case "$pickle_result" in *ERR:*)
-                _err_segs="${pickle_result##*ERR:}"
-                warn "HNSW pickle: also unreadable segment(s): $_err_segs (repair-now.sh will skip — rebuild from SQLite needed)"
-            ;; esac
-            ;;
-        *ERR:*)
-            _err_segs="${pickle_result##*ERR:}"
-            bad "HNSW pickle: unreadable segment(s): $_err_segs — rebuild from SQLite needed"
-            hint "run: bash $REPO_ROOT/mempalace-repair-now.sh"
-            record_fail "mempalace-pickle-unreadable"
-            ;;
-        *)
-            warn "HNSW pickle check error (unexpected output): ${pickle_result%%$'\n'*}" ;;
-    esac
-
-    step "MemPalace — HNSW/SQLite sync per collection"
-    local drift_result
-    drift_result=$( "$REPO_ROOT/.venv/bin/python3" - "$HOME/.mempalace/palace" <<'PYEOF'
-import sys, sqlite3, struct, pathlib
-
-palace = pathlib.Path(sys.argv[1])
-db = palace / "chroma.sqlite3"
-if not db.exists():
-    print("SKIP")
-    sys.exit(0)
-
-def hnsw_elements(seg_id):
-    # uint32 at offset 20 = high 32 bits of (cur_elements * 2^32) in chroma-hnswlib 0.7.6
-    hdr = palace / seg_id / "header.bin"
-    if not hdr.exists():
-        return 0
-    try:
-        data = hdr.read_bytes()
-        if len(data) >= 24:
-            n = struct.unpack_from("<I", data, 20)[0]
-            return n if 0 <= n <= 10_000_000 else 0
-    except Exception:
-        pass
-    return 0
-
-try:
-    # embeddings table uses METADATA segment IDs; join both scopes
-    with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
-        rows = conn.execute("""
-            SELECT c.name, v.id, COUNT(e.id) as cnt
-            FROM collections c
-            JOIN segments v ON v.collection=c.id AND v.scope='VECTOR'
-            JOIN segments m ON m.collection=c.id AND m.scope='METADATA'
-            LEFT JOIN embeddings e ON e.segment_id=m.id
-            GROUP BY c.id
-        """).fetchall()
-except Exception as e:
-    print(f"ERR:{e}")
-    sys.exit(0)
-
-results = []
-overall = "OK"
-for col_name, seg_id, sqlite_n in rows:
-    hnsw_n = hnsw_elements(seg_id)
-    if sqlite_n > 0 and hnsw_n == 0:
-        tag = "EMPTY"
-        overall = "FAIL"
-    elif sqlite_n > 0 and hnsw_n < sqlite_n // 2:
-        tag = "DRIFT"
-        if overall != "FAIL":
-            overall = "WARN"
-    else:
-        tag = "OK"
-    results.append(f"{col_name}:{sqlite_n}:{hnsw_n}:{tag}")
-
-print(f"{overall}|{'|'.join(results)}")
-PYEOF
-    )
-
-    case "$drift_result" in
-        SKIP)
-            ok "HNSW drift check skipped (no palace db yet)" ;;
-        ERR:*)
-            warn "HNSW drift check error: ${drift_result#ERR:}" ;;
-        OK*|WARN*|FAIL*)
-            local _overall="${drift_result%%|*}"
-            local _cols="${drift_result#*|}"
-            local _any_bad=0
-            IFS='|' read -ra _col_stats <<< "$_cols"
-            for col_stat in "${_col_stats[@]}"; do
-                IFS=':' read -r _col_name _sq _hq _tag <<< "$col_stat"
-                case "$_tag" in
-                    EMPTY)
-                        bad "HNSW empty: $_col_name has 0 HNSW elements, $_sq in SQLite"
-                        record_fail "mempalace-hnsw-empty"
-                        _any_bad=1 ;;
-                    DRIFT)
-                        bad "HNSW drift: $_col_name has $_hq HNSW, $_sq in SQLite"
-                        record_fail "mempalace-hnsw-drift"
-                        _any_bad=1 ;;
-                esac
-            done
-            if [ "$_any_bad" -eq 0 ]; then
-                _summary=""
-                for col_stat in "${_col_stats[@]}"; do
-                    IFS=':' read -r _col_name _sq _hq _tag <<< "$col_stat"
-                    _summary="${_summary}${_col_name##*_}=${_hq}/${_sq} "
-                done
-                ok "HNSW/SQLite in sync: ${_summary% }"
-            else
-                hint "run: bash $REPO_ROOT/mempalace-repair-now.sh"
-            fi ;;
-        *)
-            warn "HNSW drift check: unexpected output: ${drift_result%%$'\n'*}" ;;
-    esac
-}
 
 # ----- 9d. crons: all expected jobs registered -----------------------------
 check_crons() {
@@ -625,7 +372,7 @@ check_stack_freshness() {
         ok "all packages at HEAD"
     else
         bad "one or more packages behind HEAD — run check-stack-freshness.sh for details"
-        hint "run: cd $REPO_ROOT && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact"
+        hint "run: cd $REPO_ROOT && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp && uv sync --inexact"
         record_fail "stack-not-at-head"
     fi
 }
