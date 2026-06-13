@@ -73,6 +73,7 @@ Stop hooks (in order)
    ├── unpushed-warn.sh + pr-check.sh                 (global — reminders)
    ├── session-notify.sh  (Telegram, opt-in)          (project settings.json)
    ├── mempalace-mine-convos.sh  (all convos → --wing conversations)
+   ├── memweave/sync_memory.sh '' 15  (incremental ingest of recent transcripts)
    └── skill-suggest.sh + skill-link unlink
 ```
 
@@ -90,6 +91,30 @@ MemPalace uses chromadb's embedded Rust HNSW bindings for vector search. The bin
 | Nightly repair | `uncle-j-mempalace-repair` cron at 4am rebuilds the HNSW index from SQLite nightly, preventing silent drift accumulation |
 
 Run `./healthcheck.sh --fixall` to detect and auto-fix all repairable issues in one pass.
+
+## memweave memory freshness
+
+The offline memweave store at `~/.uncle-j-memory` (markdown corpus + sqlite index) is kept
+current by two callers of `scripts/memweave/sync_memory.sh`, which is `flock -n`-guarded
+(`/tmp/memweave-sync.lock`) so the two can never race the single sqlite writer:
+
+| Caller | Schedule | Scope |
+|--------|----------|-------|
+| `uncle-j-memweave-sync` cron | 02:30 nightly (`nice -19`) | full export+index of all this-project transcripts |
+| Stop-hook (`# uncle-j-memweave-sync`) | every session end (`async`) | incremental — `LIMIT 15` most-recent transcripts |
+
+Both redirect to `state/memweave-sync.log`; the script logs to stdout/stderr only (callers own
+the destination). The store is fully reconstructable from the markdown corpus (memweave M2
+crash-recovery: `rm` the index → byte-identical rebuild), so an interrupted sync is recoverable.
+
+**Prerequisite:** the py3.12 `.venv-memweave` must exist (memweave requires ≥3.12; it can't live
+in the 3.11 project venv). A missing venv makes `sync_memory.sh` exit 1 with a logged error —
+`install.sh` registers the cron but does **not** yet build this venv, so a fresh provision needs
+it created by hand until venv bootstrap is folded in (Phase 3/4).
+
+**Follow-up (open):** no freshness alarm yet — failures land in the log but aren't alerted, and a
+hung export holds the flock so later runs cleanly skip while the store ages. Add a memweave
+freshness probe to `healthcheck.sh` (assert index mtime < 48h).
 
 ## What each component buys you
 

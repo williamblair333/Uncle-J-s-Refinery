@@ -330,7 +330,8 @@ for entry in \
     "uncle-j-mempalace-health|0 8 * * * nice -n 19 $STACK_ROOT/.venv/bin/python $STACK_ROOT/mempalace-health.py >> $STACK_ROOT/state/mempalace-health.log 2>&1" \
     "uncle-j-jcodemunch-reindex|0 1 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin bash $STACK_ROOT/scripts/jcodemunch-reindex.sh >> $STACK_ROOT/state/jcodemunch-reindex.log 2>&1" \
     "uncle-j-auto-maintain|0 3 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin CLAUDE_BIN=/home/bill/.local/bin/claude bash $STACK_ROOT/scripts/auto-maintain.sh >> $STACK_ROOT/state/auto-maintain.log 2>&1" \
-    "uncle-j-healthcheck-notify|0 7 * * * bash $STACK_ROOT/scripts/healthcheck-notify.sh >> $STACK_ROOT/state/healthcheck-notify.log 2>&1"
+    "uncle-j-healthcheck-notify|0 7 * * * bash $STACK_ROOT/scripts/healthcheck-notify.sh >> $STACK_ROOT/state/healthcheck-notify.log 2>&1" \
+    "uncle-j-memweave-sync|30 2 * * * nice -n 19 bash $STACK_ROOT/scripts/memweave/sync_memory.sh >> $STACK_ROOT/state/memweave-sync.log 2>&1"
 do
     tag="${entry%%|*}"
     line="${entry#*|}"
