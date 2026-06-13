@@ -2,6 +2,58 @@
 
 ---
 
+## 2026-06-13 — memweave Phase 4b: decommission mempalace
+
+memweave (offline, cross-project, freshness-automated) fully replaces mempalace. This tears
+mempalace down. Data is **staged, not deleted** (reversible); globals were backed up first.
+
+### Removed (in-repo)
+- Scripts: `scripts/mempalace-{mcp-start,mine-convos,mine-project}.sh`; root
+  `mempalace-{backup.sh,delete-wing.py,health.py,repair-now.sh,repair-verify.sh}`;
+  `scripts/turbovecdb-{benchmark.py,install.sh,migrate.py,report.sh,sync.py}`; `features/mempalace/`.
+- `healthcheck.sh`: dropped `mempalace` from the MCP-connected check + the `check_mempalace` call
+  site + the mempalace/turbovecdb crons from the expected-cron list (added `uncle-j-memweave-sync`).
+- `scripts/session-start-autofix.sh`: removed the FTS5 check/repair block + the `mempalace`
+  upgrade-package + `CHROMA_DB`.
+- `install.sh`: removed the mempalace backup/health cron entries + the `features/mempalace/install.sh`
+  call (section renamed to generic "maintenance cron jobs"), the mempalace MCP-server registration
+  (`mcp_add mempalace`), the `[mempalace]` EXE-map entry, and the `mempalace init/mine` post-install
+  guidance (replaced with the memweave `sync_memory.sh --all` bootstrap). *(install.sh MCP/EXE/guidance
+  misses were caught by the smart-review code-review pass and fixed before merge.)*
+- Project `.claude/settings.json`: removed the mempalace-mine-convos Stop-hook + the
+  `mcp__mempalace__mempalace_search` permission.
+- Project `CLAUDE.md`: dropped the `mempalace-develop` preamble reference.
+
+### Changed (repointed to memweave)
+- `features/dreaming/dream.sh`: promotion now copies the synthesis into the memweave store
+  (`~/.uncle-j-memory/memory`) instead of `mempalace mine`; removed the mempalace binary guard.
+- `global-skills/prior-art-check/SKILL.md` (v2.0.0): search via `mw_search.py` (Bash), not the
+  mempalace MCP tool.
+- `global-skills/smart-review/SKILL.md`: drift-audit log → local
+  `state/smart-review-classifications.log` (memweave has no write API).
+- `global-skills/session-end-checklist/SKILL.md`: dropped the `mempalace diary write` snapshot
+  (memweave auto-ingests) + softened the design-memory step (post-audit-mempalace-capture pending repoint).
+
+### Live system changes
+- Removed 9 crons (6 mempalace + 3 turbovecdb).
+- Staged `~/.mempalace` (2.4 GB) → `~/.mempalace-trash-phase4-<ts>` (atomic `mv`, reversible).
+- Global `~/.claude/` config + skill files backed up to `~/.mempalace-decommission-backups-<ts>`.
+
+### Deferred (documented in HANDOFF — NOT done this phase)
+- Global `~/.claude.json` mempalace MCP-server removal (HIGH-risk edit, best done at the keyboard).
+- Global `~/.claude/settings.json` (mempalace Stop-hook + standing instruction) and `~/.claude/CLAUDE.md`
+  routing — harness denies Claude writing under `~/.claude/`.
+- `pyproject.toml`/`uv.lock` mempalace+chromadb deps (risk to other `.venv` consumers; dead dep harmless).
+- Dead `check_mempalace()` body in `healthcheck.sh` (uncalled); 6 obsolete `mempalace-*` repair skills;
+  `post-audit-mempalace-capture` skill + pre-mortem step-11 reference.
+
+### Pre-mortem
+- Infrastructure, all 12 dimensions: 1 HIGH (`~/.claude.json` — deferred out of scope), 1 MEDIUM
+  (cascade — mitigated by repointing skills/dreaming), 4 LOW. Verified: healthcheck clean (duckdb
+  cold-start only), memweave cross-project search intact post-staging.
+
+---
+
 ## 2026-06-12 — memweave Phase 4a: widen to cross-project corpus
 
 memweave now covers **every** project under `~/.claude/projects`, not just this one — the

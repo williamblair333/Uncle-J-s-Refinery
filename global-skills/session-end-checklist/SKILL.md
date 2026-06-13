@@ -95,20 +95,20 @@ This step is **weekly** — skip if fewer than 7 days since last review (check l
 ### Step 6b — Design memory check (soft)
 
 Did this session include hardening work — adversarial analysis, security fixes, or invariant
-changes to any component — that wasn't followed by a `post-audit-mempalace-capture` invocation?
+changes to any component?
 
-- **Yes** → invoke `post-audit-mempalace-capture` for the affected component(s) before committing.
+- **Yes** → capture the design invariants / closed attack vectors as durable notes. NOTE: the
+  old `post-audit-mempalace-capture` skill wrote to mempalace, which has been decommissioned in
+  favor of memweave; that skill is **pending repoint to memweave** (follow-up). Until then,
+  record the hardening notes in the session HANDOFF/CHANGELOG so the next session has them.
 - **No** → note "No hardening this session — design memory step skipped."
-
-This catches cases where step 11 of the pre-mortem was skipped or hardening happened without
-a pre-mortem clearance.
 
 ### Step 7 — Custom checks
 
 Run each `custom_checks` entry from `.session-end.yml`:
 
 ```bash
-mempalace diary write   # snapshot this session to MemPalace
+# (memweave auto-ingests this session via the Stop-hook + nightly --all cron — no manual snapshot)
 ```
 
 If a check fails and `on_failure: warn`, log the failure and continue.
