@@ -1,6 +1,34 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — memweave Phase 2b-2 (freshness cron + Stop-hook) on branch `feat/phase2b2-memweave-freshness`. Phases 1, 2, 2b-1, 3a DONE & merged.*
+*Last updated: 2026-06-12 — memweave Phase 3b (project CLAUDE.md memory routing → memweave) on branch `feat/phase3b-memweave-routing`. Phases 1, 2, 2b-1, 2b-2, 3a DONE & merged.*
+
+## Current state (2026-06-12) — memory routing repointed to memweave (branch `feat/phase3b-memweave-routing`)
+
+The **project** `CLAUDE.md` now routes "have we solved this before?" to memweave's
+`scripts/memweave/mw_search.py` (offline ONNX semantic+BM25, read-only, no MCP server) instead of
+mempalace. Smoke-tested: the documented command returns relevant prior-art hits.
+
+**Deliberately NOT done this phase (pre-mortem-driven scope cut):** the global `~/.claude/CLAUDE.md`
+was left pointing at mempalace. It's cross-project, but `~/.uncle-j-memory` holds only this project's
+transcripts — globalizing now would feed other projects this project's memory. **The global repoint +
+the cross-project-corpus decision belong to Phase 4.** Also note: `install.sh` copies the repo
+`CLAUDE.md` → global on its next run, so **land Phase 4 before re-running install.sh**.
+
+**Transitional state:** project doc says memweave; global doc + the mempalace Stop-hook/crons + the
+"check mempalace" standing-instruction hooks still say mempalace. Both backends are live, so nothing
+breaks — but Phase 4 must land to remove the split-brain.
+
+**NEXT — Phase 4: decommission mempalace** (DESTRUCTIVE, pre-mortem + **Bill sign-off**). Plan: stage
+the ~55 GB palace data to a trash dir (reversible, D1 pattern — do NOT hard-delete), remove 7
+mempalace + 3 turbovecdb crons, the mempalace MCP server registration, `scripts/mempalace-*.sh` +
+root `mempalace-*.{sh,py}`, `features/mempalace/`, healthcheck `check_mempalace` probes,
+session-start-autofix FTS5 block, the mempalace Stop-hook mining, the global CLAUDE.md routing + the
+"check mempalace" standing-instruction hooks, and the pyproject/uv.lock mempalace+chromadb deps.
+Decide cross-project memweave corpus scope at the same time.
+
+---
+
+*Earlier — memweave Phase 2b-2 (freshness cron + Stop-hook) on branch `feat/phase2b2-memweave-freshness`. Phases 1, 2, 2b-1, 3a DONE & merged.*
 
 ## Current state (2026-06-12) — memweave freshness wired (branch `feat/phase2b2-memweave-freshness`)
 

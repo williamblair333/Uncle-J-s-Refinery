@@ -94,6 +94,9 @@ Run `./healthcheck.sh --fixall` to detect and auto-fix all repairable issues in 
 
 ## memweave memory freshness
 
+Project memory routing (`CLAUDE.md` §4) resolves "have we solved this before?" to
+`scripts/memweave/mw_search.py` (offline ONNX semantic+BM25, read-only) over the store below.
+
 The offline memweave store at `~/.uncle-j-memory` (markdown corpus + sqlite index) is kept
 current by two callers of `scripts/memweave/sync_memory.sh`, which is `flock -n`-guarded
 (`/tmp/memweave-sync.lock`) so the two can never race the single sqlite writer:

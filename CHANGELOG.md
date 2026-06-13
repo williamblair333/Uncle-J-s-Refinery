@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-06-12 — memweave Phase 3b: repoint memory routing (project CLAUDE.md)
+
+### Changed
+- **`CLAUDE.md` (project)** — memory routing now points at memweave instead of mempalace: the
+  routing-table "what did we decide before?" row and the rewritten "### 4. Memory" section direct
+  agents to `.venv-memweave/bin/python scripts/memweave/mw_search.py "query"` (offline ONNX
+  semantic + BM25, read-only, no MCP server). Dropped the mempalace diary/reconnect/KG guidance.
+
+### Notes
+- Scope deliberately limited to the **project** `CLAUDE.md`. The pre-mortem flagged that the global
+  `~/.claude/CLAUDE.md` is cross-project while `~/.uncle-j-memory` holds only this project's corpus —
+  globalizing the routing now would hand other projects this project's memory. Global repoint +
+  cross-project corpus decision are deferred to Phase 4.
+- mempalace MCP/crons/data untouched this phase (both backends remain live during the transition).
+
+### Pre-mortem
+- Infrastructure, all 12 dimensions: 0 HIGH/MEDIUM, 2 LOW (install.sh would propagate to global on
+  next run → do Phase 4 first; transient doc/hook split-brain until Phase 4). CLEAR.
+
+---
+
 ## 2026-06-12 — memweave Phase 2b-2: freshness cron + Stop-hook
 
 The memweave store now stays current unattended. Both the cron and the Stop-hook call the same
