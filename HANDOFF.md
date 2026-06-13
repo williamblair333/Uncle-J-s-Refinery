@@ -1,7 +1,27 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — Phase 4f (PR #57) + install.sh fix (PR #58) + Phase 4g (PR #59) all merged;
-Phase 4g.1 (final verify/prompt refs) on branch `fix/final-mempalace-verify-prompts`. Phases 1–4e merged.*
+*Last updated: 2026-06-13 — mempalace→memweave migration COMPLETE (PRs #57–#60 merged + global edits
+applied at the keyboard); install-reliability.sh crash fix on branch `fix/install-reliability-proj-unbound`.*
+
+## 2026-06-13 — migration closed out at the keyboard + install-reliability fix
+
+Bill ran `review/finish-memweave-migration.sh`: **global edits applied + verified live** — `~/.claude.json`
+mempalace MCP server gone, `~/.claude/settings.json` Stop-hook removed + standing instruction now
+"Check memweave…" (confirmed in live hook output), `~/.claude/CLAUDE.md` §4 repointed (1 residual
+ref = the `mempalace-develop` source-archive line in the preamble; harmless). **Staged trash purged
+(~57 GB freed).**
+
+**Two gotchas surfaced + handled:**
+- **`uv sync` reverts the pysqlite3 SQLite-3.51.3 build** (pysqlite3 is pinned in uv.lock → reconciles
+  to the 3.51.1 PyPI wheel). The runbook's optional uv-sync step did this; **re-patched the live `.venv`
+  back to 3.51.3** (source build). Lesson: never run a bare `uv sync` expecting the WAL patch to hold —
+  install.sh re-applies it last for this reason. (The prune was also a no-op: chromadb/mempalace were
+  already gone.)
+- **`install-reliability.sh` crashed** with `PROJ: unbound variable` (line 204) — a dead turbovecdb
+  block (mempalace-ecosystem residue, script removed in 4b). Removed in this branch.
+
+Remaining: only the optional `post-audit-mempalace-capture` rename (needs the ~/.claude/skills symlink
+recreated at the keyboard). Everything else the harness can reach is done.
 
 ## Also 2026-06-13 — final live mempalace refs cleared (branch `fix/final-mempalace-verify-prompts`)
 
