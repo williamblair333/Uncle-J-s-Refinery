@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-06-13 — fix: install.sh pysqlite3 build broken by uv 0.10.9
+
+`install.sh` died at the pysqlite3 SQLite-3.51.3 source-build step: line 106 called
+`uv pip download`, a subcommand **removed in uv 0.10.9** (`unrecognized subcommand 'download'`,
+exit 127). This blocked fresh provisioning **and** the WAL-race patch, leaving the venv's SQLite
+stuck at 3.51.1 (the open HANDOFF item).
+
+### Fixed
+- **`install.sh`**: replaced `uv pip download "pysqlite3==0.6.0"` with a direct PyPI fetch —
+  resolve the pinned sdist URL via the PyPI JSON API, `curl --fail` it into the temp build dir.
+  Uses curl+python3+tar only (no uv-subcommand coupling), so it survives future uv bumps. The
+  compile/install path (patched `sqlite3.c/.h` → `uv pip install`) is unchanged.
+- **`install.sh`**: dropped the stale "MemPalace" from the stack-install step label (mempalace dep
+  was removed in Phase 4d).
+
+### Verified
+- Full isolated build (throwaway py3.11 venv, live `.venv` untouched): compiled pysqlite3 against
+  the 3.51.3 amalgamation → bundled SQLite reports **3.51.3** (`>= 3.51.3` assertion passed).
+- PyPI-JSON fetch yields the identical `pysqlite3-0.6.0/` dir the old `uv pip download` produced.
+- `bash -n install.sh` clean.
+
+---
+
 ## 2026-06-13 — memweave Phase 4f: control-invariant repoint (pre-mortem audit sink)
 
 Repoints the discipline mechanism's last mempalace touchpoints to memweave — the deferred

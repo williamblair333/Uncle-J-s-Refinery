@@ -73,7 +73,7 @@ step "Creating .venv with uv"
 [ -d .venv ] || uv venv --python 3.11
 ok ".venv ready at $STACK_ROOT/.venv"
 
-step "Installing Python stack (jCodeMunch, jDataMunch, jDocMunch, MemPalace)"
+step "Installing Python stack (jCodeMunch, jDataMunch, jDocMunch)"
 # --inexact: don't remove extraneous packages (e.g. langfuse installed by
 # install-langfuse.sh). Without this, re-running install.sh after
 # install-langfuse.sh silently deletes the Langfuse SDK and breaks the
@@ -103,8 +103,11 @@ if [ "$_need_build" = "yes" ]; then
   TMP_SRC=$(mktemp -d)
   curl -sL "$SQLITE_AMALG_URL" -o "$TMP_SRC/amalg.zip"
   unzip -j "$TMP_SRC/amalg.zip" "*/sqlite3.c" "*/sqlite3.h" -d "$TMP_SRC/"
-  uv pip download "pysqlite3==0.6.0" --no-binary :all: -d "$TMP_SRC" \
-    --python "$STACK_ROOT/.venv/bin/python3" -q
+  # uv 0.10.9 removed `uv pip download`; fetch the pinned sdist straight from PyPI instead
+  # (curl+python3+tar — no uv-subcommand coupling, so it survives future uv bumps).
+  _PYSQLITE_SDIST_URL=$(curl -sSL --fail "https://pypi.org/pypi/pysqlite3/0.6.0/json" \
+    | python3 -c "import sys,json;print(next(u['url'] for u in json.load(sys.stdin)['urls'] if u['packagetype']=='sdist'))")
+  curl -sSL --fail "$_PYSQLITE_SDIST_URL" -o "$TMP_SRC/pysqlite3-0.6.0.tar.gz"
   tar xz -C "$TMP_SRC" -f "$TMP_SRC"/pysqlite3-*.tar.gz
   cp "$TMP_SRC/sqlite3.c" "$TMP_SRC/sqlite3.h" "$TMP_SRC/pysqlite3-0.6.0/"
   uv pip install "$TMP_SRC/pysqlite3-0.6.0/" --python "$STACK_ROOT/.venv/bin/python3" --force-reinstall

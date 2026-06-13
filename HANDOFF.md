@@ -1,8 +1,24 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — memweave Phase 4f (control-invariant repoint) on branch `feat/phase4f-control-repoint-memweave`. Phases 1–4e DONE & merged. memweave fully replaces mempalace.*
+*Last updated: 2026-06-13 — memweave Phase 4f (control-invariant repoint, merged PR #57) + an
+install.sh provisioning fix on branch `fix/install-uv-pip-download`. Phases 1–4e DONE & merged.*
 
-## Current state (2026-06-13) — discipline audit sink repointed to memweave (branch `feat/phase4f-control-repoint-memweave`)
+## Also 2026-06-13 — install.sh pysqlite3 build fixed (branch `fix/install-uv-pip-download`)
+
+Surfaced while running the global-edit handoff: `install.sh` died at the pysqlite3 step because
+`uv pip download` was removed in uv 0.10.9. Replaced it with a PyPI-JSON-API + `curl --fail` sdist
+fetch (no uv-subcommand coupling); also dropped the stale "MemPalace" from the stack-install label.
+Verified end-to-end in an isolated venv → SQLite **3.51.3**. **Unblocks the long-open "venv SQLite
+stuck at 3.51.1" item** — once merged, re-running `install.sh` brings the live `.venv` to 3.51.3.
+
+**Two global-config-edit gotchas found this session (for the keyboard items in #1 below):**
+- A wholesale `cp repo/CLAUDE.md → ~/.claude/CLAUDE.md` (what `install.sh` §6b does) **deletes the
+  global-only `## Docker Port Registry` section.** Use the surgical Python repoint handed over in
+  session instead (swaps only §4 Memory + the routing row).
+- `~/.claude.json` keeps ~8 *dead* `mcp__mempalace__*` permission strings after the MCP server block
+  is removed — harmless; the live auto-starting server is the only thing that matters.
+
+## Current state (2026-06-13) — discipline audit sink repointed to memweave (merged PR #57)
 
 4f closes the deferred control-sensitive item (prior #2): the `pre-mortem` audit sink, the
 `post-audit-mempalace-capture` body, and the `session-end-checklist` design-memory step now write to
