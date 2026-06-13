@@ -1,6 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — memweave Phase 4d (remove orphaned mempalace/chromadb deps) on branch `feat/phase4d-mempalace-deps`. Phases 1–4c DONE & merged. memweave fully replaces mempalace.*
+*Last updated: 2026-06-13 — memweave Phase 4e (user-facing docs + reference-config sync) on branch `feat/phase4e-docs-sync`. Phases 1–4d DONE & merged. memweave fully replaces mempalace.*
+
+## Current state (2026-06-13) — docs + reference configs synced (branch `feat/phase4e-docs-sync`)
+
+4e brought the user-facing surface in line with the decommission: `README.md` (all 53 mempalace refs
+→ memweave; MCP count 7→6), `docs/STACK.md` (MemPalace page → memweave), the 4 `mcp-clients/*.tmpl`
+(dropped the mempalace MCP entry), deleted stale `mempalace.yaml` + generated `*.json`, and `ROADMAP.md`
+(migration + Phase 4 D2 marked DONE). The whole mempalace→memweave migration is now complete across
+code, config, and docs (PRs #50–#55).
+
+**STILL DEFERRED — only the genuinely-blocked / control-sensitive / irreversible items remain:**
+1. **Global `~/.claude/` edits — harness denies me writes there. Run the `!python3` command from the
+   session** to remove the mempalace Stop-hook + repoint the standing instruction. Then `~/.claude/CLAUDE.md`
+   routing (re-run `install.sh`) + `~/.claude.json` mempalace MCP-server removal (HIGH — keyboard).
+2. **Control-invariant repoint** (deliberately not rushed; discipline still fail-closes to
+   `state/premortem-unaudited.log`): `pre-mortem` skill audit sink + `post-audit-mempalace-capture`
+   + pre-mortem step-11 + session-end-checklist `related_skills` name. Wants a red-team-reviewed pass.
+3. **Purge staged trash** (irreversible — Bill's call): `~/.mempalace-trash-phase4-*` (2.4 G),
+   `~/.mempalace-trash-D1-*` (55 G), `~/.mempalace-decommission-backups-*`.
+4. **Optional:** a routine `uv sync` will prune the now-unused mempalace/chromadb still in `.venv`.
+
+---
+
+*Earlier — memweave Phase 4d (remove orphaned mempalace/chromadb deps) on branch `feat/phase4d-mempalace-deps`. Phases 1–4c DONE & merged. memweave fully replaces mempalace.*
 
 ## Current state (2026-06-13) — mempalace deps removed (branch `feat/phase4d-mempalace-deps`)
 

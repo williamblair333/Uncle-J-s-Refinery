@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-06-13 — memweave Phase 4e: user-facing docs + reference-config sync
+
+Brings the user-facing docs and MCP-client templates in line with the decommission.
+
+### Changed
+- **`README.md`**: all 53 mempalace references replaced/removed (memory rows → memweave/`mw_search.py`,
+  the bootstrap section → `sync_memory.sh --all`, install/upgrade/git-package lists drop mempalace,
+  removed the MemPalace remote-backup + automation sections, file map + credits updated); the MCP
+  server count corrected **7 → 6** (mempalace was the 7th MCP server).
+- **`docs/STACK.md`**: the MemPalace tool page rewritten as memweave (offline CLI, not an MCP server);
+  removed the ChromaDB version-pin + turbovecdb blocks.
+- **`mcp-clients/*.tmpl`** (4 tracked templates): removed the `mempalace` MCP-server entry — fresh
+  installs/render no longer register it. Deleted the stale generated `mempalace.yaml` + `*.json`
+  (gitignored; regenerate clean from the templates).
+- **`ROADMAP.md`**: marked the memweave migration + Phase 4 D2 (ChromaDB repair apparatus) DONE;
+  retired the obsolete upstream-MemPalace / turbovecdb items.
+
+Docs-only/reference-config (no runtime surface) — README/STACK/ROADMAP prose; `.tmpl` are reference
+fragments (live registration was already fixed in 4b). README/STACK sync done by a subagent, reviewed.
+
+---
+
 ## 2026-06-13 — memweave Phase 4d: remove orphaned mempalace/chromadb deps
 
 The mempalace decommission's dependency residue, now verified safe to remove.

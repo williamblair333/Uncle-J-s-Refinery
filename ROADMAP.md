@@ -7,22 +7,25 @@ Completed items age out after ~4 weeks.
 
 ## In Progress
 
-- **Upstream MemPalace PR #1607** — FTS5 auto-rebuild before abort in `mempalace repair`; 5/6 CI jobs passing (Windows pending); awaiting maintainer review
-- **turbovecdb parallel eval** — live as of 2026-06-04 (PR #23 merged); 296K drawers migrated, weekly benchmark + auto-report crons running; awaiting @kostadis response on recall@10 ef tuning
+- **memweave migration — final residue (2026-06-13):** mempalace fully decommissioned in-repo
+  (PRs #50–#55). Remaining = items I cannot do / shouldn't rush: global `~/.claude/` edits
+  (harness-denied — `!`-command provided), the `pre-mortem`/`post-audit-mempalace-capture`
+  audit-sink repoint (control-invariant — wants a red-team-reviewed pass), and purging the staged
+  trash dirs (2.4 G + 55 G, irreversible — Bill's call). See HANDOFF + `project_memweave-migration-done`.
+- *(obsolete — mempalace gone)* ~~Upstream MemPalace PR #1607~~ / ~~turbovecdb parallel eval~~ —
+  both were mempalace/palace-coupled; dropped with the decommission.
 
 ## Planned
 
 **Improvement Program** (spec: `docs/superpowers/specs/2026-06-11-refinery-improvement-program-design.md` — phases in order; principles: deterministic-first, local-canonical):
 
-- **Phase 2 — Accuracy instrumentation** (IN PROGRESS — Tasks 1–4 + 2.5 + 2.6 + **2.7 done**; recall harness live with 25 distinct-drawer probes; `recall_at_k` now dedups to distinct drawers before the top-k cut. **Backend decision RESOLVED 2026-06-12: MemPalace eliminated, memweave is the target** — M1 in-place HNSW ef-fix proven NO-GO (query-region corruption + `modify(configuration)` broken at pinned chromadb 1.5.8); M2 memweave crash-recovery PASSED, proven fully offline with our on-disk MiniLM ONNX. See `review/memory-backend-eval.md` + memory `project_memory-backend-m1-m2`. **M0.5 probe rebuild DONE 2026-06-12** — first trustworthy number: **ChromaDB recall@5 = 0.18** (4/22), vector_failure_rate 0.36, 1 hnswlib SIGSEGV. The 0.0 was a broken-benchmark artifact, confirmed. Content-defined sibling-set ground truth + per-probe subprocess isolation + `hit_at_k` semantics. See memory `project_phase2-recall-methodology`.) **2026-06-12 — recall A/B ABANDONED (Bill's call): mempalace is dead, stop benchmarking it. memweave stood up for real instead.** Shipped (PRs #45–#48): offline ONNX `EmbeddingProvider` (pad-invariance proven), transcript→markdown exporter (drops tool noise), `sync_memory.sh` flock-guarded ingest seam, full this-project corpus loaded (`~/.uncle-j-memory`, 5742 chunks, offline), and `mw_search.py` read-only retrieval CLI. memweave is now a usable standalone memory system (ingest + retrieve, fully offline, 22 tests). mempalace untouched (new-before-old). **Remaining:** Phase 2b-2 freshness cron + Stop-hook (infra) → Phase 3b CLAUDE.md routing rewire → **Phase 4 decommission mempalace (destructive, Bill sign-off required; = D2 below)**. Backend selection: ~~turbovecdb / sqlite-vec / keep MemPalace~~ → **memweave (built)**; decommission triggers D2
-- **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dual-track dreaming (MemPalace canonical → native memory mirror); pattern-importance scoring as pure script
-- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; **D2** ChromaDB repair apparatus (repair crons, force-flush, ~12 repair skills) — fires on Phase 2 backend swap; **D3** ralph — only if Phase 2 usage counter confirms idle. Plus: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
+- **Phase 2 — Accuracy instrumentation → memweave migration** ✅ **DONE 2026-06-13** (see Completed). Backend decision (MemPalace eliminated → memweave) resolved 2026-06-12; memweave built (PRs #45–#48) and the full migration + mempalace decommission shipped (PRs #50–#55).
+- **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
+- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. Plus: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
 
 - **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
 - **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
-
-- **Submit upstream MemPalace HNSW flush fix** — review `state/upstream-bug-report-hnsw-flush.md` + `state/upstream-pr-hnsw-flush.md`, submit to https://github.com/MemPalace/mempalace; once merged, remove force-flush Step 2b from `mempalace-repair-now.sh` and unpin `chromadb==1.5.8`
 
 - **Telegram chat history persistence** — skill exists (`telegram-chat-history-persistence`)
   but implementation not yet started; would allow querying past bot conversations
@@ -40,6 +43,7 @@ Completed items age out after ~4 weeks.
 
 | Date | Item |
 |------|------|
+| 2026-06-13 | **memweave migration complete — mempalace decommissioned** (PRs #50–#55). 2b-2 freshness cron + Stop-hook; 3b project CLAUDE.md routing → `mw_search.py`; 4a cross-project corpus (`--all-projects`); 4b decommission (scripts/crons/MCP/probes removed, palace staged not deleted, dreaming + 3 global skills repointed); 4c in-repo residue (dead `check_mempalace`, 6 obsolete repair skills, RELIABILITY scrub); 4d removed mempalace/chromadb deps from pyproject/uv.lock; 4e docs sync (README/STACK/ROADMAP + mcp-clients templates). Memory is now offline cross-project memweave (`~/.uncle-j-memory`). Deferred: global `~/.claude/` edits (harness-denied), control-invariant audit-sink repoint, trash purge. |
 | 2026-06-11 | Improvement Program Phase 1 — pay-for-itself audit (PR #38): deterministic collectors + scorecard + judgment. KEEP: jmunch-retrieval (5,300:1 payoff), guardrails (315 blocks), langfuse, telegram. FIX: routing-policy (9k tok/session), mempalace storage (0.32 maint share), reliability, skills (prune), dreaming + ralph (instrument). D1–D3 deletions signed off. |
 | 2026-06-06 | `dcup` Docker port registry — SQLite registry, flock mutual exclusion, live-reality preflight, sweeper service, PreToolUse hook; 26 projects registered |
 | 2026-06-06 | `adversarial-review` skill + workflow — MAD framework (Paranoid/Archaeologist/Pedant/Cynic), 2 debate rounds, judge synthesis |

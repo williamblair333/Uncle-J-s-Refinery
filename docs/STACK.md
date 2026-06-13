@@ -66,34 +66,32 @@ same folder.
 
 ---
 
-## MemPalace (primary long-term memory)
+## memweave (primary long-term memory)
 
-**What it does.** Verbatim storage of conversation / project content
-with semantic search. Organized as wings (people / projects) -> rooms
-(topics) -> drawers (content). Pluggable backend (default: ChromaDB).
+**What it does.** Offline, cross-project memory. Exports your Claude Code
+session corpus and project content into a markdown corpus and indexes it
+for local semantic search. **Not an MCP server** — a Bash CLI plus a small
+Python search tool. No external service, no API calls, fully offline.
 
-**Performance.** 96.6% R@5 on LongMemEval raw (no LLM). 98.4% on the
-held-out hybrid v4 pipeline. Leads Mem0 (~85%), Zep/Graphiti (~85%).
-Zero API calls in the raw pipeline.
+**Store location.** `~/.uncle-j-memory` — the markdown corpus and its
+local index. The store is fully rebuildable from the corpus, so a wiped
+index is recoverable with one sync run; there's no separate backup step.
 
 **Key commands.**
+```bash
+# Build / refresh the store (full cross-project export + index):
+bash scripts/memweave/sync_memory.sh --all
+
+# Search the store (read-only; --json for machine-readable output):
+.venv-memweave/bin/python scripts/memweave/mw_search.py "why did we switch to GraphQL" --k 5
 ```
-mempalace init <project-path>
-mempalace mine <project-path>
-mempalace mine ~/.claude/projects/ --mode convos    # ingest Claude sessions
-mempalace search "why did we switch to GraphQL"
-mempalace wake-up                                    # hydrate new session
-```
 
-**Source here.** `../../mempalace-develop/`.
+**Freshness is automatic.** The `uncle-j-memweave-sync` nightly cron (02:30)
+plus a session-end Stop-hook keep the store current — you don't need to run
+`sync_memory.sh` by hand.
 
-> **Pin note (2026-06-12):** the current `uv.lock` mempalace pin (`7e45720`) strips `_source_file_full`/`_chunk_index` from `search_memories` results, so retrieval ground truth is observable only at drawer/file level (`::0`), not chunk level. The recall benchmark (`scripts/bench/`) keys probes accordingly. Bumping mempalace may restore those fields — re-check `keys_from_hits` in `run_recall_bench.py` if so.
-
-**ChromaDB version pin.** `pyproject.toml` pins `chromadb==1.5.8` + `chroma-hnswlib==0.7.6`. The `chroma-hnswlib` package is critical — without it, chromadb falls back to Rust HNSW bindings with a type-confusion corruption bug (chroma-core/chroma#4460). All mine/repair scripts also export `CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI`. Do not bump chromadb without verifying a clean repair run.
-
-**SQLite version pin.** The uv-managed Python 3.11 statically embeds SQLite 3.50.4, which has a WAL-reset data race bug (present since SQLite 3.7.0, fixed in 3.51.3). `install.sh` step 2b builds `pysqlite3` from source against the SQLite 3.51.3 amalgamation and installs a `.pth` file in venv site-packages that swaps `stdlib sqlite3 → pysqlite3` at every process startup. Verify with: `.venv/bin/python3 -c "import sqlite3; print(sqlite3.sqlite_version, sqlite3.__name__)"` — should print `3.51.3 pysqlite3`.
-
-**turbovecdb (parallel eval — not production).** `turbovecdb==0.1.0` + `turbovec==0.7.0` installed from `williamblair333/turbovecdb@fix/security-findings` (commit `cf5eb6c`) via `uv pip`. Lives at `~/.turbovecdb-eval/` — completely separate from `~/.mempalace/`. ChromaDB stays production. Re-install via `bash scripts/turbovecdb-install.sh` (idempotent, called by `install-reliability.sh`).
+**Source here.** `scripts/memweave/` — `sync_memory.sh` (build),
+`mw_search.py` (search), plus the export/index helpers.
 
 ---
 
@@ -164,8 +162,8 @@ express.
     "code question"   "data question"   "docs question"   "what did we decide?"
              │                │                │                 │
      ┌───────▼─────┐   ┌──────▼────┐    ┌─────▼────┐     ┌──────▼──────┐
-     │ jCodeMunch  │   │ jDataMunch│    │jDocMunch │     │  MemPalace  │
-     │   (AST)     │   │  (CSV)    │    │(your docs)│    │(verbatim mem)│
+     │ jCodeMunch  │   │ jDataMunch│    │jDocMunch │     │  memweave   │
+     │   (AST)     │   │  (CSV)    │    │(your docs)│    │(offline mem) │
      └─────┬───────┘   └─────┬─────┘    └────┬─────┘     └──────┬──────┘
            │ fallback        │ heavy SQL      │ 3rd-party        │
      ┌─────▼─────┐      ┌────▼─────┐     ┌────▼─────┐            │
@@ -189,7 +187,7 @@ express.
 **What it does.** Runs on a schedule (default: 2 AM daily). Queries Langfuse
 for traces since the last run, invokes the `dream-synthesizer` skill to
 extract recurring mistakes and proven playbooks, and writes the results to
-MemPalace (wing: `dreaming`) and `~/.claude/CLAUDE.md`.
+the memweave store and `~/.claude/CLAUDE.md`.
 
 **Entry point.** `features/dreaming/dream.sh` (also available as `/dream`
 slash command for on-demand runs inside Claude Code).
@@ -201,7 +199,7 @@ bash features/dreaming/install.sh
 
 **When to use.** After a project has accumulated 10+ Langfuse traces. The
 `prior-art-check` skill will automatically surface dreaming output on the
-next non-trivial task because it queries MemPalace, and the `## Dreaming
+next non-trivial task because it runs `mw_search.py` (memweave), and the `## Dreaming
 Notes` section in `CLAUDE.md` informs every session directly.
 
 **Key env vars.** `DREAMING_CRON_SCHEDULE` (default: `0 2 * * *`),
@@ -223,7 +221,7 @@ agent merges the outputs. Traces are tagged by `role:` in Langfuse.
 | `code` | jCodeMunch, Serena |
 | `data` | jDataMunch, DuckDB |
 | `docs` | jDocMunch, Context7 |
-| `memory` | MemPalace |
+| `memory` | memweave |
 | `general` | all tools |
 
 **AGENT_ROLE env var.** Set by ralph-harness.sh on each sub-agent subprocess.
@@ -259,7 +257,7 @@ slash command for on-demand runs inside Claude Code).
 
 **Output (--cron mode).**
 - `~/.claude/dreaming-output/stats-YYYY-MM-DD.md` — picked up automatically
-  by the next dreaming run so weekly stats appear in MemPalace playbooks.
+  by the next dreaming run so weekly stats appear in memweave playbooks.
 - `state/stats-weekly.md` — human reference; symlink-friendly for dashboards.
 
 **Install.**
