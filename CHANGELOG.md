@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-13 — session-end: ROADMAP sync (memweave migration closed out)
+
+- Moved the memweave-migration "In Progress" item to **Recently completed** — the residue scrub
+  (#63), stack upgrade (#64), audit-sink repoint (#57), and `post-audit-*` rename (#62) all shipped;
+  only the staged-trash purge (Bill's call) remains. Added the **pysqlite3-wheel-vendoring** follow-up
+  as the sole new In-Progress item.
+
+---
+
 ## 2026-06-13 — upgrade jmunch stack to HEAD (jcode/jdata/jdoc); pysqlite3 re-patch
 
 Closed the `stack-not-at-head` healthcheck fail. All three first-party retrieval servers bumped to

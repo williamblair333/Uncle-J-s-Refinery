@@ -7,13 +7,25 @@ Completed items age out after ~4 weeks.
 
 ## In Progress
 
-- **memweave migration — final residue (2026-06-13):** mempalace fully decommissioned in-repo
-  (PRs #50–#55). Remaining = items I cannot do / shouldn't rush: global `~/.claude/` edits
-  (harness-denied — `!`-command provided), the `pre-mortem`/`post-audit-mempalace-capture`
-  audit-sink repoint (control-invariant — wants a red-team-reviewed pass), and purging the staged
-  trash dirs (2.4 G + 55 G, irreversible — Bill's call). See HANDOFF + `project_memweave-migration-done`.
-- *(obsolete — mempalace gone)* ~~Upstream MemPalace PR #1607~~ / ~~turbovecdb parallel eval~~ —
-  both were mempalace/palace-coupled; dropped with the decommission.
+- **pysqlite3 re-patch papercut (follow-up):** every `uv sync` reverts the source-built SQLite
+  3.51.3 → 3.51.1 wheel (WAL data-race bug), forcing a manual source rebuild (run twice on
+  2026-06-13). **Fix:** build the pysqlite3-3.51.3 wheel once, vendor it in-repo, pin `uv.lock` to
+  the local wheel so `uv sync` stops clobbering it. Ends the dance permanently. Own branch + pre-mortem.
+
+## Recently completed (memweave migration — fully closed 2026-06-13)
+
+- **LIVE residue scrub (PR #63):** repointed 18 global skills + feature docs + PORTING.md + flowchart
+  + GEMINI.md off mempalace → memweave; deleted dead recall-bench + `CLAUDE.md.merged` + `entities.json`.
+- **jmunch stack upgraded to HEAD (PR #64):** jcode 1.108.55 / jdata 1.13.1 / jdoc 1.70.2; cleared
+  `stack-not-at-head`. (Restart Claude Code to load the new MCP servers; run
+  `post-upgrade-mcp-integration` next session.)
+- **Audit-sink repoint (PR #57) + `post-audit-mempalace-capture`→`post-audit-memory-capture` (PR #62)**
+  + global `~/.claude/` edits applied at the keyboard. The migration (PRs #45–#64) is complete in-repo
+  and in global config; mempalace fully decommissioned.
+- *(obsolete — mempalace gone)* ~~Upstream MemPalace PR #1607~~ / ~~turbovecdb parallel eval~~.
+
+**Only genuinely-remaining deferred item:** purge the staged trash dirs (2.4 G + 55 G, irreversible —
+Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 ## Planned
 
