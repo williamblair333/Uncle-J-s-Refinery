@@ -12,7 +12,7 @@ When a new library emerges as a candidate to replace an existing backend. Especi
 
 ## Steps
 
-1. **Prior art check** — search MemPalace for any prior analysis of the candidate library or migration topic.
+1. **Prior art check** — search memweave for any prior analysis of the candidate library or migration topic (`.venv-memweave/bin/python scripts/memweave/mw_search.py "<candidate> <incumbent>" --k 5`).
 
 2. **Fetch the discussion** — use `gh` CLI to pull the PR, issue, or community discussion. Prefer `gh` over WebFetch for GitHub URLs.
 

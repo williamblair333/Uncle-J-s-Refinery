@@ -151,7 +151,7 @@ RS_Y = y;           y -= GAP + 0.014
 STOP_LABEL_Y = y;   y -= 0.002
 SH1_Y = y;          y -= GAP + 0.004   # langfuse
 SH2_Y = y;          y -= GAP + 0.004   # session-notify (Telegram)
-SH3_Y = y;          y -= GAP + 0.004   # mempalace convo mine
+SH3_Y = y;          y -= GAP + 0.004   # memweave session ingest
 SH4_Y = y;          y -= GAP + 0.016   # skill-suggest + skill-link unlink
 
 # CRON section
@@ -173,7 +173,7 @@ section_tag(ax, SS_BOX_Y, "SESSION START")
 box(ax, CX, SS_BOX_Y, W + 0.06, H + 0.008,
     "SessionStart hooks fire",
     HOOK_C, fontsize=9.5,
-    sublabel="healthcheck context injected  |  skill-link: project skills symlinked  |  MemPalace project mining")
+    sublabel="healthcheck context injected  |  skill-link: project skills symlinked")
 
 arrow(ax, CX, SS_BOX_Y - (H+0.008)/2, CX, MSG_Y + H/2)
 
@@ -205,7 +205,7 @@ section_tag(ax, PA_Y, "SKILL")
 box(ax, CX, PA_Y, W + 0.02, H,
     "prior-art-check skill invoked",
     SKILL_C,
-    sublabel="MemPalace search — 'have we solved this before?' — surfaces prior decisions + context")
+    sublabel="memweave search — 'have we solved this before?' — surfaces prior decisions + context")
 
 arrow(ax, CX, PA_Y - H/2, CX, RT_Y + DH/2)
 
@@ -222,7 +222,6 @@ TOOLS = [
     ("jCodeMunch\nsymbols · blast radius\ncall graph · hotspots", ROUTE_C),
     ("jDataMunch\nCSV · Parquet\nSQL aggregation",                ROUTE_C),
     ("jDocMunch\nproject docs\nrunbooks · markdown",              ROUTE_C),
-    ("MemPalace\nprior art · decisions\nsession snapshots",       SKILL_C),
     ("Serena\nLSP · cross-file refs\ntype resolution",            ROUTE_C),
     ("Context7\n3rd-party library\ndocs (version-pinned)",        ROUTE_C),
     ("DuckDB\nParquet · S3 · JSON\ncomplex SQL joins",            ROUTE_C),
@@ -362,8 +361,8 @@ box(ax, CX, SH2_Y, W + 0.04, H,
 arrow(ax, CX, SH2_Y - H/2, CX, SH3_Y + H/2)
 
 box(ax, CX, SH3_Y, W + 0.04, H,
-    "Stop hook: MemPalace convo mining",
-    SKILL_C, sublabel="session transcript mined into palace drawers — feeds next session's prior-art-check")
+    "Stop hook: memweave session ingest",
+    SKILL_C, sublabel="session transcript embedded into the memweave corpus — feeds next session's prior-art-check")
 
 arrow(ax, CX, SH3_Y - H/2, CX, SH4_Y + H/2)
 

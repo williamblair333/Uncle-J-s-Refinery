@@ -45,10 +45,10 @@ Leave in `_review/` and report to user when:
 
 | Item | Signal Found | Action |
 |------|-------------|--------|
-| `mempalace-fts5-corruption.md` | `status: resolved` | Auto-move |
-| `mempalace-repair-orphaned-collections.md` | `status: resolved` | Auto-move |
+| `fts5-corruption-bug.md` | `status: resolved` | Auto-move |
+| `repair-orphaned-collections.md` | `status: resolved` | Auto-move |
 | `ECC/` | `REPO-ASSESSMENT.md` + commit `ae41b6c` closed gaps | Leave (or move if user confirms) |
-| `mempalace/` (source drop) | No assessment, no commit | Leave, report to user |
+| `some-vendor-drop/` (source drop) | No assessment, no commit | Leave, report to user |
 
 ## Notes
 

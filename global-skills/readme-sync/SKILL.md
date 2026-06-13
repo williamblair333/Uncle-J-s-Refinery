@@ -12,8 +12,8 @@ Trigger phrases: "update the README", "README is out of date", "add X to the doc
 ## Steps
 
 ### 1. Check prior README work
-Before opening a single file, search MemPalace for prior README work on this repo:
-mempalace_search("README <project-name>")
+Before opening a single file, search memweave for prior README work on this repo:
+`.venv-memweave/bin/python scripts/memweave/mw_search.py "README <project-name>" --k 5`
 Skip if prior hits are for a different project.
 
 ### 2. Read the current README and recent commits in parallel

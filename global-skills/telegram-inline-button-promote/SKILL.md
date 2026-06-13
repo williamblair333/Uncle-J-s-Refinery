@@ -20,7 +20,7 @@ Applies to projects that:
 ## Key steps
 
 ### 1. Check memory and notify lib first
-mempalace_search("<feature area> promote flow")
+.venv-memweave/bin/python scripts/memweave/mw_search.py "<feature area> promote flow" --k 5
 # Then read lib/notify.sh (or equivalent) to find the pitch/button function
 
 ### 2. Add the inline button to the outbound notification

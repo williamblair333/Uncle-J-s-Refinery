@@ -1,6 +1,6 @@
 ---
 name: telegram-chat-history-persistence
-description: Design and implement context continuity for a Telegram → Claude gateway. Use when the bot loses cross-session context or when choosing between transcript injection, SQLite buffering, RAG, and MemPalace for chat history.
+description: Design and implement context continuity for a Telegram → Claude gateway. Use when the bot loses cross-session context or when choosing between transcript injection, SQLite buffering, RAG, and the memweave corpus for chat history.
 metadata:
   type: project
 ---
@@ -21,7 +21,7 @@ Invoke when:
 | 3 | **LLM-summarized history** ✓ | Bounded, captures gist, handles long gaps | Slight losiness; one async LLM call per session |
 | 4 | SQLite store | Queryable, durable, no external deps | Still needs retrieval strategy on top |
 | 5 | RAG over chat history | Solves "10 hours ago" references | Needs embedding model (e.g. local ollama) |
-| 6 | MemPalace | Zero new infra | Gateway shell can't call MCP directly; needs glue |
+| 6 | memweave corpus (mw_search.py) | Zero new infra, shell-callable CLI (no MCP glue) | Summaries only; not a turn-by-turn buffer |
 | 7 | Mem0 / Zep managed | Production-ready | Data leaves machine, external cost |
 | 8 | Long-context model injection | No retrieval logic | Expensive, slow, still has a ceiling |
 
@@ -35,11 +35,11 @@ Invoke when:
    - Queries SQLite for the last 2–3 session summaries
    - Appends the last N raw turns (e.g. 20 turns or 2 hours)
    - Injects both into the system prompt as "Recent Telegram context"
-4. **MemPalace** receives only session summaries (not raw transcripts) — which is what it's actually good at
+4. **The memweave corpus** receives only session summaries (not raw transcripts) — which is what it's actually good at
 
 ## Key Constraints
 
-**Avoid storing raw transcripts in MemPalace** — circular disclosure risk: if the bot disclosed something it shouldn't have (commit hashes, tool names), storing it verbatim lets the bot retrieve and repeat the mistake with false confidence.
+**Avoid storing raw transcripts in the memweave corpus** — circular disclosure risk: if the bot disclosed something it shouldn't have (commit hashes, tool names), storing it verbatim lets the bot retrieve and repeat the mistake with false confidence.
 
 **Sanitize before injection** — strip or redact sensitive content (commit hashes, file paths, MCP tool names) from the last-N raw turns before they enter the system prompt. See [[feedback_telegram_disclosure]].
 

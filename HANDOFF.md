@@ -1,7 +1,34 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — mempalace→memweave migration COMPLETE (PRs #57–#60 merged + global edits
-applied at the keyboard); install-reliability.sh crash fix on branch `fix/install-reliability-proj-unbound`.*
+*Last updated: 2026-06-13 — LIVE mempalace residue scrubbed from instructional surfaces (branch
+`chore/scrub-mempalace-residue`); mempalace→memweave migration was already complete (PRs #57–#62).*
+
+## 2026-06-13 — scrubbed all LIVE mempalace residue → memweave (branch `chore/scrub-mempalace-residue`)
+
+The migration (PRs #50–#62) covered code/config/docs but left mempalace in the *instructional*
+surfaces — 18 global skills, feature docs, `PORTING.md`, the flowchart generator, `GEMINI.md`. This
+branch repoints every place that still told a session to **use** mempalace → memweave (`mw_search.py`
+for search; "Stop-hook auto-ingests" for writes). Net −130 mempalace lines across 41 files.
+
+**Also fixed in passing:** `scripts/jcodemunch-reindex.sh` now self-heals the local/git dual-identity
+index collision (it was silently failing the cron reindex — diagnosed this session: the CLI `index`
+has no identity flag, so a stray `local/` + git index on the same path collide; the script now
+deletes the stray and retries). The session-status-briefing skill's health step uses `grep` not
+`tail` so failures aren't truncated.
+
+**Removed:** `scripts/bench/*` + `tests/test_recall_bench.py` (dead recall-A/B track), `CLAUDE.md.merged`
+(untracked — gitignored + install.sh-generated), `entities.json` (dead mempalace artifact).
+
+**Deliberately LEFT (historical/provenance — scrubbing would falsify the record or break CI):**
+dated `plans/*`+`specs/*`, `scripts/audit/*`+`tests/test_audit.py` (mempalace was a real component;
+the audit attributes the repo's *past*), provenance comments in memweave's own files, and the
+"do NOT use mempalace" warnings in `stack-not-at-head-remediation`.
+
+**Verified:** test_skills 504✓, test_audit 15✓, flowchart parses, reindex `bash -n` + live + unit-tested.
+
+**Still deferred (unchanged from prior):** the jcodemunch-mcp 6-commits-behind upgrade (`stack-not-at-head`
+— user chose to defer; the SQLite-regression-aware remediation skill is now ready), and the
+staged-trash purge.
 
 ## 2026-06-13 — migration closed out at the keyboard + install-reliability fix
 

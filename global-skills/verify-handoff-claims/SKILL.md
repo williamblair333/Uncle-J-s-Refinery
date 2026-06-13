@@ -6,7 +6,7 @@ description: Before repeating any "outstanding" or "not yet done" item from a ha
 
 ## When to Use
 
-Invoke before reporting open work from any handoff document (TODO.md, STATUS.md, NOTES.md, session diary, or MemPalace entry) when those docs may lag behind recent commits.
+Invoke before reporting open work from any handoff document (TODO.md, STATUS.md, NOTES.md, session diary, or memweave corpus note) when those docs may lag behind recent commits.
 
 ## Key Steps
 
@@ -17,8 +17,8 @@ Invoke before reporting open work from any handoff document (TODO.md, STATUS.md,
    git log --oneline -20
    ```
 
-3. **Cross-check against MemPalace** — search for the last session snapshot:
-   - `mempalace_search` with topic keywords
+3. **Cross-check against memweave** — search for the last session snapshot:
+   - `.venv-memweave/bin/python scripts/memweave/mw_search.py "<topic keywords>" --k 5`
    - Look for "Open items" or "completed this session" sections
 
 4. **Verify against source files** — for any item where git log is ambiguous, check the actual implementation exists (use `search_symbols` or `get_file_outline`, not grep).
@@ -33,4 +33,4 @@ Invoke before reporting open work from any handoff document (TODO.md, STATUS.md,
 
 - Commit message keywords to look for: feature name fragments, module names, UI component names — not just exact TODO text.
 - Priority tables in STATUS.md often lag even further than checkbox lists — check them separately.
-- MemPalace diary entries may also be stale; always prefer git log as ground truth.
+- memweave corpus notes may also be stale; always prefer git log as ground truth.

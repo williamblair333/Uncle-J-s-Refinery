@@ -1,5 +1,5 @@
 ---
-description: Run the Uncle J's Refinery dream synthesizer — mine past Langfuse traces and write playbooks to MemPalace
+description: Run the Uncle J's Refinery dream synthesizer — mine past Langfuse traces and write playbooks to the memweave corpus
 allowed-tools: Bash
 ---
 
@@ -17,7 +17,7 @@ Steps:
 
 3. Report:
    - The number of traces processed.
-   - Whether MemPalace was updated.
+   - Whether the memweave corpus was updated (via `sync_memory.sh`).
    - Whether `~/.claude/CLAUDE.md` was updated.
    - The path of the output file written.
    - Any `warn` lines from stderr.

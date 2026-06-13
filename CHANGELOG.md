@@ -2,6 +2,49 @@
 
 ---
 
+## 2026-06-13 — scrub all LIVE mempalace residue → memweave; remove dead recall-bench
+
+Closed the gap the Phase-4 migration left: the migration covered repo code/config/docs but missed
+the *instructional* surfaces (global skills, feature docs, porting guide). Swept every place that
+still told a session to **use** mempalace and repointed it to memweave. Net −130 mempalace lines.
+
+### Changed (live guidance → memweave)
+- **18 global skills** — repointed `mempalace_search`/`mempalace_diary_write`/`mempalace_add_drawer`
+  calls and "search/snapshot MemPalace" prose to `mw_search.py` (search) and "memweave auto-ingests
+  via the Stop-hook" (writes; memweave has no write API). Includes `session-status-briefing` (the
+  HNSW-health step → stack-health; `grep` not `tail` so failures aren't truncated) and
+  `stack-not-at-head-remediation` (dropped dead `--upgrade-package mempalace`; added the pysqlite3
+  3.51.3→3.51.1 regression + MCP-restart caution that its "non-destructive, just run it" premise hid).
+- **`scripts/jcodemunch-reindex.sh`** — self-heals the local/git dual-identity collision (detect the
+  exact error → delete the stray `local/` index → retry once) that was silently breaking the cron reindex.
+- **`scripts/generate-flowchart.py`** — removed MemPalace from the MCP-tools panel (it's a CLI, not
+  an MCP server; 7→6 servers); prior-art + session-ingest boxes now say memweave.
+- **`GEMINI.md`** (dead `.venv/bin/mempalace search` binary call), `docs/SESSION-END.md`, `PRD.md`,
+  `prd-template.md`, `features/dreaming/{README.md,dream.md}`, `features/gemini-integration/README.md`,
+  `features/session-stats/stats.md` — all repointed.
+- **`PORTING.md`** — rewrote the MemPalace section for memweave's actual shape (copy store + venv +
+  `mw_search.py`; NOT an MCP server); MCP count 7→6.
+- **`.gitignore`** — dropped the dead `mempalace.yaml`/`entities.json` ignore block.
+
+### Removed
+- **`scripts/bench/*` + `tests/test_recall_bench.py`** — abandoned ChromaDB/mempalace recall-A/B
+  benchmark (superseded by memweave; not in CI; no external importers).
+- **`CLAUDE.md.merged`** — untracked (it's gitignored + install.sh-generated; was committed by
+  mistake — exactly the `validate-external-audit` complaint). Regenerated clean from the repo CLAUDE.md.
+- **`entities.json`** — dead mempalace entity-extraction artifact (un-ignored by the .gitignore edit).
+
+### Intentionally left (NOT scrubbed)
+- Dated `docs/superpowers/plans/*` + `specs/*` archives, `scripts/audit/*` + `tests/test_audit.py`
+  (historical cost-attribution — mempalace was a real component; scrubbing would falsify the record
+  and break CI), and provenance comments in memweave's own files (they explain *why* memweave
+  replaced mempalace). `stack-not-at-head-remediation`'s remaining hits are "do NOT use mempalace" warnings.
+
+### Verified
+- `test_skills.py` 504 passed · `test_audit.py` 15 passed · `generate-flowchart.py` parses ·
+  `jcodemunch-reindex.sh` `bash -n` clean + live run green + collision-detection unit-tested.
+
+---
+
 ## 2026-06-13 — rename post-audit-mempalace-capture → post-audit-memory-capture
 
 The skill's body already wrote to the memweave corpus (Phase 4f); only its dir name was stale. The

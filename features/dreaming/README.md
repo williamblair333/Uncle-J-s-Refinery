@@ -1,7 +1,7 @@
 # Dreaming
 
 Scheduled batch process that mines past Claude Code sessions and writes
-playbooks and mistake patterns back to MemPalace and `~/.claude/CLAUDE.md`.
+playbooks and mistake patterns back to the memweave corpus and `~/.claude/CLAUDE.md`.
 
 Inspired by Anthropic's Dreaming capability announced at Code with Claude
 (May 7, 2026). The implementation uses the Langfuse Stop hook traces that
@@ -14,13 +14,13 @@ are already being recorded, so there is no additional instrumentation needed.
 3. Invokes the `dream-synthesizer` skill via `claude -p`
 4. Synthesizer returns `## Recurring Mistakes` and `## Proven Playbooks`
 5. Output written to `~/.claude/dreaming-output/dream-YYYY-MM-DD.md`
-6. MemPalace ingests the output directory (wing: `dreaming`)
+6. The memweave corpus ingests the output (nightly `sync_memory.sh --all`)
 7. Proven playbooks appended to `~/.claude/CLAUDE.md` (idempotent)
 
 ## Prerequisites
 
 - Langfuse running and traces being recorded (install-langfuse.sh)
-- MemPalace installed (install.sh)
+- memweave store provisioned (`.venv-memweave` + `~/.uncle-j-memory`, via install.sh)
 - Claude CLI on PATH
 
 ## Install

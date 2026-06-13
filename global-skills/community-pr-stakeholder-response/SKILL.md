@@ -9,7 +9,7 @@ When you're tagged on a community or upstream PR and need to draft a thoughtful 
 
 ## Steps
 
-1. **Prior art check** — search MemPalace for prior involvement: earlier review comments, related decisions, known concerns from past sessions.
+1. **Prior art check** — search memweave for prior involvement: earlier review comments, related decisions, known concerns from past sessions. (`.venv-memweave/bin/python scripts/memweave/mw_search.py "<topic>" --k 5`)
 
 2. **Fetch current PR state** — `gh pr view <number>` + `gh pr view <number> --comments` to get the full picture: title, description, latest comment, and any tags/mentions.
 
