@@ -95,21 +95,26 @@ check_mcp_connected() {
     }
     local missing=()
     for name in duckdb jcodemunch jdatamunch jdocmunch serena context7; do
-        if ! printf '%s\n' "$output" | grep -qE "^${name}: .*✓ Connected"; then
+        if ! printf '%s\n' "$output" | grep -qE "^${name}: .*[✓✔] Connected"; then
             missing+=("$name")
         fi
     done
-    # duckdb uses uvx (slow cold start — ~3s on this machine). Retry once before
-    # declaring failure to avoid false-positives at session open.
+    # duckdb launches via uvx (mcp-server-motherduck); its first MCP handshake at
+    # session-open can outrun a single probe on a cold machine. It cold-starts in
+    # <1s once the uvx cache is warm, so poll up to ~15s before declaring failure:
+    # a genuine down state still surfaces, only the cold-start race is absorbed.
     if [[ ${#missing[@]} -eq 1 && "${missing[0]}" == "duckdb" ]]; then
-        sleep 3
-        output="$(claude mcp list 2>&1)"
-        if printf '%s\n' "$output" | grep -qE "^duckdb: .*✓ Connected"; then
-            ok "all 6 stack servers Connected (duckdb needed 1 retry — uvx cold start)"
-            return
-        fi
-        bad "duckdb not Connected after retry"
-        hint "run: $REPO_ROOT/install.sh --auto-register"
+        local i
+        for i in 1 2 3 4 5; do
+            sleep 3
+            output="$(claude mcp list 2>&1)"
+            if printf '%s\n' "$output" | grep -qE "^duckdb: .*[✓✔] Connected"; then
+                ok "all 6 stack servers Connected (duckdb warmed after ${i} retr$([ "$i" -eq 1 ] && echo y || echo ies))"
+                return
+            fi
+        done
+        bad "duckdb not Connected after 5 retries (~15s)"
+        hint "run: uvx mcp-server-motherduck --help   # warm the uvx cache, then: $REPO_ROOT/install.sh --auto-register"
         record_fail "mcp-servers-down(duckdb)"
         return
     fi
@@ -142,6 +147,28 @@ check_jcodemunch_path() {
         bad "jcodemunch not at a known venv path — may be uvx or stale local-scope registration"
         hint "run: claude mcp remove jcodemunch -s local ; claude mcp remove jcodemunch -s project"
         record_fail "jcodemunch-wrong-scope"
+    fi
+}
+
+# ----- 3b. venv SQLite is the WAL-race-fixed 3.51.3 (vendored pysqlite3) ----
+# A bare `uv sync` used to silently revert pysqlite3 to the PyPI 3.51.1 wheel
+# (WAL data-race bug). pyproject pins a vendored 3.51.3 wheel; this asserts the
+# pin held, so a future Python-bump fallback to PyPI fails LOUD instead of silent.
+check_sqlite_version() {
+    step "venv SQLite — 3.51.3 (vendored pysqlite3, WAL-race fix)"
+    local want="3.51.3" got
+    got="$("$REPO_ROOT/.venv/bin/python" -c 'import sqlite3; print(sqlite3.sqlite_version)' 2>/dev/null)" || {
+        bad "could not query venv sqlite3 version"
+        hint "run: $REPO_ROOT/install.sh   # rebuilds the venv + pysqlite3 patch"
+        record_fail "sqlite-version-unknown"
+        return
+    }
+    if [ "$got" = "$want" ]; then
+        ok "venv sqlite3 = $got (vendored wheel)"
+    else
+        bad "venv sqlite3 = $got, expected $want — pin reverted (likely PyPI 3.51.1 WAL bug)"
+        hint "run: bash $REPO_ROOT/scripts/build-vendored-pysqlite3.sh   # rebuild wheel for this Python, then uv lock && uv sync"
+        record_fail "sqlite-version($got)"
     fi
 }
 
@@ -613,6 +640,7 @@ check_trace_api() {
 step "healthcheck mode=$MODE  repo=$REPO_ROOT"
 check_mcp_connected
 check_jcodemunch_path
+check_sqlite_version
 check_mcp_timeout
 check_langfuse_compose
 check_langfuse_api

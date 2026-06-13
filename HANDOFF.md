@@ -1,6 +1,38 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — jmunch stack upgraded to HEAD (branch `chore/upgrade-jcodemunch-mcp`);
+*Last updated: 2026-06-13 — healthcheck checkmark bug fixed + pysqlite3 3.51.3 vendored
+(branch `fix/duckdb-checkmark-pysqlite3-vendor`).*
+
+## 2026-06-13 — "duckdb fail" root-caused (checkmark bug) + pysqlite3 wheel vendored
+
+**The recurring `HEALTHCHECK: fail (1) -- mcp-servers-down(duckdb)` was NOT a duckdb cold-start** —
+it was a checkmark codepoint bug. `healthcheck.sh` grepped `✓` (U+2713) but `claude mcp list`
+prints `✔` (U+2714), so the pattern matched **zero** servers; all 6 landed in `missing[]` and the
+else-branch headlined `missing[0]` = `duckdb` (alphabetically first). All 6 were connected the whole
+time. Fix: `[✓✔] Connected`. Every skill/HANDOFF note calling this "duckdb cold-start, not
+actionable" was rationalizing a real bug — memory `[[project_duckdb-healthcheck-checkmark-bug]]`
+records the correction.
+
+**pysqlite3 vendoring — the `uv sync` clobber dance is over.** `scripts/build-vendored-pysqlite3.sh`
+builds the 0.6.0 wheel against the SQLite 3.51.3 amalgamation once → `vendor/wheels/`. `pyproject.toml
+[tool.uv.sources]` pins it **marker-conditionally** (vendored wheel on cp311/linux/x86_64; PyPI
+fallback elsewhere so CI's `install-smoke` stays resolvable on a future Python bump). `uv.lock` diff
+= pysqlite3-only. New `healthcheck.sh check_sqlite_version` asserts `== 3.51.3` so a fallback-to-PyPI
+revert fails LOUD. Verified: `uv sync` → 3.51.3 from the wheel; `HEALTHCHECK: ok`.
+
+**Durability caveat (the one carried pre-mortem MEDIUM):** after a uv Python-minor bump (3.11→3.12)
+the marker stops matching and `uv sync` falls back to PyPI 3.51.1 — but the healthcheck assert turns
+that from silent to a loud session-open FAIL. Recovery: re-run `build-vendored-pysqlite3.sh` to mint a
+cp312 wheel, then `uv lock && uv sync`. **Do NOT `uv lock --upgrade-package pysqlite3` or unpin.**
+
+**Swept** 8 inert `mempalace-*`/`turbovecdb-*` logs (~26 MB) from `state/` (frozen at the
+pre-decommission morning cron runs; crontab + scripts already gone).
+
+**Still deferred (unchanged):** staged-trash purge (Bill's call — already ~57 GB freed earlier).
+
+---
+
+*Earlier — jmunch stack upgraded to HEAD (branch `chore/upgrade-jcodemunch-mcp`);
 mempalace residue scrub merged (PR #63).*
 
 ## 2026-06-13 — jmunch stack upgraded to HEAD (branch `chore/upgrade-jcodemunch-mcp`)

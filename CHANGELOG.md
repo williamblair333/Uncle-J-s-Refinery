@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-06-13 — healthcheck checkmark fix (the real "duckdb" bug) + pysqlite3 wheel vendoring
+
+### Fixed — the recurring `mcp-servers-down(duckdb)` was never duckdb
+`healthcheck.sh check_mcp_connected()` grepped for `✓` (U+2713) but `claude mcp list` prints `✔`
+(U+2714). The pattern matched **zero** servers, so all 6 fell into `missing[]`, the else-branch
+fired, and it headlined `missing[0]` = `duckdb` (first in loop order) — pure alphabetical
+coincidence. All 6 servers were connected the whole time (verified: 6/6 ✔ in 3.2s). Pattern →
+`[✓✔] Connected`. Result: `HEALTHCHECK: ok`. Kept a duckdb-only 5×3s poll loop as harmless
+defense-in-depth for a genuine lone cold-start.
+
+### Changed — pysqlite3 3.51.3 vendored, ending the `uv sync` clobber dance
+- `scripts/build-vendored-pysqlite3.sh` — one-time builder: compiles the pysqlite3 0.6.0 wheel
+  against the SQLite 3.51.3 amalgamation, self-verifies the wheel reports 3.51.3 in a throwaway
+  venv, drops it in `vendor/wheels/`.
+- `vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl` — the committed wheel (uv records
+  its sha256 in the lock).
+- `pyproject.toml [tool.uv.sources]` — marker-conditional pin: the vendored wheel for
+  `python_version==3.11 and linux and x86_64`, PyPI fallback for every other env (keeps CI's
+  `install-smoke` `uv sync` resolvable on a future Python bump). `uv.lock` diff = pysqlite3-only.
+- `healthcheck.sh` — new `check_sqlite_version` asserts `sqlite3.sqlite_version == 3.51.3`, so a
+  silent revert to the PyPI 3.51.1 wheel fails LOUD at session-open.
+- A bare `uv sync` now installs the 3.51.3 wheel, not the buggy 3.51.1 — the manual re-patch is gone.
+
+### Housekeeping
+- Swept 8 inert `mempalace-*`/`turbovecdb-*` logs (~26 MB) from `state/` (frozen at the pre-decommission morning runs).
+
+---
+
 ## 2026-06-13 — session-end: ROADMAP sync (memweave migration closed out)
 
 - Moved the memweave-migration "In Progress" item to **Recently completed** — the residue scrub
