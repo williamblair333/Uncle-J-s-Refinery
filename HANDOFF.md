@@ -1,6 +1,41 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — memweave Phase 3b (project CLAUDE.md memory routing → memweave) on branch `feat/phase3b-memweave-routing`. Phases 1, 2, 2b-1, 2b-2, 3a DONE & merged.*
+*Last updated: 2026-06-12 — memweave Phase 4a (cross-project corpus widening) on branch `feat/phase4a-memweave-crossproject`. Phases 1, 2, 2b-1, 2b-2, 3a, 3b DONE & merged.*
+
+## Current state (2026-06-12) — memweave widened to cross-project (branch `feat/phase4a-memweave-crossproject`)
+
+memweave's store `~/.uncle-j-memory` now holds **every** project's transcripts (15 projects, 530
+md, 4670 chunks), via a new `--all-projects` export mode + `sync_memory.sh --all`; the nightly cron
+runs `--all`. This is the prerequisite that lets Phase 4b decommission mempalace (cross-project)
+**without** stranding other projects' memory. Cross-project retrieval verified (fog-of-chess +
+Kanka memories surface). 23/23 memweave tests green. Pre-mortem 12/12, 4 LOW, CLEAR.
+
+**NEXT — Phase 4b: decommission mempalace** (the destructive teardown; now unblocked because
+memweave covers all projects). Enumerated scope:
+- **Global (outside repo — back up first, NOT git-reversible):** `~/.claude.json` mempalace MCP
+  server (10 refs); `~/.claude/settings.json` line 267 (the "check mempalace" standing instruction)
+  + line 303 (`mempalace hook run --hook stop`); `~/.claude/CLAUDE.md` routing (the 3b-deferred
+  global repoint → point at mw_search.py now that the store is cross-project). Consider adding a
+  **global** memweave Stop-hook to replace mempalace's per-session cross-project ingest (else other
+  projects only refresh via the nightly `--all` cron).
+- **Crons (reversible):** `uncle-j-mempalace-backup`, `-health`, the mine-project/mine-convos/repair
+  + `@reboot` repair, and the 3 turbovecdb crons (turbovecdb syncs *from* the palace).
+- **In-repo (git-reversible):** `scripts/mempalace-{mcp-start,mine-convos,mine-project}.sh`; root
+  `mempalace-{backup.sh,delete-wing.py,health.py,repair-now.sh,repair-verify.sh}`; `scripts/turbovecdb-*`;
+  `features/mempalace/`; `healthcheck.sh` `check_mempalace()` + the `mempalace` entry in the MCP list
+  (line 97); `scripts/session-start-autofix.sh` FTS5 block; project `.claude/settings.json`
+  mempalace Stop-hook + `mcp__mempalace__mempalace_search` permission; `CLAUDE.md` line-10 preamble;
+  `pyproject.toml` mempalace dep + chromadb/hnswlib overrides + `[tool.uv.sources]` mempalace, then
+  regen `uv.lock`.
+- **Data (STAGE, do not delete):** `mv ~/.mempalace` (2.4 GB) → `~/.mempalace-trash-phase4-<date>/`
+  (reversible; Bill purges manually — the D1 precedent). The ~55 GB was already staged to
+  `~/.mempalace-trash-D1-20260611`.
+- Pre-mortem will be HIGH (global cross-project config, non-git-reversible) — back up every global
+  file before editing.
+
+---
+
+*Earlier — memweave Phase 3b (project CLAUDE.md memory routing → memweave) on branch `feat/phase3b-memweave-routing`. Phases 1, 2, 2b-1, 2b-2, 3a DONE & merged.*
 
 ## Current state (2026-06-12) — memory routing repointed to memweave (branch `feat/phase3b-memweave-routing`)
 

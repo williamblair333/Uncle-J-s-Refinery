@@ -2,6 +2,37 @@
 
 ---
 
+## 2026-06-12 — memweave Phase 4a: widen to cross-project corpus
+
+memweave now covers **every** project under `~/.claude/projects`, not just this one — the
+prerequisite for decommissioning mempalace (which was cross-project) without stranding the
+memory of other projects.
+
+### Added
+- **`export_all_projects()` + `--all-projects`** in `scripts/memweave/export_transcripts.py` —
+  walks every project dir under `~/.claude/projects` into one shared store (session ids are
+  globally-unique UUIDs → flat `memory/` dir never collides; each doc keeps its `project:`
+  metadata). `export_project` gained an injectable `projects_root` param (default unchanged).
+- **`tests/test_memweave_export.py`** — `test_export_all_projects_covers_every_project_dir`
+  (multi-project walk + non-dir skip + per-file project metadata). 23 memweave tests green.
+
+### Changed
+- **`scripts/memweave/sync_memory.sh`** — new `--all` mode (export every project, then index).
+- **`uncle-j-memweave-sync` cron** — now runs `sync_memory.sh --all` (full cross-project nightly).
+  The session-end Stop-hook stays this-project incremental (`'' 15`).
+- **`docs/RELIABILITY.md`** — `~/.uncle-j-memory` documented as the cross-project store.
+
+### Verification
+- Live full run: 15 projects, 530 md (was 399), 131 new other-project sessions indexed, 4670
+  chunks. Cross-project retrieval confirmed (fog-of-chess + Kanka/CampaignGenerator memories
+  surface from queries).
+
+### Pre-mortem
+- Infrastructure, all 12 dimensions: 0 HIGH/MEDIUM, 4 LOW (longer cron runtime; cross-project
+  query dilution; store growth; legacy store name). CLEAR.
+
+---
+
 ## 2026-06-12 — memweave Phase 3b: repoint memory routing (project CLAUDE.md)
 
 ### Changed

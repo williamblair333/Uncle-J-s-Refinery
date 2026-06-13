@@ -97,14 +97,16 @@ Run `./healthcheck.sh --fixall` to detect and auto-fix all repairable issues in 
 Project memory routing (`CLAUDE.md` §4) resolves "have we solved this before?" to
 `scripts/memweave/mw_search.py` (offline ONNX semantic+BM25, read-only) over the store below.
 
-The offline memweave store at `~/.uncle-j-memory` (markdown corpus + sqlite index) is kept
-current by two callers of `scripts/memweave/sync_memory.sh`, which is `flock -n`-guarded
-(`/tmp/memweave-sync.lock`) so the two can never race the single sqlite writer:
+The offline memweave store at `~/.uncle-j-memory` is the **cross-project** memory store — it
+holds every project's transcripts under `~/.claude/projects` (markdown corpus + sqlite index),
+not just this project's. (The `uncle-j` name is legacy.) It's kept current by two callers of
+`scripts/memweave/sync_memory.sh`, which is `flock -n`-guarded (`/tmp/memweave-sync.lock`) so the
+two can never race the single sqlite writer:
 
 | Caller | Schedule | Scope |
 |--------|----------|-------|
-| `uncle-j-memweave-sync` cron | 02:30 nightly (`nice -19`) | full export+index of all this-project transcripts |
-| Stop-hook (`# uncle-j-memweave-sync`) | every session end (`async`) | incremental — `LIMIT 15` most-recent transcripts |
+| `uncle-j-memweave-sync` cron | 02:30 nightly (`nice -19`) | `--all` — full cross-project export+index (every project) |
+| Stop-hook (`# uncle-j-memweave-sync`) | every session end (`async`) | incremental — this project, `LIMIT 15` most-recent transcripts |
 
 Both redirect to `state/memweave-sync.log`; the script logs to stdout/stderr only (callers own
 the destination). The store is fully reconstructable from the markdown corpus (memweave M2

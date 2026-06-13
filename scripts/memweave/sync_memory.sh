@@ -17,14 +17,17 @@
 # avoids double-logged lines when a caller also redirects to that file.)
 #
 # Usage:
-#   scripts/memweave/sync_memory.sh [PROJECT] [LIMIT]
-#     PROJECT  dir name under ~/.claude/projects (default: -opt-proj-Uncle-J-s-Refinery)
-#     LIMIT    optional: only the N most recent transcripts (default: all)
+#   scripts/memweave/sync_memory.sh [PROJECT|--all] [LIMIT]
+#     --all    export EVERY project under ~/.claude/projects (cross-project corpus) — the
+#              nightly cron uses this; the store ~/.uncle-j-memory becomes the global store
+#     PROJECT  single project dir name under ~/.claude/projects (default: this project) — the
+#              session-end Stop-hook uses this for a fast incremental ingest
+#     LIMIT    optional: only the N most recent transcripts per project (default: all)
 set -euo pipefail
 
 REPO="/opt/proj/Uncle-J-s-Refinery"
 VENV="$REPO/.venv-memweave/bin/python"
-PROJECT="${1:--opt-proj-Uncle-J-s-Refinery}"
+MODE="${1:-}"
 LIMIT="${2:-}"
 LOCK="/tmp/memweave-sync.lock"
 
@@ -42,9 +45,18 @@ if ! flock -n 200; then
   exit 0
 fi
 
-echo "===== [$(date -Iseconds)] memweave sync: project=$PROJECT limit=${LIMIT:-all} ====="
-export_args=(--project="$PROJECT")
+if [ "$MODE" = "--all" ]; then
+  export_args=(--all-projects)
+  scope="all-projects"
+else
+  # MODE empty (Stop-hook passes '') falls back to this project.
+  PROJECT="${MODE:--opt-proj-Uncle-J-s-Refinery}"
+  export_args=(--project="$PROJECT")
+  scope="project=$PROJECT"
+fi
 [ -n "$LIMIT" ] && export_args+=(--limit "$LIMIT")
+
+echo "===== [$(date -Iseconds)] memweave sync: $scope limit=${LIMIT:-all} ====="
 "$VENV" "$REPO/scripts/memweave/export_transcripts.py" "${export_args[@]}"
 "$VENV" "$REPO/scripts/memweave/index_workspace.py"
 echo "===== [$(date -Iseconds)] sync complete ====="
