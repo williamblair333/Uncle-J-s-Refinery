@@ -4,7 +4,8 @@ requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14'",
     "python_full_version == '3.13.*'",
-    "python_full_version < '3.13'",
+    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
+    "(python_full_version < '3.13' and platform_machine != 'x86_64') or (python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and sys_platform != 'linux')",
 ]
 
 [[package]]
@@ -233,7 +234,8 @@ dependencies = [
     { name = "jcodemunch-mcp", extra = ["local-embed"] },
     { name = "jdatamunch-mcp" },
     { name = "jdocmunch-mcp" },
-    { name = "pysqlite3" },
+    { name = "pysqlite3", version = "0.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' or platform_machine != 'x86_64' or sys_platform != 'linux'" },
+    { name = "pysqlite3", version = "0.6.0", source = { path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl" }, marker = "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "uv" },
 ]
 
@@ -265,7 +267,8 @@ requires-dist = [
     { name = "jcodemunch-mcp", extras = ["openai"], marker = "extra == 'openai'", git = "https://github.com/jgravelle/jcodemunch-mcp.git" },
     { name = "jdatamunch-mcp", git = "https://github.com/jgravelle/jdatamunch-mcp.git" },
     { name = "jdocmunch-mcp", git = "https://github.com/jgravelle/jdocmunch-mcp.git" },
-    { name = "pysqlite3", specifier = ">=0.6.0" },
+    { name = "pysqlite3", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'linux'", specifier = ">=0.6.0" },
+    { name = "pysqlite3", marker = "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'linux'", path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl" },
     { name = "uv", specifier = ">=0.5" },
 ]
 provides-extras = ["anthropic", "openai", "gemini", "groq"]
@@ -426,7 +429,8 @@ version = "2.30.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version == '3.13.*'",
-    "python_full_version < '3.13'",
+    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
+    "(python_full_version < '3.13' and platform_machine != 'x86_64') or (python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and sys_platform != 'linux')",
 ]
 dependencies = [
     { name = "google-auth", marker = "python_full_version < '3.14'" },
@@ -1247,6 +1251,11 @@ wheels = [
 name = "pysqlite3"
 version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
+    "(python_full_version < '3.13' and platform_machine != 'x86_64') or (python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and sys_platform != 'linux')",
+]
 sdist = { url = "https://files.pythonhosted.org/packages/fa/84/6e586bef5f6337dee60066eef752c73fa6fcb93c1e7997b550d3105ed4f9/pysqlite3-0.6.0.tar.gz", hash = "sha256:ecf5112b62a4e6c04438957e343fe9672707bd3191f789ecae6c95b226aa6bb6", size = 40838, upload-time = "2026-01-05T18:29:37.843Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f3/33/75d5279c4cd374bae4c75237bbcff0f26c9722ce8a942cd118c9bb11b7f3/pysqlite3-0.6.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:e3e0ff8dfd84926a06cac62905b7659be7152ced4f6c1ac8ea381a1281555cce", size = 953036, upload-time = "2026-01-05T18:29:07.577Z" },
@@ -1269,6 +1278,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/46/c8/f490d4890f1d1541efda54fea9249f9ae264c46fd5d0e12e5e2757f6abcb/pysqlite3-0.6.0-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:65a9af11004d350538b6bd852b0ec22cdd62928be9ab522d85c0840d5bf92a72", size = 4531310, upload-time = "2026-01-05T18:29:28.293Z" },
     { url = "https://files.pythonhosted.org/packages/e0/c3/ff97773adf35afaadaa969ae9fa20f09d25732b2ceba0b986f7039a89c6b/pysqlite3-0.6.0-cp314-cp314-win32.whl", hash = "sha256:cc9787dc409f800e310c8a457b7c98d1c4d4a76e15821b7fb460c0e63554ddd8", size = 744085, upload-time = "2026-01-05T18:29:29.277Z" },
     { url = "https://files.pythonhosted.org/packages/bc/76/103fc35bec8934c672b5193eadc66384472fd071c269cd95bc4b16595d17/pysqlite3-0.6.0-cp314-cp314-win_amd64.whl", hash = "sha256:81226436fae52d3bec4ce578104c5bcf4c22d3fcf29d4a590fcbde56b90472ef", size = 903944, upload-time = "2026-01-05T18:29:30.309Z" },
+]
+
+[[package]]
+name = "pysqlite3"
+version = "0.6.0"
+source = { path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl" }
+resolution-markers = [
+    "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
+]
+wheels = [
+    { filename = "pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl", hash = "sha256:b2a93a6745b8dc1221dff0a589a400f30499da64831d50a5ce00ecac7ca59723" },
 ]
 
 [[package]]

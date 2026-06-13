@@ -18,7 +18,8 @@ dependencies = [
     "uv >=0.5",
     # WAL data-race fix (present in all SQLite 3.7.0–3.51.2, fixed in 3.51.3).
     # The uv Python 3.11 has SQLite 3.50.4 statically compiled in; pysqlite3 is
-    # built from source against 3.51.3 amalgamation by install.sh step 2b.
+    # pinned below to a VENDORED 3.51.3 wheel (see [tool.uv.sources]) so a bare
+    # `uv sync` can no longer revert it to the PyPI 3.51.1 wheel (still buggy).
     # The _pysqlite3_patch.pth in site-packages swaps stdlib sqlite3 → pysqlite3
     # at every venv process startup (covers mine crons, repair, MCP server).
     "pysqlite3>=0.6.0",
@@ -48,6 +49,15 @@ managed = true
 jcodemunch-mcp = { git = "https://github.com/jgravelle/jcodemunch-mcp.git" }
 jdatamunch-mcp = { git = "https://github.com/jgravelle/jdatamunch-mcp.git" }
 jdocmunch-mcp  = { git = "https://github.com/jgravelle/jdocmunch-mcp.git" }
+# Vendored pysqlite3 built against the SQLite 3.51.3 amalgamation (WAL data-race
+# fix). The marker scopes the wheel to THIS host's ABI (cp311 / linux / x86_64);
+# any other env (incl. a future uv Python bump) falls back to the PyPI registry.
+# Rebuild the wheel after a Python-minor bump: scripts/build-vendored-pysqlite3.sh
+# DO NOT unpin or `uv lock --upgrade-package pysqlite3` — reintroduces the 3.51.1
+# WAL bug. healthcheck.sh asserts sqlite_version==3.51.3 so a revert fails loud.
+pysqlite3 = [
+    { path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl", marker = "python_version == '3.11' and sys_platform == 'linux' and platform_machine == 'x86_64'" },
+]
 
 [dependency-groups]
 dev = [
