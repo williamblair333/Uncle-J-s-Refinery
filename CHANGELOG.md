@@ -2,6 +2,40 @@
 
 ---
 
+## 2026-06-13 — memweave Phase 4c: in-repo mempalace residue cleanup
+
+Follow-on to 4b — removes the dead in-repo residue the decommission left behind.
+
+### Removed
+- Dead, uncalled `check_mempalace()` body (~250 lines) from `healthcheck.sh` (call site was
+  already removed in 4b; it referenced deleted scripts + an undefined `log`).
+- 6 obsolete `mempalace-*` repair-runbook skills under `global-skills/`
+  (boot-repair-always-runs, dict-pickle-repair, fts5-malformed-index-repair,
+  hnsw-corruption-fix, repair-mine-interference, wing-failure-stale-server-state).
+
+### Changed
+- `healthcheck.sh`: dropped `--upgrade-package mempalace` from the stack-not-at-head hint;
+  fixed the MCP-check labels "7 stack servers" → "6" (mempalace was removed from the loop in
+  4b — caught by the smart-review pass).
+- `docs/RELIABILITY.md`: scrubbed all mempalace references — stack line, prior-art row, the
+  compose-flow diagram, the Stop-hooks list, and the entire "MemPalace operational notes"
+  section (kept the still-relevant MEMORY.md-staleness + session-end-check notes under a
+  renamed "Operational notes").
+
+### Still deferred (HANDOFF)
+- Global `~/.claude/` edits (harness-denied — `!`-command provided): settings.json hooks,
+  CLAUDE.md routing, `~/.claude.json` MCP.
+- `pyproject.toml`/`uv.lock` mempalace+chromadb deps + `scripts/check-stack-freshness.sh`
+  mempalace check (coupled — unpinning `chromadb==1.5.8` risks the jcodemunch/jdata/jdoc stack).
+- `pre-mortem` skill + `post-audit-mempalace-capture` audit-sink repoint (control-invariant).
+- Purge the staged trash dirs (2.4 G + 55 G).
+
+### Pre-mortem
+- Infrastructure, all 12 dimensions: 0 HIGH/MEDIUM, 1 LOW (possible dangling `related_skills`
+  name — cosmetic). CLEAR. healthcheck verified clean (duckdb cold-start only) post-removal.
+
+---
+
 ## 2026-06-13 — memweave Phase 4b: decommission mempalace
 
 memweave (offline, cross-project, freshness-automated) fully replaces mempalace. This tears

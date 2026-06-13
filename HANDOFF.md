@@ -1,6 +1,33 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — memweave Phase 4b (decommission mempalace) on branch `feat/phase4b-decommission-mempalace`. Phases 1, 2, 2b-1, 2b-2, 3a, 3b, 4a DONE & merged. memweave fully replaces mempalace.*
+*Last updated: 2026-06-13 — memweave Phase 4c (in-repo mempalace residue cleanup) on branch `feat/phase4c-mempalace-residue`. Phases 1–4b DONE & merged. memweave fully replaces mempalace.*
+
+## Current state (2026-06-13) — in-repo mempalace residue cleaned (branch `feat/phase4c-mempalace-residue`)
+
+4c removed the dead in-repo leftovers from the 4b decommission: the uncalled `check_mempalace()`
+body in `healthcheck.sh`, 6 obsolete `mempalace-*` repair skills, and all mempalace references in
+`docs/RELIABILITY.md`. healthcheck verified clean (duckdb cold-start only).
+
+**STILL DEFERRED (the genuinely-blocked / higher-risk / irreversible items):**
+1. **Global `~/.claude/` edits — harness denies me all writes there; run the `!python3` command
+   from earlier** to remove the mempalace Stop-hook + repoint the standing instruction. Then:
+   `~/.claude/CLAUDE.md` routing (re-run `install.sh` to propagate the repo copy), and
+   `~/.claude.json` mempalace MCP-server removal (HIGH — do carefully at the keyboard).
+2. **`pyproject.toml` + `uv.lock`** mempalace git-dep + `chromadb==1.5.8`/`chroma-hnswlib`
+   overrides + `[tool.uv.sources] mempalace`, AND `scripts/check-stack-freshness.sh` lines 232/262/274
+   (these are coupled). **Risk:** unpinning chromadb may float jcodemunch/jdata/jdoc-mcp's version —
+   verify the retrieval stack still indexes before/after. Until then a dead git-dep is harmless.
+3. **Control-invariant repoint** (deliberately not rushed): `pre-mortem` skill's audit sink
+   (`mempalace_diary_write` → it currently fail-closes to `state/premortem-unaudited.log`, which still
+   works) + `post-audit-mempalace-capture` skill (repoint to write capture md into the memweave store)
+   + the pre-mortem step-11 trigger + `session-end-checklist` related_skills name. Worth a careful,
+   red-team-reviewed pass since it touches the discipline mechanism.
+4. **Purge the staged trash** when satisfied: `~/.mempalace-trash-phase4-*` (2.4 G) +
+   `~/.mempalace-trash-D1-*` (55 G), and the `~/.mempalace-decommission-backups-*` dir.
+
+---
+
+*Earlier — memweave Phase 4b (decommission mempalace) on branch `feat/phase4b-decommission-mempalace`. Phases 1, 2, 2b-1, 2b-2, 3a, 3b, 4a DONE & merged. memweave fully replaces mempalace.*
 
 ## Current state (2026-06-13) — mempalace decommissioned (branch `feat/phase4b-decommission-mempalace`)
 

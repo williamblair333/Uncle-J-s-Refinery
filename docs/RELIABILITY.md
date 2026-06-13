@@ -1,12 +1,12 @@
 # Reliability layer reference
 
-The core stack (jMunch trio + MemPalace + Serena + Context7 + DuckDB)
-gives Claude the *right tools*. The reliability layer makes sure
-Claude *actually uses them correctly*. Four components:
+The core stack (jMunch trio + Serena + Context7 + DuckDB MCP servers, plus the
+offline memweave memory CLI) gives Claude the *right tools*. The reliability layer
+makes sure Claude *actually uses them correctly*. Four components:
 
 | Component                     | What it does                                                      | When to turn off            |
 | ----------------------------- | ----------------------------------------------------------------- | --------------------------- |
-| prior-art-check skill         | MemPalace lookup BEFORE the first real tool call every session    | never; it's just a lookup   |
+| prior-art-check skill         | memweave (mw_search.py) lookup BEFORE the first real tool call every session | never; it's just a lookup   |
 | judge skill                   | Gathers blast radius + PR risk, then delegates to specialist agents | for throwaway prototyping  |
 | Specialist agents (6)         | Code review, security, silent failures, planning, architecture, TDD — each with precise trigger conditions | individually per task type |
 | Ralph harness                 | while-true loop that only stops when risk is low + PRD is DONE    | only in live runs           |
@@ -24,8 +24,7 @@ Claude *actually uses them correctly*. Four components:
 ── SESSION START ──────────────────────────────────────────────────────
 SessionStart hooks
    ├── healthcheck context injected into session banner
-   ├── skill-link: per-project skills symlinked to ~/.claude/skills/
-   └── mempalace-mine-project: project docs mined into palace
+   └── skill-link: per-project skills symlinked to ~/.claude/skills/
 
 ── PER-MESSAGE LOOP ───────────────────────────────────────────────────
 user message
@@ -35,13 +34,13 @@ UserPromptSubmit: scan-secrets.sh      <- blocks pasted credentials
    │                                      (API keys, tokens, PEM blocks)
    ▼
 prior-art-check skill                  <- "have we solved this?"
-   │   MemPalace hit? surface prior decisions as context
+   │   memweave hit? surface prior decisions as context
    ▼
 CLAUDE.md routing policy               <- which MCP tool fits?
    │
    ▼
 MCP tools / main work                  <- jcodemunch / serena / jdatamunch
-   │                                      jdocmunch / mempalace / context7 / duckdb
+   │                                      jdocmunch / context7 / duckdb (+ memweave CLI)
    ▼
 PreToolUse hooks                       <- enforce-docs, scan-commit,
    │                                      bash-guard rules, jcodemunch pre-hook
@@ -68,11 +67,9 @@ response to user
 ── SESSION END ────────────────────────────────────────────────────────
 Stop hooks (in order)
    ├── Langfuse trace submitted                       (global settings.json)
-   ├── mempalace hook run --hook stop                 (global — diary + ingest)
    ├── session-end-check.sh --stop-hook               (global — doc gate)
    ├── unpushed-warn.sh + pr-check.sh                 (global — reminders)
    ├── session-notify.sh  (Telegram, opt-in)          (project settings.json)
-   ├── mempalace-mine-convos.sh  (all convos → --wing conversations)
    ├── memweave/sync_memory.sh '' 15  (incremental ingest of recent transcripts)
    └── skill-suggest.sh + skill-link unlink
 ```
@@ -115,11 +112,11 @@ freshness probe to `healthcheck.sh` (assert index mtime < 48h).
 
 Answers the question "does the agent ask itself 'have we solved this
 before' before working?" with **yes, now it does**. Without this skill,
-MemPalace is a tool the agent *could* call but usually won't. With it,
-the agent checks prior work on every non-trivial prompt. Zero cost on
-cold palaces; 1-2 second overhead on warm ones.
+memweave is a CLI the agent *could* run but usually won't. With it,
+the agent checks prior work on every non-trivial prompt via `mw_search.py`.
+Zero cost on an empty store; 1-2 second overhead on a warm one.
 
-Step 3b (staleness filter): any MemPalace hit containing `pending`,
+Step 3b (staleness filter): any memweave hit containing `pending`,
 `awaiting`, `needs`, `consider`, `not yet`, `TODO`, or `FIXME` must be
 verified against current source before being reported as fact. Prevents
 the failure mode where a memory entry says "PR awaiting review" long after
@@ -246,38 +243,13 @@ If you want more later, these are the next things worth adding:
   with Claude + Gemini + GPT-5.2 concurrently. Expensive per review;
   use on high-stakes PRs only.
 
-## MemPalace operational notes
+## Operational notes
 
-### HNSW index corruption
-
-The chromadb HNSW vector index (`~/.mempalace/palace/<uuid>/link_lists.bin`) can become corrupted if a mine process is aborted mid-write. Corruption manifests as a SIGSEGV on all `mempalace mine` calls and MCP server startup. Dry-run (`--dry-run`) still works because it skips writes.
-
-**Check index health:**
-```bash
-ls -lh ~/.mempalace/palace/*/link_lists.bin
-# Healthy: a few KB to low MB. Suspicious: > 50 MB for < 10k drawers.
-```
-
-**Recovery:** delete the HNSW directory files individually (the `rm -rf` hook blocks recursive deletes on home). ChromaDB rebuilds from SQLite automatically — no data loss, but re-adds take a minute.
-
-### Mine concurrency lockfiles
-
-`scripts/mempalace-mine-convos.sh` and `scripts/mempalace-mine-project.sh` both use `mkdir`-based lockfiles in `state/`. A hard-killed process (SIGKILL) may leave the lock directory behind.
-
-**Auto-recovery:** locks older than 30 minutes are automatically cleared by the scripts themselves on the next invocation. No manual action needed unless you want to unblock immediately:
-
-```bash
-rmdir state/mempalace-mine-convos.lock 2>/dev/null
-rmdir state/mempalace-mine-project.lock 2>/dev/null
-```
-
-The `healthcheck.sh` also detects stale locks (>30 min) and reports `mempalace-stale-lock` in the SessionStart banner, so silent blackouts are caught at session open rather than discovered after days of missing mines.
-
-Check 9g additionally scans `MEMORY.md` for stale tracking entries (`pending`, `awaiting`, `needs <verb>`, etc.) and flags them at session start so they're verified before being reported as current fact.
-
-The lockfiles exist because `mempalace mine` has no built-in concurrency guard. The project Stop hook (`mempalace-mine-convos.sh`) uses a `mkdir`-based lock in `state/`; the 3am cron uses `flock /tmp/mempalace-mine-convos.lock`. These are separate locks — a session ending near 4am could briefly overlap the repair cron, which is safe under WAL mode + pysqlite3 3.51.3.
+The SessionStart staleness check scans `MEMORY.md` for stale tracking entries (`pending`, `awaiting`, `needs <verb>`, etc.) and flags them at session start so they're verified before being reported as current fact.
 
 `session-end-check.sh` behaviour is covered by `tests/test_session_end_check.py` (10 tests, job 5 in `ci.yml`).
+
+(memweave memory operational details — freshness, store layout, recovery — are in the "memweave memory freshness" section above. mempalace was decommissioned 2026-06-13.)
 
 ---
 
