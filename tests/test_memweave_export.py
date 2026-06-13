@@ -114,3 +114,33 @@ def test_render_markdown_structure():
 
 def test_render_markdown_empty_turns_is_empty():
     assert render_markdown("x", []) == ""
+
+
+def test_export_all_projects_covers_every_project_dir(tmp_path):
+    """Cross-project widening: export_all_projects must walk every project dir under
+    projects_root and export each into one shared store, preserving per-file project
+    metadata. Session ids are globally-unique UUIDs, so the flat memory/ dir never collides."""
+    from export_transcripts import export_all_projects  # noqa: E402
+
+    proot = tmp_path / "projects"
+    specs = [("-proj-alpha", "aaaaaaaa-1111", "the alpha decision rationale "),
+             ("-proj-beta", "bbbbbbbb-2222", "the beta decision rationale ")]
+    for proj, sid, q in specs:
+        d = proot / proj
+        d.mkdir(parents=True)
+        line = json.dumps({"type": "user", "message": {"role": "user", "content": q * 20}})
+        (d / f"{sid}.jsonl").write_text(line + "\n")
+    # a non-dir entry under the root must be skipped, not crash
+    (proot / "stray-file.txt").write_text("ignore me")
+
+    out = tmp_path / "store"
+    written, small, empty, projects = export_all_projects(
+        projects_root=proot, out_workspace=out, min_chars=50)
+
+    assert projects == 2
+    assert written == 2
+    mem = out / "memory"
+    assert (mem / "aaaaaaaa-1111.md").exists()
+    assert (mem / "bbbbbbbb-2222.md").exists()
+    assert "-proj-alpha" in (mem / "aaaaaaaa-1111.md").read_text()
+    assert "-proj-beta" in (mem / "bbbbbbbb-2222.md").read_text()

@@ -105,13 +105,14 @@ def render_markdown(session_id, turns, *, project=None, date_iso=None) -> str:
     return "\n\n".join(head) + "\n\n" + "\n\n".join(body) + "\n"
 
 
-def export_project(project, *, out_workspace=DEFAULT_WORKSPACE, limit=None, min_chars=200):
+def export_project(project, *, projects_root=PROJECTS_ROOT, out_workspace=DEFAULT_WORKSPACE,
+                   limit=None, min_chars=200):
     """Export one project's transcripts (newest first) to <out_workspace>/memory/*.md.
 
     Returns (written, skipped_small, skipped_empty). Idempotent: overwrites the
     per-session file each run; memweave's index() then re-embeds only changed files.
     """
-    proj_dir = PROJECTS_ROOT / project
+    proj_dir = Path(projects_root).expanduser() / project
     if not proj_dir.is_dir():
         raise FileNotFoundError(f"project transcript dir not found: {proj_dir}")
     transcripts = sorted(proj_dir.glob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -137,21 +138,51 @@ def export_project(project, *, out_workspace=DEFAULT_WORKSPACE, limit=None, min_
     return written, skipped_small, skipped_empty
 
 
+def export_all_projects(*, projects_root=PROJECTS_ROOT, out_workspace=DEFAULT_WORKSPACE,
+                        limit=None, min_chars=200):
+    """Export *every* project under projects_root into one shared store.
+
+    Session ids are globally-unique UUIDs, so the flat <out_workspace>/memory dir
+    never collides across projects; each rendered doc carries its `project:` metadata.
+    Non-directory entries under the root are skipped. Returns aggregate
+    (written, skipped_small, skipped_empty, projects).
+    """
+    root = Path(projects_root).expanduser()
+    written = skipped_small = skipped_empty = projects = 0
+    for proj_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+        w, s, e = export_project(proj_dir.name, projects_root=root,
+                                 out_workspace=out_workspace, limit=limit, min_chars=min_chars)
+        written += w
+        skipped_small += s
+        skipped_empty += e
+        projects += 1
+    return written, skipped_small, skipped_empty, projects
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--project", default="-opt-proj-Uncle-J-s-Refinery",
                     help="project dir name under ~/.claude/projects")
+    ap.add_argument("--all-projects", action="store_true",
+                    help="export every project under ~/.claude/projects into one shared store "
+                         "(cross-project corpus); overrides --project")
     ap.add_argument("--out", default=str(DEFAULT_WORKSPACE),
                     help="memweave workspace dir (markdown lands in <out>/memory)")
     ap.add_argument("--limit", type=int, default=None,
-                    help="export only the N most recent transcripts (bounded slice)")
+                    help="export only the N most recent transcripts (per project; bounded slice)")
     ap.add_argument("--min-chars", type=int, default=200,
                     help="skip rendered docs shorter than this (trivial sessions)")
     args = ap.parse_args()
 
-    written, small, empty = export_project(
-        args.project, out_workspace=args.out, limit=args.limit, min_chars=args.min_chars)
-    print(f"export_transcripts: project={args.project} -> {Path(args.out).expanduser()}/memory")
+    if args.all_projects:
+        written, small, empty, projects = export_all_projects(
+            out_workspace=args.out, limit=args.limit, min_chars=args.min_chars)
+        print(f"export_transcripts: all-projects ({projects} projects) -> "
+              f"{Path(args.out).expanduser()}/memory")
+    else:
+        written, small, empty = export_project(
+            args.project, out_workspace=args.out, limit=args.limit, min_chars=args.min_chars)
+        print(f"export_transcripts: project={args.project} -> {Path(args.out).expanduser()}/memory")
     print(f"  wrote {written} markdown files; skipped {small} too-small, {empty} empty "
           f"(no conversational text)")
     return 0
