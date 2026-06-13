@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-06-13 — memweave Phase 4g: remove live mempalace residue
+
+A verification sweep of live (executing) surfaces — not historical docs — found mempalace wiring
+the Phase 4b decommission missed. One was a **resurrection risk**.
+
+### Fixed
+- **`finish-install.sh`**: removed the `claude mcp add … mempalace` registration **and** the entire
+  "MemPalace backup + health-check cron" block — re-running this installer would have **re-registered
+  the mempalace MCP server and re-created the backup/health crons** that 4b removed. Also dropped the
+  `./.venv/bin/mempalace init` next-steps hint.
+- **`scripts/auto-maintain.sh`** (live 3am cron): removed `mempalace` from the package-freshness
+  `THRESHOLDS`/`GITHUB` maps and the upgrade loop — it was querying `MemPalace/mempalace` for a
+  package no longer installed (removed 4d).
+- **`.session-end.yml`**: removed the `MemPalace snapshot` custom_check (`mempalace diary write`),
+  which errored at every session end (binary gone). memweave auto-ingests via the Stop-hook + nightly
+  `sync_memory.sh --all` cron, so no manual snapshot is needed (`custom_checks: []`).
+- **`features/gemini-integration/install.sh`**: repointed the GEMINI.md memory instruction from the
+  dead `.venv/bin/mempalace search` to `mw_search.py`.
+
+Left intentionally: `scripts/audit/components.json` (historical audit manifest — keeps mempalace
+commit attribution) and a one-line comment in `features/dreaming/dream.sh`.
+
+Pre-mortem: Infrastructure 12/12 — 0 HIGH/MEDIUM, 1 LOW. Verified: `bash -n` clean on all three
+scripts, `.session-end.yml` parses (`custom_checks: []`), crontab already mempalace-free.
+
+---
+
 ## 2026-06-13 — fix: install.sh pysqlite3 build broken by uv 0.10.9
 
 `install.sh` died at the pysqlite3 SQLite-3.51.3 source-build step: line 106 called

@@ -29,7 +29,7 @@ consider:
 
 # Custom checks: run as shell commands before commit.
 # on_failure: warn (print but continue) | block (exit 1)
-custom_checks:
-  - name: MemPalace snapshot
-    command: "mempalace diary write"
-    on_failure: warn
+custom_checks: []
+# (memweave auto-ingests the session via the Stop-hook + nightly `sync_memory.sh --all` cron —
+#  no manual snapshot command needed; the old `mempalace diary write` check was removed with the
+#  mempalace decommission.)
