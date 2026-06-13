@@ -1,7 +1,26 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — LIVE mempalace residue scrubbed from instructional surfaces (branch
-`chore/scrub-mempalace-residue`); mempalace→memweave migration was already complete (PRs #57–#62).*
+*Last updated: 2026-06-13 — jmunch stack upgraded to HEAD (branch `chore/upgrade-jcodemunch-mcp`);
+mempalace residue scrub merged (PR #63).*
+
+## 2026-06-13 — jmunch stack upgraded to HEAD (branch `chore/upgrade-jcodemunch-mcp`)
+
+Closed `stack-not-at-head`. Bumped all three first-party retrieval servers via `uv lock
+--upgrade-package` + `uv sync --inexact`: jcodemunch-mcp 1.108.50→1.108.55, jdatamunch-mcp
+1.13.0→1.13.1, jdocmunch-mcp 1.69.1→1.70.2 (uv.lock diff = only these three; nothing floated).
+Re-indexed with the new jcodemunch binary. **Freshness: all three at HEAD; healthcheck down to the
+duckdb cold-start only.**
+
+**The pysqlite3 dance (ran TWICE this session):** every `uv sync` reverts the source-built SQLite
+3.51.3 → 3.51.1 wheel (WAL data-race bug). Fixed each time by rebuilding pysqlite3 from source
+(`/tmp/repatch-pysqlite3.sh`, = install.sh §2b) and verifying 3.51.3. The build-from-source command
+is **blocked from the agent's Bash** (deny list) — Bill ran it via `!`. **Permanent fix worth doing
+next: vendor the source-built pysqlite3 wheel + pin it in uv.lock so `uv sync` stops clobbering it.**
+
+**MUST DO: restart Claude Code** — the live jcode/jdata/jdoc MCP servers in this session still hold
+the pre-upgrade code; they only reload on session restart. The on-disk index is already current
+(reindex used a fresh CLI process). Run `post-upgrade-mcp-integration` next session (after restart)
+to route any new tools — the bumps are patch/minor ("pricing sync" upstream commits), so likely a no-op.
 
 ## 2026-06-13 — scrubbed all LIVE mempalace residue → memweave (branch `chore/scrub-mempalace-residue`)
 

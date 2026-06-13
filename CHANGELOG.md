@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-06-13 — upgrade jmunch stack to HEAD (jcode/jdata/jdoc); pysqlite3 re-patch
+
+Closed the `stack-not-at-head` healthcheck fail. All three first-party retrieval servers bumped to
+HEAD via `uv lock --upgrade-package` + `uv sync --inexact`:
+- `jcodemunch-mcp` 1.108.50 → **1.108.55**
+- `jdatamunch-mcp` 1.13.0 → **1.13.1**
+- `jdocmunch-mcp` 1.69.1 → **1.70.2**
+
+### Changed
+- `uv.lock` — only the three jmunch git revs moved (verified: no transitive floating).
+- Re-indexed the repo with the new jcodemunch binary (self-healing reindex wrapper).
+
+### Re-patch (the recurring papercut)
+`uv sync` reverts the source-built pysqlite3 (SQLite **3.51.3**) to the 3.51.1 PyPI wheel — the
+WAL-reset data-race bug. Rebuilt pysqlite3 from source against the 3.51.3 amalgamation (install.sh
+§2b logic) after sync; verified `sqlite3.sqlite_version == 3.51.3`. **Follow-up worth doing:** vendor
+the source-built wheel + pin it in uv.lock so `uv sync` stops clobbering it (would end the manual dance).
+
+### Verified
+- `check-stack-freshness.sh`: all three jmunch **at HEAD**. `healthcheck.sh --quick`: `stack-not-at-head`
+  cleared (only duckdb cold-start remains). sqlite 3.51.3.
+
+### Note
+The live MCP servers in the session that ran this still hold the OLD code — **restart Claude Code**
+to load the upgraded servers. Re-index used the new CLI (fresh process), so the index is current.
+
+---
+
 ## 2026-06-13 — scrub all LIVE mempalace residue → memweave; remove dead recall-bench
 
 Closed the gap the Phase-4 migration left: the migration covered repo code/config/docs but missed
