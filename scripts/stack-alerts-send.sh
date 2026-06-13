@@ -38,7 +38,7 @@ log "Updates detected. Invoking Claude for relevance analysis..."
 
 prompt="You are analyzing MCP stack updates for the Uncle J's Refinery project.
 This project is a Claude Code harness that relies on jcodemunch, jdatamunch, jdocmunch,
-mempalace, serena, and context7 as core retrieval and memory tools.
+serena, and context7 as core retrieval tools, with memweave (offline CLI) for memory.
 
 Freshness check output:
 ${freshness_output}

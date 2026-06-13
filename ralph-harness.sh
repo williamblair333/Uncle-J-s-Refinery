@@ -128,7 +128,7 @@ $OUTCOMES_CONTEXT
 
 Rules for this iteration:
 1. Re-read the PRD from disk. Do NOT assume earlier iterations' context is in memory.
-2. Consult MemPalace for prior work on this PRD topic BEFORE editing.
+2. Consult memweave (scripts/memweave/mw_search.py) for prior work on this PRD topic BEFORE editing.
 3. Use jcodemunch / serena for code navigation. Do not Read large files.
 4. Make the smallest change that advances the PRD.
 5. Update the PRD's 'Progress' section at the end with one-line status.

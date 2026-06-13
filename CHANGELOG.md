@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-06-13 — memweave Phase 4g.1: final live mempalace refs (verify + prompts)
+
+Tail of the 4g live-surface sweep — three remaining executable/prompt references.
+
+### Fixed
+- **`verify.sh`**: removed the `mempalace --help` binary check — the post-install verifier would
+  report FAIL since the binary was removed in 4d (same class as the CI smoke-test line fixed earlier).
+- **`scripts/stack-alerts-send.sh`**: repointed the stack-description prompt — drop mempalace from the
+  retrieval-tool list, note memweave for memory.
+- **`ralph-harness.sh`**: the per-iteration prompt now says "Consult memweave (`mw_search.py`)"
+  instead of "Consult MemPalace".
+
+After this, no live executable mempalace wiring remains in the repo; only three intentional/comment
+refs persist (`.session-end.yml` explanatory comment, `dream.sh` comment, `components.json` audit
+manifest). Pre-mortem 12/12 (1 LOW); `bash -n` clean on all three.
+
+---
+
 ## 2026-06-13 — memweave Phase 4g: remove live mempalace residue
 
 A verification sweep of live (executing) surfaces — not historical docs — found mempalace wiring

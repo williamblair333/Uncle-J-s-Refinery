@@ -1,7 +1,16 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — Phase 4f (control repoint, merged PR #57) + install.sh fix (merged PR #58)
-+ Phase 4g (live mempalace residue) on branch `feat/phase4g-live-residue-cleanup`. Phases 1–4e merged.*
+*Last updated: 2026-06-13 — Phase 4f (PR #57) + install.sh fix (PR #58) + Phase 4g (PR #59) all merged;
+Phase 4g.1 (final verify/prompt refs) on branch `fix/final-mempalace-verify-prompts`. Phases 1–4e merged.*
+
+## Also 2026-06-13 — final live mempalace refs cleared (branch `fix/final-mempalace-verify-prompts`)
+
+Tail of the 4g sweep: `verify.sh` dropped its dead `mempalace --help` check (would FAIL),
+`scripts/stack-alerts-send.sh` + `ralph-harness.sh` had their prompt strings repointed to memweave.
+**No live executable mempalace wiring remains in the repo** — only 3 intentional/comment refs persist
+(`.session-end.yml` comment, `dream.sh` comment, `scripts/audit/components.json` audit manifest).
+The mempalace→memweave migration is now complete across every in-repo surface; only the four
+`~/.claude/` keyboard items + the trash purge remain (see deferred list below).
 
 ## Also 2026-06-13 — live mempalace residue removed (branch `feat/phase4g-live-residue-cleanup`)
 
