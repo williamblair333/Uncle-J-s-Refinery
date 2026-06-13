@@ -28,7 +28,6 @@ echo "Python stack (venv binaries):"
 check "jcodemunch-mcp --version" "$VENV_BIN/jcodemunch-mcp" --version
 check "jdatamunch-mcp --help"    "$VENV_BIN/jdatamunch-mcp" --help
 check "jdocmunch-mcp --help"     "$VENV_BIN/jdocmunch-mcp"  --help
-check "mempalace --help"         "$VENV_BIN/mempalace"       --help
 
 echo
 echo "External helpers:"
