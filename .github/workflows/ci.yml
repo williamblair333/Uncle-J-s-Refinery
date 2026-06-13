@@ -43,7 +43,6 @@ jobs:
           .venv/bin/jcodemunch-mcp  --version
           .venv/bin/jdatamunch-mcp  --help   > /dev/null
           .venv/bin/jdocmunch-mcp   --help   > /dev/null
-          .venv/bin/mempalace       --help   > /dev/null
 
   # ── 3. Auxiliary installer syntax (reliability, guardrails, langfuse) ──────
   aux-syntax:

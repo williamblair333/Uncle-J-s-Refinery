@@ -26,6 +26,11 @@ the first draft, all closed in the rewrite.
 - **`global-skills/session-end-checklist/SKILL.md`**: design-memory step now invokes the repointed
   capture skill instead of flagging it "pending repoint."
 
+### Fixed
+- **`.github/workflows/ci.yml`**: removed the dead `.venv/bin/mempalace --help` line from the
+  "Smoke-test MCP binary versions" step — the binary was removed in Phase 4d, so the step had been
+  failing with exit 127 on **main** since then. CI's `Package install smoke test` is green again.
+
 ### Verified
 - Hand-placed corpus md indexes + surfaces via `mw_search.py` (smoke test, 0.824 hybrid score).
 - Heredoc write handles hostile text (`$(...)`, `$VARS`, backticks, quotes, `%s/%n`) literally, RC=0.
