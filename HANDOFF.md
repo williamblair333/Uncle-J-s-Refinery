@@ -1,7 +1,17 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — memweave Phase 4f (control-invariant repoint, merged PR #57) + an
-install.sh provisioning fix on branch `fix/install-uv-pip-download`. Phases 1–4e DONE & merged.*
+*Last updated: 2026-06-13 — Phase 4f (control repoint, merged PR #57) + install.sh fix (merged PR #58)
++ Phase 4g (live mempalace residue) on branch `feat/phase4g-live-residue-cleanup`. Phases 1–4e merged.*
+
+## Also 2026-06-13 — live mempalace residue removed (branch `feat/phase4g-live-residue-cleanup`)
+
+A sweep of **executing** surfaces (not historical docs) found mempalace wiring 4b missed:
+`finish-install.sh` would have **re-registered the mempalace MCP + re-created the backup/health crons**
+(resurrection risk); `scripts/auto-maintain.sh` (3am cron) queried the removed package;
+`.session-end.yml` ran `mempalace diary write` (dead binary) every session end; the gemini installer
+injected a dead `.venv/bin/mempalace search` into GEMINI.md. All removed/repointed to memweave.
+Left intentionally: `scripts/audit/components.json` (historical audit attribution) +
+`features/dreaming/dream.sh` comment. Pre-mortem 12/12 (1 LOW); bash -n + YAML verified.
 
 ## Also 2026-06-13 — install.sh pysqlite3 build fixed (branch `fix/install-uv-pip-download`)
 

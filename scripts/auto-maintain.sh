@@ -34,13 +34,11 @@ declare -A THRESHOLDS=(
     [jcodemunch-mcp]=20
     [jdatamunch-mcp]=20
     [jdocmunch-mcp]=20
-    [mempalace]=5
 )
 declare -A GITHUB=(
     [jcodemunch-mcp]="jgravelle/jcodemunch-mcp"
     [jdatamunch-mcp]="jgravelle/jdatamunch-mcp"
     [jdocmunch-mcp]="jgravelle/jdocmunch-mcp"
-    [mempalace]="MemPalace/mempalace"
 )
 
 # ── GitHub helpers ────────────────────────────────────────────────────────────
@@ -97,7 +95,7 @@ except Exception:
 info "=== Part A: Package freshness check ==="
 PACKAGES_TO_UPGRADE=()
 
-for pkg in jcodemunch-mcp jdatamunch-mcp jdocmunch-mcp mempalace; do
+for pkg in jcodemunch-mcp jdatamunch-mcp jdocmunch-mcp; do
     threshold="${THRESHOLDS[$pkg]}"
     github="${GITHUB[$pkg]}"
     behind=$(commits_behind "$pkg" "$github")
