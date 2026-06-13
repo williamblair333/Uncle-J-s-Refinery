@@ -7,7 +7,6 @@
       "mcp__jcodemunch__search_text",
       "mcp__jcodemunch__index_file",
       "mcp__jcodemunch__get_file_content",
-      "mcp__mempalace__mempalace_search",
       "mcp__jcodemunch__list_repos",
       "mcp__jcodemunch__get_symbol_source",
       "Bash(crontab -l)"
@@ -72,15 +71,6 @@
           {
             "type": "command",
             "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh unlink  # uncle-j-skill-manager-stop",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/mempalace-mine-convos.sh  # uncle-j-mempalace-convos",
             "async": true
           }
         ]

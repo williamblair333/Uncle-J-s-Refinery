@@ -1,10 +1,10 @@
 ---
 name: smart-review
-description: Auto-classifying code review router — rules floor + shadow classifier → dispatches code-review (low/medium/high) or adversarial-review (critical). Logs every classification to MemPalace for drift audit.
+description: Auto-classifying code review router — rules floor + shadow classifier → dispatches code-review (low/medium/high) or adversarial-review (critical). Logs every classification to a local drift-audit file.
 version: 1.1.0
 platforms: [linux, macos]
 category: review
-tags: [code-review, classification, adversarial, MemPalace, git, quality-gate]
+tags: [code-review, classification, adversarial, drift-audit, git, quality-gate]
 prerequisites:
   commands: [git, gh]
   skills: []
@@ -94,31 +94,32 @@ Tell the user: `"[SMART-REVIEW] Floor: {FLOOR_TIER} | Shadow: {SHADOW_TIER} | Re
 
 ---
 
-## Step 5 — Drift audit log (MemPalace)
+## Step 5 — Drift audit log (local)
 
-After every review, write a classification record:
+After every review, append a classification record to the local drift-audit log
+(`state/smart-review-classifications.log` under the repo root). memweave has no
+write API, so this is a plain append-only file:
 
-```
-mempalace_diary_write(
-  content="[SMART-REVIEW CLASSIFICATION]
-Date: {date}
+```bash
+printf '%s\n' "[SMART-REVIEW CLASSIFICATION] $(date -Iseconds)
 Files: {FILES_CHANGED}
 Diff size: {lines added/removed}
 Floor tier: {FLOOR_TIER} (rules matched: {which rules fired})
 Shadow tier: {SHADOW_TIER} (shadow reason: {shadow one-liner})
 Resolved tier: {RESOLVED_TIER}
 Disagreement: {yes/no — if yes, floor was X, shadow was Y}
-Review dispatched: {code-review effort={level} | adversarial-review}",
-  wing="uncle_j_s_refinery",
-  room="review_audit"
-)
+Review dispatched: {code-review effort={level} | adversarial-review}
+" >> /opt/proj/Uncle-J-s-Refinery/state/smart-review-classifications.log
 ```
+
+(`state/` is gitignored, so the log stays local; the nightly memweave `--all` sync
+does not index it.)
 
 ---
 
 ## Drift audit review (periodic)
 
-When the `session-end-checklist` runs, or on request, scan MemPalace for recent `[SMART-REVIEW CLASSIFICATION]` entries and check:
+When the `session-end-checklist` runs, or on request, scan `state/smart-review-classifications.log` for recent `[SMART-REVIEW CLASSIFICATION]` entries and check:
 
 - How often did floor and shadow disagree?
 - Which file paths am I consistently under-classifying?

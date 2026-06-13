@@ -1,21 +1,24 @@
 ---
 name: prior-art-check
-description: MemPalace search before any non-trivial task — "have we solved this before?" Fires before any coding, design, or architecture work; runs before the first substantive retrieval tool call.
-version: 1.0.0
+description: memweave memory search before any non-trivial task — "have we solved this before?" Fires before any coding, design, or architecture work; runs before the first substantive retrieval tool call.
+version: 2.0.0
 platforms: [linux, macos]
 category: memory
-tags: [MemPalace, search, session-start, context, prior-work, cold-start]
+tags: [memweave, search, session-start, context, prior-work, cold-start]
 prerequisites:
   commands: []
   skills: []
-related_skills: [session-status-briefing, post-audit-mempalace-capture, stale-pending-memory-guard]
+related_skills: [session-status-briefing, stale-pending-memory-guard]
 ---
 
 # Prior-art check
 
-Your job: every time a new conversation starts on a non-trivial task, call
-MemPalace **before** the first substantive tool call. This is "have we
-already solved this?" — asked out loud, before the work.
+Your job: every time a new conversation starts on a non-trivial task, search
+**memweave** *before* the first substantive tool call. This is "have we already
+solved this?" — asked out loud, before the work.
+
+memweave is an offline, cross-project memory store (`~/.uncle-j-memory`) queried by a
+small Bash CLI — there is **no MCP tool**. Search it by running `mw_search.py`.
 
 ## When to trigger
 
@@ -36,10 +39,16 @@ Step 1. **Formulate the query.** Pull 2-4 keywords from the user's
 request. Keep the query short and concrete. Prefer nouns and verbs from
 the request itself; don't paraphrase.
 
-Step 2. **Call MemPalace.** Use the `mempalace_search` tool (if loaded)
-or call ToolSearch with `select:mempalace_search` first. Pass the
-query. Default limit: 5. If you have a specific project in mind, scope
-by wing/room.
+Step 2. **Search memweave.** Run (absolute paths — works from any project):
+
+```
+/opt/proj/Uncle-J-s-Refinery/.venv-memweave/bin/python \
+  /opt/proj/Uncle-J-s-Refinery/scripts/memweave/mw_search.py "your query" --k 5
+```
+
+Add `--json` for machine-parseable output. It opens the existing cross-project index
+read-only (no writes). A missing/empty store exits nonzero with a clear message — then
+fall back to the session transcript and proceed.
 
 Step 3. **Interpret results.**
 
@@ -47,11 +56,10 @@ Step 3. **Interpret results.**
   each, quote the decision/fact verbatim when possible, and *explicitly
   tell the user* "we've touched this before: …". Then continue the task
   with that context.
-- **Hits with low relevance** — note briefly that MemPalace had
+- **Hits with low relevance** — note briefly that memweave had
   tangential matches, then proceed.
-- **No hits or empty palace** — say "no prior work found in MemPalace"
-  and proceed. This is also the signal that the palace hasn't been
-  initialized for this project yet.
+- **No hits or empty store** — say "no prior work found in memweave"
+  and proceed.
 
 Step 3b. **Staleness filter — verify before reporting.**
 
@@ -76,12 +84,11 @@ as the CLAUDE.md routing policy dictates.
 
 ## What NOT to do
 
-- Don't let a MemPalace miss block progress — it's context, not a gate.
+- Don't let a memweave miss block progress — it's context, not a gate.
 - Don't summarize everything it returns. One sentence per top hit.
 - Don't call it repeatedly in the same session for the same topic.
   Once per topic per session is enough.
-- Don't surface raw palace data (drawer IDs, internal paths). Translate
-  to user-friendly summaries.
+- Don't surface raw internal paths. Translate to user-friendly summaries.
 
 ## Example
 
@@ -90,7 +97,8 @@ User: "Help me debug the retry logic in the payment service."
 Your first move:
 
 ```
-mempalace_search(query="retry logic payment service", limit=5)
+/opt/proj/Uncle-J-s-Refinery/.venv-memweave/bin/python \
+  /opt/proj/Uncle-J-s-Refinery/scripts/memweave/mw_search.py "retry logic payment service" --k 5
 ```
 
 If a hit shows "Dec 2025 — switched from exponential backoff to

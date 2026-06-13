@@ -80,18 +80,6 @@ Stop hooks (in order)
 All gates can fire in under 15 seconds for a typical coding turn.
 Ralph runs the per-message loop on every iteration.
 
-## MemPalace HNSW health
-
-MemPalace uses chromadb's embedded Rust HNSW bindings for vector search. The bindings have a known type-confusion bug in the `updatePoint` path (upsert of an existing item) that corrupts the HNSW index on upgrade. Three defences are in place:
-
-| Defence | Mechanism |
-|---------|-----------|
-| Version pin | `pyproject.toml` `override-dependencies = ["chromadb==1.5.8"]` — freezes the Rust bindings version; bump only after verifying `mempalace repair` runs clean |
-| Drift detection | `healthcheck.sh check_mempalace()` compares SQLite drawer count vs HNSW header `cur_element_count`; fails with a `run: mempalace repair` hint (Y/n interactive, or auto-run under `--fixall`) when HNSW < 50% of SQLite |
-| Nightly repair | `uncle-j-mempalace-repair` cron at 4am rebuilds the HNSW index from SQLite nightly, preventing silent drift accumulation |
-
-Run `./healthcheck.sh --fixall` to detect and auto-fix all repairable issues in one pass.
-
 ## memweave memory freshness
 
 Project memory routing (`CLAUDE.md` §4) resolves "have we solved this before?" to

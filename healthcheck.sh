@@ -94,7 +94,7 @@ check_mcp_connected() {
         return
     }
     local missing=()
-    for name in duckdb jcodemunch jdatamunch jdocmunch mempalace serena context7; do
+    for name in duckdb jcodemunch jdatamunch jdocmunch serena context7; do
         if ! printf '%s\n' "$output" | grep -qE "^${name}: .*✓ Connected"; then
             missing+=("$name")
         fi
@@ -598,10 +598,7 @@ check_crons() {
         [uncle-j-auto-maintain]="bash $REPO_ROOT/scripts/auto-maintain.sh"
         [uncle-j-healthcheck-notify]="bash $REPO_ROOT/scripts/healthcheck-notify.sh"
         [uncle-j-jcodemunch-reindex]="bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
-        [uncle-j-mempalace-repair]="mempalace repair"
-        [uncle-j-turbovecdb-sync]="turbovecdb-sync.py"
-        [uncle-j-turbovecdb-benchmark]="turbovecdb-benchmark.py"
-        [uncle-j-turbovecdb-report]="turbovecdb-report.sh"
+        [uncle-j-memweave-sync]="scripts/memweave/sync_memory.sh"
     )
     for label in "${!EXPECTED[@]}"; do
         if printf '%s\n' "$tab" | grep -q "$label"; then
@@ -876,7 +873,6 @@ check_langfuse_sdk
 check_skills
 check_skill_compliance
 check_agents
-check_mempalace
 check_crons
 check_stack_freshness
 check_post_merge_hook

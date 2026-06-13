@@ -6,8 +6,7 @@ reading is a last resort, not a default.
 
 The stack is stored under `C:\Users\wblair\Downloads\claude\_stack_setup\`.
 Full source for each component is archived alongside it in sibling folders
-(`jcodemunch-mcp-main`, `jdatamunch-mcp-master`, `jdocmunch-mcp-master`,
-`mempalace-develop`).
+(`jcodemunch-mcp-main`, `jdatamunch-mcp-master`, `jdocmunch-mcp-master`).
 
 ## Tools by modality — first choice wins
 

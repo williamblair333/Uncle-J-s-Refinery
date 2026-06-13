@@ -2,7 +2,7 @@
 # features/dreaming/dream.sh — Dream synthesizer for Uncle J's Refinery.
 #
 # Queries Langfuse for traces since the last run, invokes the
-# dream-synthesizer skill via claude -p, writes playbooks to MemPalace,
+# dream-synthesizer skill via claude -p, writes playbooks to the memweave store,
 # and optionally appends proven playbooks to ~/.claude/CLAUDE.md.
 #
 # Usage:
@@ -15,7 +15,7 @@ set -euo pipefail
 DREAM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_ROOT="$(cd "$DREAM_DIR/../.." && pwd)"
 VENV_PY="$STACK_ROOT/.venv/bin/python"
-MEMPALACE="$STACK_ROOT/.venv/bin/mempalace"
+MEMWEAVE_STORE="$HOME/.uncle-j-memory/memory"
 SKILL_FILE="$DREAM_DIR/skills/dream-synthesizer/SKILL.md"
 STATE_DIR="$STACK_ROOT/state"
 LAST_RUN_FILE="$STATE_DIR/dreaming-last-run.txt"
@@ -44,7 +44,6 @@ DREAMING_OUTPUT_DIR="${DREAMING_OUTPUT_DIR:-$HOME/.claude/dreaming-output}"
 
 # ── Dependency checks ────────────────────────────────────────────────────────
 [ -x "$VENV_PY" ]    || { warn "Stack venv missing — run ./install.sh first"; exit 1; }
-[ -x "$MEMPALACE" ]  || { warn "mempalace binary missing — run ./install.sh first"; exit 1; }
 [ -f "$SKILL_FILE" ] || { warn "dream-synthesizer skill missing — run features/dreaming/install.sh"; exit 1; }
 command -v claude >/dev/null 2>&1 || { warn "'claude' CLI not on PATH"; exit 1; }
 command -v curl   >/dev/null 2>&1 || { warn "'curl' not on PATH"; exit 1; }
@@ -198,7 +197,7 @@ try:
         held_content = (
             f'# Held dream playbooks — {now_ts}\n\n'
             'These entries contain URLs and require human verification before promotion.\n'
-            'To promote: copy entries to a dream output file and re-run `mempalace mine`.\n'
+            'To promote: copy entries into ~/.uncle-j-memory/memory/ for the next memweave sync.\n'
             'To reject: delete this file.\n\n'
             '## Held Playbooks\n\n'
             + '\n'.join(held_entries) + '\n'
@@ -229,8 +228,10 @@ unset _ORIG_SYNTHESIS
     && ok "Held ${HELD_COUNT} URL-bearing playbook(s) → $PENDING_DIR" \
     || ok "No URL-bearing playbooks detected"
 
-# ── Write output to MemPalace ─────────────────────────────────────────────────
-step "Writing to MemPalace via mine"
+# ── Promote dreaming output into the memweave memory store ────────────────────
+# Copy the synthesis into the cross-project memweave store (~/.uncle-j-memory/memory);
+# the nightly `sync_memory.sh --all` cron then embeds it. (Replaces the old mempalace mine.)
+step "Promoting dreaming output to the memweave store"
 mkdir -p "$DREAMING_OUTPUT_DIR"
 OUTPUT_FILE="$DREAMING_OUTPUT_DIR/dream-$(date +%Y-%m-%d).md"
 
@@ -240,11 +241,13 @@ OUTPUT_FILE="$DREAMING_OUTPUT_DIR/dream-$(date +%Y-%m-%d).md"
 } > "$OUTPUT_FILE"
 
 if [ "$DRY_RUN" -eq 0 ]; then
-    "$MEMPALACE" mine "$DREAMING_OUTPUT_DIR" --wing "dreaming" 2>/dev/null \
-        && ok "MemPalace updated" \
-        || warn "MemPalace mine failed (non-fatal — output still written to $OUTPUT_FILE)"
+    if mkdir -p "$MEMWEAVE_STORE" && cp "$OUTPUT_FILE" "$MEMWEAVE_STORE/dream-$(date +%Y-%m-%d).md"; then
+        ok "dreaming output promoted to memweave store (embedded on next sync)"
+    else
+        warn "memweave promotion failed (non-fatal — output still written to $OUTPUT_FILE)"
+    fi
 else
-    ok "[dry-run] would mine: $DREAMING_OUTPUT_DIR"
+    ok "[dry-run] would copy dream output into $MEMWEAVE_STORE"
 fi
 
 # ── Append proven playbooks to CLAUDE.md (idempotent) ────────────────────────
@@ -284,7 +287,7 @@ log_entry "ok: $TRACE_COUNT traces processed -> $OUTPUT_FILE"
 
 # FYI notification — skip if no traces or dry-run (nothing interesting to report)
 if [[ "$DRY_RUN" -eq 0 && "${TRACE_COUNT:-0}" -gt 0 ]]; then
-    _DREAM_MSG="🌙 Dream run: ${TRACE_COUNT} trace(s) processed → playbooks updated in MemPalace."
+    _DREAM_MSG="🌙 Dream run: ${TRACE_COUNT} trace(s) processed → playbooks promoted to the memweave store."
     [ "${HELD_COUNT:-0}" -gt 0 ] && \
         _DREAM_MSG="${_DREAM_MSG} ${HELD_COUNT} playbook(s) held for URL review → $PENDING_DIR"
     source "$STACK_ROOT/lib/notify.sh" 2>/dev/null \

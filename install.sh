@@ -129,7 +129,6 @@ declare -A EXE=(
     [jcodemunch]="$VENV_BIN/jcodemunch-mcp"
     [jdatamunch]="$VENV_BIN/jdatamunch-mcp"
     [jdocmunch]="$VENV_BIN/jdocmunch-mcp"
-    [mempalace]="$VENV_BIN/mempalace"
 )
 for k in "${!EXE[@]}"; do
     if [ -x "${EXE[$k]}" ]; then ok "$k -> ${EXE[$k]}"
@@ -292,7 +291,6 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     mcp_add jcodemunch "${EXE[jcodemunch]}"
     mcp_add jdatamunch "${EXE[jdatamunch]}"
     mcp_add jdocmunch  "${EXE[jdocmunch]}"
-    mcp_add mempalace -- bash "$STACK_ROOT/scripts/mempalace-mcp-start.sh"
     mcp_add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant
     [ "$SKIP_CONTEXT7" -eq 0 ] && mcp_add context7 -- npx -y "@upstash/context7-mcp"
     [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add duckdb -- uvx mcp-server-motherduck --db-path :memory: --read-write --allow-switch-databases
@@ -322,12 +320,10 @@ else:
     print("    OK  MCP_TIMEOUT already 60000 in settings.json env block")
 PY
 
-# --- 5c. MemPalace health monitoring (cron) ---------------------------------
-step "Setting up MemPalace backup + health-check cron jobs"
+# --- 5c. Maintenance cron jobs ----------------------------------------------
+step "Setting up maintenance cron jobs"
 mkdir -p "$STACK_ROOT/state"
 for entry in \
-    "uncle-j-mempalace-backup|0 */6 * * * nice -n 19 bash $STACK_ROOT/mempalace-backup.sh >> $STACK_ROOT/state/mempalace-backup.log 2>&1" \
-    "uncle-j-mempalace-health|0 8 * * * nice -n 19 $STACK_ROOT/.venv/bin/python $STACK_ROOT/mempalace-health.py >> $STACK_ROOT/state/mempalace-health.log 2>&1" \
     "uncle-j-jcodemunch-reindex|0 1 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin bash $STACK_ROOT/scripts/jcodemunch-reindex.sh >> $STACK_ROOT/state/jcodemunch-reindex.log 2>&1" \
     "uncle-j-auto-maintain|0 3 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin CLAUDE_BIN=/home/bill/.local/bin/claude bash $STACK_ROOT/scripts/auto-maintain.sh >> $STACK_ROOT/state/auto-maintain.log 2>&1" \
     "uncle-j-healthcheck-notify|0 7 * * * bash $STACK_ROOT/scripts/healthcheck-notify.sh >> $STACK_ROOT/state/healthcheck-notify.log 2>&1" \
@@ -338,10 +334,6 @@ do
     install_cron "$tag" "$line"
     ok "cron registered: $tag"
 done
-
-# --- 5c2. MemPalace mine crons (project code, conversations, repair, boot) ---
-step "Setting up MemPalace mine + repair crons"
-bash "$STACK_ROOT/features/mempalace/install.sh"
 
 # --- 5d. Skills (reliability layer) ----------------------------------------
 step "Installing global skills (reliability layer)"
@@ -445,10 +437,9 @@ Installed. What to do now:
      Cursor          -> mcp-clients/cursor-mcp.json
      Windsurf        -> mcp-clients/windsurf-mcp.json
 
-2. Bootstrap MemPalace for a project (one-time per project):
-     $VENV_BIN/mempalace init ~/path/to/project
-     $VENV_BIN/mempalace mine ~/path/to/project
-     $VENV_BIN/mempalace mine ~/.claude/projects/ --mode convos
+2. Build the memweave memory store (offline, cross-project):
+     bash $STACK_ROOT/scripts/memweave/sync_memory.sh --all
+     # query it:  $STACK_ROOT/.venv-memweave/bin/python $STACK_ROOT/scripts/memweave/mw_search.py "query"
 
 3. Sanity-check:
      ./verify.sh

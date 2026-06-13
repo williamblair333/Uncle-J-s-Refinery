@@ -1,6 +1,41 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — memweave Phase 4a (cross-project corpus widening) on branch `feat/phase4a-memweave-crossproject`. Phases 1, 2, 2b-1, 2b-2, 3a, 3b DONE & merged.*
+*Last updated: 2026-06-13 — memweave Phase 4b (decommission mempalace) on branch `feat/phase4b-decommission-mempalace`. Phases 1, 2, 2b-1, 2b-2, 3a, 3b, 4a DONE & merged. memweave fully replaces mempalace.*
+
+## Current state (2026-06-13) — mempalace decommissioned (branch `feat/phase4b-decommission-mempalace`)
+
+memweave (offline, cross-project, freshness-automated) is the memory system. mempalace is torn
+down: in-repo scripts/probes/crons removed, dreaming + the 3 high-traffic global skills repointed
+to memweave, 9 crons removed, the 2.4 GB palace **staged** (not deleted) to
+`~/.mempalace-trash-phase4-<ts>`. Globals backed up to `~/.mempalace-decommission-backups-<ts>`.
+Verified: healthcheck clean (duckdb cold-start only), cross-project memweave search intact.
+
+**Reversibility:** in-repo via `git revert`; palace via `mv` back; globals via the backup dir;
+crons re-register from git history.
+
+**DEFERRED — must finish to fully close out (mostly needs you at the keyboard):**
+1. **Global `~/.claude.json`** — remove the mempalace MCP-server block. HIGH-risk (a botched edit
+   breaks Claude across all projects); the harness denies me writing under `~/.claude/`. Until done,
+   the dead MCP entry may try to start and recreate an empty `~/.mempalace` (harmless; re-stage if so).
+2. **Global `~/.claude/settings.json`** — remove the `mempalace hook run --hook stop` Stop-hook +
+   repoint the "check mempalace" standing instruction to memweave. (Harness-denied for me; use the
+   `update-config` skill or edit by hand. Prepared change: standing instruction →
+   `mw_search.py "<query>"`.)
+3. **Global `~/.claude/CLAUDE.md`** — repoint memory routing to memweave (mirror the project CLAUDE.md
+   §4 from Phase 3b). Note: `install.sh` copies repo `CLAUDE.md` → global on its next run.
+4. **`pyproject.toml` + `uv.lock`** — remove the mempalace git-dep + the `chromadb==1.5.8`/
+   `chroma-hnswlib` overrides + `[tool.uv.sources] mempalace`, then `uv sync`. Risk: other `.venv`
+   consumers — verify before removing.
+5. **Dead code/skills:** delete the uncalled `check_mempalace()` body in `healthcheck.sh` (lines were
+   ~332–584; left as dead code due to a Bash-write guard — use Edit/Write); remove the 6 obsolete
+   `mempalace-*` repair skills under `global-skills/`; repoint `post-audit-mempalace-capture` + the
+   pre-mortem skill's step-11 reference to memweave.
+6. When ready, **purge the staged trash:** `~/.mempalace-trash-phase4-*` (2.4 GB) +
+   `~/.mempalace-trash-D1-*` (55 GB).
+
+---
+
+*Earlier — memweave Phase 4a (cross-project corpus widening) on branch `feat/phase4a-memweave-crossproject`. Phases 1, 2, 2b-1, 2b-2, 3a, 3b DONE & merged.*
 
 ## Current state (2026-06-12) — memweave widened to cross-project (branch `feat/phase4a-memweave-crossproject`)
 
