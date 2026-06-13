@@ -1,7 +1,11 @@
 ---
 name: post-audit-mempalace-capture
-description: After any adversarial/red-team analysis of a component, skill, or control mechanism, write two durable MemPalace entries — design invariants + audit baseline, and closed attack vectors — so future sessions can answer "is this change a regression?" without relying on git history alone.
+description: After any adversarial/red-team analysis of a component, skill, or control mechanism, write two durable memory notes — design invariants + audit baseline, and closed attack vectors — into the memweave corpus so future sessions can answer "is this change a regression?" without relying on git history alone.
 ---
+
+> **Note:** the skill dir name still says `mempalace`; it now writes to the **memweave** corpus
+> (`~/.uncle-j-memory/memory/`). The name is retained because its `~/.claude/skills/` symlink
+> can't be recreated by the harness — a rename is a Bill-keyboard follow-up.
 
 ## When to use
 
@@ -12,32 +16,38 @@ After completing any multi-cycle adversarial analysis, security audit, or harden
 
 ## The pattern
 
-Two MemPalace entries per audited component. No more, no less.
+Two markdown sections per audited component, appended to the memweave corpus. No more, no less.
+Both go in one file so they index together and surface as a pair in `mw_search.py`:
 
-### Entry 1 — Design invariants + audit baseline
+Run via the Bash tool (the tool result confirms the write). The heredoc terminator is a unique
+token — keep it as-is and do not let baseline content contain that exact line:
+```bash
+mkdir -p ~/.uncle-j-memory/memory
+cat >> ~/.uncle-j-memory/memory/audit-baselines.md <<'PM_AUDIT_BASELINE_EOF'
+
+## [AUDIT BASELINE] <Component> — <YYYY-MM-DD>
+
+### Design invariants + audit baseline
+Invariants (numbered — the non-negotiables):
+1. ...
+2. ...
+
+Audit certification: <N>-cycle adversarial analysis completed <date>.
+Final cycle result: <only MEDIUMs/LOWs | no new CRITs or HIGHs>.
+Confidence baseline: any single-session edit touching invariants requires its own adversarial pass.
+
+### Known closed attack vectors
+- **<Attack name>** — <one-line vector description>; closed by <one-line fix description>
+PM_AUDIT_BASELINE_EOF
+```
+
+### Section 1 — Design invariants + audit baseline
 
 Properties that **must hold** in any future version. If a proposed change violates any of these, it is a regression regardless of what the commit message says.
 
-Type: project
-Title: [Component] — Design invariants and audit baseline
-Body:
-  Invariants (numbered — the non-negotiables):
-  1. ...
-  2. ...
-
-  Audit certification: [N]-cycle adversarial analysis completed [date].
-  Final cycle result: [only MEDIUMs/LOWs | no new CRITs or HIGHs].
-  Confidence baseline: any single-session edit touching invariants requires its own adversarial pass.
-
-### Entry 2 — Known closed attack vectors
+### Section 2 — Known closed attack vectors
 
 Specific attacks found and patched. A future reviewer scans this and asks: "does this proposed change re-open any of these?"
-
-Type: project
-Title: [Component] — Known closed attack vectors
-Body:
-  - **[Attack name]** — [one-line vector description]; closed by [one-line fix description]
-  - ...
 
 ## Filter criterion
 

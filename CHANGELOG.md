@@ -2,6 +2,37 @@
 
 ---
 
+## 2026-06-13 — memweave Phase 4f: control-invariant repoint (pre-mortem audit sink)
+
+Repoints the discipline mechanism's last mempalace touchpoints to memweave — the deferred
+control-sensitive item (HANDOFF #2). Pre-mortem (Infrastructure, 12/12, 1 MEDIUM) + an
+adversarial security-reviewer pass were run; the red-team found 2 CRIT + 2 HIGH + 3 MEDIUM in
+the first draft, all closed in the rewrite.
+
+### Changed
+- **`global-skills/pre-mortem/SKILL.md`**: the HIGH/CATASTROPHIC transfer audit sink moves from
+  `mempalace_diary_write` (MCP) to an append-only markdown file
+  `~/.uncle-j-memory/memory/premortem-audit.md` (memweave-indexed), with
+  `state/premortem-unaudited.log` as the fail-closed fallback. Audit Log rewritten as an explicit
+  5-step sequence — write **via the Bash tool** (tool result = the confirmation, not a prose claim),
+  confirm `AUDIT_WRITE_RC=0`, degrade-with-notice to the fallback, BLOCK if both sinks fail, token
+  last. Writes use a single-quoted heredoc (unique terminator) so arbitrary steelman text lands
+  literally — no shell-quoting/format-string hazard. Cross-session DECLINED surfacing now uses a
+  synchronous `grep` (no index-lag window) **plus** `mw_search.py`.
+- **`global-skills/post-audit-mempalace-capture/SKILL.md`**: body repoints from "two MemPalace
+  entries" to two markdown sections appended to `~/.uncle-j-memory/memory/audit-baselines.md`
+  (Bash-tool heredoc, unique terminator). Dir name retained (its `~/.claude/skills` symlink can't be
+  recreated by the harness — rename is a Bill-keyboard follow-up; noted in-skill).
+- **`global-skills/session-end-checklist/SKILL.md`**: design-memory step now invokes the repointed
+  capture skill instead of flagging it "pending repoint."
+
+### Verified
+- Hand-placed corpus md indexes + surfaces via `mw_search.py` (smoke test, 0.824 hybrid score).
+- Heredoc write handles hostile text (`$(...)`, `$VARS`, backticks, quotes, `%s/%n`) literally, RC=0.
+- Design invariants + closed attack vectors captured to `~/.uncle-j-memory/memory/audit-baselines.md`.
+
+---
+
 ## 2026-06-13 — memweave Phase 4e: user-facing docs + reference-config sync
 
 Brings the user-facing docs and MCP-client templates in line with the decommission.

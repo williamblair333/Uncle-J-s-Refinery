@@ -129,8 +129,8 @@ not CLEAR. Re-examine for a finding.
 
   **MECHANISM:** The specific causal chain. Not the outcome — the path from action to failure.
     ✗ Weak: "The cron may not fire."
-    ✓ Strong: "The cron calls `.venv/bin/mempalace` — this path breaks on every `uv sync`
-               because uv recreates the venv directory."
+    ✓ Strong: "The cron calls `.venv-memweave/bin/python` — this path breaks on every venv
+               rebuild because uv recreates the directory under the active Python minor."
 
   **CONDITION:** The specific triggering condition. Prefer conditions already observed or
     confirmed in this environment over hypotheticals.
@@ -150,9 +150,9 @@ not CLEAR. Re-examine for a finding.
 
 ### Severity Tiers
 
-**LOW** — flagged in checklist, does not block, logged to MemPalace as advisory.
+**LOW** — flagged in checklist, does not block, noted as an advisory.
 
-**MEDIUM** — warns visibly, does not individually block, logged to MemPalace as advisory.
+**MEDIUM** — warns visibly, does not individually block, noted as an advisory.
 
 **MEDIUM BUNDLE** — 3 or more MEDIUM findings → STATUS escalates to ⛔ BLOCKED (MEDIUM BUNDLE).
 Apply Warning 1 of the WarGames escalation. The user must acknowledge each MEDIUM finding
@@ -179,7 +179,7 @@ A risk is CATASTROPHIC when: irreversible AND blast radius extends beyond this s
 - Infrastructure changes outside this project (firewall rules, DNS, deployed containers, IAM)
 - Any action that requires someone else to take action to undo
 - Any irreversible deletion of data, logs, or state that cannot be fully recreated from
-  version control alone (log files, state/ directories, MemPalace wings, cron history)
+  version control alone (log files, state/ directories, the memweave audit sink, cron history)
 - Any action that passes the **regret test**: "If this goes wrong, will I feel sick looking
   at it tomorrow morning?" If yes and the action is irreversible: CATASTROPHIC.
 
@@ -247,20 +247,28 @@ Note: "I know what I'm doing" and "just do it" are confidence claims, not reason
 They do not satisfy Warning 3.
 
 **Cross-session escalation memory:**
-When Claude issues a hard decline (action blocked, token not created), log to MemPalace:
+When Claude issues a hard decline (action blocked, token not created), append to the memweave
+audit sink so future sessions can surface it. Run via the Bash tool (heredoc → literal text, no
+quoting/format-string hazard; don't let record text contain the `PM_AUDIT_EOF` line):
+```bash
+mkdir -p ~/.uncle-j-memory/memory
+cat >> ~/.uncle-j-memory/memory/premortem-audit.md <<'PM_AUDIT_EOF'
+
+## [PRE-MORTEM DECLINED] <ISO-8601 timestamp>
+Action attempted: <exact action description>
+Failure mode unaddressed: <specific failure mode>
+Escalation reached: <Warning level>
+Outcome: declined — failure mode was not engaged
+PM_AUDIT_EOF
 ```
-mempalace_diary_write(
-  content="[PRE-MORTEM DECLINED] {date}
-Action attempted: {exact action description}
-Failure mode unaddressed: {specific failure mode from the steelman}
-Escalation reached: {Warning level at decline}
-Outcome: declined — failure mode was not engaged",
-  wing="uncle_j_s_refinery",
-  room="audit"
-)
+At session start, check for prior declines with **both** a synchronous grep (no index dependency —
+catches same-day declines even if the Stop-hook/cron hasn't re-indexed yet) and a semantic search:
+```bash
+grep -A4 '\[PRE-MORTEM DECLINED\]' ~/.uncle-j-memory/memory/premortem-audit.md 2>/dev/null | tail -40
+.venv-memweave/bin/python scripts/memweave/mw_search.py "[PRE-MORTEM DECLINED]" --k 5
 ```
-In future sessions, prior-art-check will surface DECLINED entries. Also explicitly search:
-`mempalace_search("[PRE-MORTEM DECLINED]", room="audit", limit=5)` at session start.
+The grep is authoritative for "has anything been declined"; the search adds semantic recall across
+the wider corpus. (Index retrieval lags one pass — the grep closes the crash/same-day window.)
 
 When a session attempts an action matching a prior decline (same surface file, operation
 type, or failure mode — err toward surfacing rather than treating as new):
@@ -283,12 +291,13 @@ verifiable claim, not a theoretical argument."
 The user has the keys. If they choose to turn them with full knowledge, that is their
 right. The skill's job is ceremony and documentation, not permanent veto.
 
-## MemPalace Log
+## Audit Log
 
-Every HIGH/CATASTROPHIC transfer gets logged via `mempalace_diary_write`. The diary write
-MUST be attempted and its result confirmed before the transfer is complete — show the tool
-call result in your output.
+Every HIGH/CATASTROPHIC transfer gets logged to the **memweave audit sink** — an append-only
+markdown file indexed into the memweave corpus (no MCP; offline, local-disk). The write MUST
+succeed before the token is created. Follow the steps **in order**; the token comes last (Step 5).
 
+Record template (fill the fields verbatim from the analysis above):
 ```
 [PRE-MORTEM TRANSFER] YYYY-MM-DD
 Action: [verbatim]
@@ -299,42 +308,61 @@ Reasoning engaged with steelman: yes / no
 Responsibility: transferred to user
 ```
 
-**Audit fail-closed:** If `mempalace_diary_write` fails or the MemPalace MCP is unavailable:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  ⚠ AUDIT FAILURE                                            │
-│  mempalace_diary_write could not record this transfer.      │
-│  Transfer is BLOCKED until one of:                          │
-│    (a) Diary write succeeds (retry after MCP reconnects)    │
-│    (b) User explicitly states in chat:                      │
-│        "I accept that no audit record exists for this       │
-│         transfer. Responsibility is mine."                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-When path (b) is acknowledged — in this order before creating the token:
-
-Step 1. Write to local fallback log (copy action/steelman verbatim from the output above):
+**Step 1 — Write to the primary sink, via the Bash tool.** Run this as a real Bash tool call —
+the tool result IS the confirmation; a prose claim that you "wrote it" is NOT. Use the heredoc so
+arbitrary steelman/reasoning text (quotes, `%`, newlines) lands literally with no shell quoting or
+format-string hazard. Do **not** alter the `PM_AUDIT_EOF` terminator; do not let record text
+contain that exact line:
 ```bash
-bash -c '
-  mkdir -p /opt/proj/Uncle-J-s-Refinery/state
-  printf "[PRE-MORTEM UNAUDITED TRANSFER]\nDate: %s\nAction: [action verbatim]\nDimension: [which] — [severity]\nSteelman: [full text]\nUser acknowledgment: MemPalace unavailable; user accepted no audit record\nResponsibility: transferred to user\n\n" \
-    "$(date -Iseconds)" \
-    >> /opt/proj/Uncle-J-s-Refinery/state/premortem-unaudited.log
-'
-```
+mkdir -p ~/.uncle-j-memory/memory
+cat >> ~/.uncle-j-memory/memory/premortem-audit.md <<'PM_AUDIT_EOF'
 
-Step 2. Confirm write succeeded. If fallback log write also fails:
+## [PRE-MORTEM TRANSFER] <ISO-8601 timestamp>
+Action: <action verbatim>
+Dimension: <which> — <severity>
+Steelman: <full steelman text>
+User reasoning: <user reasoning verbatim>
+Reasoning engaged with steelman: <yes/no>
+Responsibility: transferred to user
+PM_AUDIT_EOF
+echo "AUDIT_WRITE_RC=$?"
 ```
-⛔ BOTH AUDIT PATHS FAILED — transfer is blocked.
-   Resolve MemPalace MCP or write access to state/ before proceeding.
+This file is indexed by the memweave nightly cron + session-end Stop-hook, so the transfer
+surfaces in future `mw_search.py` prior-art checks.
+
+**Step 2 — Confirm.** The Bash tool returned and `AUDIT_WRITE_RC=0`. If so, state in the
+transcript: "AUDIT — transfer recorded to ~/.uncle-j-memory/memory/premortem-audit.md". Go to
+Step 5. If the call errored or `RC` is non-zero (e.g. `~/.uncle-j-memory` not writable), go to
+Step 3.
+
+**Step 3 — Fallback sink (degraded path), via the Bash tool.** The fallback log is a durable
+record too, but it is NOT indexed into the corpus — so a transfer recorded only here will not
+surface in future `mw_search.py`. Surface this to the user explicitly:
+```bash
+mkdir -p /opt/proj/Uncle-J-s-Refinery/state
+cat >> /opt/proj/Uncle-J-s-Refinery/state/premortem-unaudited.log <<'PM_AUDIT_EOF'
+[PRE-MORTEM UNAUDITED TRANSFER]
+Date: <ISO-8601 timestamp>
+Action: <action verbatim>
+Dimension: <which> — <severity>
+Steelman: <full steelman text>
+Degradation: primary memweave sink unavailable; recorded to fallback only (not corpus-indexed)
+Responsibility: transferred to user
+PM_AUDIT_EOF
+echo "AUDIT_WRITE_RC=$?"
 ```
+State in the transcript: "⚠ AUDIT DEGRADED — primary memweave sink failed; transfer recorded to
+state/premortem-unaudited.log only (not searchable until manually re-homed). Reviewed in
+session-end-checklist." If `RC=0`, go to Step 5.
 
-Step 3. State in transcript: "AUDIT FALLBACK — no MemPalace record for this transfer.
-  Written to state/premortem-unaudited.log. Reviewed in session-end-checklist."
+**Step 4 — Both sinks failed.** If Step 3 also errored:
+```
+⛔ BOTH AUDIT PATHS FAILED — transfer is BLOCKED.
+   Restore write access to ~/.uncle-j-memory/ or state/ before proceeding. No token.
+```
+Do not create the token.
 
-Step 4. Create the token.
+**Step 5 — Only now create the clearance token** (per Instructions §10).
 
 LOW/MEDIUM findings logged as advisories when relevant. No transfer record required.
 
@@ -355,7 +383,7 @@ LOW/MEDIUM findings logged as advisories when relevant. No transfer record requi
    - Any HIGH/CATASTROPHIC → STATUS: ⛔ BLOCKED — WarGames escalation.
 7. Block on HIGH/CATASTROPHIC/MEDIUM BUNDLE until resolved or escalation completes.
    W3 retry cap (2 attempts) and 10-exchange budget run concurrently — whichever fires first.
-8. Log HIGH/CATASTROPHIC transfers to MemPalace. Fail-closed if diary write fails (see above).
+8. Log HIGH/CATASTROPHIC transfers to the memweave audit sink. Fail-closed if the write fails (see above).
 9. Non-consequential work (minimum stamp): no analysis, no token.
 10. **Token creation — only after full analysis on a surface-touching action.**
 
@@ -445,7 +473,7 @@ These are the thoughts that mean STOP — you are about to skip or weaken the pr
 | `verification-before-completion` | VBC = "works now?" Pre-mortem = "fails when?" Pre-mortem fires before commitment; VBC before completion claim. Complementary, not redundant. |
 | `systematic-debugging` | Debugging finds root cause. Pre-mortem asks if the fix will hold. |
 | `prior-art-check` | Runs first. Pre-mortem runs after action is decided. |
-| `session-end-checklist` | Pre-mortem findings feed into session-end MemPalace snapshot. Also reviews `state/premortem-unaudited.log` for unaudited transfers since last session — attempt retroactive MemPalace logging for each entry found. |
+| `session-end-checklist` | Pre-mortem findings feed into the session-end memweave ingest. Also reviews `state/premortem-unaudited.log` for unaudited transfers since last session — attempt retroactive audit-sink logging for each entry found. |
 
 ## Residual Risks (Acknowledged — Not Patchable at Skill Level)
 
@@ -455,7 +483,7 @@ These are the thoughts that mean STOP — you are about to skip or weaken the pr
 - **Token scope behavioral not cryptographic:** The scope statement is in the transcript; the
   token file encodes only session ID + age. Future hook-layer patch: embed scope in token file,
   verify at edit time.
-- **Cross-session retrieval not guaranteed:** MemPalace search may not surface a DECLINED entry
+- **Cross-session retrieval not guaranteed:** memweave search may not surface a DECLINED entry
   if action phrasing differs. Mitigation: direct tag search `[PRE-MORTEM DECLINED]` supplements
   semantic query.
 - **Anchoring bias despite independence rule:** Claude sees prior ratings while writing later ones.

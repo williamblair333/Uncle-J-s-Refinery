@@ -97,10 +97,10 @@ This step is **weekly** — skip if fewer than 7 days since last review (check l
 Did this session include hardening work — adversarial analysis, security fixes, or invariant
 changes to any component?
 
-- **Yes** → capture the design invariants / closed attack vectors as durable notes. NOTE: the
-  old `post-audit-mempalace-capture` skill wrote to mempalace, which has been decommissioned in
-  favor of memweave; that skill is **pending repoint to memweave** (follow-up). Until then,
-  record the hardening notes in the session HANDOFF/CHANGELOG so the next session has them.
+- **Yes** → invoke `post-audit-mempalace-capture` to record the design invariants / closed attack
+  vectors as durable notes. That skill now writes markdown into the memweave corpus
+  (`~/.uncle-j-memory/memory/`), so the notes surface in future `mw_search.py` prior-art checks.
+  (Skill dir name retained for symlink stability; rename is a Bill-keyboard follow-up.)
 - **No** → note "No hardening this session — design memory step skipped."
 
 ### Step 7 — Custom checks
