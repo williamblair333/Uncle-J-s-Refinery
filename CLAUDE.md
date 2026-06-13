@@ -19,7 +19,7 @@ Full source for each component is archived alongside it in sibling folders
 | Parquet / S3 / complex SQL / joins across files | **duckdb** (MotherDuck MCP)       | jdatamunch                        |
 | My own project docs / runbooks / markdown       | **jdocmunch**                     | Read                              |
 | Third-party library documentation               | **context7**                      | WebSearch/WebFetch                |
-| "What did we decide / discuss / build before?"  | **mempalace**                     | session transcript                |
+| "What did we decide / discuss / build before?"  | **memweave** (`mw_search.py`)     | session transcript                |
 | General web / news / current events             | WebSearch, WebFetch               | —                                 |
 
 If the first choice is unavailable, try the fallback and note it. Do **not**
@@ -148,20 +148,22 @@ tools can answer structurally.
   is authoritative and version-pinned. Call it whenever the question
   references a named library.
 
-### 4. Memory — mempalace before WebSearch or re-asking
-- Start every non-trivial task with a `mempalace` search for prior work on
-  the same topic. "Have we solved this before?" is always question #1.
-- On session close (or before compaction), snapshot the session into
-  MemPalace so the next session starts with context.
-- Organize mines by wing (person/project) so scopes stay tight.
-- Use `mempalace_diary_write` for per-session notes; `mempalace_diary_read` to review
-  prior entries. Both scoped per-project automatically (mempalace 3.3.3+).
-- Call `mempalace_reconnect` at session start or when search returns "ef or M is too
-  small" — MCP server can load stale HNSW from disk on startup.
-- **Knowledge graph (mempalace 3.x):** `mempalace_kg_add` / `mempalace_kg_query` / `mempalace_kg_invalidate`
-  / `mempalace_kg_timeline` — structured entity-relationship facts with temporal validity; use
-  when a free-text drawer isn't sufficient (typed entity-relation with time bounds). `mempalace_kg_stats`
-  for KG usage/health.
+### 4. Memory — memweave before WebSearch or re-asking
+- Start every non-trivial task with a memory search for prior work on the same topic.
+  "Have we solved this before?" is always question #1. Run:
+  `.venv-memweave/bin/python scripts/memweave/mw_search.py "your query" --k 5`
+  (offline ONNX semantic + BM25 over `~/.uncle-j-memory`; add `--json` for machine-parseable
+  output, `--min-score N` to threshold). It opens the existing index read-only — no writes.
+- **memweave ships no MCP server** — it's a separate-process Bash CLI, not an MCP tool. Use Bash
+  to invoke `mw_search.py`; do not look for a `memweave_*` MCP tool.
+- A missing/empty store exits nonzero with a clear message — fall back to the session transcript.
+- **Freshness is automatic** — `scripts/memweave/sync_memory.sh` runs nightly (cron
+  `uncle-j-memweave-sync`, 02:30) and at every session end (Stop-hook), so the store stays current.
+  No manual snapshot step at session close.
+- The store is **rebuildable from the markdown corpus** at `~/.uncle-j-memory` (rm the sqlite index
+  → byte-identical rebuild via `sync_memory.sh`); the markdown is the source of truth, not the index.
+- Scope note: `~/.uncle-j-memory` currently holds **this project's** transcripts. Cross-project
+  corpus + global routing are a later decision (tracked in HANDOFF).
 
 ### 5. Runtime traces (when available)
 - After ingesting OTel/SQL/stack traces via `import_runtime_signal`, use:
