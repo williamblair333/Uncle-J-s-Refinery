@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-13 — session-end: ROADMAP sync (pysqlite3 vendoring + checkmark fix shipped)
+
+- Moved the **pysqlite3 re-patch papercut** from In Progress → Completed (recent) — shipped as PR #65
+  (vendored 3.51.3 wheel + marker-conditional pin + healthcheck assert). In Progress is now empty.
+- README + docs/STACK.md checked — no update needed (pysqlite3 is an internal install detail; the
+  6-server stack list is unchanged).
+
+---
+
 ## 2026-06-13 — healthcheck checkmark fix (the real "duckdb" bug) + pysqlite3 wheel vendoring
 
 ### Fixed — the recurring `mcp-servers-down(duckdb)` was never duckdb

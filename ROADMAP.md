@@ -7,10 +7,7 @@ Completed items age out after ~4 weeks.
 
 ## In Progress
 
-- **pysqlite3 re-patch papercut (follow-up):** every `uv sync` reverts the source-built SQLite
-  3.51.3 → 3.51.1 wheel (WAL data-race bug), forcing a manual source rebuild (run twice on
-  2026-06-13). **Fix:** build the pysqlite3-3.51.3 wheel once, vendor it in-repo, pin `uv.lock` to
-  the local wheel so `uv sync` stops clobbering it. Ends the dance permanently. Own branch + pre-mortem.
+- _(nothing in flight)_
 
 ## Recently completed (memweave migration — fully closed 2026-06-13)
 
@@ -55,6 +52,7 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 | Date | Item |
 |------|------|
+| 2026-06-13 | **pysqlite3 3.51.3 wheel vendored + "duckdb" healthcheck bug root-caused** (PR #65). The recurring `mcp-servers-down(duckdb)` fail was a checkmark codepoint bug (`✓` U+2713 grep vs `✔` U+2714 output) matching zero servers → headlined `missing[0]`=duckdb; fixed to `[✓✔]`. Vendored the pysqlite3-3.51.3 wheel (`scripts/build-vendored-pysqlite3.sh` → `vendor/wheels/`), marker-conditional pin in `pyproject.toml` (PyPI fallback off-platform), `check_sqlite_version` healthcheck assert. Ends the `uv sync` clobber dance permanently. |
 | 2026-06-13 | **memweave migration complete — mempalace decommissioned** (PRs #50–#55). 2b-2 freshness cron + Stop-hook; 3b project CLAUDE.md routing → `mw_search.py`; 4a cross-project corpus (`--all-projects`); 4b decommission (scripts/crons/MCP/probes removed, palace staged not deleted, dreaming + 3 global skills repointed); 4c in-repo residue (dead `check_mempalace`, 6 obsolete repair skills, RELIABILITY scrub); 4d removed mempalace/chromadb deps from pyproject/uv.lock; 4e docs sync (README/STACK/ROADMAP + mcp-clients templates). Memory is now offline cross-project memweave (`~/.uncle-j-memory`). Deferred: global `~/.claude/` edits (harness-denied), control-invariant audit-sink repoint, trash purge. |
 | 2026-06-11 | Improvement Program Phase 1 — pay-for-itself audit (PR #38): deterministic collectors + scorecard + judgment. KEEP: jmunch-retrieval (5,300:1 payoff), guardrails (315 blocks), langfuse, telegram. FIX: routing-policy (9k tok/session), mempalace storage (0.32 maint share), reliability, skills (prune), dreaming + ralph (instrument). D1–D3 deletions signed off. |
 | 2026-06-06 | `dcup` Docker port registry — SQLite registry, flock mutual exclusion, live-reality preflight, sweeper service, PreToolUse hook; 26 projects registered |

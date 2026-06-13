@@ -1,7 +1,7 @@
 # Handoff — Uncle J's Refinery
 
 *Last updated: 2026-06-13 — healthcheck checkmark bug fixed + pysqlite3 3.51.3 vendored
-(branch `fix/duckdb-checkmark-pysqlite3-vendor`).*
+(PR #65 merged to main; ROADMAP synced; session closed).*
 
 ## 2026-06-13 — "duckdb fail" root-caused (checkmark bug) + pysqlite3 wheel vendored
 
