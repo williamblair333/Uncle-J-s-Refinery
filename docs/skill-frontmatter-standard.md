@@ -47,7 +47,7 @@ related_skills: [blue-team, outcomes]  # loosely related (not hard deps); omit i
 |---|---|
 | `security` | pre-mortem, red-team, blue-team, adversarial-review, telegram-security-audit |
 | `review` | smart-review, code-review, adversarial-review, per-task-review-cycle, validate-external-audit |
-| `memory` | All mempalace-* skills, prior-art-check, post-audit-mempalace-capture |
+| `memory` | memweave skills, prior-art-check, post-audit-memory-capture |
 | `git` | session-end-checklist, catch-up-pull, verify-pr-branch, readme-sync |
 | `analysis` | deep-repo-analysis, competitive-analysis, eval skills |
 | `infrastructure` | post-upgrade-mcp-integration, stack-not-at-head-remediation, install scripts |
