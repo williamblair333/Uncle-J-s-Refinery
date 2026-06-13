@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-13 — fix: install-reliability.sh crash on dead turbovecdb block
+
+`install-reliability.sh` printed `line 204: PROJ: unbound variable` during install — a leftover
+turbovecdb block (turbovecdb was part of the mempalace ecosystem, removed in 4b) guarded on an
+undefined `$PROJ`, and the script it referenced (`scripts/turbovecdb-install.sh`) no longer exists.
+
+### Fixed
+- **`install-reliability.sh`**: removed the dead turbovecdb-install block (the file's only `$PROJ`
+  use and only turbovecdb reference). `bash -n` clean.
+
+Note: re-running `uv sync` reverts the pysqlite3 SQLite-3.51.3 source build back to the 3.51.1 PyPI
+wheel (pysqlite3 is pinned in uv.lock), so `install.sh` re-applies the source build as its last step.
+Do not run a bare `uv sync` expecting the WAL patch to survive.
+
+---
+
 ## 2026-06-13 — memweave Phase 4g.1: final live mempalace refs (verify + prompts)
 
 Tail of the 4g live-surface sweep — three remaining executable/prompt references.
