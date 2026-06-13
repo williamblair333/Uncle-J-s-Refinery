@@ -1,6 +1,36 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — memweave Phase 4e (user-facing docs + reference-config sync) on branch `feat/phase4e-docs-sync`. Phases 1–4d DONE & merged. memweave fully replaces mempalace.*
+*Last updated: 2026-06-13 — memweave Phase 4f (control-invariant repoint) on branch `feat/phase4f-control-repoint-memweave`. Phases 1–4e DONE & merged. memweave fully replaces mempalace.*
+
+## Current state (2026-06-13) — discipline audit sink repointed to memweave (branch `feat/phase4f-control-repoint-memweave`)
+
+4f closes the deferred control-sensitive item (prior #2): the `pre-mortem` audit sink, the
+`post-audit-mempalace-capture` body, and the `session-end-checklist` design-memory step now write to
+the **memweave** corpus instead of `mempalace_diary_write`. Audit records → append-only
+`~/.uncle-j-memory/memory/premortem-audit.md` (indexed → surfaces in `mw_search.py`), with
+`state/premortem-unaudited.log` as the fail-closed fallback. Ran pre-mortem (Infrastructure 12/12,
+1 MEDIUM) **and** an adversarial security-reviewer pass that surfaced 2 CRIT + 2 HIGH + 3 MEDIUM in
+the first draft — **all closed** in the rewrite (Bash-tool forced-confirmation, single-quoted
+heredoc, synchronous `grep` for cross-session declines, explicit 5-step write-then-token order).
+Verified end-to-end (corpus index+search, hostile-text heredoc literality). Design invariants +
+closed vectors captured to `~/.uncle-j-memory/memory/audit-baselines.md`.
+
+**STILL DEFERRED — only the genuinely-blocked / control-sensitive-name / irreversible items remain:**
+1. **Global `~/.claude/` edits — harness denies me writes there. Run the `!python3` command from the
+   session** to remove the mempalace Stop-hook + repoint the standing instruction. Then
+   `~/.claude/CLAUDE.md` routing (re-run `install.sh`) + `~/.claude.json` mempalace MCP-server removal
+   (HIGH — keyboard).
+2. **Rename `post-audit-mempalace-capture` → a memweave-neutral name** (Bill-keyboard): the dir's
+   `~/.claude/skills/` symlink can't be recreated by the harness. Touches the dir, the symlink,
+   `session-end-checklist` `related_skills`, and pre-mortem step-11's reference. Body is already
+   memweave; only the name is stale.
+3. **Purge staged trash** (irreversible — Bill's call): `~/.mempalace-trash-phase4-*` (2.4 G),
+   `~/.mempalace-trash-D1-*` (55 G), `~/.mempalace-decommission-backups-*`.
+4. **Optional:** a routine `uv sync` prunes the now-unused mempalace/chromadb still in `.venv`.
+
+---
+
+*Earlier — memweave Phase 4e (user-facing docs + reference-config sync) on branch `feat/phase4e-docs-sync`. Phases 1–4d DONE & merged. memweave fully replaces mempalace.*
 
 ## Current state (2026-06-13) — docs + reference configs synced (branch `feat/phase4e-docs-sync`)
 
