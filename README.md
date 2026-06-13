@@ -24,12 +24,12 @@ Memory is the mechanism, not the mission: remembering everything is how sessions
 
 ## What that looks like in practice
 
-Seven MCP servers, a self-healing retrieval stack, and a nightly loop that mines your own sessions for mistakes. One install — automatically active in every Claude Code project on the machine. Every piece maps to a priority:
+Six MCP servers plus an offline cross-project memory store, a self-healing retrieval stack, and a nightly loop that mines your own sessions for mistakes. One install — automatically active in every Claude Code project on the machine. Every piece maps to a priority:
 
 - **Right** — four guardrail layers block destructive commands, credential leaks, and prompt injection before they land; a daily healthcheck catches HNSW corruption, FTS5 drift, and SQLite mismatches before a broken index silently degrades answers
 - **Cheap** — Tree-sitter symbol index queries your codebase structurally instead of reading whole files (~80% token reduction on real code tasks); jOutputMunch trims output 25–40%; Telegram approval flows and alerts spend less of *your* attention at a terminal
 - **Inventive** — nightly cron replays Langfuse traces, extracts recurring mistakes and proven playbooks via `dream-synthesizer`, and patches Claude's operating instructions without you lifting a finger; auto-skill drafts new skills from workflows you demonstrate
-- **Local** — the ChromaDB memory palace, MiniLM embeddings, and Langfuse observability all run on your machine; "what did we decide about auth?" pulls sessions from months ago without the question ever leaving the box
+- **Local** — the memweave cross-project memory store, MiniLM embeddings, and Langfuse observability all run on your machine; "what did we decide about auth?" pulls sessions from months ago without the question ever leaving the box
 
 Install once. The retrieval routing, hooks, and guardrails apply to every Claude Code project on the machine automatically.
 
@@ -60,16 +60,14 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
   - [9. MCP performance tuning (optional)](#9-mcp-performance-tuning-optional)
   - [10. Stack update alerts (optional)](#10-stack-update-alerts-optional)
   - [11. GitHub webhook server (optional)](#11-github-webhook-server-optional)
-  - [12. Bootstrap MemPalace (optional)](#12-bootstrap-mempalace-optional)
-  - [13. MemPalace remote backup (recommended)](#13-mempalace-remote-backup-recommended)
-  - [14. Telegram gateway (optional)](#14-telegram-gateway--approval-channel-and-monitoring-alerts-optional)
-  - [15. Telegram session notifications (optional)](#15-telegram-notify--session-end-notifications-optional)
-  - [16. Dreaming (optional)](#16-dreaming--automatic-playbook-extraction-optional)
-  - [17. Session stats (optional)](#17-session-stats--weekly-efficiency-reporter-optional)
-  - [18. Auto-skill (optional)](#18-auto-skill--automatic-skill-drafting-optional)
-  - [19. Skill manager (optional)](#19-skill-manager--global--per-project-skill-symlinks-optional)
-  - [20. Ralph cron (optional)](#20-ralph-cron--scheduled-autonomous-ralph-runs-optional)
-  - [21. MemPalace automation (optional)](#21-mempalace-automation--keep-the-palace-current-optional)
+  - [12. Bootstrap memweave (optional)](#12-bootstrap-memweave-optional)
+  - [13. Telegram gateway (optional)](#13-telegram-gateway--approval-channel-and-monitoring-alerts-optional)
+  - [14. Telegram session notifications (optional)](#14-telegram-notify--session-end-notifications-optional)
+  - [15. Dreaming (optional)](#15-dreaming--automatic-playbook-extraction-optional)
+  - [16. Session stats (optional)](#16-session-stats--weekly-efficiency-reporter-optional)
+  - [17. Auto-skill (optional)](#17-auto-skill--automatic-skill-drafting-optional)
+  - [18. Skill manager (optional)](#18-skill-manager--global--per-project-skill-symlinks-optional)
+  - [19. Ralph cron (optional)](#19-ralph-cron--scheduled-autonomous-ralph-runs-optional)
 - [Daily usage](#daily-usage)
 - [Troubleshooting](#troubleshooting)
 - [File map](#file-map)
@@ -86,7 +84,7 @@ Install once. The retrieval routing, hooks, and guardrails apply to every Claude
 |---|---|---|
 | Claude reads whole files to find one function | jCodeMunch indexes your repo via Tree-sitter; Claude queries the symbol index instead | ~80% token reduction on real code tasks (up to ~95% on large-file, single-symbol lookups) |
 | Massive data files get dumped into context | jDataMunch profiles and slices CSV/TSV; DuckDB handles Parquet/SQL joins | ~25,000× reduction on the LAPD 1M-row benchmark |
-| Claude forgets everything between sessions | MemPalace stores decisions, patterns, and prior art in a local ChromaDB palace with semantic search | "What did we decide about auth?" hits sessions from months ago |
+| Claude forgets everything between sessions | memweave stores decisions, patterns, and prior art as an offline cross-project markdown corpus with local semantic search | "What did we decide about auth?" hits sessions from months ago |
 | Verbose boilerplate responses | jOutputMunch system-prompt rules strip preamble, summaries, and filler from every reply | 25–40% output token reduction |
 | Destructive commands run unchecked | Four guard layers: secret scanner, prompt-injection defender, bash-matcher rules, code-reviewer subagent | `rm -rf`, pipe-to-shell, direct pushes to main — all blocked before they land |
 | No observability into what Claude is doing | Langfuse (self-hosted, Docker) traces every turn with tool calls, timings, and token counts | Full session replay in the local UI |
@@ -102,7 +100,7 @@ This project is named in tribute to **J. Gravelle** ([@jgravelle](https://github
 - **jDocMunch** — section-precise documentation retrieval
 - **jOutputMunch** — system-prompt rules that cut output tokens 25–40%
 
-Everything else in this repo — MemPalace, Serena, Context7, DuckDB, Superpowers, Ralph, guardrails, Langfuse, custom skills, install scripts — is plumbing and governance built around that core. Without J. Gravelle's work, there is no refinery to build a plant around. If this stack saves you tokens, the credit belongs to him first.
+Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers, Ralph, guardrails, Langfuse, custom skills, install scripts — is plumbing and governance built around that core. Without J. Gravelle's work, there is no refinery to build a plant around. If this stack saves you tokens, the credit belongs to him first.
 
 ---
 
@@ -116,11 +114,11 @@ Everything else in this repo — MemPalace, Serena, Context7, DuckDB, Superpower
 | | DuckDB MCP | SQL over Parquet/JSON/CSV/S3/GCS/R2 |
 | **Retrieval — docs** | jDocMunch | Your project docs, section-precise |
 | | Context7 | Third-party library docs, version-pinned |
-| **Retrieval — memory** | MemPalace | Long-term verbatim memory with semantic search |
+| **Retrieval — memory** | memweave | Offline cross-project memory: markdown corpus + local semantic search via `mw_search.py` (CLI, not an MCP server) |
 | **Efficiency — output** | jOutputMunch | System-prompt rules that cut output tokens 25–40% |
 | **Reliability** | Superpowers | 20+ skills: brainstorming, TDD, systematic debugging, verification |
 | | Ralph Wiggum | Autonomous loop harness with verification gates |
-| | prior-art-check | Custom skill — forces MemPalace lookup before non-trivial work |
+| | prior-art-check | Custom skill — runs `mw_search.py` (memweave) before non-trivial work |
 | | judge | Custom skill — spawns code-reviewer subagent before Edit/Write |
 | **Governance** | jCodeMunch hooks | PreToolUse / PostToolUse / PreCompact / TaskCompleted / SubagentStart enforcement |
 | | dwarvesf guardrails | UserPromptSubmit secret scanner + PostToolUse prompt-injection defender |
@@ -129,15 +127,15 @@ Everything else in this repo — MemPalace, Serena, Context7, DuckDB, Superpower
 | **Optional features** | Stack alerts | Daily cron checks GitHub HEAD for each package; Claude assesses relevance; Telegram inline-button pitch; tap ✅ to upgrade |
 | | Telegram gateway | Approval + monitoring channel: skill promotion, healthcheck alerts, Ralph plateau, dreaming FYI, post-merge notices |
 | | Telegram notify | Stop hook — sends a Telegram notification when each Claude session ends |
-| | Dreaming | Daily Langfuse trace mining → mistake patterns + playbooks → MemPalace + CLAUDE.md |
+| | Dreaming | Daily Langfuse trace mining → mistake patterns + playbooks → memweave store + CLAUDE.md |
 | | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
 | | Auto-skill | Stop hook — analyzes session transcript; drafts a SKILL.md to `state/skill-drafts/`; pitches via Telegram for approval |
 | | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start |
 | | Agent library | 6 specialist subagents in `global-agents/` — planner, code-reviewer, security-reviewer, architect, tdd-guide, silent-failure-hunter — symlinked to `~/.claude/agents/` |
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
-| | MemPalace automation | Stop hook (convo mining) + daily cron (project mining) — keeps palace current automatically |
+| | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
 
-All 7 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically.
+All 6 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically.
 
 ---
 
@@ -174,7 +172,7 @@ Commercial use is governed by [Anthropic's Commercial Terms of Service](https://
 
 Everything outside the `/ee` folder is MIT — free for commercial use with no usage limits. The `/ee` folder contains enterprise-only features (SCIM, audit logs, data retention policies) that require a commercial license. See [Langfuse open-source FAQ](https://langfuse.com/docs/open-source).
 
-**Everything else** — MemPalace, Serena, DuckDB MCP, Context7, Superpowers, dwarvesf/claude-guardrails, and the Langfuse template — is MIT-licensed. No commercial restrictions beyond attribution.
+**Everything else** — memweave, Serena, DuckDB MCP, Context7, Superpowers, dwarvesf/claude-guardrails, and the Langfuse template — is MIT-licensed. No commercial restrictions beyond attribution.
 
 **This repo's glue code** — install scripts, merged CLAUDE.md, custom skills, Ralph harness, and all supporting scripts — is **AGPL-3.0** (see `LICENSE`). Free for personal and commercial use; network-deployed modifications must be released under the same license.
 
@@ -239,10 +237,10 @@ This script does the following, in order:
 
 1. Installs `uv` (fast Python package manager) if missing.
 2. Creates `.venv/` via `uv venv --python 3.11`.
-3. `uv sync` — installs jcodemunch-mcp, jdatamunch-mcp, jdocmunch-mcp, mempalace from their GitHub repos (pinned to exact commit SHAs in `uv.lock`).
+3. `uv sync` — installs jcodemunch-mcp, jdatamunch-mcp, jdocmunch-mcp from their GitHub repos (pinned to exact commit SHAs in `uv.lock`).
 4. Warm-caches Serena and DuckDB MCP via uvx.
 5. Runs `jcodemunch-mcp init --yes --hooks --audit` — installs enforcement hooks into `~/.claude/settings.json` and appends the retrieval routing policy to `~/.claude/CLAUDE.md`.
-6. With `--auto-register`: runs `claude mcp add -s user ...` for all 7 MCP servers.
+6. With `--auto-register`: runs `claude mcp add -s user ...` for all 6 MCP servers.
 7. Sets `MCP_TIMEOUT=60000` in Claude Code's env block (default 30s is too short for Serena and MotherDuck cold-starts).
 8. Registers cron jobs for scheduled maintenance tasks.
 
@@ -260,7 +258,7 @@ Expect **all PASS**. See [Troubleshooting](#troubleshooting) if anything fails �
 claude mcp list
 ```
 
-All seven should show `✓ Connected`. The three Google remotes (Drive/Gmail/Calendar) show `! Needs authentication` until you OAuth them via `/mcp` inside Claude Code — that's expected.
+All six should show `✓ Connected`. The three Google remotes (Drive/Gmail/Calendar) show `! Needs authentication` until you OAuth them via `/mcp` inside Claude Code — that's expected.
 
 ### 5. Global routing policy
 
@@ -280,7 +278,7 @@ This file is Claude's operating instructions — it tells the model which retrie
 
 Installs two custom skills:
 
-- `~/.claude/skills/prior-art-check/SKILL.md` — forces a MemPalace lookup at the start of every non-trivial task ("have we solved this before?")
+- `~/.claude/skills/prior-art-check/SKILL.md` — runs `mw_search.py` (memweave) at the start of every non-trivial task ("have we solved this before?")
 - `~/.claude/skills/judge/SKILL.md` — spawns a code-reviewer subagent with structural evidence before any Edit or Write lands
 
 The script also auto-installs the two Anthropic marketplace plugins at user scope (available in every project, not just this one):
@@ -373,7 +371,7 @@ claude mcp list
 
 ### 10. Stack update alerts (optional)
 
-A daily cron job that checks whether each of the four core Python packages is behind GitHub HEAD, invokes Claude to assess whether the update is worth taking, and sends you a Telegram inline-button pitch. Tap ✅ and Claude upgrades the package; tap ❌ and it's silently dropped.
+A daily cron job that checks whether each of the three core Python packages is behind GitHub HEAD, invokes Claude to assess whether the update is worth taking, and sends you a Telegram inline-button pitch. Tap ✅ and Claude upgrades the package; tap ❌ and it's silently dropped.
 
 ```bash
 bash features/stack-alerts/install.sh
@@ -381,7 +379,7 @@ bash features/stack-alerts/install.sh
 
 Requires a Telegram bot token and your chat ID (see `features/stack-alerts/README.md`).
 
-**Git is the golden reference.** The four core Python packages are installed from their GitHub repos via `uv`, not PyPI. The lockfile (`uv.lock`) pins exact commit SHAs. The freshness check compares the locked SHA against `HEAD` on each repo — a PyPI release is not required for an update to be available.
+**Git is the golden reference.** The three core Python packages are installed from their GitHub repos via `uv`, not PyPI. The lockfile (`uv.lock`) pins exact commit SHAs. The freshness check compares the locked SHA against `HEAD` on each repo — a PyPI release is not required for an update to be available.
 
 Run the freshness check manually at any time:
 
@@ -391,7 +389,7 @@ bash scripts/check-stack-freshness.sh
 
 | Tier | Tools | Action threshold |
 |---|---|---|
-| **git packages** | jcodemunch, jdatamunch, jdocmunch, mempalace | Behind HEAD → upgrade |
+| **git packages** | jcodemunch, jdatamunch, jdocmunch | Behind HEAD → upgrade |
 | **Langfuse** | langfuse, langfuse-worker | New version available → pull |
 | **Langfuse infrastructure** | ClickHouse, Redis, Postgres | New major exists — informational only; update only if Langfuse release notes require it |
 
@@ -402,7 +400,7 @@ To upgrade Python packages to latest HEAD:
 ```bash
 cd "$STACK_ROOT"
 uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp \
-  --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact
+  --upgrade-package jdocmunch-mcp && uv sync --inexact
 ```
 
 **Post-merge hook.** `install.sh` wires a `git post-merge` hook that fires on every `git pull`. It detects new features, changed `install.sh`, updated `CLAUDE.md`, and new skills, then sends a Telegram alert (or prints to terminal) listing what needs action.
@@ -426,75 +424,26 @@ The installer checks dependencies, prompts for your public URL, generates a webh
 
 Full setup guide: [`features/github-webhook/README.md`](features/github-webhook/README.md)
 
-### 12. Bootstrap MemPalace (optional)
+### 12. Bootstrap memweave (optional)
 
-MemPalace is installed but empty after a fresh install. To seed it:
-
-```bash
-./.venv/bin/mempalace init ~/path/to/a/project
-./.venv/bin/mempalace mine ~/path/to/a/project
-./.venv/bin/mempalace mine ~/.claude/projects/ --mode convos
-```
-
-The last line ingests all your existing Claude Code session transcripts so "what did we decide about X" returns hits from day one.
-
-### 13. MemPalace remote backup (recommended)
-
-Your palace lives at `~/.mempalace/palace` — outside the repo, outside any container. If you wipe the machine or switch computers, it's gone unless you have a remote copy. Everything Claude has learned across all sessions — decisions, patterns, prior art, playbooks — lives there. It's worth protecting.
-
-#### One-time setup
+memweave is an offline, cross-project memory store. The store at `~/.uncle-j-memory` is empty after a fresh install. To build it:
 
 ```bash
-sudo apt install rclone   # or: curl https://rclone.org/install.sh | sudo bash
-
-rclone config   # follow the interactive prompts — supports S3, GCS, Dropbox, Backblaze B2, SFTP, and more
+bash scripts/memweave/sync_memory.sh --all
 ```
 
-Set `MEMPALACE_REMOTE` in Claude Code's env so the backup cron picks it up:
+This exports your existing Claude Code session corpus across all projects into a markdown corpus and indexes it for offline semantic search, so "what did we decide about X" returns hits from day one.
+
+Search the store at any time (read-only):
 
 ```bash
-python3 - <<'PY'
-import json, pathlib
-p = pathlib.Path.home() / ".claude/settings.json"
-d = json.loads(p.read_text()) if p.exists() else {}
-d.setdefault("env", {})["MEMPALACE_REMOTE"] = "myremote:my-bucket/mempalace"
-p.write_text(json.dumps(d, indent=2))
-print("written")
-PY
+.venv-memweave/bin/python scripts/memweave/mw_search.py "why did we switch to GraphQL" --k 5
+# --json for machine-readable output
 ```
 
-Replace `myremote:my-bucket/mempalace` with your actual rclone remote and path. After this, the existing 6-hour backup cron (`mempalace-backup.sh`) syncs the palace to your remote automatically.
+**Freshness is automatic.** The `uncle-j-memweave-sync` nightly cron (02:30) plus a session-end Stop-hook keep the store current — you don't need to re-run `sync_memory.sh` by hand. The store is fully rebuildable from its markdown corpus at `~/.uncle-j-memory`, so a wiped index is recoverable with one `sync_memory.sh --all` run; there's no separate backup step.
 
-#### Restoring on a new machine
-
-After running the full installer, pull your palace before starting Claude Code:
-
-```bash
-rclone copy myremote:my-bucket/mempalace ~/.mempalace/palace
-```
-
-#### Working across two machines simultaneously
-
-ChromaDB does not support concurrent writers. **Do not point two active Claude Code instances at the same remote palace simultaneously** — you will corrupt it.
-
-Safe pattern: one machine active at a time. When switching:
-
-1. On machine A: wait for the next backup cron, or run `bash mempalace-backup.sh` manually.
-2. On machine B: `rclone copy myremote:my-bucket/mempalace ~/.mempalace/palace` before starting Claude Code.
-
-#### Merging two diverged palaces
-
-If two machines both accumulated sessions independently (no shared remote), merging is not automatic. Best path:
-
-```bash
-# On the receiving machine, re-mine both sets of session traces:
-./.venv/bin/mempalace mine ~/.claude/projects/ --mode convos
-# Copy the other machine's session traces over (~/.claude/projects/) and mine again.
-```
-
-Manually-written drawers (not derived from sessions) must be migrated via `mempalace export` / `mempalace import` if available in your version, or by copying drawer files from the palace SQLite directly.
-
-### 14. Telegram gateway — approval channel and monitoring alerts (optional)
+### 13. Telegram gateway — approval channel and monitoring alerts (optional)
 
 A cron job that polls your Telegram bot every 2 minutes. **Primary purpose: approval and monitoring**, not general-purpose chat. The bot does not maintain conversational context across sessions.
 
@@ -523,7 +472,7 @@ bash features/telegram-gateway/install.sh
 
 Logs: `state/telegram-gateway.log`
 
-### 15. Telegram notify — session-end notifications (optional)
+### 14. Telegram notify — session-end notifications (optional)
 
 A Stop hook that sends you a Telegram message when each Claude Code session ends, with a one-line summary of what Claude did.
 
@@ -534,9 +483,9 @@ bash features/telegram-notify/install.sh
 
 Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env` (set by step 10).
 
-### 16. Dreaming — automatic playbook extraction (optional)
+### 15. Dreaming — automatic playbook extraction (optional)
 
-Queries Langfuse for traces from the past day, synthesizes recurring mistakes and proven playbooks via the `dream-synthesizer` skill, writes dated output to `~/.claude/dreaming-output/`, ingests it into MemPalace (wing: `dreaming`), and appends proven playbooks to `~/.claude/CLAUDE.md` idempotently.
+Queries Langfuse for traces from the past day, synthesizes recurring mistakes and proven playbooks via the `dream-synthesizer` skill, writes dated output to `~/.claude/dreaming-output/`, ingests it into the memweave store, and appends proven playbooks to `~/.claude/CLAUDE.md` idempotently.
 
 ```bash
 bash features/dreaming/install.sh
@@ -547,7 +496,7 @@ bash features/dreaming/dream.sh
 
 Runs daily at 2 AM by default (`DREAMING_CRON_SCHEDULE` in `state/dreaming.env`). See `features/dreaming/README.md` for configuration.
 
-### 17. Session stats — weekly efficiency reporter (optional)
+### 16. Session stats — weekly efficiency reporter (optional)
 
 Queries Langfuse for the past 7 days of sessions, renders a markdown table (date, project, traces, tool calls, tokens), flags sessions exceeding 40k tokens, and writes output that Dreaming picks up on its next run.
 
@@ -559,7 +508,7 @@ bash features/session-stats/install.sh
 
 Runs every Sunday at 8 AM by default. See `features/session-stats/README.md`.
 
-### 18. Auto-skill — automatic skill drafting (optional)
+### 17. Auto-skill — automatic skill drafting (optional)
 
 A Stop hook that reads the full session transcript, asks Claude whether the session demonstrated a reusable workflow, and — if yes — drafts a `SKILL.md` to `state/skill-drafts/<id>-skill-draft.md`. A Telegram notification is sent with a 300-character preview and the promotion command:
 
@@ -574,7 +523,7 @@ bash features/auto-skill/install.sh
 # uninstall: bash features/auto-skill/install.sh --uninstall
 ```
 
-### 19. Skill manager — global + per-project skill symlinks (optional)
+### 18. Skill manager — global + per-project skill symlinks (optional)
 
 Symlinks every skill in `global-skills/` into `~/.claude/skills/` once at install time, and installs SessionStart/Stop hooks that symlink/remove the per-project `skills/` directory so project-specific skills are available only while you're in that project.
 
@@ -583,7 +532,7 @@ bash features/skill-manager/install.sh
 # uninstall: bash features/skill-manager/install.sh --uninstall
 ```
 
-### 20. Ralph cron — scheduled autonomous Ralph runs (optional)
+### 19. Ralph cron — scheduled autonomous Ralph runs (optional)
 
 Installs a cron job that runs the verification-gated Ralph harness against a given PRD file on a schedule you choose interactively.
 
@@ -591,20 +540,6 @@ Installs a cron job that runs the verification-gated Ralph harness against a giv
 bash features/ralph-cron/install.sh
 bash features/ralph-cron/install.sh --list       # show installed ralph crons
 bash features/ralph-cron/install.sh --uninstall MARKER
-```
-
-### 21. MemPalace automation — keep the palace current (optional)
-
-Installs:
-- **Stop hook**: mines `~/.claude/projects/` after every session (conversation mode)
-- **Daily 3 AM cron**: mines the project repo (code mode)
-- **Nightly 4 AM cron**: runs `mempalace repair` to rebuild HNSW index from SQLite (prevents drift)
-
-Without this, you must run `mempalace mine` manually; HNSW index can drift and degrade semantic search.
-
-```bash
-bash features/mempalace/install.sh
-# uninstall: bash features/mempalace/install.sh --uninstall
 ```
 
 ---
@@ -690,11 +625,9 @@ The banner's `fix:` line tells you what to run. Common causes:
 | `mcp-timeout` | Re-run `./install.sh` — rewrites `MCP_TIMEOUT=60000` |
 | `docker-down` / `langfuse-unhealthy` | `docker compose -f claude-code-langfuse-template/docker-compose.yml up -d` |
 | `langfuse-sdk-missing` | Re-run `./install-langfuse.sh` |
-| `mempalace-sqlite` | `sqlite3 ~/.mempalace/palace/chroma.sqlite3 "INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild');"` |
-| `mempalace-stale-lock` | `rmdir state/mempalace-mine-convos.lock state/mempalace-mine-project.lock 2>/dev/null` — locks auto-clear after 30 min |
-| `mempalace-hnsw-corruption` | Run `/mempalace-hnsw-corruption-fix` skill |
+| `memweave-store-empty` | `bash scripts/memweave/sync_memory.sh --all` — rebuilds the store from the markdown corpus |
 | `cron-missing(...)` | Re-run `./install.sh` — crons are registered in step 6d |
-| `stack-not-at-head` | `uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp --upgrade-package mempalace && uv sync --inexact` |
+| `stack-not-at-head` | `uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp && uv sync --inexact` |
 | `post-merge-hook-missing` | `ln -sfn "$STACK_ROOT/scripts/post-merge-hook.sh" "$STACK_ROOT/.git/hooks/post-merge"` |
 | `secrets` | Review the grep hits; add to `.gitignore` or redact |
 | `hook-no-fire` / `trace-api` (full mode) | `tail -5 ~/.claude/state/langfuse_hook.log`, then verify `from langfuse import Langfuse` works from the stack venv |
@@ -795,7 +728,7 @@ cp -r ~/.claude ~/.claude.bak.$(date +%Y%m%d-%H%M%S)
 (cd claude-code-langfuse-template && docker compose down -v)
 
 # Remove MCP registrations
-for s in jcodemunch jdatamunch jdocmunch mempalace serena duckdb context7; do
+for s in jcodemunch jdatamunch jdocmunch serena duckdb context7; do
     claude mcp remove "$s" 2>/dev/null
 done
 
@@ -826,9 +759,6 @@ Uncle-J-s-Refinery/
 ├── prd-template.md                     ← starting template for Ralph tasks
 ├── pyproject.toml                      ← uv-managed Python deps
 ├── uv.lock
-├── mempalace.yaml                      ← MemPalace wing/room configuration
-├── mempalace-backup.sh                 ← rclone sync of ~/.mempalace/palace to remote
-├── mempalace-health.py                 ← SQLite health probe used by healthcheck.sh
 ├── patch-jcodemunch-hook-paths.py      ← one-time fix for hook path mismatches after move
 ├── LICENSE                             ← AGPL-3.0; upstream licenses apply to each dep
 ├── .venv/                              ← real Python venv created by install.sh (gitignored)
@@ -849,9 +779,7 @@ Uncle-J-s-Refinery/
 │   ├── github-webhook-server.py        ← HTTP server for GitHub push/PR events
 │   ├── healthcheck-notify.sh           ← daily Telegram notification on healthcheck failure
 │   ├── jcodemunch-reindex.sh           ← triggers jcodemunch re-index after significant changes
-│   ├── mempalace-mcp-start.sh          ← wrapper that starts the mempalace MCP server
-│   ├── mempalace-mine-convos.sh        ← mines ~/.claude/projects/ (conversation mode)
-│   ├── mempalace-mine-project.sh       ← mines the project repo (code mode)
+│   ├── memweave/                       ← offline cross-project memory: sync_memory.sh (build) + mw_search.py (read-only search)
 │   ├── post-merge-hook.sh              ← git post-merge hook; alerts on new features
 │   ├── ralph-cron-run.sh               ← runs ralph-harness.sh for a given PRD (cron target)
 │   ├── review-check.sh                 ← runs the code review checklist
@@ -875,7 +803,7 @@ Uncle-J-s-Refinery/
 │   ├── auto-skill/
 │   │   └── install.sh                  ← Stop hook: suggests skills based on session tool use
 │   ├── dreaming/
-│   │   ├── install.sh                  ← daily Langfuse trace mining → MemPalace + CLAUDE.md
+│   │   ├── install.sh                  ← daily Langfuse trace mining → memweave store + CLAUDE.md
 │   │   ├── dream.sh                    ← manual trigger
 │   │   ├── dream.md                    ← /dream slash command
 │   │   ├── README.md                   ← full feature docs
@@ -883,8 +811,6 @@ Uncle-J-s-Refinery/
 │   ├── github-webhook/
 │   │   ├── install.sh                  ← systemd user service + GitHub webhook registration
 │   │   └── README.md                   ← setup guide, public URL requirements
-│   ├── mempalace/
-│   │   └── install.sh                  ← Stop hook (convos) + daily cron (project) mining
 │   ├── ralph-cron/
 │   │   └── install.sh                  ← per-PRD cron jobs for scheduled Ralph runs
 │   ├── session-stats/
@@ -913,7 +839,6 @@ Uncle-J-s-Refinery/
 ├── global-skills/                      ← project-agnostic skills, symlinked to ~/.claude/skills/
 │   ├── deep-repo-analysis/
 │   ├── judge/
-│   ├── mempalace-hnsw-corruption-fix/
 │   ├── orchestrator/
 │   ├── outcomes/
 │   ├── per-task-review-cycle/
@@ -993,7 +918,7 @@ Cloned at install time (gitignored):
 │   ├── scan-secrets/                   ← guardrail (step 7)
 │   ├── scan-commit/                    ← guardrail (step 7)
 │   └── prompt-injection-defender/      ← guardrail (step 7)
-├── dreaming-output/                    ← dated dream + stats reports (feeds MemPalace)
+├── dreaming-output/                    ← dated dream + stats reports (feeds the memweave store)
 │   ├── dream-YYYY-MM-DD.md
 │   └── stats-YYYY-MM-DD.md
 ├── state/
@@ -1012,7 +937,7 @@ Cloned at install time (gitignored):
 | Tool | Origin |
 | --- | --- |
 | jCodeMunch / jDataMunch / jDocMunch / jOutputMunch | [@jgravelle](https://github.com/jgravelle) |
-| MemPalace | [mempalaceofficial.com](https://mempalaceofficial.com) |
+| memweave | this repo (`scripts/memweave/`) — offline cross-project memory CLI |
 | Serena | [oraios/serena](https://github.com/oraios/serena) |
 | DuckDB MCP | [motherduckdb/mcp-server-motherduck](https://github.com/motherduckdb/mcp-server-motherduck) |
 | Context7 | [@upstash/context7-mcp](https://www.npmjs.com/package/@upstash/context7-mcp) |
@@ -1030,7 +955,7 @@ Cloned at install time (gitignored):
 (cd claude-code-langfuse-template && docker compose down -v)
 
 # Remove MCP registrations
-for s in jcodemunch jdatamunch jdocmunch mempalace serena duckdb context7; do
+for s in jcodemunch jdatamunch jdocmunch serena duckdb context7; do
     claude mcp remove "$s" 2>/dev/null
 done
 
@@ -1064,7 +989,7 @@ The glue in this repo — install scripts, merged CLAUDE.md, custom skills, Ralp
 
 ### Also credit where due
 
-- MemPalace team ([mempalaceofficial.com](https://mempalaceofficial.com)) — local-first semantic memory with best-in-class LongMemEval recall
+- memweave — this repo's offline cross-project memory store (`scripts/memweave/`): markdown corpus + local semantic search, no MCP server, no external dependency
 - Oraios ([oraios/serena](https://github.com/oraios/serena)) — LSP-grade code intelligence MCP
 - MotherDuck team — DuckDB MCP server that runs SQL over anything
 - Upstash — Context7 for version-pinned third-party docs
