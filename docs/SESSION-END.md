@@ -82,10 +82,13 @@ consider:
     prompt: "Any items completed or new ones to add?"
 
 custom_checks:
-  - name: MemPalace snapshot
-    command: "mempalace diary write"
+  - name: memweave freshness
+    command: "bash scripts/memweave/sync_memory.sh '' 15"
     on_failure: warn
 ```
+
+(The memory snapshot is automatic — the Stop-hook + nightly `sync_memory.sh --all` cron ingest
+the session into the memweave corpus; the optional check above just nudges an incremental sync.)
 
 The `consider` list and `custom_checks` are fully customizable. The mandatory
 list is the non-negotiable floor.

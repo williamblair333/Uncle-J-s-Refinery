@@ -1,6 +1,6 @@
 ---
 name: session-status-briefing
-description: Produce a comprehensive session-start status report combining git state, HANDOFF, code health metrics, risk surface, dead code candidates, and MemPalace HNSW health. Invoke at the start of any session to orient quickly without re-reading files.
+description: Produce a comprehensive session-start status report combining git state, HANDOFF, code health metrics, risk surface, dead code candidates, and retrieval-stack health. Invoke at the start of any session to orient quickly without re-reading files.
 metadata:
   type: feedback
 ---
@@ -24,20 +24,24 @@ Read `HANDOFF.md` from the project root. Extract:
 
 If HANDOFF says something is fixed but symptoms persist, trust the symptoms over the doc.
 
-### 2. MemPalace HNSW health check
+### 2. Stack health check
 
 Run the health check script to get ground truth on stack state:
 
 ```bash
-CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI bash healthcheck.sh --quick 2>&1 | tail -10
+bash healthcheck.sh --quick 2>&1 | grep -E '^\s+(OK|X|WARN|CRIT)|^HEALTHCHECK'
 ```
 
-Look for `HEALTHCHECK: ok` vs `HEALTHCHECK: fail`. Flag any CRIT items prominently before the rest of the briefing. Common failures:
-- `mempalace-sqlite`: FTS5 corruption — fix: run `INSERT INTO embedding_fulltext_search(embedding_fulltext_search) VALUES('rebuild')` via venv Python
-- `stack-not-at-head`: packages behind HEAD — fix: `stack-not-at-head-remediation` skill
-- `jcodemunch-stale`: index stale — fix: `bash scripts/jcodemunch-reindex.sh`
+(The `grep` keeps the full OK/X line list — `tail` alone truncates the failures off the bottom.)
 
-If `HEALTHCHECK: fail` includes mempalace issues, attempt the in-session repair before the rest of the briefing. Do not proceed if MemPalace is broken — the prior-art search (step 4) depends on it.
+Look for `HEALTHCHECK: ok` vs `HEALTHCHECK: fail`. Flag any CRIT items prominently before the rest of the briefing. Common failures:
+- `mcp-servers-down(duckdb)`: duckdb cold-start — self-heals on first query; not actionable.
+- `stack-not-at-head`: packages behind HEAD — fix: `stack-not-at-head-remediation` skill.
+- `jcodemunch-stale`: index stale — fix: `bash scripts/jcodemunch-reindex.sh` (self-heals the local/git dual-identity collision and retries).
+
+The "X not Connected: ..." line listing all six servers is the cold-start snapshot taken before
+they finish connecting — trust the `HEALTHCHECK:` headline, which names only the genuinely-down
+server. Attempt the in-session repair for any real failure before the rest of the briefing.
 
 ### 3. Repo digest (parallel with 1 and 2)
 
@@ -45,21 +49,17 @@ If `HEALTHCHECK: fail` includes mempalace issues, attempt the in-session repair 
 
 Also call `mcp__jcodemunch__digest` if the index is fresh. If stale or unavailable, fall back to git log only.
 
-### 4. MemPalace prior-art check
+### 4. memweave prior-art check
 
-Only run after confirming HNSW health (step 2) passes.
+Search the memweave corpus for any prior work on the session's topic (offline ONNX semantic +
+BM25 over `~/.uncle-j-memory`; read-only, no MCP server, no reconnect step):
 
-First, call `mempalace_reconnect` to ensure the MCP server has loaded the latest on-disk HNSW
-(the server can start with stale in-memory state even after a Claude restart — confirmed issue
-2026-06-05). If reconnect fails, note it and skip the search; do not block the briefing.
-
-Then search for any prior work on the session's topic:
-
-```
-mempalace_search("session status OR digest OR health check", wing=<project>)
+```bash
+.venv-memweave/bin/python scripts/memweave/mw_search.py "session status OR digest OR health check" --k 5
 ```
 
-If step 2 shows MemPalace is broken, or reconnect failed, skip this and note it in the output.
+A missing/empty store exits nonzero with a clear message — note it and fall back to the session
+transcript; do not block the briefing.
 
 ### 5. Risk surface (if doing code work)
 
@@ -102,7 +102,7 @@ Only include candidates where `is_referenced: false` after this check.
 ## Notes
 
 - HANDOFF and healthcheck are mandatory — do not skip them even if "just asking a question"
-- If healthcheck fails, fix it before searching MemPalace
+- If healthcheck fails, fix it before searching memweave
 - If `digest` returns a full briefing, use it; skip step 5 (hotspots already provided by digest) but still run the step 6 `check_references` verification pass on dead code candidates
 - Do not re-read source files to gather this data — use the retrieval stack
 - Trust symptoms over HANDOFF when they conflict

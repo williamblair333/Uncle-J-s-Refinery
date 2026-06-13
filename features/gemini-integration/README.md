@@ -6,7 +6,7 @@ This package enables native, automatic support for **Gemini CLI** within Uncle J
 To ensure absolute stability, this integration follows a "Passive Observer" pattern. Gemini CLI reads the Refinery's state and playbooks but **never** modifies Claude Code's internal configuration (`settings.json`) or hook state. All Gemini-specific logic is stored in the project's `GEMINI.md` file.
 
 ## Features
-- **Structural Parity**: Gemini is mandated to use `jcodemunch-mcp` and `mempalace` for all repository tasks.
+- **Structural Parity**: Gemini is mandated to use `jcodemunch-mcp` and `memweave` (`mw_search.py`) for all repository tasks.
 - **Context Sync**: A `startup-probe.sh` script allows Gemini to "catch up" on what Claude Code has learned or changed since the last session.
 - **Output Discipline**: Enforces the `jOutputMunch` high-signal response style.
 - **Zero Interference**: Safe to run alongside Claude Code in the same workspace.

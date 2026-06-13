@@ -45,7 +45,7 @@ CODE SPECIFICALLY:
 
 ## What this doesn't cover
 
-Retrieval routing (jcodemunch, mempalace, etc.) — those only apply inside the harness. In a plain web session, handle that by pasting only the relevant code snippet, not the whole file.
+Retrieval routing (jcodemunch, memweave, etc.) — those only apply inside the harness. In a plain web session, handle that by pasting only the relevant code snippet, not the whole file.
 
 ## Adaptation notes
 

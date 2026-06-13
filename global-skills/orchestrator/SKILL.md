@@ -15,7 +15,7 @@ Assign each subtask to one role based on what it primarily needs:
 | `code` | jCodeMunch, Serena | reading or modifying source code |
 | `data` | jDataMunch, DuckDB | reading or analyzing data files |
 | `docs` | jDocMunch, Context7 | reading or searching documentation |
-| `memory` | MemPalace | retrieving prior decisions or prior art |
+| `memory` | memweave (mw_search.py) | retrieving prior decisions or prior art |
 | `general` | all tools | task spans multiple tool types |
 
 ## Instructions
@@ -33,8 +33,8 @@ Assign each subtask to one role based on what it primarily needs:
 [
   {
     "role": "memory",
-    "task": "Search MemPalace for prior work on <topic>. Return all relevant decisions, patterns, and known pitfalls.",
-    "tools_needed": ["MemPalace"],
+    "task": "Search memweave (mw_search.py) for prior work on <topic>. Return all relevant decisions, patterns, and known pitfalls.",
+    "tools_needed": ["memweave"],
     "context_needed": "Topic: <topic>",
     "output_format": "Bullet list of relevant prior decisions",
     "parallel": true

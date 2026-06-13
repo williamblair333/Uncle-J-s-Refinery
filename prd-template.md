@@ -18,7 +18,7 @@ would check, not implementation details.>
 
 ## Context and prior work
 
-<Links to docs, prior PRs, prior conversations. If MemPalace has
+<Links to docs, prior PRs, prior conversations. If the memweave corpus has
 history on this topic, the agent should surface it here on iteration 1
 and leave it for later iterations to reference.>
 
@@ -47,7 +47,7 @@ PRD and decides how to split it. To guide decomposition, you can add hints
 here about which parts are parallelizable and which must run in sequence.>
 
 Example hints:
-- "Research tasks (MemPalace + docs) can run in parallel with code analysis."
+- "Research tasks (memweave + docs) can run in parallel with code analysis."
 - "Implementation must follow research (serialize tasks 2 and 3)."
 - "Max 4 sub-agents — this is a focused change."
 

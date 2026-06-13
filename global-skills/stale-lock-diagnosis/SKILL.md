@@ -12,7 +12,7 @@ A background script uses `mkdir` as an atomic lock and a `trap` to release it on
 Symptoms:
 - Hooks are confirmed wired in `settings.json`
 - Log file shows no recent entries, or shows only "skipped" entries
-- The target output (MemPalace, index, etc.) has no new data since a specific date
+- The target output (memweave corpus, index, etc.) has no new data since a specific date
 
 ## Diagnostic steps
 
@@ -62,4 +62,4 @@ This replaces a hard "bail if locked" with "bail if locked AND fresh; clear if s
 
 - `trap` cleans up on `EXIT`, `INT`, `TERM` — but not `SIGKILL`. That's the fundamental gap; the auto-clear threshold is the only reliable mitigation.
 - Choose a timeout longer than the job's normal runtime but short enough to detect a stuck run. 30 minutes is a reasonable default for a mine/index job.
-- After clearing and running manually, verify output in the target system (MemPalace drawer count, index file mtime, etc.) to confirm the catchup completed.
+- After clearing and running manually, verify output in the target system (memweave index file mtime, corpus file count, etc.) to confirm the catchup completed.

@@ -29,13 +29,13 @@ works on macOS or Windows, skip it and note it.
 | jCodeMunch MCP | Tree-sitter symbol index; ~95% token reduction on code reading | Wire as MCP server |
 | jDataMunch MCP | CSV/TSV structural retrieval | Wire as MCP server |
 | jDocMunch MCP | Section-precise project doc retrieval | Wire as MCP server |
-| MemPalace MCP | Long-term verbatim memory with semantic search | Wire as MCP server |
+| memweave | Offline semantic + BM25 memory over a markdown corpus (NO MCP server — a Bash CLI + store) | Copy the store + `.venv-memweave`; call `mw_search.py` as a CLI |
 | Serena MCP | LSP-backed code intelligence (Python/TS/Rust/Go/C#) | Wire as MCP server |
 | Context7 MCP | Third-party library docs, version-pinned | Wire as MCP server |
 | DuckDB MCP | SQL over Parquet/JSON/CSV/S3 | Wire as MCP server |
 | Retrieval routing policy | Which tool to call for which request shape | Paste into SOUL.md |
 | jOutputMunch rules | Output token discipline (-25–40%) | Paste into SOUL.md |
-| prior-art-check skill | Force MemPalace lookup before non-trivial work | Port to Hermes skill |
+| prior-art-check skill | Force a memweave lookup before non-trivial work | Port to Hermes skill |
 | judge skill | Independent code-reviewer subagent before Edit/Write | Port to Hermes skill |
 | Superpowers skills | brainstorm, TDD, debugging, verification, etc. | Port each to Hermes skill |
 | Langfuse observability | Per-turn tracing, token counts, tool call logs | Write Hermes plugin |
@@ -158,14 +158,16 @@ venv at `/opt/proj/Uncle-J-s-Refinery/.venv`. Hermes speaks MCP natively.
 
 ```bash
 VENV=/opt/proj/Uncle-J-s-Refinery/.venv
-ls $VENV/bin/ | grep -E "jcode|jdata|jdoc|mempalace|serena|mcp"
+ls $VENV/bin/ | grep -E "jcode|jdata|jdoc|serena|mcp"
 ```
 
 Note the actual binary names. Typical output:
 - `jcodemunch-mcp`
 - `jdatamunch-mcp`
 - `jdocmunch-mcp`
-- `mempalace`
+
+(memweave is **not** in this venv — it lives in the separate `.venv-memweave` (Python 3.12) and
+is invoked as a CLI, not an MCP server. See the memweave block in Section 4.3.)
 
 ### 4.2 Discover Hermes MCP config format
 
@@ -210,18 +212,23 @@ hermes mcp add jdocmunch \
   --command "$VENV/bin/jdocmunch-mcp"
 ```
 
-**MemPalace:**
+**memweave (NOT an MCP server — a CLI + store):**
+memweave ships no MCP server, so there is nothing to `hermes mcp add`. Port it by copying three
+things and invoking the search CLI directly (or wrapping it in a Hermes skill that shells out):
 ```bash
-hermes mcp add mempalace \
-  --command "$VENV/bin/mempalace" \
-  --args "serve" \
-  --env "MEMPALACE_STORE_PATH=$HOME/.hermes/mempalace"
+# 1. The Python 3.12 venv (memweave requires >=3.12; can't share the 3.11 stack venv)
+cp -r /opt/proj/Uncle-J-s-Refinery/.venv-memweave ~/.hermes/.venv-memweave
+# 2. The search CLI + sync seam
+cp -r /opt/proj/Uncle-J-s-Refinery/scripts/memweave ~/.hermes/scripts/memweave
+# 3. The markdown corpus (the source of truth — the sqlite index rebuilds from it)
+cp -r ~/.uncle-j-memory ~/.hermes/uncle-j-memory
 ```
-
-MemPalace needs a store path. `~/.hermes/mempalace` is a clean location
-that Hermes owns. If you want to migrate existing memories from the
-Refinery, copy `~/.mempalace/` (or wherever the Refinery stored them)
-to `~/.hermes/mempalace/` before first use.
+Then query it as a plain command (no MCP):
+```bash
+~/.hermes/.venv-memweave/bin/python ~/.hermes/scripts/memweave/mw_search.py "<query>" --k 5
+```
+The corpus is the source of truth: delete the sqlite index and `sync_memory.sh` rebuilds it
+byte-identically. Point the Hermes prior-art skill at this CLI.
 
 **Serena (LSP-backed code intelligence):**
 Serena runs via `uvx`. It's not in the Refinery venv.
@@ -284,7 +291,7 @@ back to brute-force file reading, grep, or shell commands.
 | Parquet / S3 / complex SQL / joins across files | **duckdb** | jdatamunch |
 | My own project docs / runbooks / markdown | **jdocmunch** | read file |
 | Third-party library documentation | **context7** | web search |
-| "What did we decide / discuss / build before?" | **mempalace** | session transcript |
+| "What did we decide / discuss / build before?" | **memweave** (`mw_search.py`) | session transcript |
 | General web / news / current events | web search | — |
 
 ## Operating rules
@@ -306,10 +313,11 @@ back to brute-force file reading, grep, or shell commands.
 - For project docs: ask jdocmunch for sections by heading, not whole files.
 - For third-party library questions: context7 is authoritative.
 
-**Memory — mempalace before web search or re-asking**
-- Start every non-trivial task with a mempalace search.
+**Memory — memweave before web search or re-asking**
+- Start every non-trivial task with a memweave search (`mw_search.py "<query>" --k 5`).
 - "Have we solved this before?" is always question #1.
-- Snapshot the session into MemPalace before compaction or end of day.
+- No manual snapshot needed — the Stop-hook + nightly `sync_memory.sh` ingest the session
+  into the memweave corpus automatically.
 
 **Verification before landing changes**
 - Before finalizing code changes: `get_changed_symbols`, `get_untested_symbols`,
@@ -385,8 +393,8 @@ Write `~/.hermes/skills/prior-art-check.md`:
 ```markdown
 # Prior-art check
 
-Every time a new conversation starts on a non-trivial task, call
-MemPalace before the first substantive tool call. "Have we already
+Every time a new conversation starts on a non-trivial task, query
+memweave before the first substantive tool call. "Have we already
 solved this?" — asked before the work.
 
 ## When to trigger
@@ -402,7 +410,7 @@ Do NOT trigger for small talk or obviously current-events questions.
 ## Steps
 
 1. Pull 2–4 keywords from the request. Keep it short and concrete.
-2. Call mempalace search with those keywords, limit 5.
+2. Run `mw_search.py "<those keywords>" --k 5` (the memweave search CLI).
 3. Interpret:
    - High relevance hits: summarize top 1–2, tell the user "we've
      touched this before: …", then continue with that context.
@@ -491,9 +499,9 @@ ONE THING THAT COULD STILL GO WRONG: <always answer>
 - `block` — do NOT land the change. Report the blocker, propose a fix,
   re-run judge on the revised change.
 
-**Step 4 — log to MemPalace if non-approve**
+**Step 4 — log to the memweave corpus if non-approve**
 
-Write a short memory: what was tried, what blocked it.
+Append a short note to the memory corpus: what was tried, what blocked it.
 ```
 
 ### 6.4 brainstorm
@@ -561,7 +569,7 @@ before proposing fixes.
 6. **Verify the fix.** Run the reproduction case. Confirm the bug is
    gone. Confirm nothing adjacent broke.
 
-7. **Log to MemPalace.** One sentence: what the bug was and what fixed it.
+7. **Log to the memweave corpus.** One sentence: what the bug was and what fixed it.
 
 ## What NOT to do
 - Do not propose a fix before reproducing the bug.
@@ -1011,22 +1019,26 @@ verification gate. Tell the agent in the cron prompt:
 
 ---
 
-## Section 10 — MemPalace Migration
+## Section 10 — memweave Memory Migration
 
-If you have memories in the Refinery's MemPalace that you want in
-Hermes:
+If you have memories in the Refinery's memweave corpus that you want in
+Hermes, copy the markdown corpus (the source of truth — the sqlite index
+rebuilds from it):
 
 ```bash
-# Find where the Refinery stores MemPalace data
-ls ~/.mempalace/ 2>/dev/null || find ~ -name "*.mempalace" 2>/dev/null
+# The Refinery's memweave corpus
+ls ~/.uncle-j-memory/memory/ 2>/dev/null
 
-# Copy to the Hermes MemPalace location (set in Section 4.3)
-cp -r ~/.mempalace/ ~/.hermes/mempalace/
+# Copy to the Hermes location (set in Section 4.3)
+cp -r ~/.uncle-j-memory/ ~/.hermes/uncle-j-memory/
+
+# Rebuild the index from the markdown (byte-identical from the corpus)
+~/.hermes/.venv-memweave/bin/python ~/.hermes/scripts/memweave/sync_memory.sh
 ```
 
-After copying, verify the MCP server sees the data:
+After copying, verify search returns the data (it's a CLI, not an MCP server):
 ```bash
-hermes -p "/prior-art-check Uncle J's Refinery"
+~/.hermes/.venv-memweave/bin/python ~/.hermes/scripts/memweave/mw_search.py "Uncle J" --k 5
 ```
 
 You should see existing memories surface.
@@ -1069,15 +1081,15 @@ Run these after completing all sections. Everything must pass.
 # 1. Hermes starts cleanly
 hermes -p "hello" && echo "PASS: hermes starts"
 
-# 2. All 7 MCP servers connected
+# 2. All 6 MCP servers connected (memweave is a separate CLI, not counted here)
 hermes mcp list | grep -c "connected"
-# Expected: 7
+# Expected: 6
 
 # 3. jCodeMunch responds
 hermes -p "use jcodemunch to list repos" && echo "PASS: jcodemunch"
 
-# 4. MemPalace responds
-hermes -p "search mempalace for 'Uncle J'" && echo "PASS: mempalace"
+# 4. memweave responds (CLI, not MCP)
+~/.hermes/.venv-memweave/bin/python ~/.hermes/scripts/memweave/mw_search.py "Uncle J" --k 5 && echo "PASS: memweave"
 
 # 5. Skills load
 hermes -p "/prior-art-check" && echo "PASS: prior-art-check skill"
@@ -1109,8 +1121,8 @@ migration:
 
 I've just migrated from Uncle J's Refinery to Hermes. The following
 is now configured:
-- 7 MCP retrieval servers (jCodeMunch, jDataMunch, jDocMunch,
-  MemPalace, Serena, Context7, DuckDB)
+- 6 MCP retrieval servers (jCodeMunch, jDataMunch, jDocMunch,
+  Serena, Context7, DuckDB) + memweave memory as a separate CLI
 - Retrieval routing policy and jOutputMunch rules in SOUL.md
 - Skills: prior-art-check, judge, brainstorm, systematic-debugging,
   tdd, verify, write-plan
@@ -1118,8 +1130,8 @@ is now configured:
 - Secret scanner and injection defender plugins
 - Ralph equivalent via hermes cron
 
-Save this to MemPalace so future sessions start with context.
-Wing: hermes_refinery. Room: setup.
+This session is auto-ingested into the memweave corpus, so future sessions start with context.
+For a durable standalone note, append this summary to `~/.hermes/uncle-j-memory/memory/`.
 ```
 
 ---
@@ -1156,5 +1168,5 @@ MCP servers give Hermes structural code/data/doc retrieval that no other
 agent has out of the box. Hermes gives those tools a runtime that can
 run on a $5 VPS, report to Telegram, and improve itself over time.
 
-Good luck. The whole point of MemPalace is that nothing gets lost.
+Good luck. The whole point of the memweave corpus is that nothing gets lost.
 Use it.

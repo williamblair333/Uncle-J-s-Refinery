@@ -62,7 +62,8 @@ install-guardrails → install-langfuse` in order and end up with:
   - **File modes**: five scripts were tracked as `100644` and threw
     "Permission denied". Now all `*.sh` are `100755` via
     `git update-index --chmod=+x`.
-- MemPalace: check it for prior-art on any change before writing code.
+- memweave: check it for prior-art on any change before writing code
+  (`.venv-memweave/bin/python scripts/memweave/mw_search.py "<query>" --k 5`).
   "Have we solved this before?" is question #1.
 
 ## Acceptance criteria
@@ -108,7 +109,7 @@ the Progress section and tick off as you verify.
 - Use **jcodemunch / serena** for code navigation. Never `Read` a whole
   source file to "see what's in it". For the routing policy, see the
   stack-routing section in `~/.claude/CLAUDE.md`.
-- Run **MemPalace** search before substantive work. If prior-art exists,
+- Run a **memweave** search before substantive work. If prior-art exists,
   link it in the Progress entry.
 - Touch the fewest symbols possible. Don't refactor "while you're in
   there". A bug fix is a bug fix.

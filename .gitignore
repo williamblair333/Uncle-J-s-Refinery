@@ -113,9 +113,6 @@ cowork-history.txt
 session-history.*
 *-installer.txt
 
-# MemPalace per-project files (issue #185)
-mempalace.yaml
-entities.json
 
 # Review folders (_review = active queue, _reviewed = processed/done)
 _review/

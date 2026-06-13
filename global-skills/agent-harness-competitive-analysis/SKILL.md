@@ -10,10 +10,10 @@ When the user asks for a competitive analysis, "how do we compare to X", or "who
 
 ## Workflow
 
-### 1. Check MemPalace first
+### 1. Check memweave first
 Search for any prior competitive analysis or feature-port work before starting:
-mempalace_search("competitive analysis [product name]")
-mempalace_search("[product name] vs [competitor]")
+`.venv-memweave/bin/python scripts/memweave/mw_search.py "competitive analysis [product name]" --k 5`
+`.venv-memweave/bin/python scripts/memweave/mw_search.py "[product name] vs [competitor]" --k 5`
 If prior work exists, start from it rather than re-doing it.
 
 ### 2. Orient on the subject product
@@ -73,10 +73,10 @@ Numbered list of moats — specific, evidence-backed, not marketing copy.
 - Target user (personal/one-person vs. team vs. general public)
 - Data ownership (local vs. vendor-hosted state)
 
-### 6. Save to MemPalace
-After compiling:
-mempalace_add_drawer(wing="project", room="competitive-intel", ...)
-Include: key findings, date, competitor versions/star counts at time of analysis.
+### 6. Save to the memweave corpus
+After compiling, append a durable note to `~/.uncle-j-memory/memory/` (auto-embedded by the
+Stop-hook + nightly `sync_memory.sh`). Include: key findings, date, competitor versions/star
+counts at time of analysis. The session is auto-ingested too, so the analysis is retained either way.
 
 ## Output rules
 

@@ -19,7 +19,7 @@ Steps:
 
 4. After the table, note any rows flagged ⚠ high and suggest:
    - Check those sessions for large file reads that jcodemunch could have replaced
-   - Check if MemPalace was queried at the start (prior-art-check)
+   - Check if memweave was queried at the start (prior-art-check)
 
 5. If Langfuse credentials are missing or the API is unreachable, say so
    and suggest: `bash /opt/proj/Uncle-J-s-Refinery/install-langfuse.sh`

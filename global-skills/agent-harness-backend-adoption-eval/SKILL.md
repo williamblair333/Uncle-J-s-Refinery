@@ -20,14 +20,14 @@ Before starting, gather:
 ## Workflow
 
 ### 1. Prior-art check (always first)
-mempalace_search(query="<proposed library name> <existing backend name>", limit=5)
+`.venv-memweave/bin/python scripts/memweave/mw_search.py "<proposed library name> <existing backend name>" --k 5`
 If hits exist, surface the prior decision verbatim before continuing.
 
 ### 2. Parallel gather
 Run these simultaneously:
 - Fetch the GitHub discussion / PR: `gh pr view <URL>` or `gh issue view <URL>`
 - Read any migration docs linked from the PR or repo README
-- Check if there's a contrib backlog in MemPalace for the affected component
+- Check the memweave corpus for a contrib backlog on the affected component
 
 ### 3. Read the actual implementation
 Don't trust only benchmarks. Read:
@@ -69,12 +69,11 @@ One of three stances:
 Never leave the recommendation ambiguous.
 
 ### 5. Archive the decision
-After the recommendation is accepted or rejected, write to MemPalace:
-mempalace_add_drawer(
-  text="<library> eval <date>: <one-sentence decision + key reason>",
-  room="architecture",
-  tags=["adoption-eval", "<library-name>", "<incumbent-name>"]
-)
+After the recommendation is accepted or rejected, record it durably in the memweave corpus —
+append a one-line note to `~/.uncle-j-memory/memory/` (the Stop-hook + nightly `sync_memory.sh`
+embed it for future prior-art checks):
+`<library> eval <date>: <one-sentence decision + key reason>`
+The session itself is auto-ingested too, so the reasoning is captured even without a manual note.
 
 ## Anti-patterns to avoid
 

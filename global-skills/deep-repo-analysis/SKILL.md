@@ -11,8 +11,8 @@ Run this skill when you want a scored architectural health report on an unfamili
 
 ## Steps
 
-### 1. Check MemPalace for prior analysis
-mempalace_search("repo health analysis <project-name>")
+### 1. Check memweave for prior analysis
+`.venv-memweave/bin/python scripts/memweave/mw_search.py "repo health analysis <project-name>" --k 5`
 If a recent snapshot exists, diff against it rather than starting cold.
 
 ### 2. Index the repo (if not already indexed)
@@ -63,8 +63,10 @@ Static analyzers flag test helpers and factory functions called only from execut
 - Exclude factory functions called only from `server.ts` / `main.ts`
 - Flag only symbols with zero known callers across all entry points
 
-### 8. Snapshot to MemPalace
-mempalace_diary_write(content="<summary>", tags=["health", "repo-analysis"])
+### 8. Snapshot to the memweave corpus
+The session is auto-ingested by the Stop-hook; for a durable standalone note, append a one-line
+summary to `~/.uncle-j-memory/memory/` (tags: health, repo-analysis) — the nightly
+`sync_memory.sh` embeds it for future prior-art checks.
 
 ## Key interpretation rules
 

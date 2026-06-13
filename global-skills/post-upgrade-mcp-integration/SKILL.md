@@ -6,12 +6,12 @@ type: process
 
 ## When to use
 
-After any upgrade to jcodemunch, jdatamunch, jdocmunch, mempalace, serena, or any other MCP server. Trigger immediately on detecting a version bump — don't wait for a user request.
+After any upgrade to jcodemunch, jdatamunch, jdocmunch, serena, or any other MCP server. Trigger immediately on detecting a version bump — don't wait for a user request.
 
 ## Steps
 
 ### 1. Check for prior work
-mempalace_search("upgrade integration <tool-name>")
+`.venv-memweave/bin/python scripts/memweave/mw_search.py "upgrade integration <tool-name>" --k 5`
 Skip steps already done in a prior session.
 
 ### 2. Enumerate current tools
@@ -30,10 +30,11 @@ Group by function (retrieval, navigation, quality, bridging, schema, index manag
 Add new tools under their category with a one-line description of when to prefer them over adjacent tools. Remove or update stale entries. Keep the routing table scannable — no walls of prose.
 
 ### 6. Clean up redundant memories
-If a MemPalace memory covers behavior now captured in a skill or CLAUDE.md rule, remove the memory. Memory is for facts that aren't derivable from config; routing rules belong in CLAUDE.md.
+If a memweave corpus note covers behavior now captured in a skill or CLAUDE.md rule, remove the note from `~/.uncle-j-memory/memory/`. Memory is for facts that aren't derivable from config; routing rules belong in CLAUDE.md.
 
 ### 7. Snapshot
-mempalace_diary_write("Integrated <tool> vX.Y — added N tools across K categories")
+The session is auto-ingested by the Stop-hook; for a durable standalone note, append
+"Integrated <tool> vX.Y — added N tools across K categories" to `~/.uncle-j-memory/memory/`.
 
 ### 8. Clear post-upgrade flag
 ```bash

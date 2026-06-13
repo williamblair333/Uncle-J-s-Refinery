@@ -21,7 +21,7 @@ Apply this filter to the draft in context. Rewrite and output only the tightened
 
 - Multi-sentence explanations of single points → one sentence + code if needed
 - Paragraph prose where a bullet list is shorter
-- Attribution phrases ("For MemPalace's use case…") → drop unless the distinction matters
+- Attribution phrases ("For this backend's use case…") → drop unless the distinction matters
 - Fix descriptions → just the fix, not the full context of why it's a fix
 
 ### Keep

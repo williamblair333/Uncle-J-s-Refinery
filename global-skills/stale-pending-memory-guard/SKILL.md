@@ -5,7 +5,7 @@ description: Before reporting any memory hit containing "pending/awaiting/needs/
 
 ## When to use
 
-Run this guard inside `prior-art-check` whenever a `mempalace_search` hit's body contains action-pending language. Without it, a stale "awaiting review" entry gets reported as current fact even after the upstream work completed — as happened with MemPalace PR #1523 (memory said "awaiting review"; it had already merged).
+Run this guard inside `prior-art-check` whenever a memweave (`mw_search.py`) hit's body contains action-pending language. Without it, a stale "awaiting review" entry gets reported as current fact even after the upstream work completed — as happened with an upstream PR whose note said "awaiting review" after it had already merged.
 
 This guard fills a gap that healthcheck 9e does **not** cover: 9e catches technical staleness (are we behind upstream?), not tracking staleness (does our note still match reality?).
 
@@ -15,14 +15,14 @@ Flag any memory hit whose body contains: `pending`, `awaiting`, `needs`, `consid
 
 ## Steps
 
-1. **Surface hits normally** via `mempalace_search`.
+1. **Surface hits normally** via memweave (`.venv-memweave/bin/python scripts/memweave/mw_search.py "<query>" --k 5`).
 2. **Scan each hit's body** for trigger words (case-insensitive).
 3. **Verify flagged entries** before reporting:
    - PR/issue → `gh pr view <number>` or `gh issue view <number>`
    - Package/code → freshness check or `git log --oneline -5`
    - Config/infra → read the live file or service status
 4. **Report the verified state**, not the memory text.
-5. **Update stale entries** via `mempalace_update_drawer` with corrected status + date.
+5. **Update stale entries** by editing the corresponding note in the memweave corpus (`~/.uncle-j-memory/memory/`) with corrected status + date; the nightly `sync_memory.sh` re-embeds it.
 6. Continue with the rest of `prior-art-check` normally.
 
 ## What NOT to flag

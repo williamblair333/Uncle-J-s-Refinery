@@ -85,9 +85,9 @@ Step 3. **Decide based on the verdict.**
 - `block` — do NOT land the change. Report the blocker to the user,
   propose a fix, and re-run this skill on the revised change.
 
-Step 4. **Log the outcome.** If the verdict was non-approve, add a
-short note to MemPalace via `mempalace_write` so future "have we
-touched this" checks see it:
+Step 4. **Log the outcome.** If the verdict was non-approve, append a
+short note to the memweave corpus (`~/.uncle-j-memory/memory/`) so future
+"have we touched this" checks see it (the session is auto-ingested too):
 
 ```
 Topic: <symbol or area>

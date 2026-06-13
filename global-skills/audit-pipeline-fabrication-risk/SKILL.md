@@ -7,13 +7,13 @@ description: Systematically audit an AI pipeline for hallucination/fabrication p
 
 - Another agent or session flagged a fabrication/hallucination propagation risk in a pipeline
 - You need to verify whether proposed fixes are grounded in what the code actually does
-- A pipeline writes model-generated content to persistent stores (CLAUDE.md, MemPalace, databases, cron scripts)
+- A pipeline writes model-generated content to persistent stores (CLAUDE.md, the memweave corpus, databases, cron scripts)
 - You want to identify the highest-leverage intervention point before building
 
 ## Key Steps
 
-### 1. Check MemPalace First
-mempalace search: "<pipeline name> fabrication risk"
+### 1. Check memweave First
+`.venv-memweave/bin/python scripts/memweave/mw_search.py "<pipeline name> fabrication risk" --k 5`
 Prior sessions may have already mapped propagation paths or attempted fixes.
 
 ### 2. Read the Actual Pipeline Code
@@ -35,7 +35,7 @@ Common precision failures to catch:
 
 ### 4. Map the Propagation Chain
 Identify every store the pipeline writes to:
-grep -n "mempalace mine\|>> ~/.claude\|CLAUDE.md\|append" <pipeline_script>
+grep -n "sync_memory\|~/.uncle-j-memory\|>> ~/.claude\|CLAUDE.md\|append" <pipeline_script>
 Each write site is a potential propagation gate. Rank by blast radius:
 - Writes to standing instructions (CLAUDE.md) > writes to memory wings > writes to logs
 
@@ -48,8 +48,8 @@ If both options exist, build the pre-write filter first.
 
 ### 6. Propose Concrete, Code-Grounded Fixes
 Reference specific line numbers:
-# dream.sh line 164: mempalace mine call
-# dream.sh line 187: CLAUDE.md append
+# dream.sh: writes synthesis to the dream output dir (memweave ingests it via sync_memory.sh)
+# dream.sh: CLAUDE.md append
 # Fix: grep $SYNTHESIS for URL patterns before both writes
 
 Fixes that cannot be verified against actual code should be marked as assumptions pending verification.
