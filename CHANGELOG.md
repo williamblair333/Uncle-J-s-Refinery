@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-06-13 — rename post-audit-mempalace-capture → post-audit-memory-capture
+
+The skill's body already wrote to the memweave corpus (Phase 4f); only its dir name was stale. The
+prior blocker (the `~/.claude/skills` symlink can't be recreated by the harness) is split: the
+in-repo rename lands here; the one-line symlink repoint is the keyboard step.
+
+### Changed
+- **`git mv global-skills/post-audit-mempalace-capture global-skills/post-audit-memory-capture`** +
+  `name:` frontmatter; removed the now-obsolete "dir name still says mempalace" note.
+- Updated all **live** invoke-by-name refs in lockstep: `pre-mortem` step-11, `session-end-checklist`
+  `related_skills` + the design-memory step, and `docs/skill-frontmatter-standard.md`.
+- `git grep post-audit-mempalace-capture` now hits only historical CHANGELOG/HANDOFF/ROADMAP entries.
+
+### Keyboard step (one-time)
+```bash
+rm ~/.claude/skills/post-audit-mempalace-capture
+ln -sfn /opt/proj/Uncle-J-s-Refinery/global-skills/post-audit-memory-capture ~/.claude/skills/post-audit-memory-capture
+```
+(install-reliability.sh scans `global-skills/*/`, so a re-run also creates the new symlink — but
+leaves the old one dangling, so the `rm` is needed either way.)
+
+Pre-mortem: Infrastructure 12/12 — 1 MEDIUM (all live refs must move in lockstep — mitigated by the
+git-grep gate above), 1 LOW (transient dangling symlink until the keyboard step).
+
+---
+
 ## 2026-06-13 — fix: install-reliability.sh crash on dead turbovecdb block
 
 `install-reliability.sh` printed `line 204: PROJ: unbound variable` during install — a leftover

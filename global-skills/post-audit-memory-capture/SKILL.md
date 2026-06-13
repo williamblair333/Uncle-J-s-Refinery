@@ -1,11 +1,7 @@
 ---
-name: post-audit-mempalace-capture
+name: post-audit-memory-capture
 description: After any adversarial/red-team analysis of a component, skill, or control mechanism, write two durable memory notes — design invariants + audit baseline, and closed attack vectors — into the memweave corpus so future sessions can answer "is this change a regression?" without relying on git history alone.
 ---
-
-> **Note:** the skill dir name still says `mempalace`; it now writes to the **memweave** corpus
-> (`~/.uncle-j-memory/memory/`). The name is retained because its `~/.claude/skills/` symlink
-> can't be recreated by the harness — a rename is a Bill-keyboard follow-up.
 
 ## When to use
 

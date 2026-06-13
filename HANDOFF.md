@@ -20,8 +20,13 @@ ref = the `mempalace-develop` source-archive line in the preamble; harmless). **
 - **`install-reliability.sh` crashed** with `PROJ: unbound variable` (line 204) — a dead turbovecdb
   block (mempalace-ecosystem residue, script removed in 4b). Removed in this branch.
 
-Remaining: only the optional `post-audit-mempalace-capture` rename (needs the ~/.claude/skills symlink
-recreated at the keyboard). Everything else the harness can reach is done.
+Rename done in-repo (`post-audit-mempalace-capture` → `post-audit-memory-capture`, all 4 live refs +
+the frontmatter doc updated). **Only keyboard step left:** repoint the `~/.claude/skills` symlink:
+```bash
+rm ~/.claude/skills/post-audit-mempalace-capture
+ln -sfn /opt/proj/Uncle-J-s-Refinery/global-skills/post-audit-memory-capture ~/.claude/skills/post-audit-memory-capture
+```
+After that, the mempalace→memweave migration is complete with nothing outstanding.
 
 ## Also 2026-06-13 — final live mempalace refs cleared (branch `fix/final-mempalace-verify-prompts`)
 
@@ -75,10 +80,8 @@ closed vectors captured to `~/.uncle-j-memory/memory/audit-baselines.md`.
    session** to remove the mempalace Stop-hook + repoint the standing instruction. Then
    `~/.claude/CLAUDE.md` routing (re-run `install.sh`) + `~/.claude.json` mempalace MCP-server removal
    (HIGH — keyboard).
-2. **Rename `post-audit-mempalace-capture` → a memweave-neutral name** (Bill-keyboard): the dir's
-   `~/.claude/skills/` symlink can't be recreated by the harness. Touches the dir, the symlink,
-   `session-end-checklist` `related_skills`, and pre-mortem step-11's reference. Body is already
-   memweave; only the name is stale.
+2. ~~Rename `post-audit-mempalace-capture`~~ **DONE** (→ `post-audit-memory-capture`, in-repo; the
+   `~/.claude/skills` symlink repoint is the only keyboard step — see the top entry's command).
 3. **Purge staged trash** (irreversible — Bill's call): `~/.mempalace-trash-phase4-*` (2.4 G),
    `~/.mempalace-trash-D1-*` (55 G), `~/.mempalace-decommission-backups-*`.
 4. **Optional:** a routine `uv sync` prunes the now-unused mempalace/chromadb still in `.venv`.

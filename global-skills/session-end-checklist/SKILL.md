@@ -8,7 +8,7 @@ tags: [session, documentation, CHANGELOG, HANDOFF, ROADMAP, git, wrap-up]
 prerequisites:
   commands: [git, gh]
   skills: [pre-mortem]
-related_skills: [smart-review, catch-up-pull, post-audit-mempalace-capture]
+related_skills: [smart-review, catch-up-pull, post-audit-memory-capture]
 ---
 
 ## When to use
@@ -97,7 +97,7 @@ This step is **weekly** — skip if fewer than 7 days since last review (check l
 Did this session include hardening work — adversarial analysis, security fixes, or invariant
 changes to any component?
 
-- **Yes** → invoke `post-audit-mempalace-capture` to record the design invariants / closed attack
+- **Yes** → invoke `post-audit-memory-capture` to record the design invariants / closed attack
   vectors as durable notes. That skill now writes markdown into the memweave corpus
   (`~/.uncle-j-memory/memory/`), so the notes surface in future `mw_search.py` prior-art checks.
   (Skill dir name retained for symlink stability; rename is a Bill-keyboard follow-up.)
