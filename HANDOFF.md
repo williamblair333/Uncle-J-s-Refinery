@@ -1,6 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-12 — Replacing mempalace with memweave. Phases 1, 2, 2b-1, 3a DONE & merged. memweave is a usable standalone memory system (ingest + retrieve, fully offline).*
+*Last updated: 2026-06-12 — memweave Phase 2b-2 (freshness cron + Stop-hook) on branch `feat/phase2b2-memweave-freshness`. Phases 1, 2, 2b-1, 3a DONE & merged.*
+
+## Current state (2026-06-12) — memweave freshness wired (branch `feat/phase2b2-memweave-freshness`)
+
+The memweave store now refreshes unattended. Two callers share the `flock -n`-guarded
+`scripts/memweave/sync_memory.sh` seam:
+- **Cron `uncle-j-memweave-sync`** — 02:30 nightly, `nice -19`, full export+index. In `install.sh` + live in crontab.
+- **Stop-hook** (`# uncle-j-memweave-sync`, `async`) — incremental `LIMIT 15` session-end ingest.
+- `sync_memory.sh` no longer self-tees; callers redirect to `state/memweave-sync.log`. Smoke-tested (2 new / 398 skipped, 1.9s).
+- Also removed 2 orphaned untracked bench scripts (abandoned recall-A/B track).
+
+**Pre-mortem:** Infrastructure, 12/12. 1 MEDIUM (no freshness alarm), 2 LOW. Proceeded.
+
+**Open follow-ups from this phase:**
+1. **Freshness probe** (the MEDIUM): add a memweave index-mtime check (<48h) to `healthcheck.sh`.
+2. **`.venv-memweave` bootstrap**: `install.sh` registers the cron but doesn't build the py3.12 venv — fold venv creation into install.sh during Phase 3/4 so a fresh provision works.
+
+**NEXT (recommended order — continues into critical-surface / destructive territory):**
+1. **Phase 3b — harness wiring**: repoint CLAUDE.md memory routing (both files) from mempalace to `scripts/memweave/mw_search.py`. Critical surface; pairs with Phase 4.
+2. **Phase 4 — decommission mempalace** (DESTRUCTIVE, pre-mortem + **Bill sign-off**): 7 mempalace + 3 turbovecdb crons, MCP server, `scripts/mempalace-*.sh` + root `mempalace-*.{sh,py}`, healthcheck probes, session-start autofix, Stop-hook mining, CLAUDE.md rules, then ~55 GB palace data (stage to trash dir, don't hard-delete).
+
+---
+
+*Earlier — Replacing mempalace with memweave. Phases 1, 2, 2b-1, 3a DONE & merged. memweave is a usable standalone memory system (ingest + retrieve, fully offline).*
 
 ## Current state (2026-06-12) — memweave usable end-to-end (branch `feat/phase3a-memweave-search-cli`)
 

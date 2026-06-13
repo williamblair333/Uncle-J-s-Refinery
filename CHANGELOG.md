@@ -2,6 +2,35 @@
 
 ---
 
+## 2026-06-12 — memweave Phase 2b-2: freshness cron + Stop-hook
+
+The memweave store now stays current unattended. Both the cron and the Stop-hook call the same
+`flock -n`-guarded seam, so they can't race the single sqlite writer.
+
+### Added
+- **`uncle-j-memweave-sync` cron** (02:30 nightly, `nice -19`) — full export+index of this-project
+  transcripts via `scripts/memweave/sync_memory.sh`. Registered in `install.sh` and live in crontab.
+- **Stop-hook** (`.claude/settings.json`, `# uncle-j-memweave-sync`, `async`) — incremental
+  session-end ingest, `LIMIT 15` most-recent transcripts so per-session cost stays flat as the
+  corpus grows.
+- **`docs/RELIABILITY.md`** — new "memweave memory freshness" section (caller table, `.venv-memweave`
+  prerequisite, open follow-up to add a healthcheck freshness probe).
+
+### Changed
+- **`scripts/memweave/sync_memory.sh`** — dropped the internal `tee`; the script now writes to
+  stdout/stderr only and each caller owns its log destination (cron + hook both redirect to
+  `state/memweave-sync.log`). Avoids double-logged lines.
+
+### Removed
+- Orphaned untracked bench scripts `scripts/bench/_ef_experiment.py` and
+  `scripts/bench/install-bench-cron.sh` (leftovers from the abandoned recall-A/B track).
+
+### Pre-mortem
+- Infrastructure, all 12 dimensions: 1 MEDIUM (no freshness alarm yet — follow-up logged), 2 LOW
+  (`.venv-memweave` not yet built by install.sh; unbounded store growth). Proceeded.
+
+---
+
 ## 2026-06-12 — memweave Phase 3a: read-only memory search CLI
 
 memweave is now a usable standalone memory system end to end (ingest + retrieve).
