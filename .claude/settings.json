@@ -118,6 +118,7 @@
   },
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
-    "ralph-wiggum@claude-code-plugins": true
+    "ralph-wiggum@claude-code-plugins": true,
+    "understand-anything@understand-anything": true
   }
 }

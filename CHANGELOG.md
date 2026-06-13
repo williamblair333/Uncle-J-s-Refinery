@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-13 — enable understand-anything plugin
+
+### Changed
+- `.claude/settings.json` — committed the previously-uncommitted `enabledPlugins` entry for
+  `understand-anything@understand-anything` so its skills load durably across fresh checkouts and
+  `install.sh` runs (the plugin was already installed; only the enable flag was untracked).
+
+---
+
 ## 2026-06-13 — session-end: ROADMAP sync (pysqlite3 vendoring + checkmark fix shipped)
 
 - Moved the **pysqlite3 re-patch papercut** from In Progress → Completed (recent) — shipped as PR #65

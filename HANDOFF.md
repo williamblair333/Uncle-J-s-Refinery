@@ -1,6 +1,17 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — healthcheck checkmark bug fixed + pysqlite3 3.51.3 vendored
+*Last updated: 2026-06-13 — enabled the understand-anything plugin in project settings
+(branch `chore/enable-understand-anything-plugin`).*
+
+## 2026-06-13 — enable understand-anything plugin
+
+Committed the one-line `enabledPlugins` addition in `.claude/settings.json` (plugin was already
+installed; the enable flag was just untracked in the working tree). Durable across fresh checkouts.
+Pre-mortem: Infrastructure, 12/12 CLEAR. healthcheck `ok`.
+
+---
+
+*Earlier — healthcheck checkmark bug fixed + pysqlite3 3.51.3 vendored
 (PR #65 merged to main; ROADMAP synced; session closed).*
 
 ## 2026-06-13 — "duckdb fail" root-caused (checkmark bug) + pysqlite3 wheel vendored
