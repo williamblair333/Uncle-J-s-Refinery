@@ -680,6 +680,62 @@ check_memweave_fresh() {
     fi
 }
 
+# ----- 9o. dreaming last-run freshness (>36h = cron failing) ---------------
+check_dreaming_runtime() {
+    step "dreaming — runtime health (last-run freshness)"
+    local last_run="$REPO_ROOT/state/dreaming-last-run.txt"
+    local log="$REPO_ROOT/state/dreaming.log"
+
+    if [[ ! -f "$last_run" ]]; then
+        warn "dreaming-last-run.txt missing — dreaming has never completed (normal on fresh install)"
+        return
+    fi
+
+    local mtime now age_h
+    mtime="$(stat -c %Y "$last_run" 2>/dev/null || echo 0)"
+    now="$(date +%s)"
+    age_h=$(( (now - mtime) / 3600 ))
+
+    if (( age_h <= 36 )); then
+        ok "dreaming last completed ${age_h}h ago"
+    else
+        bad "dreaming last-run is ${age_h}h stale (>36h) — cron likely failing"
+        if [[ -f "$log" ]]; then
+            local clues
+            clues="$(tail -30 "$log" | grep '!!' || true)"
+            if [[ -n "$clues" ]]; then
+                printf '%s\n' "$clues" | head -3 | while IFS= read -r line; do
+                    printf '        %s\n' "$line" >&2
+                done
+            fi
+        fi
+        hint "check: tail -30 $log ; fix: bash $REPO_ROOT/features/dreaming/dream.sh --dry-run"
+        record_fail "dreaming-stale(${age_h}h)"
+    fi
+}
+
+# ----- 9p. auto-maintain: no shell errors in recent log --------------------
+check_auto_maintain_runtime() {
+    step "auto-maintain — no shell errors in recent log"
+    local log="$REPO_ROOT/state/auto-maintain.log"
+    if [[ ! -f "$log" ]]; then
+        warn "auto-maintain.log missing — auto-maintain has never run"
+        return
+    fi
+    local recent_errors
+    recent_errors="$(tail -50 "$log" | grep -E ': line [0-9]+:|bad substitution|syntax error' || true)"
+    if [[ -n "$recent_errors" ]]; then
+        bad "auto-maintain.log has recent shell error(s):"
+        printf '%s\n' "$recent_errors" | head -5 | while IFS= read -r line; do
+            printf '        %s\n' "$line" >&2
+        done
+        hint "check: tail -50 $log"
+        record_fail "auto-maintain-errors"
+    else
+        ok "auto-maintain.log: no recent shell errors"
+    fi
+}
+
 # ===== main =================================================================
 # verify.sh is install-time (uvx cache warmup takes ~5s); run it only in
 # --full mode. --quick sticks to runtime invariants for a ~6s session-start
@@ -707,6 +763,8 @@ check_auto_maintain_cron
 check_embedding_canary
 check_jcodemunch_watch
 check_memweave_fresh
+check_dreaming_runtime
+check_auto_maintain_runtime
 if [ "$MODE" = "full" ]; then
     check_verify
     check_smoke_hook

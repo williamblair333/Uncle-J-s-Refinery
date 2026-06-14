@@ -12,6 +12,8 @@
 
 set -euo pipefail
 
+export PATH="$HOME/.local/bin:$PATH"
+
 DREAM_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_ROOT="$(cd "$DREAM_DIR/../.." && pwd)"
 VENV_PY="$STACK_ROOT/.venv/bin/python"

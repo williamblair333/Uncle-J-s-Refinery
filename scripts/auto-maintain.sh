@@ -291,8 +291,8 @@ if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" && "$DRY_RUN" -
         fi
         [[ "${#BREAKING_FLAGS[@]}" -gt 0 ]] && SUMMARY+="⚠️ breaking changes in ${BREAKING_FLAGS[*]} — see HANDOFF.md. "
     fi
-    [[ "${#SKILL_NAMES[@]:-0}" -gt 0 ]] && SUMMARY+="drafted ${#SKILL_NAMES[@]} skill(s) for approval. "
-    [[ "$UPGRADED" -eq 0 && "${#SKILL_NAMES[@]:-0}" -eq 0 ]] && SUMMARY+="nothing to do."
+    [[ "${#SKILL_NAMES[@]}" -gt 0 ]] && SUMMARY+="drafted ${#SKILL_NAMES[@]} skill(s) for approval. "
+    [[ "$UPGRADED" -eq 0 && "${#SKILL_NAMES[@]}" -eq 0 ]] && SUMMARY+="nothing to do."
     source "$PROJ_ROOT/lib/notify.sh" 2>/dev/null && notify_send_text "$SUMMARY" || true
 fi
 

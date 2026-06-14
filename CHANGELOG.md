@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-06-14 — fix silent cron failures + healthcheck runtime probes
+
+### Fixed
+- `features/dreaming/dream.sh` — added `export PATH="$HOME/.local/bin:$PATH"` so cron finds
+  the `claude` CLI. Dreaming was silently failing every night since 2026-06-10 with
+  `!! 'claude' CLI not on PATH`.
+- `state/dreaming.env` — quoted `DREAMING_CRON_SCHEDULE="0 2 * * *"`. Unquoted value caused
+  bash to execute `2 * * *` as a command on every source, producing spurious `2: command not
+  found` errors in the dreaming log.
+- `scripts/auto-maintain.sh:294-295` — replaced invalid `${#SKILL_NAMES[@]:-0}` with
+  `${#SKILL_NAMES[@]}`. Bash cannot combine the `#` length operator with `:-` default; this
+  produced a `bad substitution` error on every auto-maintain run.
+
+### Added
+- `healthcheck.sh` — `check_dreaming_runtime`: checks `state/dreaming-last-run.txt` age;
+  fails with >36h staleness and surfaces `!!` error clues from `dreaming.log`.
+- `healthcheck.sh` — `check_auto_maintain_runtime`: greps `state/auto-maintain.log` tail for
+  shell error patterns (`: line N:`, `bad substitution`, `syntax error`).
+
+### Changed
+- `uv.lock` — `jdocmunch-mcp` 1.73.0 → 1.74.0 (SessionStart autofix bump).
+
+---
+
 ## 2026-06-14 — stack-not-at-head close-out (jdocmunch 1.71.0→1.73.0)
 
 ### Changed

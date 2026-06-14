@@ -1,9 +1,9 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-14 — follow-up sweep COMPLETE + Telegram freeze fixed & verified live (bot
-replied to a test DM, offset advanced 560009958→560009960). PRs A/B/C/D merged. stack-not-at-head
-closed (jdocmunch→1.73.0). 09:09 probe was Bill testing → NO token rotation needed. Remaining:
-restart Claude Code to load jdocmunch 1.73.0; staged-trash purge (~57 GB, Bill's call).*
+*Last updated: 2026-06-14 — Fixed 3 silent cron failures (dreaming PATH, dreaming.env quoting,
+auto-maintain bad substitution) + added healthcheck runtime probes for both. State file
+dreaming.env fixed in-place (gitignored). Healthcheck now shows 2 expected FAILs that clear
+after tonight's cron runs succeed. uv.lock committed (jdocmunch 1.74.0 bump).*
 
 ## 2026-06-14 — Telegram offset freeze resolved live + drain helper hardened (PR D)
 
@@ -21,9 +21,8 @@ repoints the offset to the oldest unconfirmed id so the gateway answers queued m
 skipping them. Pre-mortem 12/12 (0 HIGH/MEDIUM, 3 LOW). bash -n + all-3-modes tested on the live
 (now-empty) queue.
 
-**Only open Telegram item:** DM the bot once to confirm the live reply round-trip (offset is sane;
-the single-consumer code + healthy offset should make it work — just unverified end-to-end). The
-earlier test DM was the one the dry-run bug ate.
+**Telegram live round-trip: CONFIRMED** (Bill DMed the bot post-session; reply received). The
+earlier test DM was the one the dry-run bug ate; this confirmation used a fresh DM.
 
 ## 2026-06-14 — session-start follow-up sweep: PR A/B/C merged
 
