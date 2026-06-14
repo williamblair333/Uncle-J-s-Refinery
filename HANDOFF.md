@@ -1,7 +1,38 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — jcode watch daemon activated + grep-guard hardened
-(branch `fix/grep-guard-source-exploration`).*
+*Last updated: 2026-06-14 — memweave exporter drops skill-body noise + uv.lock
+autofix bump committed (branch `fix/memweave-exporter-skill-body-noise`).*
+
+## 2026-06-14 — memweave corpus de-noised (skill-body filter) + uv.lock committed
+
+Session-start status check surfaced two loose artifacts; both resolved this session.
+
+**1. uv.lock (jdocmunch-mcp 1.70.2 → 1.71.0).** The SessionStart autofix upgraded the stack to
+HEAD and left `uv.lock` dirty. Diff is jdocmunch-only (verified — nothing else floated); venv
+sqlite still 3.51.3 (vendored wheel, healthcheck OK), so NOT the pysqlite3 clobber. Committed as a
+clean upgrade artifact.
+
+**2. memweave corpus pollution (the "stale shit").** A prior-art search for "session status" kept
+returning an **old** `session-status-briefing` skill body that still referenced `mempalace_search`.
+Root cause: when a skill is invoked the harness injects the skill's full text as a **user-role
+turn** (first line `Base directory for this skill:`) — not wrapped in `<system-reminder>`, so the
+exporter kept it as searchable "user prose." Every session that loaded a skill baked that skill's
+(often superseded) body into the store as near-dup noise — the same failure mode that tanked the
+old mempalace mining.
+
+**NOT a history problem** — the transcripts are immutable records and were left intact; scrubbing
+them would falsify the log. The fix is exporter-side: `iter_turns` now drops skill-body injection
+turns (`is_skill_body()`, prefix-anchored), the same class as the already-stripped system-reminder
+/ tool traffic. 2 new tests (drop + a keep-real-prose guard against over-match); 15/15 green.
+Rebuilt the store via `sync_memory.sh --all` (re-exported 561 .md across 15 projects, full offline
+re-embed). Verified the stale skill hits no longer surface.
+
+**Caveat (pre-mortem LOW):** the filter keys on a harness convention, not a stable API. If a future
+Claude Code release rewords the injection header, the filter quietly no-ops back to today's behavior
+(search noise returns — not data loss). The guard test pins the keep-real-prose side. Pre-mortem:
+Infrastructure 12/12, 0 HIGH / 0 MEDIUM / 3 LOW, CLEAR.
+
+---
 
 ## 2026-06-13 — jcode watch daemon + grep-guard source-exploration coverage
 

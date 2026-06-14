@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-06-14 — memweave corpus de-noised + uv.lock autofix bump
+
+### Changed
+- `scripts/memweave/export_transcripts.py` — `iter_turns` now drops **skill-body injection**
+  turns. When a skill is invoked the harness injects its full text as a user-role turn (prefixed
+  `Base directory for this skill:`); the exporter previously kept these as searchable prose, so
+  every session that loaded a skill flooded the prior-art store with near-dup (often superseded,
+  e.g. mempalace-era) skill copies. New `is_skill_body()` filter, same class as the existing
+  `<system-reminder>` / tool-traffic stripping. Transcripts (the source of truth) untouched.
+- `uv.lock` — `jdocmunch-mcp` 1.70.2 → 1.71.0 (SessionStart autofix stack-to-HEAD bump; jdocmunch
+  only, sqlite still 3.51.3 vendored).
+
+### Tests
+- `tests/test_memweave_export.py` — `+2`: skill-body turn is dropped; a real message merely
+  *mentioning* the phrase mid-body is kept (over-match guard). 15/15 green.
+
+### Ops
+- Rebuilt `~/.uncle-j-memory` via `sync_memory.sh --all` (re-exported 561 .md across 15 projects,
+  full offline re-embed) so the existing corpus is cleaned, not just future ingests.
+
+---
+
 ## 2026-06-14 — session-end doc sync (security/retrieval hardening)
 
 ### Docs

@@ -103,6 +103,34 @@ def test_iter_turns_drops_system_reminder_only_user_turn():
     assert iter_turns(lines) == [("user", "genuine ask")]
 
 
+def test_iter_turns_drops_skill_body_injection():
+    """When a skill is invoked, the harness injects the skill's full body as a
+    user-role turn prefixed 'Base directory for this skill:'. That's harness
+    traffic, not conversation, and stale skill copies flood prior-art search.
+    Drop it like a system-reminder; keep the surrounding real turns."""
+    skill_body = ("Base directory for this skill: /home/bill/.claude/skills/foo\n\n"
+                  "## When to use\n\nInvoke at the start ... mempalace_search(...)")
+    lines = _lines(
+        {"type": "user", "message": {"role": "user", "content": "status report"}},
+        {"type": "user", "message": {"role": "user", "content": skill_body}},
+        {"type": "assistant", "message": {"role": "assistant",
+            "content": [{"type": "text", "text": "here is the status"}]}},
+    )
+    assert iter_turns(lines) == [("user", "status report"),
+                                 ("assistant", "here is the status")]
+
+
+def test_iter_turns_keeps_user_text_mentioning_skill_mid_message():
+    """Guard against over-matching: a genuine user message that merely mentions
+    the phrase later in the body is real conversation and must be kept."""
+    lines = _lines(
+        {"type": "user", "message": {"role": "user",
+            "content": "Please document the Base directory for this skill in the README."}},
+    )
+    assert iter_turns(lines) == [
+        ("user", "Please document the Base directory for this skill in the README.")]
+
+
 def test_render_markdown_structure():
     md = render_markdown("abc123", [("user", "q1"), ("assistant", "a1")],
                          project="-opt-proj-Uncle-J-s-Refinery", date_iso="2026-06-12")
@@ -144,3 +172,36 @@ def test_export_all_projects_covers_every_project_dir(tmp_path):
     assert (mem / "bbbbbbbb-2222.md").exists()
     assert "-proj-alpha" in (mem / "aaaaaaaa-1111.md").read_text()
     assert "-proj-beta" in (mem / "bbbbbbbb-2222.md").read_text()
+
+
+def test_export_project_removes_stale_md_when_now_too_small(tmp_path):
+    """Authoritativeness: when a tightened filter shrinks a session below min_chars,
+    a re-export must DELETE the stale .md left by a prior export — otherwise the
+    corpus can never shed newly-filtered content (the skill-body migration case)."""
+    from export_transcripts import export_project  # noqa: E402
+
+    proot = tmp_path / "projects"
+    pdir = proot / "-proj-x"
+    pdir.mkdir(parents=True)
+    sid = "cccccccc-3333"
+    # A session whose only real text is a tiny prompt plus a (now-filtered) skill body.
+    skill_body = ("Base directory for this skill: /home/bill/.claude/skills/foo\n\n"
+                  + "long skill documentation body " * 50)
+    lines = [
+        json.dumps({"type": "user", "message": {"role": "user", "content": "hi"}}),
+        json.dumps({"type": "user", "message": {"role": "user", "content": skill_body}}),
+    ]
+    (pdir / f"{sid}.jsonl").write_text("\n".join(lines) + "\n")
+
+    out = tmp_path / "store"
+    mem = out / "memory"
+    mem.mkdir(parents=True)
+    stale = mem / f"{sid}.md"
+    stale.write_text("# Session cccccccc-3333\n\nstale pre-fix content with the skill body baked in")
+
+    written, small, empty = export_project(
+        "-proj-x", projects_root=proot, out_workspace=out, min_chars=200)
+    # Real text ("hi") is < 200 chars after the skill body is filtered → skipped...
+    assert written == 0 and small == 1
+    # ...and the stale doc must be gone, not left behind.
+    assert not stale.exists()

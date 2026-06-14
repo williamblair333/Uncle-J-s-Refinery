@@ -705,8 +705,8 @@ dependencies = [
 
 [[package]]
 name = "jdocmunch-mcp"
-version = "1.70.2"
-source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#17bdd2b6529cebc8259d9ce32fb3262e78b72889" }
+version = "1.71.0"
+source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#f4ea958002c1593a9a9207614ee34650eb391098" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
