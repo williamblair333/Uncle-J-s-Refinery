@@ -173,6 +173,50 @@ def scan_skill_body(path: str) -> 'tuple[bool, str | None]':
     return True, None
 
 
+# Built-in tools the untrusted (restricted) agent must never reach: execution,
+# persistence, network, file read, and sub-agent spawning.
+_RESTRICTED_DENY_TOOLS = [
+    "Bash", "Edit", "Write", "NotebookEdit",
+    "WebFetch", "WebSearch", "Read", "Grep", "Glob", "Task",
+]
+
+
+def build_claude_argv(claude_bin: str, agent_sp: str,
+                      system_restriction: str, routed_text: str) -> list:
+    """
+    Construct the `claude` CLI argv for a Telegram agent invocation.
+
+    The 'restricted' agent serves an UNTRUSTED Telegram channel and runs with no
+    host access, enforced by three independent default-deny layers:
+      1. NO --dangerously-skip-permissions — headless --print cannot answer a
+         permission prompt, so any approval-gated tool (incl. future ones) is denied.
+      2. --strict-mcp-config (with no --mcp-config) — no MCP servers load, so the
+         retrieval stack (jcodemunch/jdata/jdoc/etc.) is unavailable.
+      3. --disallowedTools — dangerous built-ins are removed from context outright.
+
+    Any other agent (e.g. the trusted /work agent, system_prompt != "restricted")
+    keeps full access; it is gated upstream by the chat_id allowlist.
+
+    `routed_text` is always the value of the final `-p` flag — never interpolated
+    into other flags — so a hostile message cannot inject CLI arguments.
+    """
+    if agent_sp == "restricted":
+        return [
+            claude_bin,
+            "--print",
+            "--system-prompt", system_restriction,
+            "--strict-mcp-config",
+            "--disallowedTools", *_RESTRICTED_DENY_TOOLS,
+            "-p", routed_text,
+        ]
+    return [
+        claude_bin,
+        "--dangerously-skip-permissions",
+        "--print",
+        "-p", routed_text,
+    ]
+
+
 def check_rate_limit(chat_id: str, state_file: str) -> tuple:
     """
     Enforce per-chat rate limiting using a JSON state file.

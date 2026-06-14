@@ -81,7 +81,7 @@ offset_file    = sys.argv[5]
 updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
-from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body
+from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
 
@@ -468,26 +468,18 @@ for update in updates:
     else:
         log(f"agent={agent_name} cwd={agent_cwd}")
 
-    # Build subprocess args
-    if agent_sp == "restricted":
-        extra_args = ["--system-prompt", TELEGRAM_SYSTEM_RESTRICTION]
-    else:
-        extra_args = []
-
-    # Use `claude --print` to invoke Claude.
-    # --system-prompt (when present) REPLACES the entire default system context.
-    # Running from /tmp (default agent) ensures no project CLAUDE.md is loaded.
-    # Running from proj_root (work agent) loads project CLAUDE.md normally.
+    # Build subprocess args. The 'restricted' (untrusted Telegram) agent runs with
+    # no host access — no --dangerously-skip-permissions, --strict-mcp-config (no MCP
+    # servers), and a deny list of dangerous built-ins. The trusted /work agent keeps
+    # full access. See build_claude_argv() in tg_security.py for the full rationale.
+    # --system-prompt REPLACES the default system context; cwd=/tmp (restricted) loads
+    # no project CLAUDE.md, cwd=proj_root (work) loads it normally.
+    claude_argv = build_claude_argv(
+        claude_bin, agent_sp, TELEGRAM_SYSTEM_RESTRICTION, routed_text,
+    )
     try:
         result = subprocess.run(
-            [
-                claude_bin,
-                "--dangerously-skip-permissions",
-                "--print",
-                *extra_args,
-                "-p",
-                routed_text,
-            ],
+            claude_argv,
             cwd=agent_cwd,
             capture_output=True,
             text=True,

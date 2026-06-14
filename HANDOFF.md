@@ -1,7 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — enabled the understand-anything plugin in project settings
-(branch `chore/enable-understand-anything-plugin`).*
+*Last updated: 2026-06-13 — hardened the Telegram restricted agent against host compromise
+(branch `fix/telegram-restricted-agent-lockdown`); red-team CRITICAL closed.*
+
+## 2026-06-13 — Telegram restricted-agent lockdown (red-team CRITICAL fix)
+
+Bill deleted+recreated the Telegram bot (new token/chat_id already live in `.env`; outbound test
+sent OK). A red-team of the gateway (stowed at `review/telegram-gateway-redteam.md`) found a
+CRITICAL: behind the chat_id gate, the restricted agent ran `claude --dangerously-skip-permissions`
+with no tool restriction → one prompt injection = full host read/exec/exfil, near-silent.
+
+**Fixed this session:** new tested `build_claude_argv()` in `scripts/lib/tg_security.py` gives the
+restricted agent three default-deny layers (no skip-permissions / `--strict-mcp-config` /
+`--disallowedTools`); `/work` agent untouched. `telegram-gateway-poll.sh` rewired to call it.
+8 new tests (52/52 green); `bash -n` + embedded-python compile clean. **Verified live** against a
+canary via the real function's argv — exfil refused, MCP off, Bash absent. Pre-mortem: Infrastructure
+12/12 (1 MEDIUM — cron-env/flag-version, fails safe+visible).
+
+**MEDIUM follow-up (required gate):** confirm the inbound path works under the actual cron by
+DMing the bot post-merge and watching `state/telegram-gateway.log` for the first restricted reply —
+not yet done (interactive Test A/B/C passed, but not the crontab env).
+
+**Still open from the red-team (NOT fixed — separate work):** skill-frontmatter injection (promote
+path scans body only), destructive `promote` `rmtree` on name collision, output-redaction denylist
+gaps, bot-token-in-curl-URL `/proc` leak. See the review doc's matrix.
+
+---
 
 ## 2026-06-13 — enable understand-anything plugin
 
