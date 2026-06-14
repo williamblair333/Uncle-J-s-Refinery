@@ -48,56 +48,30 @@ PYEOF
 # Poll for a callback query on a specific message.
 # Args: $1=message_id
 # Stdout: "approved" | "rejected" | "pending"
-# Side-effect: calls answerCallbackQuery to dismiss loading indicator if found.
+#
+# Single-consumer model (incident F1/F2/F3): the Telegram gateway is the ONLY
+# getUpdates consumer. It drains callback_query updates and records approve/skip
+# decisions to state/stack-alerts-callback.json; this function only READS that file.
+# A second no-offset getUpdates consumer here corrupted the shared update offset and
+# caused a 22-day message-flood. The gateway also answers the callback (spinner).
 _tg_poll_reply() {
   local message_id=$1
-  local tmpjson tmppy result callback_query_id
+  local proj_root state_file result
+  proj_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  state_file="$proj_root/state/stack-alerts-callback.json"
 
-  tmpjson=$(mktemp /tmp/tg_updates_XXXXXX.json)
-  tmppy=$(mktemp /tmp/tg_poll_XXXXXX.py)
-
-  curl -sf "${_TG_API}/getUpdates?allowed_updates=callback_query&limit=100" \
-    > "$tmpjson" 2>/dev/null || echo '{"result":[]}' > "$tmpjson"
-
-  cat > "$tmppy" << 'PYEOF'
-import sys, json
-target_msg_id = int(sys.argv[1])
-with open(sys.argv[2]) as f:
-    updates = json.load(f)
-for update in updates.get("result", []):
-    cq = update.get("callback_query", {})
-    if not cq:
-        continue
-    if cq.get("message", {}).get("message_id") == target_msg_id:
-        print(cq.get("data", "skip"))   # "approve" or "skip"
-        print(cq.get("id", ""))         # callback_query_id on second line
-        sys.exit(0)
-print("pending")
-print("")
+  if ! result=$("$_TG_PY" - "$message_id" "$state_file" "$proj_root" <<'PYEOF'
+import sys, os
+message_id, state_file, proj_root = sys.argv[1], sys.argv[2], sys.argv[3]
+sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
+from tg_security import read_stack_callback
+print(read_stack_callback(state_file, int(message_id)))
 PYEOF
-
-  result=$("$_TG_PY" "$tmppy" "$message_id" "$tmpjson") \
-    || { rm -f "$tmpjson" "$tmppy"; echo "pending"; return 0; }
-  rm -f "$tmpjson" "$tmppy"
-
-  local data callback_id
-  data=$(echo "$result" | sed -n '1p')
-  callback_id=$(echo "$result" | sed -n '2p')
-
-  # Acknowledge callback to dismiss Telegram's loading indicator
-  if [[ -n "$callback_id" && "$data" != "pending" ]]; then
-    curl -sf -X POST "${_TG_API}/answerCallbackQuery" \
-      -H "Content-Type: application/json" \
-      -d "{\"callback_query_id\":\"${callback_id}\"}" > /dev/null 2>&1 || true
-  fi
-
-  if [[ "$data" == "approve" ]]; then
-    echo "approved"
-  elif [[ "$data" == "pending" ]]; then
+  ); then
     echo "pending"
-  else
-    echo "rejected"
+    return 0
   fi
+  echo "$result"
 }
 
 # Send a plain text message (confirmations, errors).
