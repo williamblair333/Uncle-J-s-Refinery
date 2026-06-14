@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-06-13 — harden Telegram restricted agent (red-team CRITICAL fix)
+
+### Security
+- Closed the CRITICAL from `review/telegram-gateway-redteam.md`: the restricted (untrusted
+  Telegram) agent previously ran `claude` with `--dangerously-skip-permissions` and no tool
+  restriction, so a prompt injection could read `.env`/host files and exfiltrate out-of-band,
+  fully bypassing the disclosure system prompt and output redactor.
+- New tested pure function `build_claude_argv()` in `scripts/lib/tg_security.py` enforces three
+  independent default-deny layers for the restricted agent: (1) **no**
+  `--dangerously-skip-permissions` (headless `--print` can't approve → tools denied, incl. future
+  ones); (2) `--strict-mcp-config` (no MCP servers load — jcodemunch/jdata/jdoc unavailable);
+  (3) `--disallowedTools` for Bash/Edit/Write/NotebookEdit/WebFetch/WebSearch/Read/Grep/Glob/Task.
+  The user message is always the value of the final `-p` flag — never interpolated into other
+  flags — so a hostile message can't inject CLI args.
+- The trusted `/work` agent is unchanged (keeps full access, gated by the chat_id allowlist).
+- `scripts/telegram-gateway-poll.sh` now calls `build_claude_argv()` instead of hardcoding the
+  invocation. Verified live: canary-exfil attempt via the real function's argv was refused (Bash
+  absent, MCP off, social-engineering ignored), and plain Q&A still works headless.
+- 8 new unit tests in `tests/test_tg_security.py` lock the invariant (a future re-add of
+  `--dangerously-skip-permissions` to the restricted path fails CI). 52/52 pass.
+- Scope note: the red-team's other findings (skill-frontmatter injection, destructive `promote`
+  `rmtree`, output-redaction denylist gaps) are NOT addressed here — tracked in the review doc.
+
+---
+
 ## 2026-06-13 — enable understand-anything plugin
 
 ### Changed
