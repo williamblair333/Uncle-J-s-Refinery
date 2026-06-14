@@ -1,7 +1,35 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-13 — hardened the Telegram restricted agent against host compromise
-(branch `fix/telegram-restricted-agent-lockdown`); red-team CRITICAL closed.*
+*Last updated: 2026-06-13 — jcode watch daemon activated + grep-guard hardened
+(branch `fix/grep-guard-source-exploration`).*
+
+## 2026-06-13 — jcode watch daemon + grep-guard source-exploration coverage
+
+**Daemon (no git artifact):** activated `jcodemunch-watch` user service via
+`service_installer.install_service()` — real-time inotify reindex of all 9 indexed repos,
+`enable --now`, Linger=yes, logs to `~/.code-index/logs`. Was inactive before (freshness came
+only from the 01:00 cron + register_edit). Verified active (PID held per-repo watcher locks,
+`index_stale=F`). Reverse with `service_installer.uninstall_service()`.
+
+**grep-guard (PR #69):** rewrote `hooks/discipline/grep-guard.sh` (symlinked from
+`~/.claude/hooks/discipline/`) to enforce "use jcode for code exploration" beyond the old
+`grep -r`-only rule — now catches non-recursive grep + rg/ag/ack + cat/sed/head/tail on **repo
+source**, via **per-segment** dispatch (a source file must be an arg to that segment's read tool).
+Allows pipes, logs/state/tmp/proc, non-source, out-of-repo source, sed -i, redirects/heredocs.
+Fixed the comment-substring exception bug. 28-case test matrix; 79/79 green. Pre-mortem:
+Infrastructure 12/12 (1 MEDIUM = false-positives, TDD-gated — and one real FP surfaced during
+build: `pytest a.py | tail` — fixed by per-segment dispatch before merge).
+
+**Why daemon-first:** a hardened guard forcing reliance on jcode is only safe if the index is
+fresh; the daemon closes the out-of-band-edit staleness gap. Both done together deliberately.
+
+**Optional follow-up (LOW, deferred):** add a `jcodemunch-watch is-active` probe to
+`healthcheck.sh` so a silently-died daemon (e.g. post-upgrade ExecStart break) is caught at
+session-start rather than via index_stale drift.
+
+---
+
+## 2026-06-13 — Telegram restricted-agent lockdown (red-team CRITICAL fix)
 
 ## 2026-06-13 — Telegram restricted-agent lockdown (red-team CRITICAL fix)
 
