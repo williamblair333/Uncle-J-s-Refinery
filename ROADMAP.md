@@ -9,6 +9,21 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Recently completed (2026-06-14 — follow-up sweep + Telegram incident)
+
+- **Telegram red-team depth findings closed (PR #73):** whole-file injection scan on `promote`
+  (frontmatter included), `assert_skill_target_safe` removes the destructive `rmtree`, output
+  redaction gains relative-`.env` + spaced-`sk-ant` patterns (+ left-boundary fix on the existing key rule).
+- **getUpdates single-consumer — 22-day offset-freeze incident (PR #74):** two cron pollers consumed
+  one bot token; made the gateway the sole consumer (approve/skip relayed via
+  `state/stack-alerts-callback.json`), + F4 log byte-sanitize, F5 datetime tz-aware, per-poll
+  observability line. **Freeze resolved live** by repointing the corrupt offset into the real id range.
+- **Drain helper hardened + `--catch-up` (PR #76):** removed the negative-offset footgun (it
+  confirmed/ate a live test DM); dry-run is now genuinely read-only; `--catch-up` repoints to the
+  oldest unconfirmed id so queued messages are answered, not skipped.
+- **healthcheck probes (PR #75):** `jcodemunch-watch` daemon liveness (warn-not-fail under cron) +
+  memweave index freshness (<48h).
+
 ## Recently completed (2026-06-13/14 — security & retrieval hardening)
 
 - **memweave corpus de-noised (PR #71):** skill invocations inject the skill's full body as a

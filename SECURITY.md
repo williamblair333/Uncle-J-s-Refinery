@@ -52,6 +52,32 @@ This closes the out-of-band exfiltration path (a prompt injection cannot `cat .e
 out). The invariant is CI-pinned in `tests/test_tg_security.py` (re-adding skip-permissions to the
 restricted path fails the suite). The `/work` agent is intentionally exempt — see below.
 
+### Skill promotion (`promote`) hardening
+
+Promoting a Telegram skill draft installs it into `~/.claude/skills` (global, all sessions), so the
+`promote` path is a supply-chain surface. Controls (`tg_security.py`):
+
+- **Whole-file injection scan** — `scan_skill_body` scans the entire draft, **frontmatter included**.
+  A skill's `description:` is loaded by Claude in future sessions, so an injection hidden there is a
+  persistent cross-session vector; body-only scanning (the prior behavior) let it through.
+- **No destructive overwrite** — `assert_skill_target_safe` refuses to install over a real
+  (non-symlink) skill on a name collision; only a gateway-owned symlink is replaced. The previous
+  `shutil.rmtree` path could delete a legitimate skill.
+
+### Output redaction (defense-in-depth)
+
+`scan_output` redacts secrets/paths from replies (API keys incl. spaced `sk - ant -`, relative
+`.env` paths, emails, host paths, IPs). This is **defense-in-depth, not a primary control** — the
+real protection is the restricted agent's removed action channel (above). Prose-spelled keys
+("es kay dash ant…") are an accepted residual; denylist redaction is inherently lossy.
+
+### getUpdates single-consumer (reliability invariant)
+
+The gateway is the **sole** `getUpdates` consumer (Telegram is single-consumer-per-token). A second
+no-offset consumer corrupted the shared offset for 22 days, freezing the bot and re-skipping a stale
+backlog (the message-flood incident). Stack-alert approvals route through the gateway via a state
+file, not a second `getUpdates` call. Re-introducing a second consumer is a regression.
+
 ## Telegram `/work` Agent — Elevated Access
 
 Messages prefixed `/work` route to a project-context Claude instance (cwd=PROJ_ROOT,
