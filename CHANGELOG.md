@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-14 — session-end doc sync (security/retrieval hardening)
+
+### Docs
+- `SECURITY.md` — documented the restricted Telegram agent's new no-host-access model (no
+  skip-perms / strict-mcp-config / disallowedTools) under "Known Security Model".
+- `README.md` — corrected the `grep-guard.sh` description (now routes all source reads, not just
+  `grep -r`).
+- `ROADMAP.md` — logged PRs #67/#68/#69 as recently completed; added Planned items for the
+  `jcodemunch-watch` healthcheck probe and the remaining (gitignored) Telegram red-team findings.
+
+---
+
 ## 2026-06-13 — jcode real-time watch daemon + grep-guard source-exploration coverage
 
 ### Added

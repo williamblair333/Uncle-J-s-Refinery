@@ -34,6 +34,24 @@ Security-relevant components:
 - Rate limiting is enforced per chat (20 messages/hour by default)
 - Credentials are stored in `.env`, excluded from git via `.gitignore`
 
+### Default (restricted) Telegram agent — no host access
+
+The default agent (any message without the `/work` prefix) runs with **no host access** as
+defense-in-depth behind the chat_id gate — the disclosure system prompt is no longer the only
+barrier. Enforced in `build_claude_argv()` (`tg_security.py`) via three independent default-deny
+layers:
+
+- **no `--dangerously-skip-permissions`** — headless `--print` cannot approve a permission prompt,
+  so any tool (incl. ones added by future Claude Code versions) is denied
+- **`--strict-mcp-config`** — no MCP servers load (the jcodemunch/jdata/jdoc retrieval stack is
+  unavailable to the restricted agent)
+- **`--disallowedTools`** — Bash, Edit, Write, NotebookEdit, WebFetch, WebSearch, Read, Grep,
+  Glob, Task are removed from context
+
+This closes the out-of-band exfiltration path (a prompt injection cannot `cat .env` / `curl` data
+out). The invariant is CI-pinned in `tests/test_tg_security.py` (re-adding skip-permissions to the
+restricted path fails the suite). The `/work` agent is intentionally exempt — see below.
+
 ## Telegram `/work` Agent — Elevated Access
 
 Messages prefixed `/work` route to a project-context Claude instance (cwd=PROJ_ROOT,

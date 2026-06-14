@@ -912,7 +912,7 @@ Cloned at install time (gitignored):
 ├── hooks/
 │   ├── discipline/                     ← blocking PreToolUse guards + Stop hook (step 6)
 │   │   ├── edit-surface-guard.sh       ← blocks Edit/Write on surface-list files (requires pre-mortem)
-│   │   ├── grep-guard.sh               ← blocks grep -r (routes to jcodemunch search_text)
+│   │   ├── grep-guard.sh               ← routes source-code reads (grep/rg/cat/sed/head/tail) to jcodemunch; per-segment, allows pipes/logs/writes
 │   │   └── unpushed-warn.sh            ← Stop hook: warns when branch is ahead of remote
 │   ├── langfuse_hook.py                ← Stop hook (step 8)
 │   ├── scan-secrets/                   ← guardrail (step 7)
