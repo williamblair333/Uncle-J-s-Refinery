@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-06-14 — Telegram gateway: red-team depth findings closed
+
+### Security
+- `scripts/lib/tg_security.py` — `scan_skill_body` now scans the **whole** skill file
+  (frontmatter included) for injection patterns, not just the body. Closes the red-team **HIGH**:
+  an injection hidden in a skill's `description:` is loaded by Claude in future sessions.
+- `scripts/lib/tg_security.py` + `scripts/telegram-gateway-poll.sh` — new `assert_skill_target_safe()`;
+  `install_skill()` refuses to overwrite a real dir/file on skill-name collision (only gateway-owned
+  symlinks are replaced). Removes the destructive `shutil.rmtree` path. Closes red-team **MEDIUM**.
+- `scripts/lib/tg_security.py` — `scan_output` redacts relative `.env` paths and spaced `sk - ant -`
+  keys; added `(?<![a-zA-Z])` left-guard to the existing `sk-ant-` rule (it over-redacted
+  `task-ant-…`/`flask-ant-…` — pre-existing FP). Closes red-team **MEDIUM** (defense-in-depth;
+  prose-spelled keys remain an accepted residual). 
+
+### Tests
+- `tests/test_tg_security.py` — `+12` (frontmatter injection, rmtree guard, redaction gaps +
+  left-boundary regressions). 64/64 green. Independent code-reviewer pass caught the missing
+  left-boundary before merge.
+
+---
+
 ## 2026-06-14 — memweave corpus de-noised + uv.lock autofix bump
 
 ### Changed

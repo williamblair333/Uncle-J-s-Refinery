@@ -81,7 +81,7 @@ offset_file    = sys.argv[5]
 updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
-from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv
+from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
 
@@ -222,10 +222,11 @@ def install_skill(draft_path, skill_name, scope):
     os.makedirs(skill_dir, exist_ok=True)
     shutil.copy2(draft_path, os.path.join(skill_dir, 'SKILL.md'))
     link = os.path.join(os.path.expanduser('~/.claude/skills'), skill_name)
+    # Refuse to clobber a real (non-symlink) skill on name collision; only replace
+    # a gateway-owned symlink. Never shutil.rmtree a real directory.
+    assert_skill_target_safe(link)
     if os.path.islink(link):
         os.unlink(link)
-    elif os.path.exists(link):
-        shutil.rmtree(link)
     os.symlink(skill_dir, link)
     return skill_dir
 

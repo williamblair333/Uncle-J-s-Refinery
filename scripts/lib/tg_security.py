@@ -59,8 +59,9 @@ _INJECTION_PATTERNS = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in [
 
 # Sensitive patterns that must never appear in responses sent to Telegram
 _OUTPUT_REDACTIONS = [
-    # Anthropic API keys
-    (re.compile(r'sk-ant-[a-zA-Z0-9\-_]{10,}'), '[REDACTED-API-KEY]'),
+    # Anthropic API keys. (?<![a-zA-Z]) stops "task-ant-…"/"flask-ant-…" from matching
+    # the trailing "sk" of an ordinary hyphenated word (false-positive over-redaction).
+    (re.compile(r'(?<![a-zA-Z])sk-ant-[a-zA-Z0-9\-_]{10,}'), '[REDACTED-API-KEY]'),
     # Generic long secrets next to known key names
     (re.compile(
         r'\b(ANTHROPIC_API_KEY|LANGFUSE_(?:PUBLIC|SECRET)_KEY|TELEGRAM_BOT_TOKEN'
@@ -71,6 +72,14 @@ _OUTPUT_REDACTIONS = [
     (re.compile(r'\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b'), '[REDACTED-EMAIL]'),
     # Linux filesystem paths starting at known roots
     (re.compile(r'(?:/opt|/home|/root|/etc|/var|/tmp|/usr|/proc|/sys|/run|/mnt|/srv|/dev|/snap|/media)[/\w.\-]+'), '[REDACTED-PATH]'),
+    # Relative dotenv/secret-file references the absolute-path rule above misses
+    # (./.env, config/.env, bare .env). "environment" is unaffected — a literal dot is required.
+    (re.compile(r'(?:[\w.\-/]*/)?\.env(?:\.\w+)?\b'), '[REDACTED-PATH]'),
+    # Spaced/separated Anthropic key (sk - ant - …) the contiguous rule above misses.
+    # The (?<![a-zA-Z]) left-guard stops "task-ant-…"/"flask-ant-…" from matching the
+    # trailing "sk" of an ordinary word (would over-redact / falsely reject a skill).
+    # Prose-spelled keys ("es kay dash ant") remain inherent and are an accepted residual.
+    (re.compile(r'(?<![a-zA-Z])sk[\s\-]+ant[\s\-]+[a-zA-Z0-9]{12,}'), '[REDACTED-API-KEY]'),
     # IPv4 addresses
     (re.compile(r'\b(?:\d{1,3}\.){3}\d{1,3}\b'), '[REDACTED-IP]'),
     # SCREAMING_SNAKE env-var assignments
@@ -142,10 +151,12 @@ def scan_skill_body(path: str) -> 'tuple[bool, str | None]':
     """
     Scan a skill draft file for injection patterns and secrets before promotion.
 
-    Injection patterns are checked against the body only (post-frontmatter) to
-    avoid false positives from legitimate "instructions" language in descriptions.
-    Secret patterns are checked against the full file — no secret should appear
-    anywhere in a promoted skill.
+    Injection AND secret patterns are checked against the WHOLE file, frontmatter
+    included. The frontmatter `description:` is loaded by Claude in future sessions,
+    so an injection hidden there is a persistent, cross-session attack vector
+    (red-team HIGH) — scanning the body only let it through. The specific injection
+    regexes (e.g. "ignore previous instructions", "system:" line-prefix) do not
+    match the bare word "instructions", so legitimate descriptions still pass.
 
     Returns (True, None) if safe, (False, reason_str) if rejected.
     """
@@ -155,22 +166,37 @@ def scan_skill_body(path: str) -> 'tuple[bool, str | None]':
     except OSError as e:
         return False, f"Could not read draft: {e}"
 
-    # Split on '---' to isolate frontmatter from body.
-    # Format: '---\n<frontmatter>\n---\n<body>' → split gives ['', fm, body]
-    parts = content.split('---', 2)
-    body = parts[2] if len(parts) >= 3 else content
-
-    # Body: check for prompt injection patterns
+    # Whole file: check for prompt injection patterns (frontmatter included)
     for pattern in _INJECTION_PATTERNS:
-        if pattern.search(body):
-            return False, "Skill body contains injection pattern."
+        if pattern.search(content):
+            return False, "Skill file contains injection pattern."
 
-    # Full file: check for secrets (API keys, env var assignments, etc.)
+    # Whole file: check for secrets (API keys, env var assignments, etc.)
     for pattern, _ in _OUTPUT_REDACTIONS:
         if pattern.search(content):
             return False, "Skill file contains sensitive data pattern."
 
     return True, None
+
+
+def assert_skill_target_safe(link_path: str) -> None:
+    """
+    Guard against the destructive `promote` rmtree (red-team MEDIUM).
+
+    The gateway only ever installs skills as symlinks into ~/.claude/skills. A real
+    directory or file at the target means a legitimate, non-gateway skill lives there;
+    overwriting it (the old `shutil.rmtree` path) would destroy it on a name collision.
+
+    Raises ValueError if `link_path` exists and is NOT a symlink. A missing path or a
+    gateway-owned symlink is safe to (re)create.
+    """
+    if os.path.islink(link_path):
+        return
+    if os.path.exists(link_path):
+        raise ValueError(
+            f"refusing to overwrite non-symlink at {link_path} — "
+            f"a real skill of this name already exists"
+        )
 
 
 # Built-in tools the untrusted (restricted) agent must never reach: execution,
