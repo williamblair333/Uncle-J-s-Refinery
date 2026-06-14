@@ -1,7 +1,9 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-14 — session-start follow-up sweep: PR A (red-team depth) + PR B
-(gateway single-consumer incident fix) merged; PR C next. Drain + live test = Bill's keyboard.*
+*Last updated: 2026-06-14 — session-start follow-up sweep DONE: PR A (red-team depth), PR B
+(gateway single-consumer incident fix), PR C (healthcheck probes) merged. Keyboard items remain:
+the Telegram offset drain + live test, token-rotation call, trash purge. Also a separate
+`stack-not-at-head` (a jmunch package advanced mid-session) — own remediation skill.*
 
 ## 2026-06-14 — follow-up sweep: Telegram red-team depth (PR A) + incident found
 

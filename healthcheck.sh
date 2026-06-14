@@ -633,6 +633,53 @@ check_trace_api() {
     fi
 }
 
+# ----- 9m. jcodemunch-watch inotify daemon active --------------------------
+check_jcodemunch_watch() {
+    step "jcodemunch-watch — inotify reindex daemon active"
+    # Only the literal "active" is OK. "inactive"/"failed" = a silently-died daemon
+    # (out-of-band edits stop auto-reindexing). Anything else (empty output, a
+    # "Failed to connect to bus" error under a cron context with no user DBUS) is
+    # NOT a failure — warn and skip, so cron healthchecks don't spam false fails.
+    local state
+    state="$(systemctl --user is-active jcodemunch-watch 2>/dev/null || true)"
+    case "$state" in
+        active)
+            ok "jcodemunch-watch.service active"
+            ;;
+        inactive|failed)
+            bad "jcodemunch-watch.service is $state — out-of-band edits won't auto-reindex"
+            hint "run: systemctl --user enable --now jcodemunch-watch"
+            record_fail "jcodemunch-watch-$state"
+            ;;
+        *)
+            warn "jcodemunch-watch state indeterminate ('${state:-no user systemd bus}') — skipping (cron context?)"
+            ;;
+    esac
+}
+
+# ----- 9n. memweave memory index fresh -------------------------------------
+check_memweave_fresh() {
+    step "memweave — memory index fresh (<48h)"
+    local idx="$HOME/.uncle-j-memory/.memweave/index.sqlite"
+    if [[ ! -f "$idx" ]]; then
+        bad "memweave index missing ($idx) — prior-art search is blind"
+        hint "run: bash $REPO_ROOT/scripts/memweave/sync_memory.sh --all"
+        record_fail "memweave-index-missing"
+        return
+    fi
+    local mtime now age_h
+    mtime="$(stat -c %Y "$idx" 2>/dev/null || echo 0)"
+    now="$(date +%s)"
+    age_h=$(( (now - mtime) / 3600 ))
+    if (( age_h <= 48 )); then
+        ok "memweave index fresh (${age_h}h old)"
+    else
+        bad "memweave index stale (${age_h}h old, >48h) — nightly sync may have stopped"
+        hint "run: bash $REPO_ROOT/scripts/memweave/sync_memory.sh --all"
+        record_fail "memweave-index-stale"
+    fi
+}
+
 # ===== main =================================================================
 # verify.sh is install-time (uvx cache warmup takes ~5s); run it only in
 # --full mode. --quick sticks to runtime invariants for a ~6s session-start
@@ -658,6 +705,8 @@ check_jcodemunch_index_fresh
 check_untracked_skills
 check_auto_maintain_cron
 check_embedding_canary
+check_jcodemunch_watch
+check_memweave_fresh
 if [ "$MODE" = "full" ]; then
     check_verify
     check_smoke_hook
