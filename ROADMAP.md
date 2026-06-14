@@ -9,6 +9,18 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Recently completed (2026-06-13/14 — security & retrieval hardening)
+
+- **Telegram restricted-agent lockdown (PR #68):** red-team found a CRITICAL — the restricted
+  (untrusted) agent ran `claude --dangerously-skip-permissions` with no tool restriction, so a
+  prompt injection could read `.env`/host files and exfiltrate out-of-band. Fixed via tested
+  `build_claude_argv()` (no skip-perms / `--strict-mcp-config` / `--disallowedTools`); `/work`
+  agent unchanged.
+- **jcode watch daemon + grep-guard hardening (PR #69):** activated the `jcodemunch-watch` user
+  service (real-time index freshness across all 9 repos); rewrote `grep-guard.sh` to route ALL
+  source-code reads (not just `grep -r`) to jcodemunch via per-segment dispatch.
+- **understand-anything plugin enabled in project settings (PR #67).**
+
 ## Recently completed (memweave migration — fully closed 2026-06-13)
 
 - **LIVE residue scrub (PR #63):** repointed 18 global skills + feature docs + PORTING.md + flowchart
@@ -45,6 +57,10 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   active workflows
 
 - **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
+
+- **`jcodemunch-watch` healthcheck probe (LOW)** — add a `systemctl --user is-active jcodemunch-watch` assertion to `healthcheck.sh` so a silently-died watch daemon (e.g. post-upgrade ExecStart break) is caught at session start rather than via `index_stale` drift. Deferred from PR #69.
+
+- **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
 
 ---
 
