@@ -81,7 +81,7 @@ offset_file    = sys.argv[5]
 updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
-from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe
+from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe, record_stack_callback
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
 
@@ -158,6 +158,9 @@ API_BASE = f"https://api.telegram.org/bot{bot_token}"
 
 def log(msg):
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Strip control bytes (F4) so a stray response/stderr fragment can't corrupt the
+    # log and silently break plain grep/tail observability.
+    msg = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', str(msg))
     line = f"[{ts}] {msg}\n"
     with open(log_file, "a") as f:
         f.write(line)
@@ -291,6 +294,15 @@ for update in updates:
                             except ValueError as e:
                                 log(f"promote_global: rejected — {e}")
                                 tg_send("❌ Skill name failed validation.")
+            elif cq_data in ("approve", "skip"):
+                # Stack-alert approve/skip button. The gateway is the SOLE getUpdates
+                # consumer; record the decision to a state file the stack-alerts poller
+                # reads (instead of a second getUpdates call that corrupted the offset).
+                cb_msg_id = callback_query.get("message", {}).get("message_id")
+                if cb_msg_id is not None:
+                    cb_state = os.path.join(proj_root, 'state', 'stack-alerts-callback.json')
+                    record_stack_callback(cb_state, cb_msg_id, cq_data)
+                    log(f"stack-alert callback recorded: {cq_data} message_id={cb_msg_id}")
         answer_callback(cq_id)
         continue
 
@@ -506,6 +518,10 @@ for update in updates:
     response = escape_html_response(response)
     log(f"Sending response ({len(response)} chars)")
     tg_send(response)
+
+# Observability: emit the update_ids seen and the offset transition every poll so an
+# offset freeze is visible within one cycle (incident F1 went unseen for 22 days).
+log(f"poll: {len(updates)} update(s) ids={[u.get('update_id') for u in updates]} offset {current_offset}->{new_offset}")
 
 print(new_offset)
 PYEOF

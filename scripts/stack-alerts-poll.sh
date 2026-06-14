@@ -34,8 +34,8 @@ if [[ "$reply" == "pending" ]]; then
 import sys, datetime
 sent_at_str, expiry_min = sys.argv[1], int(sys.argv[2])
 try:
-    sent_at = datetime.datetime.strptime(sent_at_str, "%Y-%m-%dT%H:%M:%SZ")
-    elapsed = (datetime.datetime.utcnow() - sent_at).total_seconds() / 60
+    sent_at = datetime.datetime.strptime(sent_at_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+    elapsed = (datetime.datetime.now(datetime.timezone.utc) - sent_at).total_seconds() / 60
     print("true" if elapsed > expiry_min else "false")
 except Exception:
     print("true")

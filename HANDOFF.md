@@ -1,7 +1,7 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-14 — working through session-start follow-ups; PR A (Telegram
-red-team depth) first (branch `fix/telegram-security-depth`).*
+*Last updated: 2026-06-14 — session-start follow-up sweep: PR A (red-team depth) + PR B
+(gateway single-consumer incident fix) merged; PR C next. Drain + live test = Bill's keyboard.*
 
 ## 2026-06-14 — follow-up sweep: Telegram red-team depth (PR A) + incident found
 
@@ -21,12 +21,27 @@ frozen at `665762228` since 2026-05-23** (22 days) → the 09:09–09:26 message
 cause: **two concurrent `getUpdates` consumers on one bot token** — `telegram-gateway-poll.sh`
 (offset-based) and `lib/notify-telegram.sh:_tg_poll_reply` (no-offset, called by
 `stack-alerts-poll.sh` when a pending approval exists). Telegram is single-consumer per token.
-The security lockdown (PR #68) **held** during the flood (destructive demands refused). → **PR B**
-(next) makes getUpdates single-consumer + a deliberate offset drain (drain needs Bill at keyboard).
+The security lockdown (PR #68) **held** during the flood (destructive demands refused).
+
+**PR B — gateway single-consumer (branch `fix/telegram-gateway-single-consumer`) DONE.** The gateway
+is now the SOLE getUpdates consumer: it records `approve`/`skip` callbacks to
+`state/stack-alerts-callback.json` (new pure `record_stack_callback`/`read_stack_callback` in
+`tg_security.py`), and `_tg_poll_reply` reads that file instead of calling getUpdates. Plus F4 (log
+byte-sanitize), F5 (datetime tz-aware), a per-poll observability line, and a new
+`scripts/telegram-drain-offset.sh` (dry-run default). +7 tests (71/71). Pre-mortem 12/12 (1 MEDIUM:
+approvals now depend on a healthy offset → the drain must run; no pitch pending so merge is safe).
+code-reviewer APPROVE (fixed a drain `set -e` UX bug). **Drain dry-run confirmed the root cause: the
+stored offset `665762228` is HIGHER than the real update_ids (~560009943) — a corrupted value.**
+
+⚠ **ACTIVATION REQUIRED (Bill, keyboard) — the fix is inert until drained.** Approvals now route
+through the gateway, which can't see updates while the offset is corrupted. Steps: (1) comment out
+the `uncle-j-telegram-gateway` cron; (2) `bash scripts/telegram-drain-offset.sh` (inspect) then
+`--confirm`; (3) re-enable the cron; (4) DM the bot to confirm a reply. The drain races the live
+cron if not paused (observed: the peek flaps 10↔0 updates).
 
 **Still queued:** PR C (healthcheck watch-daemon + memweave-freshness probes). Keyboard-only items
-for Bill: live inbound cron test (DM the bot), the offset queue-drain, bot-token rotation decision
-(was the 09:09 probe Bill or account compromise?), staged-trash purge (~57 GB).
+for Bill: the drain+live-test above, bot-token rotation decision (was the 09:09 probe Bill or
+account compromise?), staged-trash purge (~57 GB).
 
 **Unrelated pre-existing test failures (not mine):** `tests/test_memweave_search.py::test_cli_missing_store_exits_nonzero`
 + `test_cli_empty_query_exits_2` fail on clean `main` too — the store now exists, violating the

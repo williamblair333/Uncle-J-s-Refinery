@@ -87,7 +87,7 @@ python3 - "$message_id" "$packages" << 'PYEOF' > "$STATE_FILE"
 import sys, json, datetime
 state = {
     "message_id": int(sys.argv[1]),
-    "sent_at": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "sent_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "packages": json.loads(sys.argv[2])
 }
 print(json.dumps(state, indent=2))

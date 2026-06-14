@@ -2,6 +2,43 @@
 
 ---
 
+## 2026-06-14 — Telegram gateway: single-consumer getUpdates (incident fix)
+
+### Fixed
+- **Root cause of the message-flood incident (forensics in the gitignored
+  `review/2026-06-14-telegram-gateway-incident/`):** the `getUpdates` offset froze for 22 days
+  because **two cron processes consumed `getUpdates` on one bot token** (`telegram-gateway-poll.sh`
+  offset-based + `lib/notify-telegram.sh:_tg_poll_reply` no-offset). Telegram is single-consumer
+  per token. The gateway is now the **sole** consumer:
+  - `scripts/lib/tg_security.py` — new pure `record_stack_callback()` / `read_stack_callback()`
+    (atomic temp+`os.replace` write; read consumes only on exact `message_id` match).
+  - `scripts/telegram-gateway-poll.sh` — records `approve`/`skip` button presses to
+    `state/stack-alerts-callback.json` (inside the existing chat-id gate).
+  - `lib/notify-telegram.sh:_tg_poll_reply` — **rewritten** to read that state file instead of
+    calling `getUpdates`. The second consumer is gone.
+- **F4** — gateway python `log()` strips control bytes (a stray fragment had made the log binary,
+  breaking plain `grep`/`tail`).
+- **F5** — `datetime.utcnow()` → `datetime.now(timezone.utc)` in `scripts/stack-alerts-poll.sh`
+  + `scripts/stack-alerts-send.sh` (Python 3.13 deprecation; sent_at parse made tz-aware).
+
+### Added
+- `scripts/telegram-gateway-poll.sh` — per-poll observability line (update_ids + `offset N→M`)
+  so a freeze is visible within one cycle instead of 22 days.
+- `scripts/telegram-drain-offset.sh` — dry-run-by-default helper to drain the stale backlog and
+  reset the corrupted offset (the live op that activates the fix; pause the gateway cron first,
+  refuses to drain when the newest update is fresh).
+
+### Tests
+- `tests/test_tg_security.py` — `+7` relay tests (atomic write, match/consume, non-match preserve,
+  overwrite, malformed→pending). 71/71 green. Relay integration smoke verified end-to-end.
+  Independent code-reviewer pass (APPROVE; one drain-helper `set -e` UX bug fixed before merge).
+
+### Activation (Bill, at the keyboard)
+1. Pause the `uncle-j-telegram-gateway` cron. 2. `bash scripts/telegram-drain-offset.sh` (inspect),
+then `--confirm` (drain). 3. Re-enable the cron. 4. DM the bot to confirm a reply.
+
+---
+
 ## 2026-06-14 — Telegram gateway: red-team depth findings closed
 
 ### Security

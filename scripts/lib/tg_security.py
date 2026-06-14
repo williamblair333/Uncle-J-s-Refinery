@@ -243,6 +243,49 @@ def build_claude_argv(claude_bin: str, agent_sp: str,
     ]
 
 
+def record_stack_callback(state_path: str, message_id: int, data: str) -> None:
+    """
+    Record a stack-alert approve/skip button press for the stack-alerts poller to read.
+
+    The Telegram gateway is the SOLE getUpdates consumer (single-consumer-per-token —
+    a second no-offset consumer corrupted the shared update offset, incident F1/F2/F3).
+    The gateway drains the callback_query and writes the decision here; the stack-alerts
+    poller reads it via read_stack_callback() instead of making its own getUpdates call.
+
+    Write is atomic (temp + os.replace) so a concurrent reader never sees a partial file.
+    """
+    tmp = state_path + '.tmp'
+    with open(tmp, 'w') as f:
+        json.dump({"message_id": int(message_id), "data": str(data)}, f)
+    os.replace(tmp, state_path)
+
+
+def read_stack_callback(state_path: str, target_message_id: int) -> str:
+    """
+    Read (and on match, consume) the recorded stack-alert callback.
+
+    Returns "approved" if the recorded decision for target_message_id is "approve",
+    "rejected" for any other recorded decision, or "pending" if there is no file, the
+    file is malformed, or the recorded message_id does not match target. A non-matching
+    poll never consumes the file, so a live callback for a different message survives.
+    """
+    if not os.path.exists(state_path):
+        return "pending"
+    try:
+        with open(state_path) as f:
+            d = json.load(f)
+    except Exception:
+        return "pending"
+    if int(d.get("message_id", -1)) != int(target_message_id):
+        return "pending"
+    decision = d.get("data", "")
+    try:
+        os.remove(state_path)  # consume on match
+    except OSError:
+        pass
+    return "approved" if decision == "approve" else "rejected"
+
+
 def check_rate_limit(chat_id: str, state_file: str) -> tuple:
     """
     Enforce per-chat rate limiting using a JSON state file.

@@ -412,6 +412,69 @@ def test_scan_skill_body_compound_sk_word_not_rejected():
     finally:
         os.unlink(p)
 
+
+# ── stack-alert callback relay (single-consumer getUpdates fix) ───────────────────
+# The gateway is the sole getUpdates consumer; it records approve/skip callbacks to a
+# state file that the stack-alerts poller reads instead of making its own getUpdates
+# call (which corrupted the shared Telegram offset — incident F1/F2/F3).
+
+def test_read_stack_callback_missing_file_is_pending(tmp_path):
+    from tg_security import read_stack_callback
+    assert read_stack_callback(str(tmp_path / "nope.json"), 42) == "pending"
+
+
+def test_record_then_read_approve(tmp_path):
+    from tg_security import record_stack_callback, read_stack_callback
+    p = str(tmp_path / "cb.json")
+    record_stack_callback(p, 42, "approve")
+    assert read_stack_callback(p, 42) == "approved"
+    # consumed on match
+    assert not os.path.exists(p)
+
+
+def test_record_then_read_skip(tmp_path):
+    from tg_security import record_stack_callback, read_stack_callback
+    p = str(tmp_path / "cb.json")
+    record_stack_callback(p, 7, "skip")
+    assert read_stack_callback(p, 7) == "rejected"
+    assert not os.path.exists(p)
+
+
+def test_read_stack_callback_nonmatching_id_is_pending_and_preserved(tmp_path):
+    from tg_security import record_stack_callback, read_stack_callback
+    p = str(tmp_path / "cb.json")
+    record_stack_callback(p, 100, "approve")
+    # a poll for a different (older) message must not consume the live callback
+    assert read_stack_callback(p, 99) == "pending"
+    assert os.path.exists(p)
+    # the matching poll still works afterward
+    assert read_stack_callback(p, 100) == "approved"
+
+
+def test_record_stack_callback_overwrites_previous(tmp_path):
+    from tg_security import record_stack_callback, read_stack_callback
+    p = str(tmp_path / "cb.json")
+    record_stack_callback(p, 1, "approve")
+    record_stack_callback(p, 2, "skip")  # latest wins
+    assert read_stack_callback(p, 1) == "pending"
+    assert read_stack_callback(p, 2) == "rejected"
+
+
+def test_read_stack_callback_malformed_json_is_pending(tmp_path):
+    from tg_security import read_stack_callback
+    p = tmp_path / "cb.json"
+    p.write_text("{not valid json")
+    assert read_stack_callback(str(p), 42) == "pending"
+
+
+def test_record_stack_callback_atomic_no_partial(tmp_path):
+    # write must be via a temp + replace; no .tmp left behind
+    from tg_security import record_stack_callback
+    p = str(tmp_path / "cb.json")
+    record_stack_callback(p, 5, "approve")
+    assert os.path.exists(p)
+    assert not os.path.exists(p + ".tmp")
+
 # ── build_claude_argv ──────────────────────────────────────────────────────────
 # The restricted agent serves an untrusted Telegram channel and MUST run with no
 # host access. The trusted /work agent (system_prompt != "restricted") keeps full
