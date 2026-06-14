@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-14 — healthcheck: watch-daemon + memweave-freshness probes
+
+### Added
+- `healthcheck.sh` — `check_jcodemunch_watch`: `systemctl --user is-active jcodemunch-watch`.
+  Closes the deferred LOW from the 2026-06-13 watch-daemon work (a silently-died daemon was only
+  caught via index-staleness drift). Treats only literal `active` as OK; `inactive`/`failed` as a
+  recorded fail; a bus-unavailable error (cron context, no user DBUS) as a non-failing WARN so cron
+  healthchecks don't spam false positives.
+- `healthcheck.sh` — `check_memweave_fresh`: fails if `~/.uncle-j-memory/.memweave/index.sqlite` is
+  missing or its mtime is >48h old (the nightly sync stopped). Closes the deferred memweave
+  freshness-probe follow-up.
+
+Both run in `--quick` mode (read-only, <50ms). `bash -n` clean; both report OK live.
+
+---
+
 ## 2026-06-14 — Telegram gateway: single-consumer getUpdates (incident fix)
 
 ### Fixed
