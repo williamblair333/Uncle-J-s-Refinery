@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-06-13 — jcode real-time watch daemon + grep-guard source-exploration coverage
+
+### Added
+- **jcodemunch-watch user daemon activated** (`service_installer.install_service()` →
+  `~/.config/systemd/user/jcodemunch-watch.service`, `enable --now`, Linger=yes). Gives
+  real-time index freshness across all 9 indexed repos instead of relying solely on the 01:00
+  reindex cron + per-edit `register_edit`. Reversible via `service_installer.uninstall_service()`.
+  Not a git artifact (user systemd unit lives outside the repo).
+
+### Changed
+- `hooks/discipline/grep-guard.sh` rewritten to enforce the "use jcode for code exploration"
+  policy beyond the old `grep -r`-only check. Now DENIES non-recursive `grep`, plus
+  `rg`/`ag`/`ack` and `cat`/`sed`/`head`/`tail` when they read **repo source files**, routing to
+  jcode (`search_text`/`get_symbol_source`/`get_file_outline`). Detection is **per command-segment**
+  — a source file only counts as an argument to *that segment's* read tool, so `pytest a.py | tail`
+  is allowed while `cat a.py | grep x` is denied. ALLOWS: stdin pipes, `state/`/`*.log`/`/tmp`/
+  `/proc`/`/var/log` targets, non-source files, source **outside** the repo (jcode can't help),
+  `sed -i` edits, and all redirections/heredocs (writes — incl. the pre-mortem audit sink).
+- Fixed the substring-exception bug: an allowed path named in a trailing `# comment` no longer
+  exempts a real recursive source grep (comment is stripped before matching).
+
+### Tests
+- `tests/test_grep_guard.py` — new 28-case allow/deny matrix (drives the rewrite; pins the
+  false-positive ALLOW cases). 79/79 across grep-guard + tg_security suites.
+
+---
+
 ## 2026-06-13 — harden Telegram restricted agent (red-team CRITICAL fix)
 
 ### Security
