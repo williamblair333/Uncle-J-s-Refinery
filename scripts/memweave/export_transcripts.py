@@ -32,6 +32,21 @@ DEFAULT_WORKSPACE = Path(os.path.expanduser("~/.uncle-j-memory"))
 
 _SYS_REMINDER_RE = re.compile(r"<system-reminder>.*?</system-reminder>", re.DOTALL)
 
+# When a skill is invoked, the harness injects the skill's full body as a
+# user-role turn whose first line is this literal prefix. It's harness traffic,
+# not conversation — and stale/superseded skill copies (e.g. an old skill that
+# still referenced mempalace) otherwise flood prior-art search with near-dup
+# noise, the same failure mode that tanked the old mempalace mining. Drop it like
+# a system-reminder. NB: this is a harness convention, not a stable API — if a
+# future Claude Code release rewords the header, this filter quietly no-ops back
+# to today's behavior (a guard test pins the keep-real-prose side).
+_SKILL_BODY_PREFIX = "Base directory for this skill:"
+
+
+def is_skill_body(text: str) -> bool:
+    """True when a turn's text is a harness skill-body injection, not conversation."""
+    return text.lstrip().startswith(_SKILL_BODY_PREFIX)
+
 
 def strip_system_reminders(text: str) -> str:
     """Remove injected <system-reminder>…</system-reminder> spans (harness context,
@@ -61,7 +76,8 @@ def extract_text(content) -> str:
 def iter_turns(lines) -> list[tuple[str, str]]:
     """Parse jsonl transcript lines → [(role, text)] for user/assistant messages
     that carry real text. Skips metadata event types, malformed lines, and turns
-    whose only content was tool traffic or a system-reminder."""
+    whose only content was tool traffic, a system-reminder, or a skill-body
+    injection."""
     turns: list[tuple[str, str]] = []
     for line in lines:
         line = line.strip()
@@ -81,6 +97,8 @@ def iter_turns(lines) -> list[tuple[str, str]]:
             continue
         text = extract_text(msg.get("content"))
         if not text:
+            continue
+        if role == "user" and is_skill_body(text):
             continue
         turns.append((role, text))
     return turns
@@ -127,13 +145,19 @@ def export_project(project, *, projects_root=PROJECTS_ROOT, out_workspace=DEFAUL
         turns = iter_turns(tp.read_text(errors="replace").splitlines())
         date_iso = datetime.fromtimestamp(tp.stat().st_mtime, timezone.utc).strftime("%Y-%m-%d")
         md = render_markdown(tp.stem, turns, project=project, date_iso=date_iso)
-        if not md:
-            skipped_empty += 1
+        out_path = mem_dir / f"{tp.stem}.md"
+        if not md or len(md) < min_chars:
+            # Too-small/empty after filtering. Remove any stale .md left by a prior
+            # export so a newly-tightened filter (e.g. skill-body stripping that
+            # shrinks a session below min_chars) actually sheds the old, larger doc
+            # instead of leaving it behind. export stays authoritative over the store.
+            out_path.unlink(missing_ok=True)
+            if not md:
+                skipped_empty += 1
+            else:
+                skipped_small += 1
             continue
-        if len(md) < min_chars:
-            skipped_small += 1
-            continue
-        (mem_dir / f"{tp.stem}.md").write_text(md)
+        out_path.write_text(md)
         written += 1
     return written, skipped_small, skipped_empty
 
