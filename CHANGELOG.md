@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-14 — stack-not-at-head close-out (jdocmunch 1.71.0→1.73.0)
+
+### Changed
+- `uv.lock` — `jdocmunch-mcp` 1.71.0 → 1.73.0 (SessionStart autofix bump to upstream HEAD;
+  jdocmunch-only — verified nothing else floated). `uv sync --inexact` confirmed the venv matches;
+  **sqlite held at 3.51.3** (vendored pysqlite3 wheel, no clobber). Clears the `stack-not-at-head`
+  healthcheck failure. Live jdocmunch MCP server loads 1.73.0 on the next Claude Code restart.
+
+---
+
 ## 2026-06-14 — drain helper: read-only dry-run fix + --catch-up mode
 
 ### Fixed

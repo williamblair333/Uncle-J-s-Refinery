@@ -1,8 +1,9 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-14 — follow-up sweep + Telegram freeze RESOLVED live. PRs A/B/C/D merged.
-Gateway now polls healthily at a sane offset (560009958). One open item: send a test DM to confirm
-the bot replies (the offset is sane; only the live round-trip is unverified).*
+*Last updated: 2026-06-14 — follow-up sweep COMPLETE + Telegram freeze fixed & verified live (bot
+replied to a test DM, offset advanced 560009958→560009960). PRs A/B/C/D merged. stack-not-at-head
+closed (jdocmunch→1.73.0). 09:09 probe was Bill testing → NO token rotation needed. Remaining:
+restart Claude Code to load jdocmunch 1.73.0; staged-trash purge (~57 GB, Bill's call).*
 
 ## 2026-06-14 — Telegram offset freeze resolved live + drain helper hardened (PR D)
 
