@@ -1,7 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-14 — session-start follow-up sweep DONE: PR A (red-team depth), PR B
-(gateway single-consumer incident fix), PR C (healthcheck probes) merged. Keyboard items remain:
+*Last updated: 2026-06-14 — follow-up sweep + Telegram freeze RESOLVED live. PRs A/B/C/D merged.
+Gateway now polls healthily at a sane offset (560009958). One open item: send a test DM to confirm
+the bot replies (the offset is sane; only the live round-trip is unverified).*
+
+## 2026-06-14 — Telegram offset freeze resolved live + drain helper hardened (PR D)
+
+Ran the drain helper against the live bot. It surfaced the root cause directly: the stored offset
+`665762228` was HIGHER than the real update_ids (~`560009958`), so the gateway's
+`update_id+1 > offset` advance condition never fired → permanent freeze. Unstuck by repointing the
+offset into the real range (`printf 560009958 > state/telegram-gateway-offset.txt`); the gateway now
+polls cleanly (`poll: 0 update(s) ... offset 560009958->560009958` every 2 min, no flood).
+
+**Bug found + fixed during the response (PR D):** the drain helper's "read-only" dry-run used
+`getUpdates?offset=-1`, which per the Telegram API confirms/forgets prior updates — it **consumed
+Bill's live test DM**. Removed the negative offset entirely; inspection is now genuinely read-only
+(no-offset peek), `--confirm` drains via a bounded positive-offset loop, and a new `--catch-up` mode
+repoints the offset to the oldest unconfirmed id so the gateway answers queued messages instead of
+skipping them. Pre-mortem 12/12 (0 HIGH/MEDIUM, 3 LOW). bash -n + all-3-modes tested on the live
+(now-empty) queue.
+
+**Only open Telegram item:** DM the bot once to confirm the live reply round-trip (offset is sane;
+the single-consumer code + healthy offset should make it work — just unverified end-to-end). The
+earlier test DM was the one the dry-run bug ate.
+
+## 2026-06-14 — session-start follow-up sweep: PR A/B/C merged
+
+Keyboard items remain:
 the Telegram offset drain + live test, token-rotation call, trash purge. Also a separate
 `stack-not-at-head` (a jmunch package advanced mid-session) — own remediation skill.*
 

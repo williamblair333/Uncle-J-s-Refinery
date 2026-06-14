@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-06-14 — drain helper: read-only dry-run fix + --catch-up mode
+
+### Fixed
+- `scripts/telegram-drain-offset.sh` — the dry-run used `getUpdates?offset=-1`, which per the
+  Telegram API **confirms/forgets prior updates** — so the "read-only" inspection silently consumed
+  a live test message during the incident response. The negative offset is **removed entirely**:
+  inspection now uses only the no-offset peek (confirms nothing), and `--confirm` drains via a
+  bounded **positive-offset** confirm loop (confirms `< offset`, predictable).
+
+### Added
+- `scripts/telegram-drain-offset.sh --catch-up` — sets the offset to the OLDEST unconfirmed id so
+  the gateway processes the queue **forward without skipping** (the correct mode for a frozen offset
+  when you want queued messages answered). `--confirm` remains the "discard stale backlog" mode and
+  refuses when any fresh (<600s) update is present.
+
+The 22-day offset freeze (id `665762228`, corrupt/high) was unstuck this session by repointing the
+offset into the real id range; the gateway now polls healthily and tracks new messages.
+
+---
+
 ## 2026-06-14 — healthcheck: watch-daemon + memweave-freshness probes
 
 ### Added
