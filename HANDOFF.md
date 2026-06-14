@@ -1,7 +1,38 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-14 — memweave exporter drops skill-body noise + uv.lock
-autofix bump committed (branch `fix/memweave-exporter-skill-body-noise`).*
+*Last updated: 2026-06-14 — working through session-start follow-ups; PR A (Telegram
+red-team depth) first (branch `fix/telegram-security-depth`).*
+
+## 2026-06-14 — follow-up sweep: Telegram red-team depth (PR A) + incident found
+
+Session-start briefing listed deferred follow-ups; Bill said "do the follow up and pr merge as
+we go." Working them as separate PRs by risk.
+
+**PR A — Telegram security depth (this branch) DONE.** Closed the three open red-team findings from
+`review/telegram-gateway-redteam.md`: HIGH frontmatter-injection (`scan_skill_body` scans whole
+file now), MEDIUM destructive `promote` (new `assert_skill_target_safe()` refuses to clobber a real
+skill; rmtree path removed), MEDIUM output-redaction gaps (`.env` relative + spaced `sk-ant`;
+left-boundary fix on the existing key rule too). +12 tests, 64/64. Pre-mortem 12/12 CLEAR;
+code-reviewer caught a missing regex boundary, fixed before merge.
+
+**NEW — active production bug found this session (forensics in the gitignored
+`review/2026-06-14-telegram-gateway-incident/`).** The Telegram `getUpdates` **offset has been
+frozen at `665762228` since 2026-05-23** (22 days) → the 09:09–09:26 message flood Bill saw. Root
+cause: **two concurrent `getUpdates` consumers on one bot token** — `telegram-gateway-poll.sh`
+(offset-based) and `lib/notify-telegram.sh:_tg_poll_reply` (no-offset, called by
+`stack-alerts-poll.sh` when a pending approval exists). Telegram is single-consumer per token.
+The security lockdown (PR #68) **held** during the flood (destructive demands refused). → **PR B**
+(next) makes getUpdates single-consumer + a deliberate offset drain (drain needs Bill at keyboard).
+
+**Still queued:** PR C (healthcheck watch-daemon + memweave-freshness probes). Keyboard-only items
+for Bill: live inbound cron test (DM the bot), the offset queue-drain, bot-token rotation decision
+(was the 09:09 probe Bill or account compromise?), staged-trash purge (~57 GB).
+
+**Unrelated pre-existing test failures (not mine):** `tests/test_memweave_search.py::test_cli_missing_store_exits_nonzero`
++ `test_cli_empty_query_exits_2` fail on clean `main` too — the store now exists, violating the
+tests' missing-store assumption. Worth a fixture fix later.
+
+---
 
 ## 2026-06-14 — memweave corpus de-noised (skill-body filter) + uv.lock committed
 
