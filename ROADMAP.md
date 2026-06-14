@@ -11,6 +11,12 @@ Completed items age out after ~4 weeks.
 
 ## Recently completed (2026-06-13/14 — security & retrieval hardening)
 
+- **memweave corpus de-noised (PR #71):** skill invocations inject the skill's full body as a
+  user-role turn (`Base directory for this skill:`), which the exporter indexed as searchable
+  prose — flooding prior-art search with stale (often superseded) skill copies. `iter_turns` now
+  drops these; `export_project` made authoritative (deletes a stale `.md` when a session falls
+  below `min_chars` after filtering). Corpus rebuilt from scratch (577 indexed / 7746 chunks);
+  transcripts untouched. Also committed the `jdocmunch-mcp` 1.70.2→1.71.0 autofix `uv.lock` bump.
 - **Telegram restricted-agent lockdown (PR #68):** red-team found a CRITICAL — the restricted
   (untrusted) agent ran `claude --dangerously-skip-permissions` with no tool restriction, so a
   prompt injection could read `.env`/host files and exfiltrate out-of-band. Fixed via tested
