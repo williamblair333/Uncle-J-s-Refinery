@@ -9,6 +9,14 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Recently completed (2026-06-14 — cron silent failures + healthcheck runtime probes)
+
+- **3 silent cron failures fixed:** `dream.sh` PATH export (dreaming broken since Jun 10 — cron
+  couldn't find `claude`); `state/dreaming.env` unquoted cron schedule (bash parsed `2 * * *` as
+  a command on every source); `auto-maintain.sh:294` `${#SKILL_NAMES[@]:-0}` invalid bash
+  (bad substitution on every run). Healthcheck added `check_dreaming_runtime` (last-run freshness
+  >36h = FAIL, surfaces `!!` log clues) + `check_auto_maintain_runtime` (shell error pattern scan).
+
 ## Recently completed (2026-06-14 — follow-up sweep + Telegram incident)
 
 - **Telegram red-team depth findings closed (PR #73):** whole-file injection scan on `promote`
@@ -78,8 +86,6 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   active workflows
 
 - **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
-
-- **`jcodemunch-watch` healthcheck probe (LOW)** — add a `systemctl --user is-active jcodemunch-watch` assertion to `healthcheck.sh` so a silently-died watch daemon (e.g. post-upgrade ExecStart break) is caught at session start rather than via `index_stale` drift. Deferred from PR #69.
 
 - **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
 
