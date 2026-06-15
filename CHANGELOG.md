@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-06-15 — diagnose git-pull gap + PR #77: prune stale skill symlinks
+
+### Analysis
+- Diagnosed why `git pull` is insufficient on a non-source machine: repo files update but
+  the host plane (`~/.claude/`, venvs, crons, MCP registrations, code index) does not.
+  `install.sh` must be re-run after any update that touches those layers.
+- Found 6 dangling symlinks + 1 orphan dir in `~/.claude/skills/` — mempalace skills deleted
+  from `global-skills/` during the memweave migration but never removed from the symlink tree.
+
+### PR #77 (pending review — do not merge without checking)
+- `install-reliability.sh` — added cleanup loop after the skill-install block. Sweeps
+  `~/.claude/skills/*` for symlinks whose targets no longer exist; removes them with `rm -f`.
+  Non-symlink entries (orphan dirs, plugin-installed dirs) are explicitly skipped.
+
+### Pending (Bill's keyboard)
+- Clean up this machine's 7 dead skill entries before or after merging PR #77:
+  `! for f in ~/.claude/skills/mempalace-*; do rm -rf "$f" && echo "removed: $f"; done`
+- Langfuse patch: `! python3 /tmp/langfuse_hook_fix.py` was a no-op ("Already patched").
+  Traces buffered since 2026-05-18 may need a different fix — the patch applied cleanly
+  at some earlier point. Monitor Langfuse for incoming traces.
+
+---
+
 ## 2026-06-15 — healthcheck: stack-not-at-head → WARN + jdocmunch 1.81.0 + langfuse patch staged
 
 ### Changed

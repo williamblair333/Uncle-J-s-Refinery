@@ -1,9 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-15 — Demoted stack-not-at-head to WARN (healthcheck.sh); bumped jdocmunch
-to HEAD (1.81.0). Langfuse hook patch staged at `/tmp/langfuse_hook_fix.py` — Bill must apply it
-(`! python3 /tmp/langfuse_hook_fix.py`) to restore Langfuse tracing and unblock the dreaming loop
-(12MB of traces buffered since 2026-05-18). Tonight's healthcheck should be HEALTHCHECK: ok.*
+*Last updated: 2026-06-15 — PR #77 open: prune stale skill symlinks in install-reliability.sh.
+7 dead mempalace symlinks still live in ~/.claude/skills/ on this machine — keyboard cleanup needed.
+Langfuse patch was a no-op ("Already patched"); dreaming ran 11h ago so tracing may already be live.*
+
+## 2026-06-15 — git-pull gap diagnosed + PR #77 open
+
+### What happened
+- Session-start briefing: `HEALTHCHECK: ok`, all crons active, memweave index fresh (0h).
+- Langfuse hook patch (`/tmp/langfuse_hook_fix.py`) ran and returned "Already patched" — the
+  hook was fixed at some earlier point. Dreaming ran ~11h ago; Langfuse observability appears live.
+- Diagnosed why `git pull` alone breaks a non-source machine: tracked files sync, but the host
+  plane (`~/.claude/`, `.venv/`, crons, MCP registrations, `~/.code-index/`) does not.
+  `install.sh` must be re-run after updates that touch those layers.
+- Found 6 dangling symlinks + 1 orphan dir from mempalace skills deleted during the June 13
+  memweave migration.
+
+### PR #77 — install-reliability.sh: prune stale skill symlinks (PENDING REVIEW)
+Adds a cleanup loop after the skill-install block that removes `~/.claude/skills/*` symlinks
+whose targets no longer exist. Non-symlinks skipped. `bash -n` clean; pre-commit passed.
+
+**Most important thing for next session:** Review and merge PR #77, then run install.sh on any
+machine that pulled recent changes.
+
+### Keyboard items
+1. **Clean up this machine's 7 dead skill entries** (harness blocks Claude writes to `~/.claude/`):
+   `! for f in ~/.claude/skills/mempalace-*; do rm -rf "$f" && echo "removed: $f"; done`
+2. **After merging PR #77**, re-run `./install-reliability.sh` to confirm 0 stale entries printed.
 
 ## 2026-06-14 — Telegram offset freeze resolved live + drain helper hardened (PR D)
 
