@@ -1,9 +1,9 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-14 — Fixed 3 silent cron failures (dreaming PATH, dreaming.env quoting,
-auto-maintain bad substitution) + added healthcheck runtime probes for both. State file
-dreaming.env fixed in-place (gitignored). Healthcheck now shows 2 expected FAILs that clear
-after tonight's cron runs succeed. uv.lock committed (jdocmunch 1.74.0 bump).*
+*Last updated: 2026-06-15 — Demoted stack-not-at-head to WARN (healthcheck.sh); bumped jdocmunch
+to HEAD (1.81.0). Langfuse hook patch staged at `/tmp/langfuse_hook_fix.py` — Bill must apply it
+(`! python3 /tmp/langfuse_hook_fix.py`) to restore Langfuse tracing and unblock the dreaming loop
+(12MB of traces buffered since 2026-05-18). Tonight's healthcheck should be HEALTHCHECK: ok.*
 
 ## 2026-06-14 — Telegram offset freeze resolved live + drain helper hardened (PR D)
 

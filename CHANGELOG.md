@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-15 — healthcheck: stack-not-at-head → WARN + jdocmunch 1.81.0 + langfuse patch staged
+
+### Changed
+- `healthcheck.sh` `check_stack_freshness` — demoted from `bad + record_fail` to `warn` only.
+  Packages falling briefly behind HEAD is advisory; auto-maintain handles upgrades on threshold.
+  Dreaming/auto-maintain runtime probes are the real health signal.
+- `uv.lock` — `jdocmunch-mcp` bumped to HEAD (145655d, 2026-06-15).
+
+### Pending (Bill's keyboard)
+- `/tmp/langfuse_hook_fix.py` — patches `~/.claude/hooks/langfuse_hook.py`:
+  3× `start_as_current_span` → `start_as_current_observation`; removes both `update_current_trace`
+  calls (no longer exists in langfuse 4.x); uses `_create_trace_tags_via_ingestion` for tags.
+  Unblocks 12MB of pending traces buffered since 2026-05-18. Run: `! python3 /tmp/langfuse_hook_fix.py`
+
+---
+
 ## 2026-06-14 — fix silent cron failures + healthcheck runtime probes
 
 ### Fixed

@@ -398,9 +398,8 @@ check_stack_freshness() {
     if [ "$freshness_exit" -eq 0 ]; then
         ok "all packages at HEAD"
     else
-        bad "one or more packages behind HEAD — run check-stack-freshness.sh for details"
+        warn "one or more packages behind HEAD — run check-stack-freshness.sh for details"
         hint "run: cd $REPO_ROOT && uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp && uv sync --inexact"
-        record_fail "stack-not-at-head"
     fi
 }
 
