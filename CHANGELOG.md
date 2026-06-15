@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-06-15 — fix(install): prune stale skill symlinks after global-skills deletions
+
+### Fixed
+- `install-reliability.sh` — add cleanup pass after the skill-install loop. Any symlink in
+  `~/.claude/skills/` whose target no longer exists in `global-skills/` is now removed
+  automatically on `install.sh` re-run. Non-symlink entries (plugin-installed dirs) are skipped.
+  Root cause: the mempalace→memweave migration deleted 6 skills from `global-skills/`; the old
+  symlinks remained as dangling entries in `~/.claude/skills/`, showing up in Claude's skill
+  list but failing to load. `git pull` alone is not sufficient after a skill is removed from
+  the repo — `install.sh` must be re-run.
+
+---
+
 ## 2026-06-15 — healthcheck: stack-not-at-head → WARN + jdocmunch 1.81.0 + langfuse patch staged
 
 ### Changed

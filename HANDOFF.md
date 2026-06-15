@@ -1,9 +1,24 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-15 — Demoted stack-not-at-head to WARN (healthcheck.sh); bumped jdocmunch
-to HEAD (1.81.0). Langfuse hook patch staged at `/tmp/langfuse_hook_fix.py` — Bill must apply it
-(`! python3 /tmp/langfuse_hook_fix.py`) to restore Langfuse tracing and unblock the dreaming loop
-(12MB of traces buffered since 2026-05-18). Tonight's healthcheck should be HEALTHCHECK: ok.*
+*Last updated: 2026-06-15 — install-reliability.sh now prunes stale skill symlinks (PR open for
+review). Langfuse hook patch was a no-op (`Already patched`). Dangling mempalace skill symlinks
+still need manual cleanup on this machine — see keyboard item below.*
+
+## 2026-06-15 — install-reliability.sh: prune stale skill symlinks (PR open)
+
+`git pull` alone is not enough after skills are removed from `global-skills/` — the old
+symlinks in `~/.claude/skills/` survive indefinitely. The mempalace→memweave migration left 6
+dangling symlinks + 1 orphan dir. `install-reliability.sh` now sweeps for dangling symlinks
+([ -L ] && ! [ -e ]) after the install loop and removes them with `rm -f`. Non-symlinks are
+skipped so plugin-installed dirs are safe.
+
+**Keyboard item — clean up this machine's 7 dead entries now (harness blocks Claude writes to ~/.claude/):**
+```
+! for f in ~/.claude/skills/mempalace-*; do rm -rf "$f" && echo "removed: $f"; done
+```
+After that, re-run `./install-reliability.sh` (or `./install.sh`) to verify 0 stale entries.
+The orphan dir `mempalace-stop-hook-segfault-fix` will be removed by the above command; future
+installs will ignore it (the cleanup loop skips non-symlinks; it won't accidentally re-create it).
 
 ## 2026-06-14 — Telegram offset freeze resolved live + drain helper hardened (PR D)
 

@@ -41,6 +41,14 @@ for src in "$STACK_ROOT/global-skills"/*/; do
     ok "skill installed: $skill_name"
 done
 
+# ── Prune stale skill symlinks (targets removed from global-skills) ───────────
+for link in "$CLAUDE_DIR/skills"/*; do
+    [ -L "$link" ] || continue   # only symlinks; leave real dirs alone
+    [ -e "$link" ] && continue   # target still exists — keep
+    rm -f "$link"
+    ok "removed stale skill symlink: $(basename "$link")"
+done
+
 # ── Agents ───────────────────────────────────────────────────────────────────
 step "Installing agents to $CLAUDE_DIR/agents"
 mkdir -p "$CLAUDE_DIR/agents"
