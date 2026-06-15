@@ -55,16 +55,6 @@ if echo "$CHANGED" | grep -qE "^verify\.sh$"; then
   ACTIONS+=("✅ <b>verify.sh</b> updated — run ./verify.sh to check for new requirements")
 fi
 
-# New global skills
-NEW_SKILLS=$(git diff ORIG_HEAD HEAD --diff-filter=A --name-only 2>/dev/null \
-  | grep -E "^global-skills/[^/]+/SKILL\.md$" \
-  | sed 's|global-skills/||;s|/SKILL\.md||' || true)
-if [[ -n "$NEW_SKILLS" ]]; then
-  while IFS= read -r skill; do
-    ACTIONS+=("🧠 New skill: <b>${skill}</b> — run: bash install-reliability.sh to link it")
-  done <<< "$NEW_SKILLS"
-fi
-
 # New scripts
 NEW_SCRIPTS=$(git diff ORIG_HEAD HEAD --diff-filter=A --name-only 2>/dev/null \
   | grep -E "^scripts/[^/]+\.sh$" \
@@ -72,6 +62,21 @@ NEW_SCRIPTS=$(git diff ORIG_HEAD HEAD --diff-filter=A --name-only 2>/dev/null \
 if [[ -n "$NEW_SCRIPTS" ]]; then
   NAMES=$(echo "$NEW_SCRIPTS" | tr '\n' ' ')
   ACTIONS+=("📜 New scripts: ${NAMES}— check scripts/ for wiring instructions")
+fi
+
+# ------------------------------------------------------------------
+# Auto-run install-reliability.sh when skill tree or installer changed
+# (silent — no user action needed; logged to post-merge.log)
+# Fires before the ACTIONS early-exit so it runs even on skill-only pulls.
+# ------------------------------------------------------------------
+if echo "$CHANGED" | grep -qE '^(global-skills/|install-reliability\.sh)'; then
+    INSTALL_REL="$PROJ_ROOT/install-reliability.sh"
+    if [[ -x "$INSTALL_REL" ]]; then
+        log "post-merge: skill tree changed — running install-reliability.sh..."
+        bash "$INSTALL_REL" >> "$LOG" 2>&1 && \
+            log "post-merge: install-reliability.sh complete" || \
+            log "post-merge: install-reliability.sh failed (non-fatal)"
+    fi
 fi
 
 # ------------------------------------------------------------------

@@ -1,24 +1,23 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-15 — install-reliability.sh now prunes stale skill symlinks (PR open for
-review). Langfuse hook patch was a no-op (`Already patched`). Dangling mempalace skill symlinks
-still need manual cleanup on this machine — see keyboard item below.*
+*Last updated: 2026-06-15 — PR #77 merged: git pull now self-heals skill symlinks via post-merge
+hook. Dangling mempalace symlinks still need one-time manual cleanup on this machine.*
 
-## 2026-06-15 — install-reliability.sh: prune stale skill symlinks (PR open)
+## 2026-06-15 — git pull is now self-healing for skill changes (merged)
 
-`git pull` alone is not enough after skills are removed from `global-skills/` — the old
-symlinks in `~/.claude/skills/` survive indefinitely. The mempalace→memweave migration left 6
-dangling symlinks + 1 orphan dir. `install-reliability.sh` now sweeps for dangling symlinks
-([ -L ] && ! [ -e ]) after the install loop and removes them with `rm -f`. Non-symlinks are
-skipped so plugin-installed dirs are safe.
+`git pull` now automatically runs `install-reliability.sh` when `global-skills/` or
+`install-reliability.sh` itself changes. Combined with the stale-symlink prune added to
+`install-reliability.sh`, this means:
+- Skills added to the repo → symlinked automatically on next pull
+- Skills deleted from the repo → dangling symlinks pruned automatically on next pull
+- No manual `install.sh` re-run needed for skill changes
 
-**Keyboard item — clean up this machine's 7 dead entries now (harness blocks Claude writes to ~/.claude/):**
+`install.sh` still requires manual re-run for heavier changes (new crons, MCP registrations).
+
+**One-time keyboard cleanup for this machine's 7 dead mempalace entries:**
 ```
 ! for f in ~/.claude/skills/mempalace-*; do rm -rf "$f" && echo "removed: $f"; done
 ```
-After that, re-run `./install-reliability.sh` (or `./install.sh`) to verify 0 stale entries.
-The orphan dir `mempalace-stop-hook-segfault-fix` will be removed by the above command; future
-installs will ignore it (the cleanup loop skips non-symlinks; it won't accidentally re-create it).
 
 ## 2026-06-14 — Telegram offset freeze resolved live + drain helper hardened (PR D)
 

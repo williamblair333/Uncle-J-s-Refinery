@@ -2,7 +2,7 @@
 
 ---
 
-## 2026-06-15 — fix(install): prune stale skill symlinks after global-skills deletions
+## 2026-06-15 — fix(install): prune stale skill symlinks + auto-run on pull
 
 ### Fixed
 - `install-reliability.sh` — add cleanup pass after the skill-install loop. Any symlink in
@@ -10,8 +10,11 @@
   automatically on `install.sh` re-run. Non-symlink entries (plugin-installed dirs) are skipped.
   Root cause: the mempalace→memweave migration deleted 6 skills from `global-skills/`; the old
   symlinks remained as dangling entries in `~/.claude/skills/`, showing up in Claude's skill
-  list but failing to load. `git pull` alone is not sufficient after a skill is removed from
-  the repo — `install.sh` must be re-run.
+  list but failing to load.
+- `scripts/post-merge-hook.sh` — auto-runs `install-reliability.sh` whenever `global-skills/`
+  or `install-reliability.sh` itself changes. Previously the hook only printed an advisory.
+  Result: `git pull` is now self-healing — stale symlinks pruned, new ones linked, no manual
+  re-run required on any machine.
 
 ---
 
