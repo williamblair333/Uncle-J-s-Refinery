@@ -1,25 +1,22 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — install --update flag complete. Selective section running via
-detect_changed_sections(). Unit tests 11/11 green. CI job added. Ready for merge to main.*
+*Last updated: 2026-06-16 — install --update flag merged (PR #78, commit 8f9ac28). On main, clean.*
 
-## 2026-06-16 — install --update flag: selective section running (feat/install-update-flag)
+## 2026-06-16 — install --update flag: selective section running (PR #78, merged)
 
-`install.sh` now accepts `--update` to run git pull + re-exec (fetches origin/main, pulls if
-behind, re-execs freshly-pulled script with `SELF_UPDATED=1` guard to prevent loops).
-Post-re-exec runs only sections affected by changed files via new `detect_changed_sections()`
-in `lib/install-update.sh`, mapping to sections: skills, uv_sync, mcp_templates, jdocmunch.
+`install.sh` now accepts `--update`: fetches origin/main, pulls if behind, re-execs the
+freshly-pulled script via `exec "$SCRIPT" "$@"` with `SELF_UPDATED=1` guard (prevents loops).
+Post-re-exec runs only sections affected by changed files via `detect_changed_sections()`
+in `lib/install-update.sh` — skills, uv_sync, mcp_templates, or jdocmunch.
 If `install.sh` itself changed, falls through to full install automatically.
 
-**Deliverables:**
-- `install.sh` — added `--update` flag block (phase A: pull-detection + re-exec; phase B: selective sections)
-- `lib/install-update.sh` — new module with `detect_changed_sections()` function, tests passing
-- `tests/test_install_update.py` — 11 unit tests (all passing; guard tests excluded from CI via `-k "not guard"`)
-- `.github/workflows/ci.yml` — added job 7 `test-install-update` after `test-audit`
-- `bash -n` verified on both modified shell scripts
-- YAML validation passed
+**Shipped:**
+- `install.sh` — `--update` flag, Phase A (pull+re-exec), Phase B (selective sections)
+- `lib/install-update.sh` — `detect_changed_sections()` function
+- `tests/test_install_update.py` — 11 unit tests (11/11 green)
+- `.github/workflows/ci.yml` — job 7 `test-install-update`
 
-**Next session:** merge to main. No keyboard items.
+**No keyboard items. No open PRs.**
 
 ---
 
