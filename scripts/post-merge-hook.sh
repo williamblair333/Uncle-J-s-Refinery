@@ -55,6 +55,11 @@ if echo "$CHANGED" | grep -qE "^verify\.sh$"; then
   ACTIONS+=("✅ <b>verify.sh</b> updated — run ./verify.sh to check for new requirements")
 fi
 
+# healthcheck.sh changed — re-run to pick up fixes or new probes
+if echo "$CHANGED" | grep -qE "^healthcheck\.sh$"; then
+  ACTIONS+=("🩺 <b>healthcheck.sh</b> updated — run bash ./healthcheck.sh to see current state")
+fi
+
 # New scripts
 NEW_SCRIPTS=$(git diff ORIG_HEAD HEAD --diff-filter=A --name-only 2>/dev/null \
   | grep -E "^scripts/[^/]+\.sh$" \
