@@ -1,6 +1,23 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — post-merge-hook now hints on healthcheck.sh pull.*
+*Last updated: 2026-06-16 — install.sh --update now tells user to open Claude Code first.*
+
+## 2026-06-16 — fix(install): --update completion message now guides Claude Code restart
+
+`install.sh --update` previously ended with `Run: bash healthcheck.sh` — users ran it
+from bash and saw 3 unexplained MCP failures (MCP Connected is session-scoped). New
+message:
+```
+Next steps:
+  1. Open Claude Code (MCP servers only connect inside an active session)
+  2. Run: bash healthcheck.sh
+```
+LOW advisory: step 1 is slightly redundant if already inside Claude Code terminal, but
+not harmful. Future wording: "ensure Claude Code is open."
+
+**No keyboard items. No open PRs.**
+
+---
 
 ## 2026-06-16 — fix(post-merge-hook): print action hint when healthcheck.sh changes
 
