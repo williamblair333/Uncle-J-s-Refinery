@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-06-16 — fix(pin-canary): call capture_canary() directly via venv Python, no Claude Code session needed
+
+### Fixed
+- `scripts/pin-canary.sh` — rewrote to call `capture_canary()` directly from
+  `jcodemunch_mcp.retrieval.embed_drift` via `.venv/bin/python`. Removed the
+  `CLAUDE_CODE_SESSION` guard and `claude -p` MCP approach entirely — the function
+  is a plain Python call that works from any bash context.
+- `healthcheck.sh` `check_embedding_canary` — restored hint to `run:` format so
+  healthcheck's interactive `[y/N]` offer works again. Previously changed to
+  non-interactive after the wrong fix (the MCP approach); now corrected.
+
+---
+
 ## 2026-06-16 — fix(install): --update completion message guides user to open Claude Code first
 
 ### Fixed

@@ -1,6 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — install.sh --update now tells user to open Claude Code first.*
+*Last updated: 2026-06-16 — pin-canary.sh now works from plain bash (no Claude Code session needed).*
+
+## 2026-06-16 — fix(pin-canary): direct Python call, no Claude Code session required
+
+`scripts/pin-canary.sh` previously tried to pin the canary by calling `check_embedding_drift`
+via `claude -p` (non-interactive). MCP tools don't load in non-interactive sessions, so this
+never worked. A second Claude session discovered the fix: `capture_canary()` is a plain
+Python function in `jcodemunch_mcp.retrieval.embed_drift` — call it directly via `.venv/bin/python`.
+
+Script is now a simple Python heredoc — no `claude` binary required, no session guard, works
+from plain bash. healthcheck hint restored to `run:` format so the interactive auto-fix offer works.
+
+**Two LOW advisories from pre-mortem:**
+- Import path `jcodemunch_mcp.retrieval.embed_drift` is an internal module; a future
+  jcodemunch-mcp reorganization would break the import loudly (ImportError, healthcheck re-offers fix).
+- Function has been stable across all versions seen in this project.
+
+**No keyboard items. No open PRs.**
+
+---
 
 ## 2026-06-16 — fix(install): --update completion message now guides Claude Code restart
 

@@ -9,12 +9,14 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
-## Recently completed (2026-06-16 — healthcheck loop fixed)
+## Recently completed (2026-06-16 — healthcheck loop fixed + pin-canary direct Python)
 
 - **4 healthcheck bugs fixed:** MCP not-Connected hint no longer triggers install.sh; Langfuse
   checks gate on `LANGFUSE_PUBLIC_KEY` so unconfigured machines skip silently; 3 feature-specific
-  crons removed from mandatory EXPECTED array; pin-canary hint made non-interactive with session
-  note. `scripts/pin-canary.sh` exits cleanly outside Claude Code session.
+  crons removed from mandatory EXPECTED array; pin-canary hint restored to interactive `run:` form.
+- **`scripts/pin-canary.sh` rewritten:** now calls `capture_canary()` directly via `.venv/bin/python`
+  from `jcodemunch_mcp.retrieval.embed_drift` — no `claude` binary, no MCP session required.
+  Removed the `CLAUDE_CODE_SESSION` guard and `claude -p` approach entirely.
 
 ## Recently completed (2026-06-15/16 — git pull self-healing)
 
