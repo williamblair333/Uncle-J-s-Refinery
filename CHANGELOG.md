@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-16 — fix(install): --update completion message guides user to open Claude Code first
+
+### Fixed
+- `install.sh` — `--update` completion message replaced with numbered next-steps:
+  `1. Open Claude Code (MCP servers only connect inside an active session)`
+  `2. Run: bash healthcheck.sh`
+  Previously the message said only `Run: bash healthcheck.sh`, so users ran it from
+  plain bash and saw 3 unexplained MCP failures.
+
+---
+
 ## 2026-06-16 — fix(post-merge-hook): print action hint when healthcheck.sh changes on pull
 
 ### Fixed

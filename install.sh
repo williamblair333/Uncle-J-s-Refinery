@@ -123,7 +123,9 @@ if [[ "$UPDATE" == "1" && "$SELF_UPDATED" == "1" ]]; then
     fi
 
     step "Update complete"
-    printf '\nRun: bash healthcheck.sh   to verify everything is OK\n\n'
+    printf '\nNext steps:\n'
+    printf '  1. Open Claude Code (MCP servers only connect inside an active session)\n'
+    printf '  2. Run: bash healthcheck.sh\n\n'
     exit 0
 fi
 
