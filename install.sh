@@ -3,8 +3,13 @@
 #
 # Usage:
 #   ./install.sh                    # install stack + register MCP servers + run healthcheck
+#   ./install.sh --update           # git pull + re-run only changed sections (idempotent)
 #   ./install.sh --skip-optional    # skip MotherDuck warm-cache
 #   ./install.sh --non-interactive  # skip all optional-feature prompts (CI/automation)
+#
+# --update flow: fetches origin/main, pulls if behind, re-execs the new script,
+#   then runs only the sections affected by what changed (skills, deps, docs, etc.).
+#   If install.sh itself changed, runs the full install automatically.
 #
 # MCP servers are always registered (--auto-register is now the default).
 # After install, restart Claude Code then run: bash healthcheck.sh
@@ -13,16 +18,23 @@
 
 set -euo pipefail
 STACK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT="$(readlink -f "$0")"
 cd "$STACK_ROOT"
+
+# shellcheck source=lib/install-update.sh
+source "$STACK_ROOT/lib/install-update.sh"
 
 AUTO_REGISTER=1
 SKIP_OPTIONAL=0
 NON_INTERACTIVE=0
+UPDATE=0
+SELF_UPDATED="${SELF_UPDATED:-0}"
 for arg in "$@"; do
     case "$arg" in
         --auto-register)   AUTO_REGISTER=1 ;;
         --skip-optional)   SKIP_OPTIONAL=1 ;;
         --non-interactive) NON_INTERACTIVE=1 ;;
+        --update)          UPDATE=1 ;;
     esac
 done
 export NON_INTERACTIVE
@@ -34,6 +46,86 @@ has()   { command -v "$1" >/dev/null 2>&1; }
 
 # Source early so install_cron / prompt_yes_no are available throughout
 source "$STACK_ROOT/lib/feature-helpers.sh"
+
+# ── Self-update Phase A: pull + re-exec ──────────────────────────────────────
+# Skipped when SELF_UPDATED=1 (set before re-exec to prevent infinite loops).
+if [[ "$UPDATE" == "1" && "$SELF_UPDATED" != "1" ]]; then
+    step "Checking for updates"
+    git fetch --quiet origin main
+    LOCAL=$(git rev-parse HEAD)
+    REMOTE=$(git rev-parse origin/main)
+    if [[ "$LOCAL" == "$REMOTE" ]]; then
+        ok "Already at HEAD — nothing to pull"
+        UPDATE=0
+    else
+        ok "Updates found ($(git rev-parse --short HEAD)..$(git rev-parse --short origin/main))"
+        if ! git pull --ff-only --quiet origin main; then
+            warn "git pull failed — resolve conflicts then re-run"
+            exit 1
+        fi
+        ok "Pulled to $(git rev-parse --short HEAD)"
+        export SELF_UPDATED=1
+        exec "$SCRIPT" "$@"
+    fi
+fi
+
+# ── Self-update Phase B: selective section run (post re-exec) ─────────────────
+# Runs when: --update flag set AND SELF_UPDATED=1 (i.e. we just re-exec'd).
+if [[ "$UPDATE" == "1" && "$SELF_UPDATED" == "1" ]]; then
+    CHANGED=$(git diff ORIG_HEAD HEAD --name-only 2>/dev/null || echo "")
+    if [[ -z "$CHANGED" ]]; then
+        ok "No file changes detected after pull — nothing to do"
+        exit 0
+    fi
+    SECTIONS=$(detect_changed_sections "$CHANGED")
+
+    # If install.sh itself changed, drop --update and run full install
+    if echo "$SECTIONS" | grep -q "^full$"; then
+        step "install.sh changed — running full install"
+        ARGS_NO_UPDATE=()
+        for arg in "$@"; do [[ "$arg" != "--update" ]] && ARGS_NO_UPDATE+=("$arg"); done
+        exec "$SCRIPT" "${ARGS_NO_UPDATE[@]}"
+    fi
+
+    step "Selective update ($(echo "$SECTIONS" | tr '\n' ' ' | sed 's/ $//'))"
+    VENV_BIN="$STACK_ROOT/.venv/bin"
+
+    if echo "$SECTIONS" | grep -q "^uv_sync$"; then
+        step "Syncing Python dependencies (pyproject.toml/uv.lock changed)"
+        uv sync --inexact
+        ok "Python stack updated"
+    fi
+
+    if echo "$SECTIONS" | grep -q "^skills$"; then
+        step "Updating skills (global-skills/ changed)"
+        bash "$STACK_ROOT/install-reliability.sh" --non-interactive
+        ok "Skills updated"
+    fi
+
+    if echo "$SECTIONS" | grep -q "^mcp_templates$"; then
+        step "Re-rendering mcp-clients/*.json templates"
+        MCP_DIR="$STACK_ROOT/mcp-clients"
+        for tmpl in "$MCP_DIR"/*.json.tmpl; do
+            out="${tmpl%.tmpl}"
+            sed -e "s|{{STACK_VENV_BIN}}|$VENV_BIN|g" -e "s|{{EXE}}||g" "$tmpl" > "$out"
+            ok "rendered $(basename "$out")"
+        done
+    fi
+
+    if echo "$SECTIONS" | grep -q "^jdocmunch$"; then
+        step "Re-indexing docs (markdown changed)"
+        if [ -x "$VENV_BIN/jdocmunch-mcp" ]; then
+            "$VENV_BIN/jdocmunch-mcp" index-local --path "$STACK_ROOT" \
+                >"$STACK_ROOT/.install-jdm-index.log" 2>&1 \
+                && ok "jdocmunch re-indexed" \
+                || warn "jdocmunch index failed (see .install-jdm-index.log)"
+        fi
+    fi
+
+    step "Update complete"
+    printf '\nRun: bash healthcheck.sh   to verify everything is OK\n\n'
+    exit 0
+fi
 
 # --- 1. Prereqs --------------------------------------------------------------
 step "Checking prerequisites"

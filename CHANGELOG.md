@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-06-16 — feat(install): add --update flag with re-exec + selective sections
+
+### Added
+- `install.sh` — new `--update` flag runs git pull + re-exec pattern (fetches origin/main,
+  pulls if behind, re-execs freshly-pulled script with `SELF_UPDATED=1` guard to prevent loops).
+  Post-re-exec runs only sections affected by changed files (skills, uv_sync, mcp_templates,
+  jdocmunch) via new `detect_changed_sections()` in `lib/install-update.sh`.
+- `lib/install-update.sh` — new module with `detect_changed_sections()` function. Maps git
+  status changes to install.sh section IDs (skills, uv_sync, mcp_templates, jdocmunch).
+  Returns empty list if no affected sections. Special case: if `install.sh` itself changed,
+  falls through to full install (not selective).
+- `tests/test_install_update.py` — 11 unit tests for `detect_changed_sections()` covering
+  modified, added, deleted files, untracked state, multiple changed sections, and the
+  install.sh self-change exception. All passing; guard tests excluded from CI.
+
+### Changed
+- `.github/workflows/ci.yml` — added job 7 `test-install-update` (unit tests only, -k "not guard").
+  Runs after existing `test-audit` job.
+
+---
+
 ## 2026-06-15 — fix(install): prune stale skill symlinks + auto-run on pull
 
 ### Fixed
