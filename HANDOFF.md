@@ -12,6 +12,12 @@ auto-run was silently skipped (path pointed into `.git/`, file not found); displ
 `./verify.sh` suggestion cd'd to `.git/` instead of project root.
 **Fix:** single-line change on line 7. Hook is a symlink — fix is live immediately.
 
+**Known issue (not yet fixed):** `healthcheck.sh` Langfuse check offers to run `install-langfuse.sh`
+when the compose file is missing, which triggers a Docker install offer. On WSL, the Linux Docker
+convenience script detects WSL, prints "use Docker Desktop," then sleeps 20s before aborting —
+a bad UX trap. Fix: detect WSL (`/proc/version` contains `microsoft`) before offering the Docker
+install, or make the Langfuse check warn-only when Docker is absent.
+
 **No keyboard items. No open PRs.**
 
 ---
