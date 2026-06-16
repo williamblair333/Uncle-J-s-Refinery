@@ -120,6 +120,12 @@ check_mcp_connected() {
     fi
     if [ ${#missing[@]} -eq 0 ]; then
         ok "all 6 stack servers Connected"
+    elif [ ${#missing[@]} -ge 5 ]; then
+        # All (or nearly all) servers down = Claude Code not running or not restarted.
+        # Re-registering with --auto-register cannot fix a missing session.
+        bad "not Connected: ${missing[*]}"
+        hint "restart Claude Code — MCP servers only show Connected inside an active session; --auto-register will not help"
+        record_fail "mcp-servers-down(${missing[0]})"
     else
         bad "not Connected: ${missing[*]}"
         hint "run: $REPO_ROOT/install.sh --auto-register"
@@ -186,9 +192,21 @@ check_mcp_timeout() {
     fi
 }
 
+# Helper: returns non-empty if Langfuse is configured (LANGFUSE_PUBLIC_KEY in settings.json).
+# Gates all three Langfuse checks — skip silently when Langfuse was never installed.
+_langfuse_configured() {
+    python3 -c \
+        'import json,os,sys; d=json.load(open(os.path.expanduser("~/.claude/settings.json"))); sys.stdout.write(d.get("env",{}).get("LANGFUSE_PUBLIC_KEY",""))' \
+        2>/dev/null || true
+}
+
 # ----- 5. Langfuse compose health ------------------------------------------
 check_langfuse_compose() {
     step "Langfuse compose — 6 up, 4 healthy"
+    if [[ -z "$(_langfuse_configured)" ]]; then
+        ok "Langfuse not configured (LANGFUSE_PUBLIC_KEY absent) — skipping; run install-langfuse.sh to enable"
+        return
+    fi
     local compose="$REPO_ROOT/claude-code-langfuse-template/docker-compose.yml"
     if [ ! -f "$compose" ]; then
         bad "compose file missing: $compose"
@@ -220,6 +238,10 @@ check_langfuse_compose() {
 # ----- 6. Langfuse /api/public/health --------------------------------------
 check_langfuse_api() {
     step "Langfuse API — /api/public/health"
+    if [[ -z "$(_langfuse_configured)" ]]; then
+        ok "Langfuse not configured — skipping"
+        return
+    fi
     local body
     body="$(curl -s --max-time 3 http://localhost:3050/api/public/health 2>&1)"
     if printf '%s' "$body" | grep -q '"status":"OK"'; then
@@ -234,6 +256,10 @@ check_langfuse_api() {
 # ----- 7. langfuse SDK importable from stack venv --------------------------
 check_langfuse_sdk() {
     step "Langfuse SDK — importable from stack venv"
+    if [[ -z "$(_langfuse_configured)" ]]; then
+        ok "Langfuse not configured — skipping"
+        return
+    fi
     local py="$REPO_ROOT/.venv/bin/python"
     if [ ! -x "$py" ]; then
         bad "stack venv python missing at $py"
@@ -364,9 +390,6 @@ check_crons() {
     tab="$(crontab -l 2>/dev/null || true)"
     local missing=()
     declare -A EXPECTED=(
-        [uncle-j-stack-alerts-send]="bash $REPO_ROOT/scripts/stack-alerts-send.sh"
-        [uncle-j-stack-alerts-poll]="bash $REPO_ROOT/scripts/stack-alerts-poll.sh"
-        [uncle-j-telegram-gateway]="bash $REPO_ROOT/scripts/telegram-gateway-poll.sh"
         [uncle-j-session-stats]="features/session-stats/stats.sh"
         [uncle-j-dreaming]="features/dreaming/dream.sh"
         [uncle-j-auto-maintain]="bash $REPO_ROOT/scripts/auto-maintain.sh"
@@ -549,7 +572,7 @@ check_embedding_canary() {
     # Check canary pinned
     if [[ ! -f "$canary" ]]; then
         bad "embedding canary not pinned — semantic drift detection inactive"
-        hint "run: bash $REPO_ROOT/scripts/pin-canary.sh"
+        hint "inside Claude Code, run: bash $REPO_ROOT/scripts/pin-canary.sh  (requires active session — MCP tools unavailable from plain bash)"
         record_fail "embedding-canary-not-pinned"
         return
     fi

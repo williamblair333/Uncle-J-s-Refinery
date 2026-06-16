@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-06-16 — fix(healthcheck): eliminate install.sh re-run loop from false failures
+
+### Fixed
+- `healthcheck.sh` `check_mcp_servers` — when ≥5 servers show "not Connected", hint
+  no longer offers `install.sh --auto-register`. MCP Connected status is session-scoped
+  (only visible inside an active Claude Code session); --auto-register can't fix it, and
+  running install.sh triggered uv sync which reverted the langfuse packages. Hint now
+  says "restart Claude Code" and uses non-`run:` format so no interactive offer fires.
+- `healthcheck.sh` `check_langfuse_compose` / `check_langfuse_api` / `check_langfuse_sdk`
+  — added `_langfuse_configured()` helper (reads `LANGFUSE_PUBLIC_KEY` from
+  `~/.claude/settings.json`). All three checks now skip with `ok` when key is absent —
+  prevents the "install Docker" offer on machines where Langfuse was never set up, which
+  on WSL triggered a 20-second sleep trap via the Docker convenience script.
+- `healthcheck.sh` `check_crons` — removed `uncle-j-telegram-gateway`,
+  `uncle-j-stack-alerts-poll`, and `uncle-j-stack-alerts-send` from the mandatory EXPECTED
+  cron array. These are feature-specific crons not registered by core `install.sh`; their
+  absence was triggering a full `install.sh` run that did `uv sync --inexact` → reverted
+  any manually-installed packages (e.g. langfuse).
+- `healthcheck.sh` `check_embedding_canary` — pin-canary hint changed to non-`run:` format
+  with a note that MCP tools are unavailable outside an active Claude session.
+- `scripts/pin-canary.sh` — added `CLAUDE_CODE_SESSION` guard. Exits with a clear error
+  message when run from plain bash (where MCP tools don't load) instead of silently
+  failing after wasting a `claude -p` subprocess.
+
+---
+
 ## 2026-06-16 — fix(post-merge-hook): correct PROJ_ROOT depth when running as git hook
 
 ### Fixed

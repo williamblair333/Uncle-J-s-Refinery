@@ -22,6 +22,15 @@ if ! command -v "$CLAUDE_BIN" &>/dev/null; then
     exit 1
 fi
 
+# MCP tools are only available inside an active Claude Code session.
+# Running via 'claude -p' (non-interactive) does not load MCP servers.
+if [[ "${CLAUDE_CODE_SESSION:-}" != "true" ]]; then
+    echo "ERROR: pin-canary.sh must be run from within an active Claude Code session." >&2
+    echo "       MCP tools (check_embedding_drift) are not available in plain bash." >&2
+    echo "       Open Claude Code and run: bash $PROJ_ROOT/scripts/pin-canary.sh" >&2
+    exit 1
+fi
+
 echo "Pinning embedding canary via check_embedding_drift(capture=true)..."
 "$CLAUDE_BIN" -p \
     "Call the check_embedding_drift MCP tool with capture=true. Do nothing else." \

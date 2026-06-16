@@ -1,6 +1,35 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — post-merge-hook PROJ_ROOT fix committed. On main, pushed.*
+*Last updated: 2026-06-16 — healthcheck loop fixed (4 bugs). On main, pushed.*
+
+## 2026-06-16 — fix(healthcheck): eliminate install.sh re-run loop
+
+**Root cause of the loop:** `healthcheck.sh` has an interactive `hint "run: ..."` mechanism.
+When a hint starts with `run: `, the user is prompted `[y/N]` and answering `y` executes the
+command. Three separate checks were offering incorrect/impossible fixes that cascaded:
+
+1. **MCP not-Connected (≥5 servers)** → offered `install.sh --auto-register`. MCP Connected is
+   session-scoped (only shows Connected inside Claude Code); this ran a full install.sh → `uv sync
+   --inexact` → reverted manually-installed packages (e.g. langfuse). **Fix:** detect ≥5 servers
+   down → hint "restart Claude Code" (non-`run:` format, no interactive offer).
+
+2. **Langfuse checks (compose/api/sdk)** → offered Docker install when Langfuse was never set up.
+   On WSL, the Linux Docker convenience script detects WSL, prints "use Docker Desktop," then
+   `sleep 20` before aborting. **Fix:** `_langfuse_configured()` helper reads `LANGFUSE_PUBLIC_KEY`
+   from `~/.claude/settings.json`; all 3 checks skip silently when key is absent.
+
+3. **Cron check (3 feature-specific crons)** → `uncle-j-telegram-gateway`, `uncle-j-stack-alerts-poll`,
+   `uncle-j-stack-alerts-send` were in the mandatory EXPECTED array but are not registered by core
+   `install.sh`. Their absence triggered a full install.sh run. **Fix:** removed from EXPECTED.
+
+4. **pin-canary hint** → was `run: bash scripts/pin-canary.sh`, which fails silently from bash (MCP
+   not available). **Fix:** hint changed to non-`run:` format. `pin-canary.sh` now exits with a clear
+   error when `CLAUDE_CODE_SESSION` is not set.
+
+**Files changed:** `healthcheck.sh`, `scripts/pin-canary.sh`.
+**No keyboard items. No open PRs.**
+
+---
 
 ## 2026-06-16 — fix(post-merge-hook): PROJ_ROOT depth off-by-one (introduced in PR #78)
 
@@ -11,12 +40,6 @@ one `..` stops at `.git/`. Fix: use `../..` to reach the actual project root.
 auto-run was silently skipped (path pointed into `.git/`, file not found); displayed
 `./verify.sh` suggestion cd'd to `.git/` instead of project root.
 **Fix:** single-line change on line 7. Hook is a symlink — fix is live immediately.
-
-**Known issue (not yet fixed):** `healthcheck.sh` Langfuse check offers to run `install-langfuse.sh`
-when the compose file is missing, which triggers a Docker install offer. On WSL, the Linux Docker
-convenience script detects WSL, prints "use Docker Desktop," then sleeps 20s before aborting —
-a bad UX trap. Fix: detect WSL (`/proc/version` contains `microsoft`) before offering the Docker
-install, or make the Langfuse check warn-only when Docker is absent.
 
 **No keyboard items. No open PRs.**
 

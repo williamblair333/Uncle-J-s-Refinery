@@ -9,6 +9,13 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Recently completed (2026-06-16 — healthcheck loop fixed)
+
+- **4 healthcheck bugs fixed:** MCP not-Connected hint no longer triggers install.sh; Langfuse
+  checks gate on `LANGFUSE_PUBLIC_KEY` so unconfigured machines skip silently; 3 feature-specific
+  crons removed from mandatory EXPECTED array; pin-canary hint made non-interactive with session
+  note. `scripts/pin-canary.sh` exits cleanly outside Claude Code session.
+
 ## Recently completed (2026-06-15/16 — git pull self-healing)
 
 - **PR #77 merged:** `install-reliability.sh` prunes stale `~/.claude/skills/` symlinks on re-run;
