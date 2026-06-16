@@ -1,6 +1,20 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — install --update flag merged (PR #78, commit 8f9ac28). On main, clean.*
+*Last updated: 2026-06-16 — post-merge-hook PROJ_ROOT fix committed. On main, pushed.*
+
+## 2026-06-16 — fix(post-merge-hook): PROJ_ROOT depth off-by-one (introduced in PR #78)
+
+**Bug:** `scripts/post-merge-hook.sh` line 7 resolved PROJ_ROOT to `.git/` instead of the
+project root. The hook runs from `.git/hooks/post-merge`; `dirname` gives `.git/hooks`;
+one `..` stops at `.git/`. Fix: use `../..` to reach the actual project root.
+**Impact (all broken since PR #78):** log path wrote to `.git/state/`; `install-reliability.sh`
+auto-run was silently skipped (path pointed into `.git/`, file not found); displayed
+`./verify.sh` suggestion cd'd to `.git/` instead of project root.
+**Fix:** single-line change on line 7. Hook is a symlink — fix is live immediately.
+
+**No keyboard items. No open PRs.**
+
+---
 
 ## 2026-06-16 — install --update flag: selective section running (PR #78, merged)
 

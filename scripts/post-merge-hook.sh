@@ -4,7 +4,7 @@
 # Safe to re-run; exits 0 always (hook failures must not block the merge).
 set -uo pipefail
 
-PROJ_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJ_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENV_FILE="$PROJ_ROOT/.env"
 LOG="$PROJ_ROOT/state/post-merge.log"
 

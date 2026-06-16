@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-06-16 — fix(post-merge-hook): correct PROJ_ROOT depth when running as git hook
+
+### Fixed
+- `scripts/post-merge-hook.sh` line 7 — `PROJ_ROOT` resolved to `.git/` instead of the
+  project root. The hook runs as `.git/hooks/post-merge`; `dirname` yields `.git/hooks`,
+  so one `..` landed in `.git/`. Changed to `../..`. This silently broke: log path
+  (wrote to `.git/state/`), `install-reliability.sh` auto-run (file not found at wrong
+  path), and the post-pull `./verify.sh` suggestion message (showed `.git/` as the cd target).
+  Bug was introduced in the post-merge-hook rewrite shipped in PR #78.
+
+---
+
 ## 2026-06-16 — feat(install): add --update flag with re-exec + selective sections
 
 ### Added
