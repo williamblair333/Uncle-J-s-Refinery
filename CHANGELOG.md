@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-16 — docs: remote machine validation — healthcheck loop confirmed resolved
+
+### Validated
+- `install.sh --update` on remote Windows/WSL machine pulled PR #81, ran post-merge hook
+  correctly, printed actionable "run healthcheck.sh" notice, and exited cleanly — no loop.
+- `bash healthcheck.sh` result: 1 expected FAIL (MCP not-Connected outside Claude Code session,
+  non-interactive hint), 1 WARNING (packages behind HEAD — safe to upgrade), 1 WARNING
+  (dreaming-last-run.txt absent — expected on fresh machine). All prior loop-causing failures gone.
+
+---
+
 ## 2026-06-16 — fix(pin-canary): call capture_canary() directly via venv Python, no Claude Code session needed
 
 ### Fixed

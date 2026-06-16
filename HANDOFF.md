@@ -1,6 +1,23 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — pin-canary.sh now works from plain bash (no Claude Code session needed).*
+*Last updated: 2026-06-16 — remote machine validation complete; healthcheck loop confirmed resolved.*
+
+## 2026-06-16 — Remote machine validation (Windows/WSL)
+
+`install.sh --update` pulled PR #81 on the remote machine cleanly. Post-merge hook fired,
+printed the healthcheck.sh notice, exited. `bash healthcheck.sh` showed:
+
+- **FAIL (expected):** mcp-servers-down — all 6 servers not-Connected (expected outside a
+  Claude Code session; hint is now non-interactive, so no loop is triggered).
+- **WARNING:** stack packages behind HEAD — run upgrade command when convenient (won't loop).
+- **WARNING:** dreaming-last-run.txt missing — expected on a fresh machine.
+
+All 4 loop-causing bugs from the original incident are confirmed resolved. No open PRs.
+
+**Next session on remote machine:** open Claude Code, run `bash healthcheck.sh` — MCP failure
+clears. Run the package upgrade command from the healthcheck output if still flagged.
+
+---
 
 ## 2026-06-16 — fix(pin-canary): direct Python call, no Claude Code session required
 
