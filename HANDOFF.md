@@ -1,7 +1,27 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — Session closed. PR #77 merged: git pull is now self-healing for skill
-changes. One keyboard item remains: clean up 7 dead mempalace symlinks on this machine.*
+*Last updated: 2026-06-16 — install --update flag complete. Selective section running via
+detect_changed_sections(). Unit tests 11/11 green. CI job added. Ready for merge to main.*
+
+## 2026-06-16 — install --update flag: selective section running (feat/install-update-flag)
+
+`install.sh` now accepts `--update` to run git pull + re-exec (fetches origin/main, pulls if
+behind, re-execs freshly-pulled script with `SELF_UPDATED=1` guard to prevent loops).
+Post-re-exec runs only sections affected by changed files via new `detect_changed_sections()`
+in `lib/install-update.sh`, mapping to sections: skills, uv_sync, mcp_templates, jdocmunch.
+If `install.sh` itself changed, falls through to full install automatically.
+
+**Deliverables:**
+- `install.sh` — added `--update` flag block (phase A: pull-detection + re-exec; phase B: selective sections)
+- `lib/install-update.sh` — new module with `detect_changed_sections()` function, tests passing
+- `tests/test_install_update.py` — 11 unit tests (all passing; guard tests excluded from CI via `-k "not guard"`)
+- `.github/workflows/ci.yml` — added job 7 `test-install-update` after `test-audit`
+- `bash -n` verified on both modified shell scripts
+- YAML validation passed
+
+**Next session:** merge to main. No keyboard items.
+
+---
 
 ## 2026-06-15 — git pull is now self-healing for skill changes (merged)
 

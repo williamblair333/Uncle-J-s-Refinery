@@ -112,3 +112,22 @@ jobs:
 
       - name: pytest tests/test_audit.py
         run: python -m pytest tests/test_audit.py -v
+
+  # ── 7. install --update unit tests ───────────────────────────────────────
+  test-install-update:
+    name: install --update section detection tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add ~/.local/bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install dev dependencies
+        run: uv sync --inexact --only-group dev
+
+      - name: pytest tests/test_install_update.py (unit tests only)
+        run: uv run pytest tests/test_install_update.py -v -k "not guard"
