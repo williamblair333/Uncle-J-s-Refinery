@@ -572,7 +572,7 @@ check_embedding_canary() {
     # Check canary pinned
     if [[ ! -f "$canary" ]]; then
         bad "embedding canary not pinned — semantic drift detection inactive"
-        hint "inside Claude Code, run: bash $REPO_ROOT/scripts/pin-canary.sh  (requires active session — MCP tools unavailable from plain bash)"
+        hint "run: bash $REPO_ROOT/scripts/pin-canary.sh"
         record_fail "embedding-canary-not-pinned"
         return
     fi
