@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-16 — fix(post-merge-hook): print action hint when healthcheck.sh changes on pull
+
+### Fixed
+- `scripts/post-merge-hook.sh` — added `healthcheck.sh` change detection case. `git pull`
+  now prints `🩺 healthcheck.sh updated — run bash ./healthcheck.sh to see current state`
+  when healthcheck changes land. Matches the existing `verify.sh` pattern. Previously a
+  healthcheck pull was silently categorized as "maintenance/docs only" with no user action.
+
+---
+
 ## 2026-06-16 — fix(healthcheck): eliminate install.sh re-run loop from false failures
 
 ### Fixed

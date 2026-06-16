@@ -1,6 +1,17 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — healthcheck loop fixed (4 bugs). On main, pushed.*
+*Last updated: 2026-06-16 — post-merge-hook now hints on healthcheck.sh pull.*
+
+## 2026-06-16 — fix(post-merge-hook): print action hint when healthcheck.sh changes
+
+`scripts/post-merge-hook.sh` now detects `healthcheck.sh` in CHANGED and appends an
+ACTIONS entry: `🩺 healthcheck.sh updated — run bash ./healthcheck.sh`. Same pattern as
+the existing `verify.sh` case. Without this, a healthcheck-only pull printed "no actionable
+changes" and left the user without instructions.
+
+**No keyboard items. No open PRs.**
+
+---
 
 ## 2026-06-16 — fix(healthcheck): eliminate install.sh re-run loop
 
