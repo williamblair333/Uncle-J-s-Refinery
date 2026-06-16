@@ -1,7 +1,7 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-15 — PR #77 merged: git pull now self-heals skill symlinks via post-merge
-hook. Dangling mempalace symlinks still need one-time manual cleanup on this machine.*
+*Last updated: 2026-06-16 — Session closed. PR #77 merged: git pull is now self-healing for skill
+changes. One keyboard item remains: clean up 7 dead mempalace symlinks on this machine.*
 
 ## 2026-06-15 — git pull is now self-healing for skill changes (merged)
 

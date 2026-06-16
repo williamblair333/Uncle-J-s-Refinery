@@ -9,6 +9,12 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Recently completed (2026-06-15/16 — git pull self-healing)
+
+- **PR #77 merged:** `install-reliability.sh` prunes stale `~/.claude/skills/` symlinks on re-run;
+  `scripts/post-merge-hook.sh` auto-runs `install-reliability.sh` when `global-skills/` or the
+  installer changes. `git pull` is now the one command — no manual re-run needed for skill changes.
+
 ## Recently completed (2026-06-14 — cron silent failures + healthcheck runtime probes)
 
 - **3 silent cron failures fixed:** `dream.sh` PATH export (dreaming broken since Jun 10 — cron
@@ -84,6 +90,11 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
+
+- **grep-guard false positive: `~/.uncle-j-memory/` reads** — `grep-guard.sh` incorrectly blocked
+  3 reads of `~/.uncle-j-memory/memory/premortem-audit.md` (outside the repo; not source). The
+  guard should allow reads to paths outside `$PROJ_ROOT`. Narrow the pattern before the next
+  session that needs `pre-mortem` prior-art checks; the 3 retries wasted time.
 
 - **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
 

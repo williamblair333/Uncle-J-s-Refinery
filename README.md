@@ -403,7 +403,7 @@ uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp \
   --upgrade-package jdocmunch-mcp && uv sync --inexact
 ```
 
-**Post-merge hook.** `install.sh` wires a `git post-merge` hook that fires on every `git pull`. It detects new features, changed `install.sh`, updated `CLAUDE.md`, and new skills, then sends a Telegram alert (or prints to terminal) listing what needs action.
+**Post-merge hook.** `install.sh` wires a `git post-merge` hook that fires on every `git pull`. It auto-runs `install-reliability.sh` when `global-skills/` or the installer itself changes (stale symlinks pruned, new skills linked — no manual re-run). For heavier changes (new crons, `install.sh` updates, `CLAUDE.md`), it sends a Telegram alert or prints to terminal listing what needs action.
 
 ### 11. GitHub webhook server (optional)
 
