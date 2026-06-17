@@ -102,10 +102,12 @@ fi
 
 # ── Format traces for synthesizer ────────────────────────────────────────────
 step "Formatting $TRACE_COUNT trace(s) for synthesis"
-export TRACES_JSON
-FORMATTED="$("$VENV_PY" - <<'PYEOF'
-import sys, json, os
-data = json.loads(os.environ.get('TRACES_JSON', '{}')).get("data", [])
+TRACES_TMP="$(mktemp)"
+printf '%s' "$TRACES_JSON" > "$TRACES_TMP"
+FORMATTED="$("$VENV_PY" - "$TRACES_TMP" <<'PYEOF'
+import sys, json
+with open(sys.argv[1]) as f:
+    data = json.load(f).get("data", [])
 lines = []
 for t in data[:30]:
     session  = t.get("sessionId", "?")
@@ -113,7 +115,7 @@ for t in data[:30]:
     inp      = str(t.get("input",  "") or "")[:300]
     out      = str(t.get("output", "") or "")[:300]
     obs      = t.get("observations", []) or []
-    tools    = list({o.get("name","") for o in obs if o.get("type") == "SPAN"})[:8]
+    tools    = list({o.get("name","") for o in obs if isinstance(o, dict) and o.get("type") == "SPAN"})[:8]
     lines.append(f"--- Session {session} ({ts}) ---")
     lines.append(f"Task: {inp}")
     lines.append(f"Result: {out}")
@@ -123,6 +125,7 @@ for t in data[:30]:
 print("\n".join(lines))
 PYEOF
 )"
+rm -f "$TRACES_TMP"
 
 # ── Invoke dream-synthesizer ──────────────────────────────────────────────────
 step "Invoking dream-synthesizer"
@@ -289,12 +292,20 @@ log_entry "ok: $TRACE_COUNT traces processed -> $OUTPUT_FILE"
 
 # FYI notification — skip if no traces or dry-run (nothing interesting to report)
 if [[ "$DRY_RUN" -eq 0 && "${TRACE_COUNT:-0}" -gt 0 ]]; then
-    _DREAM_MSG="🌙 Dream run: ${TRACE_COUNT} trace(s) processed → playbooks promoted to the memweave store."
-    [ "${HELD_COUNT:-0}" -gt 0 ] && \
-        _DREAM_MSG="${_DREAM_MSG} ${HELD_COUNT} playbook(s) held for URL review → $PENDING_DIR"
-    source "$STACK_ROOT/lib/notify.sh" 2>/dev/null \
-        && notify_send_text "$_DREAM_MSG" \
-        || true
+    # Load Telegram credentials from .env (gitignored, main worktree). Sourced
+    # late so it cannot shadow already-resolved Langfuse vars. notify-telegram.sh
+    # expands ${TELEGRAM_BOT_TOKEN} at source time, so the caller must guard.
+    set -a; [ -f "$STACK_ROOT/.env" ] && source "$STACK_ROOT/.env"; set +a
+    if [ -n "${TELEGRAM_BOT_TOKEN:-}" ]; then
+        _DREAM_MSG="🌙 Dream run: ${TRACE_COUNT} trace(s) processed → playbooks promoted to the memweave store."
+        [ "${HELD_COUNT:-0}" -gt 0 ] && \
+            _DREAM_MSG="${_DREAM_MSG} ${HELD_COUNT} playbook(s) held for URL review → $PENDING_DIR"
+        source "$STACK_ROOT/lib/notify.sh" 2>/dev/null \
+            && notify_send_text "$_DREAM_MSG" \
+            || true
+    else
+        warn "Telegram token absent — skipping dream notification"
+    fi
 fi
 
 step "Dreaming run complete"
