@@ -1,6 +1,35 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-16 — remote machine validation complete; healthcheck loop confirmed resolved.*
+*Last updated: 2026-06-17 — dreaming synthesis unblocked (3 bugs fixed); PR open against main.*
+
+## 2026-06-17 — fix(dreaming): unblock synthesis — ARG_MAX, string-observation crash, notify abort
+
+`dream-synthesizer` had not run since ~Jun 10, tripping the `dreaming-stale` healthcheck
+(reported as 54–55h stale). Root cause was not the cron schedule — the cron fired nightly but
+`features/dreaming/dream.sh` crashed mid-run. Three bugs, all in that one file:
+
+1. **`Argument list too long`** — 100 Langfuse traces were exported as the `TRACES_JSON` env
+   var; the Python formatter subprocess inherited it and exceeded `ARG_MAX`. Fixed: write to a
+   `mktemp` file, read via `sys.argv[1]`.
+2. **`AttributeError: 'str' object has no attribute 'get'`** — trace `observations` can be plain
+   strings; the tool-name comprehension assumed dicts. Fixed: `isinstance(o, dict)` guard.
+3. **`TELEGRAM_BOT_TOKEN: unbound variable`** — the FYI-notification step sourced
+   `lib/notify-telegram.sh`, which expands `${TELEGRAM_BOT_TOKEN}` at source time; under `set -u`
+   this aborted the script (exit 1) *after* the work was done. Fixed: load `.env` + guard the
+   notify block on token presence (matches `features/github-webhook/install.sh`).
+
+**Validated:** `dream.sh --dry-run` runs to "Dreaming run complete" with `EXIT=0`. A real run
+during diagnosis advanced `state/dreaming-last-run.txt` to 2026-06-17, **clearing the
+dreaming-stale alert**, and wrote the day's dream output + appended Dreaming Notes to
+`~/.claude/CLAUDE.md` (normal dreaming side effects).
+
+**Note:** `TELEGRAM_BOT_TOKEN` is absent from `.env`/settings.json/dreaming.env in this
+environment, so dream notifications are skipped (logged, non-fatal). If Telegram dream pings are
+wanted, add the token to `.env`.
+
+**Open PR:** `fix/dreaming-argmax-and-notify` → main (this session).
+
+---
 
 ## 2026-06-16 — Remote machine validation (Windows/WSL)
 
