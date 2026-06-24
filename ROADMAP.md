@@ -9,6 +9,19 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Recently completed (2026-06-24 — uv-sync recovery + install.sh memweave-venv gap closed)
+
+- **Recovered a machine from a stray plain `uv sync`** (no `--inexact`): it wiped `.venv`
+  site-packages — langfuse, the §2b pysqlite3 swap, and the retired mempalace/chromadb deps.
+  Restored langfuse + the swap, built `.venv-memweave` + memory index, registered the
+  `uncle-j-memweave-sync` cron, installed the `jcodemunch-watch` unit. `HEALTHCHECK: ok`.
+- **`install.sh` §2c — provisions `.venv-memweave`** (PR #83): closes the gap where the
+  installer never created the 3.12 memweave venv, so memory sync + the Stop hook died on any
+  machine that hadn't built it by hand.
+- **Mempalace fully retired:** removed the 6 stale `uncle-j-mempalace-*` crons (their scripts
+  were already deleted) + untracked `mempalace.yaml`/`entities.json`. (Repo was already decommissioned.)
+- Committed the jcode/jdata/jdoc `uv.lock` bump + rebuilt vendored pysqlite3 wheel.
+
 ## Recently completed (2026-06-16 — healthcheck loop fixed + pin-canary direct Python)
 
 - **4 healthcheck bugs fixed:** MCP not-Connected hint no longer triggers install.sh; Langfuse
