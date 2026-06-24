@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-06-24 — fix(install): provision .venv-memweave (close memory-store gap)
+
+### Added
+- `install.sh` §2c — provisions the dedicated `.venv-memweave` (Python 3.12) with
+  `memweave onnxruntime tokenizers numpy`, idempotent (`[ -d ] || uv venv`) with a
+  `from memweave import …` verification (WARN, non-fatal). Closes the gap where the
+  installer never created this venv, so `scripts/memweave/sync_memory.sh` and the
+  session-end Stop hook died with "memweave venv missing" on any machine that hadn't
+  built it by hand. The ONNX MiniLM model is shared with jcodemunch
+  (`~/.code-index/models/all-MiniLM-L6-v2`) — no extra download. It's a separate venv
+  `uv sync` never touches, so it survives stack re-syncs.
+
+### Notes
+- `memweave` is installed unpinned to match the project's existing loose-dep convention;
+  a `TODO` in §2c flags pinning once a known-good range is chosen.
+
+---
+
 ## 2026-06-17 — fix(dreaming): unblock synthesis — ARG_MAX, string-observation crash, notify abort
 
 ### Fixed
