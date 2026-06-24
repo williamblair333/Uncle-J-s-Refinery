@@ -221,6 +221,30 @@ printf 'import _pysqlite3_patch\n' > "$SITE_PKGS/_pysqlite3_patch.pth"
 ACTUAL=$("$STACK_ROOT/.venv/bin/python3" -c "import sqlite3; print(sqlite3.sqlite_version)")
 ok "sqlite3 in venv now: $ACTUAL (via pysqlite3)"
 
+# --- 2c. Provision the dedicated memweave venv (offline ONNX memory store) ---
+# memweave runs on its own Python 3.12 venv, isolated from the 3.11 stack venv,
+# so its deps (memweave + litellm + sqlite-vec) can't collide with the munch
+# servers. sync_memory.sh and the Stop hook hardcode .venv-memweave/bin/python;
+# without this the nightly memory sync + every session-end Stop hook die with
+# "memweave venv missing". The ONNX MiniLM model is shared with jcodemunch at
+# ~/.code-index/models/all-MiniLM-L6-v2, so no extra model download is needed.
+# Unlike the §2b pysqlite patch, this is a separate venv `uv sync` never touches.
+# TODO: pin memweave to a known-good range once one is chosen — unpinned here to
+# match the project's existing loose-dep convention; a breaking major would only
+# surface at the import check below (WARN, non-fatal).
+step "Provisioning .venv-memweave (offline memory store, Python 3.12)"
+[ -d "$STACK_ROOT/.venv-memweave" ] || uv venv "$STACK_ROOT/.venv-memweave" --python 3.12
+# memweave (the library) pulls litellm etc.; the runtime injects OnnxMiniLMProvider
+# so no network is hit at query time. onnxruntime/tokenizers/numpy back that provider
+# (listed explicitly so they survive even if memweave drops one as a transitive dep).
+uv pip install --python "$STACK_ROOT/.venv-memweave/bin/python" \
+    memweave onnxruntime tokenizers numpy
+if "$STACK_ROOT/.venv-memweave/bin/python" -c "from memweave import MemWeave, MemoryConfig" 2>/dev/null; then
+    ok ".venv-memweave ready (memweave + ONNX provider importable)"
+else
+    warn ".venv-memweave provisioned but 'from memweave import ...' failed — check the install above"
+fi
+
 VENV_BIN="$STACK_ROOT/.venv/bin"
 declare -A EXE=(
     [jcodemunch]="$VENV_BIN/jcodemunch-mcp"

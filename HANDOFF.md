@@ -1,6 +1,43 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-17 — dreaming synthesis unblocked (3 bugs fixed); PR open against main.*
+*Last updated: 2026-06-24 — recovered this machine from a stray `uv sync`; install.sh memweave-venv gap fixed (PR open).*
+
+## 2026-06-24 — recovery from a plain `uv sync` + install.sh memweave-venv gap
+
+**Root cause:** a manual `uv sync` (no `--inexact`) wiped `.venv` site-packages, removing
+out-of-band installs that aren't in `uv.lock` — `langfuse`, `mempalace`/`chromadb`, **and the
+`_pysqlite3_patch.pth` swap** that `install.sh` §2b writes. `install.sh` itself uses
+`uv sync --inexact` precisely to avoid this. The "69 packages removed" was that prune, not just
+upstream slimming.
+
+**Healthcheck went fail(5) → ok.** Machine-state recovery (not repo changes):
+- Restored `langfuse>=3.0,<4` into `.venv` (Stop hook importable again).
+- Re-applied the §2b pysqlite3 swap (`_pysqlite3_patch.py` + `.pth`) → venv `sqlite3` back to 3.51.3.
+- Built `.venv-memweave` (py3.12 + `memweave onnxruntime tokenizers numpy`) and ran
+  `sync_memory.sh --all` → index at `~/.uncle-j-memory/.memweave/index.sqlite` (739 docs / 5631 chunks).
+- Registered the missing `uncle-j-memweave-sync` cron.
+- Installed + enabled the `jcodemunch-watch` systemd user unit via `jcodemunch-mcp watch-install`
+  (the user's original `sudo systemctl --user enable` failed twice: `sudo` strips the user bus, and
+  the unit had never been installed).
+
+**Mempalace fully retired** (it was already decommissioned in-repo): removed the 6 stale
+`uncle-j-mempalace-*` crons (their target scripts were already deleted, so they'd been failing)
+and the untracked `mempalace.yaml` + `entities.json`. Crontab backed up to `~/crontab.backup.*`.
+
+**Repo change (this PR):** `install.sh` §2c now provisions `.venv-memweave` so a fresh install /
+second machine can't hit the same wall. See CHANGELOG 2026-06-24.
+
+**Follow-ups:**
+- A prior-session memweave note mentions "five mempalace-specific skills" possibly lingering in
+  `~/.claude/skills` / global-skills — verify against disk before trusting (may already be resolved).
+- `uv.lock` + the vendored pysqlite3 wheel carry uncommitted upgrade churn (jdatamunch 1.16,
+  jdocmunch 1.92) on `main` — commit as a chore when ready.
+- Deprecated `uncle-j-{stack-alerts-*,telegram-gateway}` crons still run but are no longer in the
+  healthcheck's expected set — retire if desired.
+
+---
+
+*Earlier: 2026-06-17 — dreaming synthesis unblocked (3 bugs fixed); PR open against main.*
 
 ## 2026-06-17 — fix(dreaming): unblock synthesis — ARG_MAX, string-observation crash, notify abort
 
