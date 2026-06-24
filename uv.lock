@@ -667,8 +667,8 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.108.55"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#0989ba0391e932f73d5635d1cde366631a5f9064" }
+version = "1.108.80"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#5d9199a5ac12558f8dcc6794dbc55e824606a46d" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -696,8 +696,8 @@ openai = [
 
 [[package]]
 name = "jdatamunch-mcp"
-version = "1.13.1"
-source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#0af0ecb21375a35e56ddcfc8871927a9ba92179f" }
+version = "1.16.0"
+source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#379c56295cc8f0070885004a96398cae94ea6250" }
 dependencies = [
     { name = "charset-normalizer" },
     { name = "mcp" },
@@ -705,8 +705,8 @@ dependencies = [
 
 [[package]]
 name = "jdocmunch-mcp"
-version = "1.81.0"
-source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#145655d58223fa732f5dc2ade02db7e587a72c41" }
+version = "1.92.0"
+source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#bfe60fc18f13eb02fa6be588a3f8cde3297aeb66" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -1288,7 +1288,7 @@ resolution-markers = [
     "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 wheels = [
-    { filename = "pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl", hash = "sha256:b2a93a6745b8dc1221dff0a589a400f30499da64831d50a5ce00ecac7ca59723" },
+    { filename = "pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl", hash = "sha256:9c9f2e54a8daf9902b6a70a5a47baf7d1af0cdd5f9d8cb9a7c82ef737d2918b5" },
 ]
 
 [[package]]

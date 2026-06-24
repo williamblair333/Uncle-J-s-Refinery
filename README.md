@@ -426,7 +426,9 @@ Full setup guide: [`features/github-webhook/README.md`](features/github-webhook/
 
 ### 12. Bootstrap memweave (optional)
 
-memweave is an offline, cross-project memory store. The store at `~/.uncle-j-memory` is empty after a fresh install. To build it:
+memweave is an offline, cross-project memory store. `install.sh` provisions its
+dedicated `.venv-memweave` (Python 3.12) automatically; the store at
+`~/.uncle-j-memory` is empty after a fresh install. To build it:
 
 ```bash
 bash scripts/memweave/sync_memory.sh --all

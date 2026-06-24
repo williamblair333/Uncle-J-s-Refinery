@@ -20,6 +20,23 @@
 
 ---
 
+## 2026-06-24 — chore(stack): commit jcode/jdata/jdoc lock bump + memweave docs sync
+
+### Changed
+- `uv.lock` — `jcodemunch-mcp` (SHA), `jdatamunch-mcp` 1.13.1→1.16.0, `jdocmunch-mcp`
+  1.81.0→1.92.0 (the upgrade run that triggered this session). Vendored
+  `pysqlite3-0.6.0` wheel rebuilt; uv.lock hash updated to match (coupled).
+- `README.md` §12 — note that `install.sh` auto-provisions `.venv-memweave`.
+
+### Recovered (machine-state, this session — context)
+- A stray plain `uv sync` (no `--inexact`) had wiped `.venv` site-packages, removing
+  `langfuse`, the §2b `_pysqlite3_patch.pth` swap, and the (now-retired) mempalace deps.
+  Restored langfuse + the pysqlite3 swap; built `.venv-memweave` + memory index;
+  registered `uncle-j-memweave-sync` cron; installed the `jcodemunch-watch` unit.
+  Mempalace fully retired (6 stale crons + untracked artifacts removed). `HEALTHCHECK: ok`.
+
+---
+
 ## 2026-06-17 — fix(dreaming): unblock synthesis — ARG_MAX, string-observation crash, notify abort
 
 ### Fixed
