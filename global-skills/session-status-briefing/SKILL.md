@@ -43,9 +43,16 @@ The "X not Connected: ..." line listing all six servers is the cold-start snapsh
 they finish connecting — trust the `HEALTHCHECK:` headline, which names only the genuinely-down
 server. Attempt the in-session repair for any real failure before the rest of the briefing.
 
-### 3. Repo digest (parallel with 1 and 2)
+### 3. Repo digest + remote sync check (parallel with 1 and 2)
 
-`git log --oneline -10` — recent commits.
+Run both of these together:
+
+```bash
+git fetch origin main 2>&1 && git log --oneline HEAD..origin/main
+git log --oneline -10
+```
+
+If `git log HEAD..origin/main` returns any commits, report them prominently and offer to pull before continuing. Local being behind origin/main means the session starts on stale code.
 
 Also call `mcp__jcodemunch__digest` if the index is fresh. If stale or unavailable, fall back to git log only.
 
@@ -89,6 +96,7 @@ Only include candidates where `is_referenced: false` after this check.
 **Repo** — `<branch>`, <clean|N changes>
 - Latest: `<sha>` — <message>
 - <N> symbols / <N> files (<languages>)
+- ⚠ **Behind origin/main by N commits** — list them and offer to pull | Up to date
 
 **Since last session:**
 - <N> files changed: <list>

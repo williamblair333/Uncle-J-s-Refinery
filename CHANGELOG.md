@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-06-25 — feat(routing): jdocmunch 1.92.0 tool integration + session briefing remote check
+
+### Changed
+- `CLAUDE.md` §Docs work — added two new jdocmunch 1.92.0 tools to the routing policy:
+  - `resolve_related_code_repos` — maps a jdocmunch docs repo to candidate jcodemunch
+    code-repo handles by source_root; call first to get the right `code_repo` arg for
+    the bridge tools (`get_undocumented_symbols`, `link_code_to_symbols`, `find_code_examples`)
+  - `get_doc` (v1.58+) — single-doc detail view (section list, role/tag distributions,
+    byte_size, format, indexed_at); pairs with `list_docs`
+- `global-skills/session-status-briefing/SKILL.md` step 3 — expanded from `git log
+  --oneline -10` only to also run `git fetch origin main && git log HEAD..origin/main`
+  and report if local is behind remote, offering to pull before starting work
+
+### Notes
+- jdocmunch upgrade was 1.81.0→1.92.0 (committed in PR #84); tools verified present
+- Global `~/.claude/CLAUDE.md` still needs a manual patch for the two new entries; see
+  note in HANDOFF for the exact patch command
+- Dreaming (2026-06-24/25 cron windows): machine asleep at 02:00 AM on both days caused
+  the cron to miss; 82 traces accumulated and were processed via dry-run (claude not
+  invoked); real synthesis + cron time adjustment is a tracked follow-up
+
+---
+
 ## 2026-06-24 — fix(install): provision .venv-memweave (close memory-store gap)
 
 ### Added
