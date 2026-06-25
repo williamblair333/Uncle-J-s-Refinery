@@ -131,7 +131,7 @@ tools can answer structurally.
   `get_broken_links`, `get_stale_pages`, `get_wiki_stats` — run before major doc updates
   or when doc quality is in question; `find_similar_sections` for near-duplicate/
   overlapping section detection; `count_sections` for fast headcount without ranking.
-- **Code ↔ doc bridges:** `get_undocumented_symbols` (code symbols absent from docs);
+- **Code ↔ doc bridges:** `resolve_related_code_repos` — maps a jdocmunch docs repo to candidate jcodemunch code repo handles by source_root; call first to get the right `code_repo` arg for the bridge tools below; `get_undocumented_symbols` (code symbols absent from docs);
   `link_code_to_symbols` (doc code blocks → jcodemunch symbols); `find_code_examples`
   (search fenced code blocks by BM25).
 - **OpenAPI / schema:** `find_endpoint` (by path glob/method/tag); `list_endpoints_by_tag`;
@@ -142,7 +142,9 @@ tools can answer structurally.
 - **Index management:** `define_repo_group` / `list_repo_groups` for fan-out search
   across multiple repos; `check_embedding_drift` + `verify_index` for integrity;
   `tune_weights` for ranking; `analyze_perf` / `get_session_stats` for perf;
-  `list_docs` for flat per-doc inventory.
+  `list_docs` for flat per-doc inventory; `get_doc` (v1.58+) for single-doc detail
+  view (section list, role/tag distributions, byte_size, format, indexed_at) —
+  pairs with `list_docs`.
 - For third-party library docs (FastAPI, React, Django, etc.), **context7**
   is authoritative and version-pinned. Call it whenever the question
   references a named library.
