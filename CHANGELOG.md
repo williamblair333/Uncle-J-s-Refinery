@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-06-27 — chore(dreaming): move cron to 09:00 + global CLAUDE.md jdocmunch patch
+
+### Changed
+- Dreaming cron rescheduled from `0 2 * * *` to `0 9 * * *` — machine was asleep at
+  02:00 AM causing June 24/25 cron windows to miss. Fix applied without editing source:
+  `DREAMING_CRON_SCHEDULE="0 9 * * *" bash features/dreaming/install.sh` writes
+  the schedule to gitignored `state/dreaming.env` and re-registers the live crontab.
+
+### Notes
+- Global `~/.claude/CLAUDE.md` patched this session with the two jdocmunch 1.92.0
+  entries deferred from 2026-06-25 (`resolve_related_code_repos` + `get_doc` via the
+  `!python3` patch command in the prior HANDOFF). Global routing now in sync with repo.
+
+---
+
 ## 2026-06-25 — feat(routing): jdocmunch 1.92.0 tool integration + session briefing remote check
 
 ### Changed

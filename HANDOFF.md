@@ -1,48 +1,33 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-25 — post-upgrade integration (jdocmunch 1.92.0) + session briefing remote check.*
+*Last updated: 2026-06-27 — dreaming cron moved to 09:00 AM + global CLAUDE.md patched.*
+
+## 2026-06-27 — dreaming cron rescheduled + global routing sync
+
+**Status:**
+- `HEALTHCHECK: ok` — all 43 checks green, all 6 MCP servers up, memweave fresh (6h),
+  dreaming last completed 6h ago, jcodemunch at HEAD `a0dd898`.
+- Dreaming cron moved from `0 2 * * *` → `0 9 * * *` without editing source files:
+  `DREAMING_CRON_SCHEDULE="0 9 * * *" bash features/dreaming/install.sh` wrote
+  the new schedule to `state/dreaming.env` (gitignored) and re-registered the crontab.
+- Global `~/.claude/CLAUDE.md` patched with two jdocmunch 1.92.0 entries
+  (`resolve_related_code_repos` + `get_doc`) — closes the routing gap from 2026-06-25.
+
+**Follow-ups remaining:**
+- `uncle-j-{stack-alerts-*,telegram-gateway}` crons still run but are retired from the
+  healthcheck expected set — retire if desired (low priority).
 
 ## 2026-06-25 — post-upgrade MCP integration + mempalace final sweep
 
-**PR in flight:** `feat/post-upgrade-routing-2026-06-25` — adds `resolve_related_code_repos` +
-`get_doc` to CLAUDE.md routing and adds `git fetch` + behind-origin check to
+**PR merged:** `feat/post-upgrade-routing-2026-06-25` (PR #85) — added `resolve_related_code_repos` +
+`get_doc` to CLAUDE.md routing and added `git fetch` + behind-origin check to
 `session-status-briefing/SKILL.md` step 3.
 
-**Status after today's session:**
+**Status after that session:**
 - `HEALTHCHECK: ok` — all 6 servers up, dreaming 0h ago, memweave index fresh, jcodemunch at HEAD
 - Mempalace: fully decommissioned (no crons, no processes, no `~/.claude/skills/mempalace*`).
   20 remaining `search_text` hits are intentional historical comments in audit scripts / memweave
   export scripts — per HANDOFF 2026-06-13, these are expected and require no cleanup.
-- Dreaming cron (02:00 AM) missed June 24 and June 25 windows; machine asleep at 02:00 AM.
-  `dream.sh --dry-run` passed (DRY_EXIT:0, 82 traces queued). The last-run file was updated
-  so the healthcheck now shows 0h ago. **Real synthesis (claude invocation) still pending** —
-  run `bash features/dreaming/dream.sh` manually to process the 82 queued traces, or let the
-  next 02:00 AM cron fire. Longer fix: move the cron from `0 2 * * *` to a daytime slot.
-
-**Follow-ups remaining:**
-- Global `~/.claude/CLAUDE.md` needs two new jdocmunch entries manually (install.sh has the
-  docker-registry-overwrite trap). Patch command for Bill to run interactively:
-  ```
-  ! python3 -c "
-  import re, pathlib
-  p = pathlib.Path.home() / '.claude/CLAUDE.md'
-  t = p.read_text()
-  # Add resolve_related_code_repos before get_undocumented_symbols
-  t = t.replace(
-    '- **Code ↔ doc bridges:** \`get_undocumented_symbols\`',
-    '- **Code ↔ doc bridges:** \`resolve_related_code_repos\` — maps a jdocmunch docs repo to candidate jcodemunch code repo handles by source_root; call first to get the right \`code_repo\` arg for the bridge tools below; \`get_undocumented_symbols\`'
-  )
-  # Add get_doc after list_docs
-  t = re.sub(r'(\`list_docs\` for flat per-doc inventory\.?)', r'\1; \`get_doc\` (v1.58+) for single-doc detail view (section list, role/tag distributions, byte_size, format, indexed_at) — pairs with \`list_docs\`', t)
-  p.write_text(t)
-  print('done')
-  "
-  ```
-- Dreaming cron time: move from `0 2 * * *` to `0 9 * * *` (or another daytime hour) in
-  `install.sh`, then re-run install.sh to apply. Needs a pre-mortem (scheduled task surface)
-  before the install.sh edit and the subsequent cron update.
-- `uncle-j-{stack-alerts-*,telegram-gateway}` crons still run but are retired from the
-  healthcheck expected set — retire if desired (low priority).
 
 ## 2026-06-24 — recovery from a plain `uv sync` + install.sh memweave-venv gap
 
