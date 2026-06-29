@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-29 — feat(stack): jmunch-console launcher + freshness tracking
+
+### Added
+- `scripts/jmunch-console.sh` — on-demand launcher for jMunch Console
+  (`review/jmunch-console/`). Validates clone + venv binary, sets
+  `JMUNCH_MCP_BIN` to the venv path, `exec python3 server.py`.
+  Usage: `bash scripts/jmunch-console.sh` → `http://127.0.0.1:8765`
+- `scripts/check-stack-freshness.sh`: `check_git_clone()` function for
+  standalone git clones; added jmunch-console check, upgrade hint
+  (`git -C review/jmunch-console pull`), and GitHub Watch URL.
+
+### Notes
+- jmunch-console stays at `review/jmunch-console/` (nested git repo,
+  outer tree ignores its contents). Update = `git pull` there;
+  freshness check surfaces when commits are available.
+
 ## 2026-06-28 — chore(stack): bump jcodemunch-mcp 1.108.80→1.108.83 + jdatamunch-mcp SHA
 
 ### Changed
