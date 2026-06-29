@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-06-28 — chore(stack): bump jcodemunch-mcp 1.108.80→1.108.83 + jdatamunch-mcp SHA
+
+### Changed
+- `uv.lock`: jcodemunch-mcp 1.108.80 (5d9199a) → 1.108.83 (883b115) — bug fixes:
+  - v1.108.81: lazy git identity probe in `get_watch_status` (reduces subprocess cost)
+  - v1.108.82: exclude `org_savings.db` from `list_repos` (cleaner repo list)
+  - v1.108.83: tame watch-all CPU under WSL (active impact — `jcodemunch-watch` runs here)
+- `uv.lock`: jdatamunch-mcp SHA bump (379c562 → 6cf7c57) — CI-only, no functional change
+
+### Notes
+- pysqlite3 held at 3.51.3 post-sync (vendored wheel protected it)
+- No new MCP tools introduced — CLAUDE.md routing unchanged
+- MCP servers reload new code on next Claude Code restart
+
+---
+
 ## 2026-06-27 — chore(dreaming): move cron to 09:00 + global CLAUDE.md jdocmunch patch
 
 ### Changed

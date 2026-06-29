@@ -1,6 +1,28 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-27 — dreaming cron moved to 09:00 AM + global CLAUDE.md patched.*
+*Last updated: 2026-06-28 — jcodemunch-mcp bumped to 1.108.83; jMunch Console evaluated.*
+
+## 2026-06-28 — stack bump + jMunch Console evaluation
+
+**Status:**
+- `HEALTHCHECK: ok` — all 43 checks green post-upgrade, pysqlite3 held at 3.51.3.
+- jcodemunch-mcp: 1.108.80 → 1.108.83 (3 bug-fix commits: lazy git probe, org_savings.db
+  exclusion from list_repos, WSL CPU taming in watch-all). No new tools; CLAUDE.md unchanged.
+- jdatamunch-mcp: SHA bump only (CI change), no functional delta.
+- Re-indexed repo at 327341b; 536 symbols / 83 files.
+
+**jMunch Console (evaluated, not yet integrated):**
+- `github.com/jgravelle/jmunch-console` — local browser GUI for the jMunch suite.
+  Pure Python stdlib (`python server.py` → `http://127.0.0.1:8765`). MIT, opt-in.
+  Panels: index/watcher health, token savings, sessions browser, process control, alerts.
+- Pushed 2026-06-28 (very new — watch for stability before deep wiring).
+- Recommended integration: light — add `scripts/jmunch-console.sh` launcher + note in
+  STACK.md. Hold off wiring into healthcheck until it has a few sessions of stability.
+
+**Follow-ups:**
+- Restart Claude Code to load jcodemunch 1.108.83 in the live MCP server.
+- jMunch Console integration (light): launcher script + STACK.md entry (next session or now).
+- `uncle-j-{stack-alerts-*,telegram-gateway}` cron retirement (low priority, unchanged).
 
 ## 2026-06-27 — dreaming cron rescheduled + global routing sync
 
