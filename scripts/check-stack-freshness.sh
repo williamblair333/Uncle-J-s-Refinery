@@ -125,6 +125,39 @@ check_uvx_git() {
   printf "  ${GREEN}·${NC}  %-22s HEAD=%s  auto via uvx\n" "$label" "$head"
 }
 
+# Standalone git clone: compare local HEAD against GitHub HEAD.
+check_git_clone() {
+  local label=$1 github=$2 local_path=$3
+  local installed_sha installed_short head_info head_sha head_date ahead
+
+  installed_sha=$(git -C "$local_path" rev-parse HEAD 2>/dev/null || echo "?")
+  installed_short="${installed_sha:0:7}"
+  head_info=$(gh_head "$github")
+  head_sha=$(echo "$head_info" | awk '{print $1}')
+  head_date=$(echo "$head_info" | awk '{print $2}')
+
+  if [[ "$installed_sha" == "?" ]]; then
+    printf "  ${YELLOW}?${NC}  %-22s not cloned — git clone https://github.com/%s.git %s\n" \
+      "$label" "$github" "$local_path"
+    return
+  fi
+  if [[ "$head_sha" == "?" ]]; then
+    printf "  ${YELLOW}?${NC}  %-22s installed=%-10s  GitHub HEAD fetch failed\n" "$label" "$installed_short"
+    return
+  fi
+
+  if [[ "$installed_short" == "$head_sha" ]]; then
+    printf "  ${GREEN}✓${NC}  %-22s %s  at HEAD (%s)\n" "$label" "$installed_short" "$head_date"
+  else
+    ahead=$(gh_compare_ahead "$github" "$installed_sha")
+    printf "  ${RED}↑${NC}  %-22s %s → %s  (%s commits behind HEAD)\n" \
+      "$label" "$installed_short" "$head_sha" "$ahead"
+    UPGRADES=$((UPGRADES + 1))
+    show_commits_since "$github" "$installed_sha"
+    echo ""
+  fi
+}
+
 # Read the pinned tag for a docker image from docker-compose.yml.
 # Returns the tag portion after the last ':', or "" if no tag.
 compose_tag() {
@@ -239,6 +272,10 @@ echo "git  (fetched from HEAD via uvx on each run):"
 check_uvx_git "serena" "oraios/serena"
 
 echo ""
+echo "git  (standalone clones — update via git pull):"
+check_git_clone "jmunch-console" "jgravelle/jmunch-console" "$PROJ_ROOT/review/jmunch-console"
+
+echo ""
 echo "docker  (Langfuse — update when new version available):"
 check_docker_svc "langfuse"        "langfuse/langfuse:"     "github:langfuse/langfuse"
 check_docker_svc "langfuse-worker" "langfuse-worker:"       "github:langfuse/langfuse"
@@ -259,6 +296,8 @@ if [[ $UPGRADES -gt 0 ]]; then
   echo "    cd $PROJ_ROOT && uv lock --upgrade-package jcodemunch-mcp \\"
   echo "      --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp \\"
   echo "      && uv sync --inexact"
+  echo "  Standalone clones (git pull):"
+  echo "    git -C $PROJ_ROOT/review/jmunch-console pull"
   echo "  Langfuse (safe to pull when new version available):"
   echo "    docker compose -f $PROJ_ROOT/claude-code-langfuse-template/docker-compose.yml pull langfuse langfuse-worker"
   echo "    docker compose -f $PROJ_ROOT/claude-code-langfuse-template/docker-compose.yml up -d"
@@ -270,6 +309,7 @@ printf "${BOLD}GitHub Watches (→ Watch → Custom → Releases):${NC}\n"
 echo "  https://github.com/jgravelle/jcodemunch-mcp"
 echo "  https://github.com/jgravelle/jdatamunch-mcp"
 echo "  https://github.com/jgravelle/jdocmunch-mcp"
+echo "  https://github.com/jgravelle/jmunch-console"
 echo "  https://github.com/oraios/serena"
 echo "  https://github.com/upstash/context7"
 echo "  https://github.com/langfuse/langfuse"

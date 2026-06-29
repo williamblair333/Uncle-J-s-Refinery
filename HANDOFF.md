@@ -1,6 +1,24 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-28 — jcodemunch-mcp bumped to 1.108.83; jMunch Console evaluated.*
+*Last updated: 2026-06-29 — jMunch Console integrated (launcher + freshness tracking).*
+
+## 2026-06-29 — jMunch Console integration
+
+**Status:** `HEALTHCHECK: ok` (inherited from PR #86 session).
+
+**jMunch Console — integrated (light):**
+- `scripts/jmunch-console.sh` launcher created. Usage: `bash scripts/jmunch-console.sh`
+  → browser at `http://127.0.0.1:8765`. On-demand, not always-on.
+- `scripts/check-stack-freshness.sh` updated: `check_git_clone()` function added;
+  jmunch-console now appears in the freshness report + upgrade instructions + GitHub Watches.
+- Upstream: `review/jmunch-console/` (nested git repo, outer tree ignores it).
+  Update when `check-stack-freshness.sh` shows ↑: `git -C review/jmunch-console pull`.
+- Phase 1 of jmunch-console is GET-only, localhost-only. No healthcheck wiring yet
+  (hold until it has a few sessions of stability).
+
+**Follow-ups:**
+- Restart Claude Code to load jcodemunch 1.108.83 (carried from prior session).
+- `uncle-j-{stack-alerts-*,telegram-gateway}` cron retirement (low priority).
 
 ## 2026-06-28 — stack bump + jMunch Console evaluation
 
