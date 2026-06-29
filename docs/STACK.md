@@ -5,6 +5,38 @@ and `../README.md` for install/uninstall.
 
 ---
 
+## jMunch Console (optional browser GUI)
+
+**What it does.** Local browser control panel for the jMunch MCP suite.
+Surfaces indexed repos, live token-savings counter, Claude Code sessions
+browser (with resume), MCP process control, jcm config editor, and
+log/diagnostic tails — all at `http://127.0.0.1:8765`.
+
+**How to start.** `bash scripts/jmunch-console.sh` (passes `JMUNCH_MCP_BIN`
+to the venv binary; optional port arg). Stop with Ctrl-C.
+
+**Update.** `git -C review/jmunch-console pull`
+Surfaced automatically by `scripts/check-stack-freshness.sh`.
+
+**Key panels.**
+- *Index & Watcher* — repo cards: symbol/file counts, freshness, watcher state.
+- *Savings* — live lifetime counter (polls `~/.code-index/_savings.json` every 4s) + 30d receipt breakdown.
+- *Sessions* — browse/resume past Claude Code sessions by repo.
+- *Processes* — live jcm server PIDs; kill/observe without hunting `ps`.
+- *Config* — typed GUI editor for `config.jsonc` (all keys, grouped, save/reset).
+- *Diagnostics* — tails `jcw_*.log` watcher logs + `_session_live.json` heartbeat.
+
+**Phase 1 (current).** GET-only, `127.0.0.1`-only (hardcoded), no auth required by
+default. Mutations (config write, launch, session resume) behind `ALLOW_LAUNCH`
+which requires `JMUNCH_CONSOLE_READ_ONLY` to be unset — off by default.
+
+**Not yet wired.** healthcheck.sh entry (deferred until stable over a few sessions).
+
+**Source.** `review/jmunch-console/` (nested git repo; outer tree ignores its contents).
+MIT licensed. Upstream: `github.com/jgravelle/jmunch-console`.
+
+---
+
 ## jCodeMunch (primary code retrieval)
 
 **What it does.** Tree-sitter parse + symbol index + byte-precise

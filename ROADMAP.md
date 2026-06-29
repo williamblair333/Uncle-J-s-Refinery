@@ -9,6 +9,12 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Recently completed (2026-06-29 — jMunch Console integration)
+
+- **jMunch Console integrated (light):** `scripts/jmunch-console.sh` launcher; `check-stack-freshness.sh` now tracks
+  jmunch-console clone freshness + shows upgrade hint. Usage: `bash scripts/jmunch-console.sh` → `http://127.0.0.1:8765`.
+  Phase 2 wiring (healthcheck entry) deferred until stable over a few sessions.
+
 ## Recently completed (2026-06-24 — uv-sync recovery + install.sh memweave-venv gap closed)
 
 - **Recovered a machine from a stray plain `uv sync`** (no `--inexact`): it wiped `.venv`
