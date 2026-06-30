@@ -1,6 +1,24 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-29 — jMunch Console integrated (launcher + freshness tracking).*
+*Last updated: 2026-06-30 — jmunch-console is machine-local (Q&A session).*
+
+## 2026-06-30 — jmunch-console multi-machine setup (Q&A)
+
+**Status:** `HEALTHCHECK: ok` (inherited).
+
+**Key finding:** `review/jmunch-console/` is a nested git repo that the outer `.gitignore`
+excludes. Running `git pull` on a new machine does NOT clone it — each machine needs a
+one-time manual clone:
+```
+git clone https://github.com/jgravelle/jmunch-console.git review/jmunch-console
+```
+README updated to document this as a per-machine step. No code changes this session.
+
+**Follow-ups (carried):**
+- Restart Claude Code to load jcodemunch 1.108.83 (carried from 2026-06-29 session).
+- `uncle-j-{stack-alerts-*,telegram-gateway}` cron retirement (low priority).
+
+---
 
 ## 2026-06-29 — jMunch Console integration
 

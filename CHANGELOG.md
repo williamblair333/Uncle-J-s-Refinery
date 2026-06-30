@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-30 — docs: jmunch-console is machine-local (Q&A session)
+
+### Notes
+- No code changes. Session clarified that `review/jmunch-console/` is a nested git repo
+  that the outer tree ignores — `git pull` does not clone it on new machines.
+- Each machine requires a one-time: `git clone https://github.com/jgravelle/jmunch-console.git review/jmunch-console`
+- README updated to surface this as a per-machine setup step.
+
+---
+
 ## 2026-06-29 — feat(stack): jmunch-console launcher + freshness tracking
 
 ### Added

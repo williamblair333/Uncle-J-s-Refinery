@@ -779,6 +779,7 @@ Uncle-J-s-Refinery/
 │   ├── auto-maintain.sh                ← scheduled self-maintenance runner
 │   ├── check-stack-freshness.sh        ← checks installed vs latest for all MCP tools (incl. jmunch-console clone)
 │   ├── jmunch-console.sh               ← on-demand launcher for jMunch Console (browser GUI for the MCP suite → :8765)
+│   │                                     ⚠ requires per-machine clone: git clone https://github.com/jgravelle/jmunch-console.git review/jmunch-console
 │   ├── github-webhook-server.py        ← HTTP server for GitHub push/PR events
 │   ├── healthcheck-notify.sh           ← daily Telegram notification on healthcheck failure
 │   ├── jcodemunch-reindex.sh           ← triggers jcodemunch re-index after significant changes
