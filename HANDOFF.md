@@ -1,6 +1,40 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-06-30 — jmunch-console is machine-local (Q&A session).*
+*Last updated: 2026-07-05 — grep-guard false positives narrowed.*
+
+## 2026-07-05 — fix(grep-guard): narrow three false-positive patterns
+
+**Status:** `HEALTHCHECK: ok` (all 43 checks at session start).
+
+**Trigger:** weekly hook-blocks review flagged two commands blocked despite the guard's
+own deny message saying they're allowed (a stdin `cat | grep` pipe; a grep on the Claude
+memory dir). Log forensics in `state/hook-blocks.log` surfaced a third pattern.
+
+**Root causes fixed (see CHANGELOG for detail):**
+1. Whole-segment `-r` regex matched hyphenated words (`-MORTEM`, `-opt-proj-…`) → now token-anchored.
+2. grep's pattern argument matched `SRC_EXT` (`"ytd\.sh"`) → pattern/flag tokens now skipped.
+3. Recursive branch ignored the out-of-repo allowance → now walks path operands.
+
+**Tests:** 39/39 guard matrix (7 new ALLOW from the real blocked commands, 5 new kept-DENY).
+Full suite 685 passed; the 2 `test_memweave_search` failures are the known pre-existing
+store-exists fixture issue (HANDOFF 2026-06-14), untouched.
+
+**Known limitation (pre-existing, documented not fixed):** segment splitting is
+quote-unaware, so alternation patterns (`'a|b'`) split mid-pattern and can let a file
+arg escape the scan. The guard is a soft nudge; acceptable.
+
+**Code review:** code-reviewer caught a MEDIUM in the first draft (numeric-only pattern
+`grep -rl 500 /home/…` swallowed the path operand → false deny) — fixed + pinned before PR.
+
+**Follow-ups (carried):**
+- Restart Claude Code to load jcodemunch 1.108.83 (carried from 2026-06-29 session).
+- `uncle-j-{stack-alerts-*,telegram-gateway}` cron retirement (low priority).
+- `uv.lock` has a 2-line uncommitted drift on main (pre-existing this session).
+- LOW (pre-existing, from review): the recursive branch's whole-segment `ALLOWED_RE`
+  pre-check lets `grep -rn foo > /tmp/out.txt` (recursive on repo cwd, redirect merely
+  targets /tmp) through — the check matches segment text, not the read target.
+
+---
 
 ## 2026-06-30 — jmunch-console multi-machine setup (Q&A)
 

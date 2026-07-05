@@ -60,16 +60,64 @@ while IFS= read -r seg; do
     continue
   fi
 
-  # Recursive grep: `grep -r` reads a directory tree of source.
-  if [[ "$base" == grep || "$base" == egrep || "$base" == fgrep ]] \
-     && echo "$seg" | grep -qE '(-[a-zA-Z]*r[a-zA-Z]*|--recursive)\b'; then
-    echo "$seg" | grep -qE "$ALLOWED_RE" && continue
-    deny=1; break
+  # Recursive grep: an actual -r/-R flag TOKEN reads a directory tree. Flag detection is
+  # per-token, not whole-segment: hyphenated words in patterns or paths ("-MORTEM",
+  # "/…/-opt-proj-…/MEMORY.md", "ytd-angel-pr-pin") are NOT flags.
+  if [[ "$base" == grep || "$base" == egrep || "$base" == fgrep ]]; then
+    recursive=0
+    set -f
+    for tok in $seg; do
+      case "$tok" in
+        --recursive|--dereference-recursive) recursive=1; break ;;
+        --*) ;;                                            # long option, not recursive
+        -*[rR]*) echo "$tok" | grep -qE '^-[a-zA-Z]+$' && { recursive=1; break; } ;;
+      esac
+    done
+    set +f
+    if [[ $recursive -eq 1 ]]; then
+      echo "$seg" | grep -qE "$ALLOWED_RE" && continue
+      # Deny only when a path operand can reach the repo tree. Walk the operands:
+      # skip the command, flag tokens, redirects, detached numeric flag values, and
+      # the first non-flag arg (the search pattern). Absolute/~ paths OUTSIDE the
+      # repo are allowed (jcode can't help there); relative paths resolve in the
+      # repo cwd and no-path means cwd itself → deny both.
+      first=1; pattern_seen=0; has_path=0; repo_path=0
+      set -f
+      for tok in $seg; do
+        if [[ $first -eq 1 ]]; then first=0; continue; fi
+        [[ "$tok" == -* ]] && continue
+        [[ "$tok" == *">"* ]] && continue
+        if [[ $pattern_seen -eq 0 ]]; then pattern_seen=1; continue; fi
+        # After the pattern slot is filled, a bare numeral is a detached flag
+        # value (`-A 3`), not a path. Checked after pattern_seen so a numeric
+        # PATTERN (`grep -rl 500 /home/...`) can't swallow the path operand.
+        echo "$tok" | grep -qE '^[0-9]+$' && continue
+        has_path=1
+        case "$tok" in
+          ${REPO_ROOT}/*) repo_path=1 ;;
+          /*|"~"*) ;;
+          *) repo_path=1 ;;
+        esac
+      done
+      set +f
+      if [[ $has_path -eq 0 || $repo_path -eq 1 ]]; then deny=1; break; fi
+      continue
+    fi
   fi
 
-  # Scan THIS segment's tokens for a source file being read.
-  set -f; prev=""
+  # Scan THIS segment's tokens for a source file being READ. Skip the command itself,
+  # flag tokens (--include=*.sh is a filter, not a file), and — for pattern-taking tools
+  # (grep family, sed) — the first non-flag argument, which is the pattern/script text
+  # ("ytd\.sh", 's/foo.py/bar/'), not a file operand.
+  pattern_pending=0
+  case "$base" in grep|egrep|fgrep|sed) pattern_pending=1 ;; esac
+  set -f; prev=""; first=1
   for tok in $seg; do
+    if [[ $first -eq 1 ]]; then first=0; prev="$tok"; continue; fi
+    if [[ "$tok" == -* ]]; then prev="$tok"; continue; fi
+    if [[ $pattern_pending -eq 1 && "$tok" != ">"* && "$prev" != ">" && "$prev" != ">>" ]]; then
+      pattern_pending=0; prev="$tok"; continue
+    fi
     if echo "$tok" | grep -qE "$SRC_EXT"; then
       [[ "$prev" == ">" || "$prev" == ">>" || "$tok" == ">"* ]] && { prev="$tok"; continue; }   # redirect target
       echo "$tok" | grep -qE "$ALLOWED_RE" && { prev="$tok"; continue; }                          # allowed location
