@@ -119,11 +119,6 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
-- **grep-guard false positive: `~/.uncle-j-memory/` reads** — `grep-guard.sh` incorrectly blocked
-  3 reads of `~/.uncle-j-memory/memory/premortem-audit.md` (outside the repo; not source). The
-  guard should allow reads to paths outside `$PROJ_ROOT`. Narrow the pattern before the next
-  session that needs `pre-mortem` prior-art checks; the 3 retries wasted time.
-
 - **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
 
 - **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
@@ -134,6 +129,7 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 | Date | Item |
 |------|------|
+| 2026-07-05 | **grep-guard false positives narrowed** (PR #89). Three over-broad patterns fixed from real `hook-blocks.log` entries: hyphenated words (`-MORTEM`, `-opt-proj-…`) matched as `-r` flags → token-anchored flag detection; grep pattern args (`"ytd\.sh"`) matched as file operands → pattern/flag tokens skipped; recursive branch ignored the out-of-repo allowance → path-operand walk. Closes the `~/.uncle-j-memory/` reads item. +13 test regressions (40/40); code-reviewer caught a numeric-pattern MEDIUM pre-merge. |
 | 2026-06-13 | **pysqlite3 3.51.3 wheel vendored + "duckdb" healthcheck bug root-caused** (PR #65). The recurring `mcp-servers-down(duckdb)` fail was a checkmark codepoint bug (`✓` U+2713 grep vs `✔` U+2714 output) matching zero servers → headlined `missing[0]`=duckdb; fixed to `[✓✔]`. Vendored the pysqlite3-3.51.3 wheel (`scripts/build-vendored-pysqlite3.sh` → `vendor/wheels/`), marker-conditional pin in `pyproject.toml` (PyPI fallback off-platform), `check_sqlite_version` healthcheck assert. Ends the `uv sync` clobber dance permanently. |
 | 2026-06-13 | **memweave migration complete — mempalace decommissioned** (PRs #50–#55). 2b-2 freshness cron + Stop-hook; 3b project CLAUDE.md routing → `mw_search.py`; 4a cross-project corpus (`--all-projects`); 4b decommission (scripts/crons/MCP/probes removed, palace staged not deleted, dreaming + 3 global skills repointed); 4c in-repo residue (dead `check_mempalace`, 6 obsolete repair skills, RELIABILITY scrub); 4d removed mempalace/chromadb deps from pyproject/uv.lock; 4e docs sync (README/STACK/ROADMAP + mcp-clients templates). Memory is now offline cross-project memweave (`~/.uncle-j-memory`). Deferred: global `~/.claude/` edits (harness-denied), control-invariant audit-sink repoint, trash purge. |
 | 2026-06-11 | Improvement Program Phase 1 — pay-for-itself audit (PR #38): deterministic collectors + scorecard + judgment. KEEP: jmunch-retrieval (5,300:1 payoff), guardrails (315 blocks), langfuse, telegram. FIX: routing-policy (9k tok/session), mempalace storage (0.32 maint share), reliability, skills (prune), dreaming + ralph (instrument). D1–D3 deletions signed off. |
