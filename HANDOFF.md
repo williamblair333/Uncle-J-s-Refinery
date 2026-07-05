@@ -1,10 +1,10 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-05 — grep-guard false positives narrowed.*
+*Last updated: 2026-07-05 — grep-guard false positives narrowed (PR #89, merged); session closed.*
 
 ## 2026-07-05 — fix(grep-guard): narrow three false-positive patterns
 
-**Status:** `HEALTHCHECK: ok` (all 43 checks at session start).
+**Status:** `HEALTHCHECK: ok` (all 43 checks at session start). PR #89 merged; CI green (7/7).
 
 **Trigger:** weekly hook-blocks review flagged two commands blocked despite the guard's
 own deny message saying they're allowed (a stdin `cat | grep` pipe; a grep on the Claude
@@ -26,10 +26,16 @@ arg escape the scan. The guard is a soft nudge; acceptable.
 **Code review:** code-reviewer caught a MEDIUM in the first draft (numeric-only pattern
 `grep -rl 500 /home/…` swallowed the path operand → false deny) — fixed + pinned before PR.
 
-**Follow-ups (carried):**
-- Restart Claude Code to load jcodemunch 1.108.83 (carried from 2026-06-29 session).
+**Session close:** the `uv.lock` drift turned out to be jcodemunch-mcp 1.108.83 → 1.108.86
+(SessionStart autofix; `.venv` already runs 1.108.86) — committed as a chore this session.
+ROADMAP synced (grep-guard FP item → Completed). Audit baseline + closed vectors written to
+`~/.uncle-j-memory/memory/audit-baselines.md`.
+
+**Follow-ups:**
+- Restart Claude Code to load jcodemunch 1.108.86 in the live MCP servers, then run
+  `post-upgrade-mcp-integration` if the 3 patch bumps added tools (carried since 2026-06-29,
+  version target updated).
 - `uncle-j-{stack-alerts-*,telegram-gateway}` cron retirement (low priority).
-- `uv.lock` has a 2-line uncommitted drift on main (pre-existing this session).
 - LOW (pre-existing, from review): the recursive branch's whole-segment `ALLOWED_RE`
   pre-check lets `grep -rn foo > /tmp/out.txt` (recursive on repo cwd, redirect merely
   targets /tmp) through — the check matches segment text, not the read target.

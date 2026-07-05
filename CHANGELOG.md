@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-07-05 — chore(session-end): uv.lock jcodemunch-mcp 1.108.86 + ROADMAP sync
+
+### Changed
+- `uv.lock`: jcodemunch-mcp 1.108.83 (883b115) → 1.108.86 (5d2bdfc) — committing the
+  SessionStart-autofix drift; the `.venv` package was already at 1.108.86.
+  Live MCP servers pick it up on next Claude Code restart; run
+  `post-upgrade-mcp-integration` next session if new tools appear.
+- `ROADMAP.md`: moved the "grep-guard false positive: `~/.uncle-j-memory/` reads"
+  planned item to Completed (closed by PR #89 earlier today).
+
+---
+
 ## 2026-07-05 — fix(grep-guard): narrow three false-positive patterns
 
 ### Fixed
