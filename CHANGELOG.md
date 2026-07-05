@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-07-05 — fix(grep-guard): narrow three false-positive patterns
+
+### Fixed
+- `hooks/discipline/grep-guard.sh` — three over-broad patterns, all reproduced from
+  real blocked commands in the weekly `state/hook-blocks.log` review:
+  1. Recursive-flag detection matched hyphenated *words* anywhere in the segment
+     (`-MORTEM` in a pattern, `-opt-proj-…` in a Claude memory-dir path) as `-r`
+     flags. Now token-anchored: only actual flag tokens (`-r`, `-rl`, `--recursive`)
+     count.
+  2. The source-file token scan treated grep's *pattern argument* as a file operand
+     (`… | grep -c "ytd\.sh"` denied despite reading stdin). Now skips flag tokens
+     and the first non-flag arg (pattern/sed-script) for pattern-taking tools.
+  3. Recursive grep on an absolute out-of-repo target (`grep -rl x /home/bill/.local/bin/`)
+     was denied even though the non-recursive path allows out-of-repo source. The
+     recursive branch now walks path operands and allows when all are outside the repo.
+- `tests/test_grep_guard.py`: +7 ALLOW regressions (the real blocked commands) and
+  +5 kept-DENY regressions pinning the loosened paths. 39/39 green.
+
+---
+
 ## 2026-06-30 — docs: jmunch-console is machine-local (Q&A session)
 
 ### Notes
