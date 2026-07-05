@@ -87,8 +87,11 @@ while IFS= read -r seg; do
         if [[ $first -eq 1 ]]; then first=0; continue; fi
         [[ "$tok" == -* ]] && continue
         [[ "$tok" == *">"* ]] && continue
-        echo "$tok" | grep -qE '^[0-9]+$' && continue
         if [[ $pattern_seen -eq 0 ]]; then pattern_seen=1; continue; fi
+        # After the pattern slot is filled, a bare numeral is a detached flag
+        # value (`-A 3`), not a path. Checked after pattern_seen so a numeric
+        # PATTERN (`grep -rl 500 /home/...`) can't swallow the path operand.
+        echo "$tok" | grep -qE '^[0-9]+$' && continue
         has_path=1
         case "$tok" in
           ${REPO_ROOT}/*) repo_path=1 ;;

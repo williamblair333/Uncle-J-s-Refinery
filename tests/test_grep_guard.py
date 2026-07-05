@@ -73,6 +73,8 @@ ALLOW_CASES = [
     'grep -q "ytd-angel-pr-pin" /home/bill/.claude/projects/-home-bill--local-bin/memory/MEMORY.md',
     # recursive grep whose only target is absolute OUTSIDE the repo → jcode can't help
     'grep -rl "ytd.sh" /home/bill/.local/bin/ --include="*.sh" 2>/dev/null',
+    # numeric-only pattern must not swallow the path operand (code-review finding)
+    "grep -rl 500 /home/bill/.local/bin/",
     # --include=*.sh is a filter flag, not a file being read
     "ps aux | grep --include=*.sh -i python",
     # sed script text is not a file operand

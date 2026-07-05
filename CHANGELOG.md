@@ -17,8 +17,12 @@
   3. Recursive grep on an absolute out-of-repo target (`grep -rl x /home/bill/.local/bin/`)
      was denied even though the non-recursive path allows out-of-repo source. The
      recursive branch now walks path operands and allows when all are outside the repo.
-- `tests/test_grep_guard.py`: +7 ALLOW regressions (the real blocked commands) and
-  +5 kept-DENY regressions pinning the loosened paths. 39/39 green.
+- `tests/test_grep_guard.py`: +8 ALLOW regressions (the real blocked commands, plus a
+  code-review-caught numeric-pattern case) and +5 kept-DENY regressions pinning the
+  loosened paths. 40/40 green.
+- Review fix: the detached-numeric-flag-value skip ran before the pattern slot was
+  consumed, so a numeric-only pattern (`grep -rl 500 /home/…`) swallowed the path
+  operand and forced a false deny. Reordered after the `pattern_seen` gate.
 
 ---
 

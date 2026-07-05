@@ -23,10 +23,16 @@ store-exists fixture issue (HANDOFF 2026-06-14), untouched.
 quote-unaware, so alternation patterns (`'a|b'`) split mid-pattern and can let a file
 arg escape the scan. The guard is a soft nudge; acceptable.
 
+**Code review:** code-reviewer caught a MEDIUM in the first draft (numeric-only pattern
+`grep -rl 500 /home/…` swallowed the path operand → false deny) — fixed + pinned before PR.
+
 **Follow-ups (carried):**
 - Restart Claude Code to load jcodemunch 1.108.83 (carried from 2026-06-29 session).
 - `uncle-j-{stack-alerts-*,telegram-gateway}` cron retirement (low priority).
 - `uv.lock` has a 2-line uncommitted drift on main (pre-existing this session).
+- LOW (pre-existing, from review): the recursive branch's whole-segment `ALLOWED_RE`
+  pre-check lets `grep -rn foo > /tmp/out.txt` (recursive on repo cwd, redirect merely
+  targets /tmp) through — the check matches segment text, not the read target.
 
 ---
 
