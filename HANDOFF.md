@@ -1,6 +1,36 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-05 — grep-guard false positives narrowed (PR #89, merged); session closed.*
+*Last updated: 2026-07-06 — uv.lock jcodemunch 1.108.102 (catch-up-pull reconcile); jcodemunch version-skew root-caused.*
+
+## 2026-07-06 — catch-up-pull reconcile + jcodemunch `sqlite_future_version` root cause
+
+**Status:** `HEALTHCHECK: ok` (after a post-pull `jcodemunch-index-stale` reindex to `bfbc661`).
+
+**Pull reconciled.** Was 6 commits behind origin/main; `git pull --ff-only` conflicted on
+`uv.lock` (upstream PR #90 → 1.108.86 vs working-tree 1.108.102). Kept 1.108.102 (matches the
+installed `.venv`, `uv pip show` confirmed). Committed via chore PR on
+`chore/uv-lock-jcodemunch-1.108.102-2026-07-06`.
+
+**jcodemunch `sqlite_future_version` — root-caused (also hit by a parallel session).** NOT a
+plain "restart Claude Code" case. There are **two jcodemunch installs at different versions**:
+- Reindex (`scripts/jcodemunch-reindex.sh:9`) uses the **project** `.venv` → **1.108.102**.
+- The MCP server (`~/.claude.json` `jcodemunch.command`) uses the
+  **code-index venv** (`~/.code-index/local-Uncle-J-s-Refinery-b7845e4f/.venv`) → **1.108.24**.
+
+The reindex writes a 1.108.102-format index the 1.108.24 server can't load → every session that
+reindexes then loses in-session jcodemunch and falls back to Read/grep. A prior stack upgrade
+bumped the project `.venv` (tracked by `uv.lock`, "all packages at HEAD") but left the code-index
+venv stale, and the healthcheck doesn't compare the two — so the skew is invisible.
+
+**Fix options (pick one; both need a Claude Code restart to reload the server):**
+1. **Repoint the MCP server at the project `.venv`** — edit `~/.claude.json`
+   `jcodemunch.command` → `/opt/proj/Uncle-J-s-Refinery/.venv/bin/jcodemunch-mcp`. Permanent:
+   writer == reader by construction. (`~/.claude.json` is a keyboard edit — harness blocks it.)
+2. **Upgrade the code-index venv to 1.108.102** to match. Recurs on the next upgrade unless the
+   upgrade path also touches this venv.
+   Recommend #1. Consider a healthcheck probe comparing reindex-writer vs server binary version.
+
+**Follow-ups (carried):** `uncle-j-{stack-alerts-*,telegram-gateway}` cron retirement (low).
 
 ## 2026-07-05 — fix(grep-guard): narrow three false-positive patterns
 
