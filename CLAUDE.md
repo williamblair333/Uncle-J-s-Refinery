@@ -36,6 +36,7 @@ tools can answer structurally.
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
 - `get_watch_status` — check daemon coverage and staleness before relying on index freshness.
 - `jcodemunch_guide` — returns the version-current CLAUDE.md policy snippet; prefer it over a static copy in any harness that auto-loads routing rules.
+- `index_dependency` — index an INSTALLED third-party dependency (the exact version in node_modules or the repo's .venv) as its own queryable repo; ground-truth a library's API instead of guessing. Prefer over context7 when you need the installed version's actual source, not published docs.
 
 **Orientation & cold-start**:
 - Use `plan_turn` as your opening move on an unfamiliar repo. It respects the turn budget and selects the right tool for you.
@@ -60,6 +61,7 @@ tools can answer structurally.
 - `find_references` — where is an identifier imported or re-exported. `find_importers` — which files import a given file. `check_references` — quick `is_referenced` bool for dead-code detection (import + content in one call).
 - `get_dependency_graph` — file-level import graph up to 3 hops (imports / importers / both). `get_dependency_cycles` — detect circular import chains before a refactor.
 - `get_call_hierarchy` — incoming callers and outgoing callees N levels deep. `get_impact_preview` — full transitive call-graph walk showing what breaks before deleting or renaming a symbol.
+- `get_endpoint_impact` — "what breaks if I change this HTTP endpoint?" — handler + importers + callers + rendered templates; resolves string-dispatch (Django/Express/Flask/Rails) and decorator (Flask/FastAPI/Spring) routes. Endpoint-scoped counterpart to `get_blast_radius`; pass `include_infra` to attach env/compose/K8s exposure.
 - `find_implementations` — concrete implementations of an interface/abstract class (multi-source, confidence-scored). `get_class_hierarchy` — full ancestor/descendant tree across Python, Java, TS, C#.
 - `get_related_symbols` — heuristic cluster of nearby symbols (same-file + shared importers + name tokens); useful for orientation on unfamiliar code.
 - For type resolution, interface/trait dispatch, or "find all callers across files," prefer **serena** — its LSP backing outperforms AST-only search on Python/TS/Rust/Go/C#.
@@ -75,6 +77,7 @@ tools can answer structurally.
 **Quality & risk**:
 - `get_hotspots` — top-N highest-risk symbols (complexity × churn, CodeScene methodology); use before planning sprint work or targeting reviews.
 - `get_churn_rate` — git churn for a file or symbol (commit count, authors, churn/week, stable/active/volatile).
+- `get_delivery_metrics` — durable-change delivery over a window: commits_durable (landed and stuck) vs churn-back; the honest numerator for cost-per-outcome, not raw activity. Local-indexed repos only; trailing signal (recent commits flagged provisional).
 - `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
 - `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal).
 - `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
@@ -89,6 +92,7 @@ tools can answer structurally.
 
 **Session & tier config**:
 - `set_tool_tier` — explicit tier override (core/standard/full) when you hit a capability-gated failure mid-task. `announce_model` — self-report active model for automatic tier selection (idempotent; call plan_turn instead for routine per-task use).
+- `suggest_corrections` — mine retrieval-regret telemetry (re-query churn, low confidence, vocab gaps) for prioritized CLAUDE.md routing/glossary fixes as unified-diff previews + index-freshness hints + a dry-run weight proposal; read-only, never writes your files. Complements `audit_agent_config`/`tune_weights`. Requires perf telemetry.
 - `get_session_stats` — token savings stats for the current session; quantify retrieval-stack cost reduction before/after routing changes.
 - `analyze_perf` — per-tool latency telemetry; identify slow tools and cold caches.
 - `tune_weights` — learn per-repo BM25 retrieval weights from the ranking ledger; run after search-quality changes to recalibrate relevance.

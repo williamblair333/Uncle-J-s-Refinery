@@ -1,6 +1,23 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-06 — uv.lock jcodemunch 1.108.102 (catch-up-pull reconcile); jcodemunch version-skew root-caused.*
+*Last updated: 2026-07-06 — post-upgrade jcodemunch 1.108.102 routing integration (4 new tools).*
+
+## 2026-07-06 — post-upgrade jcodemunch 1.108.102 routing integration
+
+**Status:** `HEALTHCHECK: ok` (quick mode; jcodemunch index at HEAD `483e284`).
+
+Ran `post-upgrade-mcp-integration` after the 1.108.86→1.108.102 bump. Added 4 new jcodemunch
+tools to **both** CLAUDE.md files (project + global): `index_dependency`, `get_endpoint_impact`,
+`get_delivery_metrics`, `suggest_corrections`. Reverse-diff found **zero dropped tools**;
+jdata/jdoc unchanged this cycle. Cleared the stale `state/post-upgrade-needed` flag.
+
+**Carried (top open item):** the jcodemunch version-skew fix below — repoint the MCP server
+`~/.claude.json` → project `.venv` binary — is still open. Keyboard edit; harness-blocked; needs
+Bill. Until then, any reindex can still trip `sqlite_future_version` and drop in-session jcodemunch.
+
+**Also noted:** pre-existing project-vs-global `CLAUDE.md` divergence on jdata/jdoc entries —
+`install.sh` §6b copies repo `CLAUDE.md` → `~/.claude/CLAUDE.md`, so the global self-heals on the
+next install run (my direct global hand-edit this session is cosmetic on that path).
 
 ## 2026-07-06 — catch-up-pull reconcile + jcodemunch `sqlite_future_version` root cause
 
