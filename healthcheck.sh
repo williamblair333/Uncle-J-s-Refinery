@@ -395,6 +395,7 @@ check_crons() {
         [uncle-j-auto-maintain]="bash $REPO_ROOT/scripts/auto-maintain.sh"
         [uncle-j-healthcheck-notify]="bash $REPO_ROOT/scripts/healthcheck-notify.sh"
         [uncle-j-jcodemunch-reindex]="bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
+        [uncle-j-jdocmunch-reindex]="bash $REPO_ROOT/scripts/jdocmunch-reindex.sh"
         [uncle-j-memweave-sync]="scripts/memweave/sync_memory.sh"
     )
     for label in "${!EXPECTED[@]}"; do
@@ -466,19 +467,126 @@ check_memory_staleness() {
     fi
 }
 
-# ----- 9h. jdocmunch index not empty ----------------------------------------
+# ----- 9h. jdocmunch index populated and fresh -------------------------------
+# NB: this deliberately does NOT count entries in ~/.doc-index. That directory
+# holds exactly two entries (local/ and _savings.json) regardless of how many
+# repos are indexed — an `ls | wc -l` there reports "2 repo(s)" even when the
+# index is completely empty. It read as OK for months while indexes went stale.
+# Repos live in ~/.doc-index/local/<name>.json; freshness comes from each
+# manifest's head_sha vs its source root's current git HEAD.
 check_docmunch_indexed() {
-    step "jdocmunch — index populated"
-    local idx="$HOME/.doc-index"
-    if [ ! -d "$idx" ] || [ -z "$(ls -A "$idx" 2>/dev/null)" ]; then
+    step "jdocmunch — index populated and fresh"
+    local idx="$HOME/.doc-index/local"
+    local py="$REPO_ROOT/.venv/bin/python"
+
+    if [ ! -d "$idx" ]; then
         bad "jdocmunch index is empty — docs not searchable via jdocmunch"
-        hint "run: $REPO_ROOT/.venv/bin/jdocmunch-mcp index-local --path $REPO_ROOT"
+        hint "bash $REPO_ROOT/scripts/jdocmunch-reindex.sh"
         record_fail "jdocmunch-empty-index"
-    else
-        local count
-        count=$(ls "$idx" | wc -l)
-        ok "jdocmunch index: ${count} repo(s) in $idx"
+        return
     fi
+    if [ ! -x "$py" ]; then
+        warn "jdocmunch freshness unverified — python not found at $py"
+        return
+    fi
+
+    # Emits: "<STATUS>\t<name>\t<detail>", one per indexed repo.
+    # STATUS is OK | STALE | BROKEN.
+    local report
+    report=$("$py" - "$idx" <<'PY_EOF'
+import json, os, pathlib, subprocess, sys
+
+idx = pathlib.Path(sys.argv[1])
+SIDECARS = (".related.json", ".terms.json", ".boilerplate.json", ".duplicates.json")
+
+for manifest in sorted(idx.glob("*.json")):
+    if any(manifest.name.endswith(s) for s in SIDECARS):
+        continue
+    name = manifest.name[: -len(".json")]
+    try:
+        with manifest.open() as fh:
+            data = json.load(fh)
+    except Exception as exc:
+        print(f"BROKEN\t{name}\tmanifest unreadable ({type(exc).__name__})")
+        continue
+
+    # A zero-section index does not error on search — it silently returns
+    # nothing, which reads as "no results" rather than "index is broken".
+    # NB: sections is a list on disk; section_count only exists in the MCP
+    # layer's response, not in the manifest.
+    n_sections = len(data.get("sections") or [])
+    if not n_sections:
+        print(f"BROKEN\t{name}\tindex has 0 sections")
+        continue
+
+    root = data.get("source_root") or ""
+    if not root or not os.path.isdir(root):
+        print(f"BROKEN\t{name}\tsource root missing: {root or '(unset)'}")
+        continue
+
+    if not os.path.exists(os.path.join(root, ".git")):
+        print(f"OK\t{name}\t{n_sections} sections (non-git source)")
+        continue
+
+    try:
+        head = subprocess.run(
+            ["git", "-C", root, "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=30,
+        ).stdout.strip()
+    except Exception:
+        head = ""
+    recorded = (data.get("head_sha") or "").strip()
+    if head and recorded and head != recorded:
+        behind = subprocess.run(
+            ["git", "-C", root, "rev-list", "--count", f"{recorded}..{head}"],
+            capture_output=True, text=True, timeout=30,
+        ).stdout.strip() or "?"
+        print(f"STALE\t{name}\t{behind} commit(s) behind (indexed {recorded[:8]}, HEAD {head[:8]})")
+    else:
+        print(f"OK\t{name}\t{n_sections} sections at HEAD {recorded[:8]}")
+PY_EOF
+    )
+
+    if [ -z "$report" ]; then
+        bad "jdocmunch index has no repo manifests in $idx"
+        hint "bash $REPO_ROOT/scripts/jdocmunch-reindex.sh"
+        record_fail "jdocmunch-empty-index"
+        return
+    fi
+
+    # The Refinery's own docs are what this harness reads constantly, so its
+    # index is gated hard. Other repos are reported but do not fail the run.
+    local self_status="" self_detail="" total=0 degraded=0
+    while IFS=$'\t' read -r status name detail; do
+        [ -z "$status" ] && continue
+        total=$((total + 1))
+        [ "$status" != "OK" ] && degraded=$((degraded + 1))
+        if [ "$name" = "Uncle-J-s-Refinery" ]; then
+            self_status="$status"
+            self_detail="$detail"
+        elif [ "$status" != "OK" ]; then
+            warn "jdocmunch/$name: $detail"
+        fi
+    done <<<"$report"
+
+    case "$self_status" in
+        OK)
+            ok "jdocmunch: ${total} repo(s) indexed, Refinery index current — $self_detail"
+            ;;
+        STALE|BROKEN)
+            bad "jdocmunch Refinery index $self_status — $self_detail"
+            hint "bash $REPO_ROOT/scripts/jdocmunch-reindex.sh"
+            record_fail "jdocmunch-index-stale"
+            ;;
+        *)
+            bad "jdocmunch has no index for Uncle-J-s-Refinery — project docs not searchable"
+            hint "bash $REPO_ROOT/scripts/jdocmunch-reindex.sh"
+            record_fail "jdocmunch-index-missing"
+            ;;
+    esac
+
+    [ "$degraded" -gt 0 ] && warn "jdocmunch: ${degraded}/${total} repo index(es) stale or broken"
+    return 0
 }
 
 # ----- working tree: no leaked Langfuse credentials -----------------------
@@ -585,7 +693,7 @@ check_auto_maintain_cron() {
     local tab
     tab="$(crontab -l 2>/dev/null || true)"
     local missing=()
-    for label in uncle-j-auto-maintain uncle-j-jcodemunch-reindex; do
+    for label in uncle-j-auto-maintain uncle-j-jcodemunch-reindex uncle-j-jdocmunch-reindex; do
         if printf '%s\n' "$tab" | grep -q "$label"; then
             ok "cron: $label"
         else

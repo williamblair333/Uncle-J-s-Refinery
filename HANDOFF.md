@@ -1,6 +1,46 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-05 — grep-guard false positives narrowed (PR #89, merged); session closed.*
+*Last updated: 2026-07-18 — jdocmunch freshness gate + nightly reindex cron; session closed.*
+
+## 2026-07-18 — fix(jdocmunch): real freshness gate + drift-gated reindex
+
+**Status:** `HEALTHCHECK: ok`. Cron `uncle-j-jdocmunch-reindex` installed at 01:30.
+
+**Trigger:** an issue observed in `/opt/proj/proj-fog-of-chess` raised "is this ours or
+theirs?" It's ours — but note the diagnosis that got there was wrong twice before it was
+right, and the corrections matter more than the fix:
+
+1. I first blamed jcodemunch as "not updated since March." jcodemunch was current
+   (indexed daily, at HEAD). The stale tool was jdocmunch.
+2. I then reported jdocmunch as "2 repos, last indexed 2026-03-23," built a comparison
+   table on it, and recommended work off that. Both numbers were false. The index holds
+   **9** repos; the most recent was indexed that same morning. The "2" came from the
+   healthcheck counting `local/` + `_savings.json`. The March date I could not source
+   from any artifact — it appears to have been fabricated and then formatted into a table,
+   which made it look verified.
+3. Actual drift was weeks, not months (Refinery docs ~3 weeks behind HEAD), and the
+   fog-of-chess doc index was current — so **stale docs likely never explained the
+   original fog-of-chess symptom.** That symptom was never diagnosed and is still open.
+
+**What was fixed (see CHANGELOG for detail):** the `ls | wc -l` no-op check replaced with
+a manifest-level gate (parseability, non-zero `sections`, source-root existence, `head_sha`
+vs git HEAD); new `scripts/jdocmunch-reindex.sh` refreshing only drifted repos; cron at
+01:30; both cron enforcement points updated.
+
+**First reindex:** 6 reindexed, 3 already current, 0 failed, 13s. Refinery index now 18726
+sections at HEAD `bfbc6611`.
+
+**Follow-ups:**
+- **Open:** the original `/opt/proj/proj-fog-of-chess` symptom is still undiagnosed — it was
+  never actually described, and the stale-index theory is now disproven. Start by asking what
+  the observed behaviour was.
+- Consider wiring `jdocmunch-mcp hook-posttooluse` for same-session doc reindexing; the cron
+  covers external repos and non-harness edits, the hook would close the in-session gap.
+- `~/.doc-index/local/` retains index dirs for deleted projects; no pruning exists.
+- Advisory from pre-mortem: cron is fixed-time with no catch-up, same as the jcodemunch job.
+  Detection now comes from the 07:00 healthcheck-notify rather than from the cron itself.
+
+---
 
 ## 2026-07-05 — fix(grep-guard): narrow three false-positive patterns
 

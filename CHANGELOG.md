@@ -2,6 +2,51 @@
 
 ---
 
+## 2026-07-18 — fix(jdocmunch): real freshness gate + nightly drift-gated reindex
+
+### Fixed
+- `healthcheck.sh` `check_docmunch_indexed` — the check counted entries in
+  `~/.doc-index` with `ls | wc -l` and reported "N repo(s)". That directory holds
+  exactly two entries (`local/` and `_savings.json`) no matter how many repos are
+  indexed, so it printed a steady "OK 2 repo(s)" and would have done so with the
+  index completely empty. It never read a date. Replaced with a real gate that
+  enumerates `~/.doc-index/local/<name>.json` manifests and, per repo, checks
+  parseability, non-zero `sections`, source-root existence, and recorded
+  `head_sha` vs the source root's current git HEAD.
+  The Refinery's own index hard-fails (`jdocmunch-index-stale`); the other eight
+  repos warn without failing the run, so `/opt/proj/wine` drifting doesn't nag.
+- Same file: `uncle-j-jdocmunch-reindex` added to both cron enforcement points
+  (the `EXPECTED` map and the auto-maintain loop) so a crontab wipe is detected.
+
+### Added
+- `scripts/jdocmunch-reindex.sh` — drift-gated refresh across all indexed doc
+  repos. jdocmunch indexes many source roots (9 currently), most outside this
+  repo, so unlike the jcodemunch equivalent it enumerates manifests rather than
+  taking a path. Reindexes only what moved: git roots by HEAD-vs-`head_sha`,
+  non-git roots by newest file mtime vs `indexed_at`. Steady-state cost is near
+  zero. First run: 6 reindexed, 3 already current, 0 failed, 13s.
+- Cron `uncle-j-jdocmunch-reindex` at 01:30, staggered between the jcodemunch
+  reindex (01:00) and memweave sync (02:30).
+
+### Notes
+- Pre-mortem mitigations folded into the script rather than deferred: `flock`
+  guard plus a per-repo `.json.lock` check (concurrency); skip-and-continue on a
+  vanished source root so one relocated project can't stop the other eight;
+  `index_version == 3` assertion that exits 2 rather than silently reading
+  renamed fields as "nothing drifted" (this was the dimension most likely to
+  recreate the original silent-OK failure).
+- `jdocmunch-mcp hook-posttooluse` ships an auto-reindex hook that is not wired
+  up. Cron is still the correct primary — the hook only covers edits made
+  through this harness, and six of nine indexed roots are external repos. The
+  hook is a deliberate follow-up, not an oversight.
+- Caught during implementation: the first version of the gate checked
+  `section_count`, which exists only in the MCP layer's response, not in the
+  on-disk manifest (the field there is `sections`, a list). It reported all 9
+  repos BROKEN. Fixed before commit — and worth noting the gate failed loudly on
+  a bad assumption instead of passing, which is the behaviour that was missing.
+
+---
+
 ## 2026-07-05 — chore(session-end): uv.lock jcodemunch-mcp 1.108.86 + ROADMAP sync
 
 ### Changed
