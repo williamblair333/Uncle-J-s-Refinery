@@ -123,6 +123,8 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
 
+- **jcodemunch install alignment + skew probe** (root-caused 2026-07-06, PR #91 HANDOFF) — the reindex writes with the project `.venv` (1.108.102) while the MCP server runs a separate code-index venv (1.108.24), so reindexed indexes fail to load in-session (`sqlite_future_version` → Read/grep fallback). Fix: repoint `~/.claude.json` `jcodemunch.command` at the project `.venv` so writer == reader (one binary). Then add a `healthcheck.sh` probe comparing the reindex-writer version vs the MCP server binary version so the skew is caught at session-start instead of on first failed query.
+
 ---
 
 ## Completed (recent)

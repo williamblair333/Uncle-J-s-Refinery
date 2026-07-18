@@ -47,6 +47,46 @@
 
 ---
 
+## 2026-07-06 — docs(routing): post-upgrade jcodemunch 1.108.102 integration — 4 new tools
+
+### Added — CLAUDE.md routing (project + global `~/.claude/CLAUDE.md`)
+- `index_dependency` (Index & setup) — index the *installed* version of an npm/PyPI dep as its own queryable repo; ground-truth a library API over context7's published docs.
+- `get_endpoint_impact` (References & call graph) — endpoint-scoped blast radius: handler + importers + callers + rendered templates.
+- `get_delivery_metrics` (Quality & risk) — durable-change delivery (commits_durable vs churn-back); cost-per-outcome numerator.
+- `suggest_corrections` (Session & tier config) — mine retrieval-regret telemetry into routing/glossary fix proposals (read-only, diff previews).
+
+### Changed
+- Ran `post-upgrade-mcp-integration` for jcodemunch-mcp 1.108.102 (jdata 1.16.0 / jdoc 1.92.0 unchanged this cycle). Reverse-diff confirmed **zero dropped/renamed tools**.
+
+### Removed
+- Stale `state/post-upgrade-needed` flag (empty, dated Jun 11) — cleared post-integration.
+
+### Notes
+- `HEALTHCHECK: ok` at session end (quick mode; jcodemunch index at HEAD `483e284`).
+- Pre-existing project-vs-global `CLAUDE.md` divergence on jdata/jdoc entries flagged, not reconciled — `install.sh` §6b treats repo `CLAUDE.md` as source of truth, so global self-heals on next install run.
+
+---
+
+## 2026-07-06 — chore(uv.lock): jcodemunch-mcp 1.108.102 + reconcile catch-up-pull conflict
+
+### Changed
+- `uv.lock`: jcodemunch-mcp 1.108.86 (5d2bdfc) → 1.108.102 (1e177b0) — the project
+  `.venv` already runs 1.108.102 (`uv pip show` confirms), so this commits the drift left
+  by a prior-session stack upgrade. Reconciles a `git pull --ff-only` conflict: upstream
+  PR #90 moved the lock to 1.108.86 while the working tree carried the newer 1.108.102;
+  kept 1.108.102 (matches installed).
+
+### Notes — recurring jcodemunch `sqlite_future_version` (documented, not fixed here)
+- Two separate jcodemunch installs are skewed: the reindex script
+  (`scripts/jcodemunch-reindex.sh:9`) writes with the **project** `.venv` (1.108.102),
+  but the MCP server (`~/.claude.json` → code-index venv) runs **1.108.24**. The server
+  can't read the newer-format index the reindex writes → `sqlite_future_version`, forcing
+  Read/grep fallback. Restarting Claude Code alone lands back at 1.108.24 (still skewed).
+  Durable fix (separate change): align the two installs — repoint the MCP server at the
+  project `.venv` binary, or upgrade the code-index venv to 1.108.102. See HANDOFF.
+
+---
+
 ## 2026-07-05 — chore(session-end): uv.lock jcodemunch-mcp 1.108.86 + ROADMAP sync
 
 ### Changed
