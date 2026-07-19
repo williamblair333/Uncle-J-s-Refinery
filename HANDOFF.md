@@ -21,6 +21,18 @@ right, and the corrections matter more than the fix:
 3. Actual drift was weeks, not months (Refinery docs ~3 weeks behind HEAD), and the
    fog-of-chess doc index was current — so **stale docs likely never explained the
    original fog-of-chess symptom.** That symptom was never diagnosed and is still open.
+4. I also stated flatly that jdocmunch had "zero automation — no cron, no watcher, no
+   reindex script," and that claim went into the PR #94 body. Wrong again:
+   `scripts/post-merge-hook.sh:112` re-indexes jdocmunch on any merge touching `*.md`.
+   It's narrow (this repo only, merge only), which is exactly why the Refinery index
+   tracked HEAD while the other eight drifted — but "narrow" is not "none." Corrected in
+   `docs/RELIABILITY.md`; the PR body on GitHub still carries the overstatement.
+
+**Pattern worth naming:** four factual errors in one session, all the same shape — a
+confident claim asserted from inference and then formatted as evidence (a table, a
+CHANGELOG entry, a PR body), which made it look verified. Every one was cheap to check
+and none were checked before publishing. The healthcheck bug being fixed here has the
+same shape: a number that looked like evidence and wasn't.
 
 **What was fixed (see CHANGELOG for detail):** the `ls | wc -l` no-op check replaced with
 a manifest-level gate (parseability, non-zero `sections`, source-root existence, `head_sha`
