@@ -2,7 +2,36 @@
 
 ---
 
-## 2026-07-18 — fix(jdocmunch): real freshness gate + nightly drift-gated reindex
+## 2026-07-19 — fix(routing): correct stack path in CLAUDE.md; make drift check Dreaming-Notes-aware
+
+### Fixed
+- `CLAUDE.md` — the routing policy declared the stack lived at
+  `C:\Users\wblair\Downloads\claude\_stack_setup\`, a Windows path that does not
+  exist on this machine, and pointed at sibling source folders
+  (`jcodemunch-mcp-main` etc.) that aren't part of this install. Replaced with
+  `/opt/proj/Uncle-J-s-Refinery` plus a pointer to
+  `mcp-clients/claude-code-mcp.json` for the registered server commands. The
+  memweave invocation was also a bare relative path (`.venv-memweave/bin/python
+  scripts/memweave/mw_search.py`), which only resolved when cwd happened to be the
+  repo root; it is now absolute. The footer records that `~/.claude/CLAUDE.md` is
+  a deployed copy, so the next person edits the repo file rather than the copy.
+- `scripts/refinery-doctor.sh` `check_claude_md_sync` — compared the two files by
+  whole-file sha256. `features/dreaming/dream.sh` appends a `## Dreaming Notes`
+  section to the installed copy only, so the two could never be equal: the check
+  reported a migration on every run and never once reached "in sync". A real
+  routing-policy change was therefore indistinguishable from the standing noise.
+  Comparison now covers only the policy prefix above the Dreaming Notes marker,
+  with trailing blank lines normalized.
+- Same function, `--fix` path — did `cp repo_src installed`, discarding the
+  Dreaming Notes block, which exists in no other file. Now rebuilds the installed
+  copy as repo policy prefix + the installed copy's preserved notes. Fixing only
+  the comparison would have been worse than the bug: the warning would go quiet
+  while `--fix` still destroyed the playbooks.
+
+### Known issues
+- jdocmunch indexes `.venv-memweave/` and `.claude/worktrees/` in this repo, so
+  90% of the doc index is dependency and stale-worktree noise. Upstream defect;
+  see HANDOFF. Not worked around locally.
 
 ### Fixed
 - `healthcheck.sh` `check_docmunch_indexed` — the check counted entries in

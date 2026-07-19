@@ -166,23 +166,55 @@ check_claude_md_sync() {
         return
     fi
 
+    # The installed copy legitimately diverges from the repo copy: dream.sh appends
+    # an auto-generated playbook section to ~/.claude/CLAUDE.md only. Comparing whole
+    # files therefore reports drift on every run and never reaches "in sync".
+    # Compare only the routing-policy prefix, i.e. everything before the marker.
+    #
+    # MARKER IS DEFINED IN features/dreaming/dream.sh (see its `marker =` line).
+    # If you change it there, change it here — the two are not linked, and a mismatch
+    # silently restores the whole-file comparison and the permanent-drift bug.
+    local dream_marker='## Dreaming Notes (auto-generated)'
+
+    # Print the file up to (not including) the marker line; no marker => whole file.
+    # Trailing blank lines are stripped: --fix writes "<prefix>\n<marker>...", so the
+    # installed copy carries a separator blank line the repo copy has no reason to
+    # have. Without this normalization the two prefixes differ by that one line and
+    # the permanent-drift bug returns in a form that looks identical to a real diff.
+    _policy_prefix() {
+        awk -v m="$dream_marker" 'index($0, m) == 1 { exit } { print }' "$1" \
+        | awk '{ l[NR] = $0 }
+               END { n = NR
+                     while (n > 0 && l[n] == "") n--
+                     for (i = 1; i <= n; i++) print l[i] }'
+    }
+
     local repo_sum installed_sum
-    repo_sum=$($sum_cmd "$repo_src" | awk '{print $1}')
-    installed_sum=$($sum_cmd "$installed" | awk '{print $1}')
+    repo_sum=$(_policy_prefix "$repo_src" | $sum_cmd | awk '{print $1}')
+    installed_sum=$(_policy_prefix "$installed" | $sum_cmd | awk '{print $1}')
 
     if [[ "$repo_sum" == "$installed_sum" ]]; then
-        ok "in sync"
+        ok "in sync (routing policy; Dreaming Notes excluded)"
         return
     fi
 
-    migration "~/.claude/CLAUDE.md differs from repo (repo: ${repo_sum:0:12}… installed: ${installed_sum:0:12}…)"
-    suggest "run: cp $repo_src $installed   # backs up to $installed.bak first"
+    migration "~/.claude/CLAUDE.md routing policy differs from repo (repo: ${repo_sum:0:12}… installed: ${installed_sum:0:12}…)"
+    suggest "run: $0 --fix   # replaces policy prefix, preserves Dreaming Notes"
     record_migration "claude-md-sync"
 
     if [[ "$FIX_MODE" == true ]]; then
         cp "$installed" "${installed}.bak"
-        cp "$repo_src" "$installed"
-        fixed "updated ~/.claude/CLAUDE.md (backup: ${installed}.bak)"
+        # Rebuild as: repo policy prefix + the installed copy's Dreaming Notes tail.
+        # A plain `cp repo_src installed` would discard playbooks that exist nowhere else.
+        local tmp
+        tmp=$(mktemp "${installed}.XXXXXX") || { info "mktemp failed — skipping fix"; return; }
+        _policy_prefix "$repo_src" > "$tmp"
+        if grep -qF "$dream_marker" "$installed"; then
+            printf '\n' >> "$tmp"
+            awk -v m="$dream_marker" 'index($0, m) == 1 { f = 1 } f' "$installed" >> "$tmp"
+        fi
+        mv "$tmp" "$installed"
+        fixed "updated ~/.claude/CLAUDE.md policy prefix, Dreaming Notes preserved (backup: ${installed}.bak)"
     fi
 }
 
