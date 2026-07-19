@@ -117,7 +117,7 @@ cron and gated in `healthcheck.sh`:
 | Index | Refresh | Gate | Failure key |
 |-------|---------|------|-------------|
 | jcodemunch (`~/.code-index`) | `uncle-j-jcodemunch-reindex` 01:00 + `jcodemunch-watch.service` | `state/jcodemunch-last-indexed.sha` vs git HEAD | `jcodemunch-index-stale` |
-| jdocmunch (`~/.doc-index`) | `uncle-j-jdocmunch-reindex` 01:30 | per-repo manifest `head_sha` vs source root HEAD | `jdocmunch-index-stale` |
+| jdocmunch (`~/.doc-index`) | `uncle-j-jdocmunch-reindex` 01:30 + `post-merge-hook.sh` (this repo only, on `*.md` change) | per-repo manifest `head_sha` vs source root HEAD | `jdocmunch-index-stale` |
 
 `scripts/jdocmunch-reindex.sh` differs from its jcodemunch counterpart because jdocmunch
 indexes many source roots (9 currently), most outside this repo. It enumerates
@@ -139,10 +139,16 @@ read a date. A check that cannot fail is worse than no check — it converts an 
 into false confidence, and in this case a false OK was read as evidence and propagated
 into a wrong diagnosis. Prefer gates that assert a property over gates that count things.
 
+**What already existed:** `scripts/post-merge-hook.sh` re-indexes jdocmunch whenever a
+merge touches `*.md`. It is narrow — `--path "$PROJ_ROOT"`, so it covers this repo and
+none of the other eight, and it only fires on merge, not on edit or on external-repo
+churn. That is why the Refinery's own index tracked HEAD while the rest drifted for
+weeks, and why the gap read as "no automation at all" on first inspection. The cron
+generalises it; the hook is not redundant with it.
+
 **Follow-up (open):** `jdocmunch-mcp hook-posttooluse` ships an auto-reindex hook (the
 doc-side equivalent of the jCodemunch PostToolUse reindex above) and is not wired up.
-The cron is the correct primary since most indexed roots are external repos edited
-outside this harness; the hook would close the in-session gap.
+It would close the remaining in-session gap for edits that never reach a merge.
 
 ## What each component buys you
 
