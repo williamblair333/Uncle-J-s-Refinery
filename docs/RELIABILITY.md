@@ -107,6 +107,43 @@ it created by hand until venv bootstrap is folded in (Phase 3/4).
 hung export holds the flock so later runs cleanly skip while the store ages. Add a memweave
 freshness probe to `healthcheck.sh` (assert index mtime < 48h).
 
+## retrieval index freshness
+
+`CLAUDE.md` routes code reads to jcodemunch and doc reads to jdocmunch before any
+`Read`/`Grep` fallback. A stale index therefore doesn't fail loudly — it answers from
+outdated content, which is harder to notice than an error. Both indexes are refreshed on
+cron and gated in `healthcheck.sh`:
+
+| Index | Refresh | Gate | Failure key |
+|-------|---------|------|-------------|
+| jcodemunch (`~/.code-index`) | `uncle-j-jcodemunch-reindex` 01:00 + `jcodemunch-watch.service` | `state/jcodemunch-last-indexed.sha` vs git HEAD | `jcodemunch-index-stale` |
+| jdocmunch (`~/.doc-index`) | `uncle-j-jdocmunch-reindex` 01:30 | per-repo manifest `head_sha` vs source root HEAD | `jdocmunch-index-stale` |
+
+`scripts/jdocmunch-reindex.sh` differs from its jcodemunch counterpart because jdocmunch
+indexes many source roots (9 currently), most outside this repo. It enumerates
+`~/.doc-index/local/<name>.json` manifests instead of taking a path, and reindexes only
+what drifted — git roots by HEAD-vs-`head_sha`, non-git roots by newest file mtime vs
+`indexed_at` — so steady-state nightly cost is near zero. It is `flock`-guarded, skips
+repos whose jdocmunch `.json.lock` is held, skips (rather than aborts on) a vanished
+source root, and exits 2 if the manifest `index_version` is not the version it knows how
+to read.
+
+The doc gate hard-fails only on this repo's own index; the other eight warn without
+failing the run.
+
+**Historical note (2026-07-18):** the jdocmunch check previously ran
+`ls ~/.doc-index | wc -l` and reported "N repo(s)". That directory holds exactly two
+entries (`local/` and `_savings.json`) regardless of index contents, so it reported a
+steady `OK 2 repo(s)` and would have done so with the index completely empty. It never
+read a date. A check that cannot fail is worse than no check — it converts an unknown
+into false confidence, and in this case a false OK was read as evidence and propagated
+into a wrong diagnosis. Prefer gates that assert a property over gates that count things.
+
+**Follow-up (open):** `jdocmunch-mcp hook-posttooluse` ships an auto-reindex hook (the
+doc-side equivalent of the jCodemunch PostToolUse reindex above) and is not wired up.
+The cron is the correct primary since most indexed roots are external repos edited
+outside this harness; the hook would close the in-session gap.
+
 ## What each component buys you
 
 ### prior-art-check
