@@ -64,11 +64,29 @@ and lose its secret-file and symlink-escape guards (`index_local.py:178-197`).
 **Next step: file this upstream against `jgravelle/jdocmunch-mcp`.** No issue has
 been opened — that needs a human to press the button.
 
-**Also open:** `~/.claude/CLAUDE.md` is currently 4 tool entries behind the repo
-copy (`index_dependency`, `get_endpoint_impact`, `get_delivery_metrics`,
+**Found, not fixed — README documents a file that doesn't exist.** `README.md`
+lines 206, 266, and 720 instruct `cp CLAUDE.md.merged ~/.claude/CLAUDE.md`.
+`CLAUDE.md.merged` is not in the repo and no script generates it (`search_text`
+across all 85 indexed source files: 0 hits). Anyone following the README's install
+or repair steps hits a missing file. Left alone to keep this session scoped —
+either restore the merge step that produced it, or update the three README lines
+to reference `CLAUDE.md` directly.
+
+**Found, not fixed — `surface-write-guard` false-positives on scratchpad fixtures.**
+Testing the `--fix` path needed sandbox `CLAUDE.md` fixtures under
+`/tmp/.../scratchpad/`. The guard matches on basename, so it blocked writes to
+throwaway test files, and `grep-guard` blocked reading repo source for a test
+harness (8 blocks today). The discipline is working as designed, but it makes
+sandbox-testing a surface file harder than it should be. Consider exempting paths
+under the session scratchpad. Log: `state/hook-blocks.log`, 2026-07-19 —
+14 ALLOWED / 15 BLOCKED, 4 of them scratchpad paths.
+
+**Resolved in-session:** `~/.claude/CLAUDE.md` had fallen 4 tool entries behind the
+repo copy (`index_dependency`, `get_endpoint_impact`, `get_delivery_metrics`,
 `suggest_corrections`) from the 03:00 auto-maintain run. `refinery-doctor.sh --fix`
-now syncs it without eating the Dreaming Notes; it was not run, to keep this
-session's changes scoped.
+synced it and preserved all 22 Dreaming Notes playbook entries; the check now
+reports `in sync`. Backup at `~/.claude/CLAUDE.md.bak`. This was the fixed
+`--fix` path's first real-world run, and it did the right thing.
 
 ## 2026-07-18 — fix(jdocmunch): real freshness gate + drift-gated reindex
 
