@@ -1,6 +1,92 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-18 — jdocmunch freshness gate + nightly reindex cron; session closed.*
+*Last updated: 2026-07-19 — CLAUDE.md stack path corrected; drift check fixed; jdocmunch index pollution documented (upstream).*
+
+## 2026-07-19 — fix(routing): stack path + drift check; jdocmunch index pollution found
+
+**Status:** committed locally on `main`, **not pushed**. `uv.lock` carries an
+unrelated jcodemunch bump from the 03:00 auto-maintain run and was deliberately
+left out of the commit.
+
+**Trigger:** the global routing policy pointed at a Windows path
+(`C:\Users\wblair\Downloads\claude\_stack_setup\`) that has never existed on this
+box, so every session was told the stack lived somewhere it didn't.
+
+**Two things worth carrying forward, both about verification:**
+
+1. **`~/.claude/CLAUDE.md` is a deployed copy, not a source.** `install.sh:476-482`
+   and `refinery-doctor.sh` both `cp` the repo file over it. Editing only the
+   installed copy — the obvious reading of "fix the global CLAUDE.md" — would have
+   been silently reverted on the next doctor or install run. Both files were edited.
+
+2. **jcodemunch returned a confident false negative on this exact question.**
+   `search_text(repo=Uncle-J-s-Refinery, query="_stack_setup")` gave
+   `result_count=0, files_searched=85`, and `get_file_content("CLAUDE.md")` returned
+   `state: absent` with the note *"strong evidence the target is not present; do not
+   reformulate."* Both wrong: the code index covers 85 source files and excludes
+   top-level markdown. jdocmunch had the file, and `get_section(verify=true)`
+   confirmed the stale text against disk. **Treat a jcodemunch miss on `.md`/config
+   as inconclusive, not negative.** This is the same failure shape the 2026-07-18
+   entry warns about — a confident claim from a tool artifact, formatted as evidence.
+
+**jdocmunch index pollution — UPSTREAM, not worked around.** Measured from
+`list_docs(local/Uncle-J-s-Refinery)`:
+
+| bucket | docs | sections |
+|---|---:|---:|
+| real project docs | 102 | 1,914 |
+| `.venv*` / site-packages | 259 | 15,566 |
+| stale `.claude/worktrees/` copies | 83 | 1,262 |
+| **total** | **444** | **18,742** |
+
+90% of the index is noise, degrading every `search_sections` call. Cause is in
+`jdocmunch_mcp/tools/index_local.py:107-112` (v1.92.0):
+
+```python
+def _should_skip(rel_path: str) -> bool:
+    normalized = "/" + rel_path.replace("\\", "/")
+    for pat in SKIP_PATTERNS:
+        if ("/" + pat) in normalized:
+            return True
+```
+
+`SKIP_PATTERNS` (`tools/_constants.py`) contains `.venv/`, so the test is a
+substring match for `/.venv/`. Our memweave venv is `.venv-memweave/` — no match,
+so it gets walked. `.claude/worktrees/` isn't in the list at all.
+
+Suggested upstream fix: match path *segments* (or glob) rather than substrings, and
+extend `SKIP_PATTERNS` with `.venv-*/`, `venv-*/`, `.claude/worktrees/`.
+
+**Deliberately not fixed locally.** Patching site-packages is wiped by the next uv
+upgrade (auto-maintain upgrades nightly on a threshold), and switching
+`jdocmunch-reindex.sh` to `--paths-from` would move file discovery out of jdocmunch
+and lose its secret-file and symlink-escape guards (`index_local.py:178-197`).
+**Next step: file this upstream against `jgravelle/jdocmunch-mcp`.** No issue has
+been opened — that needs a human to press the button.
+
+**Found, not fixed — README documents a file that doesn't exist.** `README.md`
+lines 206, 266, and 720 instruct `cp CLAUDE.md.merged ~/.claude/CLAUDE.md`.
+`CLAUDE.md.merged` is not in the repo and no script generates it (`search_text`
+across all 85 indexed source files: 0 hits). Anyone following the README's install
+or repair steps hits a missing file. Left alone to keep this session scoped —
+either restore the merge step that produced it, or update the three README lines
+to reference `CLAUDE.md` directly.
+
+**Found, not fixed — `surface-write-guard` false-positives on scratchpad fixtures.**
+Testing the `--fix` path needed sandbox `CLAUDE.md` fixtures under
+`/tmp/.../scratchpad/`. The guard matches on basename, so it blocked writes to
+throwaway test files, and `grep-guard` blocked reading repo source for a test
+harness (8 blocks today). The discipline is working as designed, but it makes
+sandbox-testing a surface file harder than it should be. Consider exempting paths
+under the session scratchpad. Log: `state/hook-blocks.log`, 2026-07-19 —
+14 ALLOWED / 15 BLOCKED, 4 of them scratchpad paths.
+
+**Resolved in-session:** `~/.claude/CLAUDE.md` had fallen 4 tool entries behind the
+repo copy (`index_dependency`, `get_endpoint_impact`, `get_delivery_metrics`,
+`suggest_corrections`) from the 03:00 auto-maintain run. `refinery-doctor.sh --fix`
+synced it and preserved all 22 Dreaming Notes playbook entries; the check now
+reports `in sync`. Backup at `~/.claude/CLAUDE.md.bak`. This was the fixed
+`--fix` path's first real-world run, and it did the right thing.
 
 ## 2026-07-18 — fix(jdocmunch): real freshness gate + drift-gated reindex
 

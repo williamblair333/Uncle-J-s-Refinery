@@ -4,9 +4,11 @@ You have a dedicated retrieval stack installed. **Always consult it before
 falling back to brute-force file reading, grep, or bash.** Brute-force
 reading is a last resort, not a default.
 
-The stack is stored under `C:\Users\wblair\Downloads\claude\_stack_setup\`.
-Full source for each component is archived alongside it in sibling folders
-(`jcodemunch-mcp-main`, `jdatamunch-mcp-master`, `jdocmunch-mcp-master`).
+The stack lives at `/opt/proj/Uncle-J-s-Refinery` (referred to below as
+`$STACK_ROOT`). The jcodemunch, jdatamunch, and jdocmunch MCP servers run as
+entry points under `$STACK_ROOT/.venv/bin/`; serena, context7, and duckdb are
+launched via `uvx`/`npx`. Registered commands are in
+`$STACK_ROOT/mcp-clients/claude-code-mcp.json`.
 
 ## Tools by modality — first choice wins
 
@@ -156,7 +158,8 @@ tools can answer structurally.
 ### 4. Memory — memweave before WebSearch or re-asking
 - Start every non-trivial task with a memory search for prior work on the same topic.
   "Have we solved this before?" is always question #1. Run:
-  `.venv-memweave/bin/python scripts/memweave/mw_search.py "your query" --k 5`
+  `/opt/proj/Uncle-J-s-Refinery/.venv-memweave/bin/python \`
+  `  /opt/proj/Uncle-J-s-Refinery/scripts/memweave/mw_search.py "your query" --k 5`
   (offline ONNX semantic + BM25 over `~/.uncle-j-memory`; add `--json` for machine-parseable
   output, `--min-score N` to threshold). It opens the existing index read-only — no writes.
 - **memweave ships no MCP server** — it's a separate-process Bash CLI, not an MCP tool. Use Bash
@@ -242,5 +245,7 @@ Then serialize: `json.dumps(result, separators=(',',':'))` (no indent; whitespac
 
 ---
 
-*Stack installed from `C:\Users\wblair\Downloads\claude\_stack_setup\` —
-see `README.md` there for install / verify / re-register instructions.*
+*Stack source and installer live at `/opt/proj/Uncle-J-s-Refinery` — see
+`README.md` there for install / verify / re-register instructions. This file is
+deployed to `~/.claude/CLAUDE.md` by `install.sh`; edit the repo copy, not the
+deployed one.*
