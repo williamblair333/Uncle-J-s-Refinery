@@ -1,6 +1,60 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-19 — CLAUDE.md stack path corrected; drift check fixed; jdocmunch index pollution documented (upstream).*
+*Last updated: 2026-07-23 — occams-razor skill added and merged (PR #96); jdocmunch index re-synced to HEAD.*
+
+## 2026-07-23 — feat(skills): occams-razor
+
+**Status:** merged to `main` (`7fc4f25`), branch deleted local + remote, tree
+clean. `uv.lock` still carries the unrelated auto-maintain jcodemunch bump and
+remains deliberately uncommitted — same as the 2026-07-19 entry.
+
+**What landed:** `global-skills/occams-razor/SKILL.md`. Reasoning discipline for
+diagnosis/root-cause: cheapest-assumption-first enumeration, then justify any
+complexity beyond the simplest fit.
+
+**The one thing next session should know — the scope boundary is load-bearing.**
+The ask was an unconditional "always reason via Occam's Razor." That was
+deliberately narrowed, and the narrowing is the whole value:
+
+- It fires on **explanation-selection only** (diagnosis, root cause, competing
+  hypotheses). Not every turn — an always-on razor is noise on trivial work and
+  argues against the legitimately-complex answer when one is correct.
+- It is **not** a scope-cutting rule. "Simplest explanation" ≠ "build less."
+  If a future session finds this skill being cited to justify trimming features
+  or requirements, that is a misuse the file explicitly forbids in three places.
+- Simplicity is a **tie-breaker among explanations that fit all the evidence**.
+  Fit is the gate. A tidy theory that contradicts a known fact loses to a messy
+  one that doesn't.
+
+**Verification pattern worth reusing:** RED/GREEN with subagents. Baseline (no
+skill) reached for a native-library ABI break; with the skill the same scenario
+rejected that theory on evidence and landed on a scheduler race. Do the RED run
+*first* — without watching the failure you don't know the skill teaches the
+right thing.
+
+**Live demo, and the honest wrinkle in it.** Applied the skill to the session's
+own `jdocmunch-index-stale` fail. Pick: plain staleness (index pinned at
+`3d63f1e7`, HEAD at `7fc4f25d` — our own merge). Confirmed by re-index →
+"Refinery index current, 18,754 sections at HEAD".
+
+The wrinkle: `get_recent_changes` *still* showed 10 drifted sections after the
+successful re-index, which looked like the pick had failed. It hadn't — those are
+two different staleness signals. The healthcheck gate is HEAD-vs-indexed; the
+probe is section-level drift against the cached mirror, and 7 of its 10 hits are
+the `.venv-memweave/` + `.claude/worktrees/` pollution already documented below
+as an upstream defect. **Don't fuse them into one diagnosis.** Ground truth came
+from re-running `healthcheck.sh`, not from inferring.
+
+**Open, not chased:**
+- `Uncle-J-s-Refinery.summary` and `proj-fog-of-chess.summary` sub-indexes report
+  **0 sections** (healthcheck warnings, non-blocking). Unknown whether the
+  summary index is unpopulated or the count is misreported — the latter would be
+  the same class of counting bug as the 2026-07-19 `ls | wc -l` fix.
+- jcodemunch hints a stack package upgrade (`uv lock --upgrade-package ...`).
+- The doc-watch service is `installed_active: false`, so indexes only refresh via
+  the nightly cron or a manual re-index. That is why this fail surfaced at all.
+
+---
 
 ## 2026-07-19 — fix(routing): stack path + drift check; jdocmunch index pollution found
 

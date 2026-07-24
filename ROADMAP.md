@@ -116,6 +116,11 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **Agent harness competitive analysis** — skill exists; full analysis not yet run
 
+- **jdocmunch `.summary` sub-indexes report 0 sections** (surfaced 2026-07-23) — healthcheck
+  warns for both `Uncle-J-s-Refinery.summary` and `proj-fog-of-chess.summary`. Non-blocking.
+  Determine whether the summary index is genuinely unpopulated or the count is misreported;
+  the latter would be the same class of counting bug as the 2026-07-19 `ls | wc -l` fix
+
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
