@@ -2,6 +2,50 @@
 
 ---
 
+## 2026-07-23 — feat(skills): occams-razor explanation-selection discipline
+
+### Added
+- `global-skills/occams-razor/SKILL.md` (PR #96, merge `7fc4f25`) — reasoning
+  discipline for diagnosis and root-cause selection. Recipe: evidence →
+  candidates cheapest-assumption-first → simplest hypothesis consistent with
+  *all* evidence → explicit justification for any added complexity, gated by one
+  test ("what evidence does the simple explanation fail to account for?").
+
+  **Scope boundary is deliberate and stated three times in the file.** The
+  request was an unconditional "always reason via Occam's Razor"; that was
+  narrowed to explanation-selection only. An always-on razor is noise on trivial
+  tasks and suppresses the legitimately-complex answer. It is also explicitly
+  NOT a scope/feature-cutting rule — "prefer the simplest explanation" and "build
+  the minimal thing" are different principles, and conflating them would have
+  turned a diagnostic aid into a license to under-deliver.
+
+  Authored per `superpowers:writing-skills` TDD. RED baseline (subagent, no
+  skill) led with a native-library ABI break plus nondeterministic segfault.
+  GREEN (same scenario, skill present) rejected the ABI theory on evidence —
+  "sometimes fails" disqualifies a cause that would fail every run — and landed
+  on two schedulers racing a destructive rebuild. Deploys via the existing
+  `install-reliability.sh` `global-skills/*/` dir scan; no hardcoded list.
+
+### Fixed
+- `jdocmunch-index-stale` healthcheck fail — the Refinery doc index was pinned at
+  `3d63f1e7` while HEAD had moved to `7fc4f25d` (this session's own merge).
+  `scripts/jdocmunch-reindex.sh` → `reindexed=3 skipped=7 failed=0`; index now
+  18,754 sections at HEAD, healthcheck reports "Refinery index current".
+  Diagnosed with the new skill: the repo's documented FTS5/sqlite corruption
+  history (`project_fts5-fix`) baited a corruption theory, but the status was
+  `STALE` not `BROKEN` and drift buckets were clean, so no evidence promoted it.
+
+### Known issues
+- `Uncle-J-s-Refinery.summary` and `proj-fog-of-chess.summary` sub-indexes both
+  report **0 sections** (healthcheck warnings, non-blocking). Not investigated.
+- `get_recent_changes` still reports 10 drifted sections after a successful
+  re-index. Seven are `.claude/worktrees/` and `.venv-memweave/` paths — the
+  index pollution already documented in HANDOFF as an upstream jdocmunch defect.
+  This is a section-level drift probe against the cached mirror, a *different*
+  signal from the HEAD-based gate that fires the healthcheck; it did not block.
+
+---
+
 ## 2026-07-19 — fix(routing): correct stack path in CLAUDE.md; make drift check Dreaming-Notes-aware
 
 ### Fixed

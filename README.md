@@ -120,6 +120,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Ralph Wiggum | Autonomous loop harness with verification gates |
 | | prior-art-check | Custom skill — runs `mw_search.py` (memweave) before non-trivial work |
 | | judge | Custom skill — spawns code-reviewer subagent before Edit/Write |
+| | occams-razor | Custom skill — cheapest-assumption-first root-cause selection; scoped to diagnosis, not scope-cutting |
 | **Governance** | jCodeMunch hooks | PreToolUse / PostToolUse / PreCompact / TaskCompleted / SubagentStart enforcement |
 | | dwarvesf guardrails | UserPromptSubmit secret scanner + PostToolUse prompt-injection defender |
 | | Bash-matcher rules | Block destructive `rm`, pipe-to-shell, direct pushes to main, exfil to webhook services, escalation flags |
