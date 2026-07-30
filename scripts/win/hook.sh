@@ -56,9 +56,9 @@ case "${1:-}" in
         exec bash "$ROOT/hooks/discipline/unpushed-warn.sh"
         ;;
     # --- SessionStart ------------------------------------------------------
-    probe)
-        exec bash "$ROOT/scripts/win/shell-probe.sh"
-        ;;
+    # `probe` (scripts/win/shell-probe.sh) is retired: it confirmed the hook
+    # runner is Git Bash and that uv/jq/python3 resolve. state/win-port-probe.log
+    # keeps the record. See docs/WINDOWS-PORT.md.
     review-check)
         bash "$ROOT/scripts/review-check.sh" 2>/dev/null || true
         ;;

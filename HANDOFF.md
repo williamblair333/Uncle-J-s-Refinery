@@ -79,18 +79,37 @@ HANDOFF; the guard hardcoded those plus `docs/RELIABILITY.md` and ignored the
 config's `trigger.file_types` gate. The guard reads the config now. This was
 pre-existing on Linux, not a Windows artifact.
 
+**Follow-ups done in the same session:**
+- **serena and duckdb are registered** and both launch through `uvx` (verified by
+  running each `--help` first). They sit at **"Pending approval"** until someone
+  runs `claude` and approves the project `.mcp.json` once — that is a human step,
+  not a bug, and `healthcheck.sh` now reports it as a warning with the right fix
+  rather than as a server-down failure. context7 still needs Node.js.
+- **`install.sh` §5c branches on platform.** It previously ran the cron block on
+  Windows, registered nothing, and did not fail — a fresh clone got no
+  maintenance jobs and no warning. Now calls `scripts/win/schedule-tasks.sh`.
+- **The shell probe is retired** (script, dispatcher case, and hook entry
+  together — deleting only the file would have left `exec` failing at every
+  SessionStart). It confirmed Git Bash *and* caught the missing uv/jq/python3.
+
 **Open, not chased:**
+- **`jdocmunch` cannot reindex while a session is open** — the live
+  `jdocmunch-mcp` server holds `~/.doc-index/local/Uncle-J-s-Refinery.json.lock`,
+  so a post-commit reindex logs `index lock held by another process` and skips.
+  Not new and not Windows-specific, but it means `HEALTHCHECK` reads
+  `jdocmunch-index-stale` for the rest of any session that commits. The 01:30
+  scheduled job now covers it unattended.
+- **The PostToolUse checkpoint hook commits `chk:` snapshots as you work**, so
+  HEAD moves under you and the jcodemunch index goes stale mid-session. Squash
+  them before pushing (this session's were folded into one commit).
 - `state/disabled-features` lists dreaming, session-stats, healthcheck-notify.
   The first two are uninstalled; the third has no `TELEGRAM_BOT_TOKEN` so it
   would run and do nothing. Delete a line to re-enable a feature's checks.
 - duckdb and serena would likely work now that `uvx` is on PATH — not attempted.
   context7 still needs Node.js.
-- The shell probe has served its purpose: hooks **are** Git Bash. It now also
-  confirms uv/jq/python3 resolve. Safe to delete once you trust it.
-- 106 pre-existing test failures, untouched and still unexplained.
-- `install.sh` still registers nothing on Windows — `schedule-tasks.sh` is a
-  manual step. Wiring it into `install.sh` behind a platform check is the obvious
-  next move.
+- 62 pre-existing test failures (45 `test_skills.py`, 11 `test_install_update.py`,
+  6 `test_session_end_check.py`), still unexplained. Down from the port's
+  documented 106 purely because jq is now installed — 44 recovered, none lost.
 
 ---
 

@@ -31,6 +31,24 @@ success*, which is the failure class the port entry already names.
   broken install and fails the healthcheck forever.
 - `jq` 1.7.1 → `C:\util\apps\jq` (sha256 `7451FBBF…B6D6AB`), and both it and
   `C:\util\apps\uv` added to the user PATH.
+- `serena` and `duckdb` registered in `.mcp.json`, both launching through
+  `uvx` — verified by running each `--help` before wiring, not assumed. Pinned to
+  the **absolute** `uvx.exe` path: the MCP launcher no more inherits the user
+  PATH than the hook runner does. Only `context7` remains unregistered (Node.js).
+- `install.sh` §5c now branches on platform and calls
+  `scripts/win/schedule-tasks.sh` on Windows. Previously the cron block ran,
+  registered nothing, and did not fail — so a fresh Windows clone got no
+  maintenance jobs and no warning that it hadn't.
+- `healthcheck.sh` distinguishes **"Pending approval"** from "down". A newly
+  added `.mcp.json` server waits on a one-time human approval; counting that as
+  a failure pointed the reader at `--auto-register`, which cannot approve
+  anything.
+
+### Removed
+- `scripts/win/shell-probe.sh` and its SessionStart hook. It answered its
+  question — the hook runner is Git Bash (`bash 5.3.15`, MINGW64) — and then
+  earned its keep a second time by catching that `uv`, `uvx` and `jq` were all
+  missing from the hook environment. `state/win-port-probe.log` keeps the record.
 
 ### Fixed
 - **Three discipline guards were dead on Windows, two of them failing open.**

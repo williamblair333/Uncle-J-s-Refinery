@@ -135,20 +135,30 @@ check_mcp_connected() {
     # core stack and must be present and Connected; duckdb/serena/context7 are
     # supplementary (duckdb+serena need uvx, context7 needs Node) and are only
     # asserted when this host actually registered them.
-    local missing=() unconfigured=()
+    local missing=() unconfigured=() pending=()
     for name in jcodemunch jdatamunch jdocmunch; do
         if ! printf '%s\n' "$output" | grep -qE "^${name}: .*[✓✔] Connected"; then
             missing+=("$name")
         fi
     done
+    # A newly added .mcp.json server sits in "Pending approval" until a human
+    # approves it once. That is a distinct state from down: nothing is broken and
+    # no re-registration helps, so counting it as a failure sends the reader at
+    # the wrong fix (--auto-register cannot approve anything).
     for name in duckdb serena context7; do
         if ! printf '%s\n' "$output" | grep -qE "^${name}:"; then
             unconfigured+=("$name")
+        elif printf '%s\n' "$output" | grep -qE "^${name}: .*Pending approval"; then
+            pending+=("$name")
         elif ! printf '%s\n' "$output" | grep -qE "^${name}: .*[✓✔] Connected"; then
             missing+=("$name")
         fi
     done
     [ ${#unconfigured[@]} -gt 0 ] && na "not registered on this host: ${unconfigured[*]} (supplementary — core jMunch trio is what the routing policy depends on)"
+    if [ ${#pending[@]} -gt 0 ]; then
+        warn "awaiting one-time approval: ${pending[*]}"
+        hint "run \`claude\` and approve the project .mcp.json servers (one time; --auto-register does not apply)"
+    fi
     # duckdb launches via uvx (mcp-server-motherduck); its first MCP handshake at
     # session-open can outrun a single probe on a cold machine. It cold-starts in
     # <1s once the uvx cache is warm, so poll up to ~15s before declaring failure:
@@ -168,7 +178,7 @@ check_mcp_connected() {
         record_fail "mcp-servers-down(duckdb)"
         return
     fi
-    local configured=$((6 - ${#unconfigured[@]}))
+    local configured=$((6 - ${#unconfigured[@]} - ${#pending[@]}))
     if [ ${#missing[@]} -eq 0 ]; then
         ok "all $configured configured stack server(s) Connected"
     elif [ ${#missing[@]} -ge 3 ] && [ ${#missing[@]} -eq "$configured" ]; then

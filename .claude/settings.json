@@ -134,15 +134,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh probe",
-            "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh skill-link link"
           }
         ]
