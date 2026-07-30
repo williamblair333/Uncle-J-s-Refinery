@@ -4,8 +4,17 @@
 # Log: state/session-start-autofix.log
 
 set -uo pipefail
-REPO_ROOT="/opt/proj/Uncle-J-s-Refinery"
+# Derived from this script's location rather than hardcoded, so the same file works
+# on Linux (/opt/proj/...) and Windows Git Bash (C:/opt/proj/...).
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG="$REPO_ROOT/state/session-start-autofix.log"
+
+# Resolve uv explicitly: it is a declared dependency so it always exists inside the
+# repo venv, whereas a bare `uv` needs the user's PATH to be set up. Prefer the
+# venv copy (both layouts), fall back to PATH.
+UV="$REPO_ROOT/.venv/Scripts/uv.exe"
+[ -x "$UV" ] || UV="$REPO_ROOT/.venv/bin/uv"
+[ -x "$UV" ] || UV="$(command -v uv 2>/dev/null || echo uv)"
 
 ts()  { date '+%Y-%m-%d %H:%M:%S'; }
 log() { printf '%s %s\n' "$(ts)" "$*" >> "$LOG" 2>/dev/null; }
@@ -42,14 +51,17 @@ HEALTH_OUT=$(CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
 if echo "$HEALTH_OUT" | grep -q "stack-not-at-head"; then
     log "Stack packages behind HEAD — launching async upgrade"
     (
-        # Guard against concurrent upgrade runs from simultaneous session starts
-        exec 9>/tmp/uncle-j-uv-upgrade.lock || { log "Stack upgrade lock unavailable — skipping"; exit 0; }
-        flock -n 9 || { log "Stack upgrade already running — skipping"; exit 0; }
+        # Guard against concurrent upgrade runs from simultaneous session starts.
+        # mkdir is atomic on every filesystem and needs no flock, which MSYS/Git
+        # Bash does not ship.
+        LOCK_DIR="${TMPDIR:-/tmp}/uncle-j-uv-upgrade.lock.d"
+        mkdir "$LOCK_DIR" 2>/dev/null || { log "Stack upgrade already running — skipping"; exit 0; }
+        trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT
         cd "$REPO_ROOT"
-        if uv lock --upgrade-package jcodemunch-mcp \
-                   --upgrade-package jdatamunch-mcp \
-                   --upgrade-package jdocmunch-mcp \
-            && uv sync --inexact; then
+        if "$UV" lock --upgrade-package jcodemunch-mcp \
+                      --upgrade-package jdatamunch-mcp \
+                      --upgrade-package jdocmunch-mcp \
+            && "$UV" sync --inexact; then
             touch "$REPO_ROOT/state/post-upgrade-needed"
             log "Stack upgrade: OK (state/post-upgrade-needed flag created)"
         else

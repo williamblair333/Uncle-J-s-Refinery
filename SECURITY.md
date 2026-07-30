@@ -34,6 +34,26 @@ Security-relevant components:
 - Rate limiting is enforced per chat (20 messages/hour by default)
 - Credentials are stored in `.env`, excluded from git via `.gitignore`
 
+### Rate-limit locking is best-effort on Windows (2026-07-30)
+
+`check_rate_limit` serialises reads/writes of its JSON state file with an
+exclusive file lock. `fcntl.flock` is POSIX-only, so the Windows port selects
+`msvcrt.locking` instead. Two behavioural differences matter:
+
+- `msvcrt.locking` **gives up after ~10 s**, where `flock` blocks indefinitely.
+- On failure the helper returns `False` and the caller **proceeds without the
+  lock** rather than raising — deliberate, matching the surrounding fail-open
+  design (a lock we cannot take must not block a legitimate message).
+
+Consequence: under heavy concurrent delivery on Windows, two workers could
+interleave a read-modify-write and undercount, letting a chat exceed 20
+messages/hour. The chat_id gate and input sanitisation are unaffected — this
+weakens throttling only, not authorisation. The gateway is single-consumer per
+token (`getUpdates`), so concurrency here should be rare in practice.
+
+If strict throttling on Windows is ever required, move the counter to a SQLite
+table with a transaction rather than a JSON file plus an advisory lock.
+
 ### Default (restricted) Telegram agent — no host access
 
 The default agent (any message without the `/work` prefix) runs with **no host access** as

@@ -2,6 +2,174 @@
 
 ---
 
+## 2026-07-30 — fix(platform): close the Windows port's silent-failure gaps
+
+Follow-on to the port below. `healthcheck.sh --quick`: **fail (7) → ok**. None of
+the seven were broken components — the checker was asserting a Linux install.
+Underneath them sat four guards that were not merely absent but *reporting
+success*, which is the failure class the port entry already names.
+
+### Added
+- `hooks/pre-mortem-guard/write-clearance-token.sh` — **was in no repository at
+  all.** `hooks/discipline/edit-surface-guard.sh` and the pre-mortem skill both
+  referenced `~/.claude/hooks/pre-mortem-guard/write-clearance-token.sh`, which
+  existed only on the original Linux host. Porting to a second machine therefore
+  installed a guard that blocks every surface edit with no way to clear it. Now
+  version-controlled beside the guard that consumes it.
+- `scripts/win/schedule-tasks.{sh,ps1}` + `scripts/win/run-job.sh` — Task
+  Scheduler equivalents for the four maintenance crons (jcodemunch-reindex 01:00,
+  jdocmunch-reindex 01:30, memweave-sync 02:30, auto-maintain 03:00). Task names
+  match the cron labels exactly, so `healthcheck.sh` probes either scheduler
+  through one accessor.
+
+  PowerShell rather than `schtasks.exe` because **`schtasks` has no flag for
+  `StartWhenAvailable`, and its default is false** — a job scheduled at 01:00 on
+  a workstation that is asleep is skipped, not deferred. Registering via
+  `schtasks` would have produced four tasks that never fire once.
+- `state/disabled-features` (gitignored, per-host) — names features deliberately
+  not installed. Without it an intentional omission is indistinguishable from a
+  broken install and fails the healthcheck forever.
+- `jq` 1.7.1 → `C:\util\apps\jq` (sha256 `7451FBBF…B6D6AB`), and both it and
+  `C:\util\apps\uv` added to the user PATH.
+
+### Fixed
+- **Three discipline guards were dead on Windows, two of them failing open.**
+  `grep-guard.sh` and `edit-surface-guard.sh` parse their payload with `jq`,
+  absent here; the failure is swallowed by `2>/dev/null || true`, so the guard
+  exits 0 with no decision — which Claude Code reads as *allow*. `edit-surface-guard`
+  is documented FAIL CLOSED, but every deny it emits comes from `jq -n`, so
+  without jq the deny printed nothing and the edit proceeded: fail-closed
+  inverted to fail-open. Both now exit non-zero when jq is missing.
+- **`install-reliability.sh` never wired them in the first place.** Lines 107-138
+  use `jq` to *do* the wiring and warn-and-continue on failure, so the guards were
+  absent from `settings.json` entirely. Now wired through `scripts/win/hook.sh`.
+- **`edit-surface-guard` could never validate a token on Windows.** `python3` here
+  is a native interpreter and cannot open an MSYS path like `/tmp/premortem-cleared-…`;
+  `json.load` raised, `token_valid()` returned 1, and the guard denied every
+  surface edit unconditionally. Now converts via `cygpath -m` (forward slashes —
+  `-w` emits backslashes and breaks the Python string literal).
+- **`grep-guard.sh` hardcoded `REPO_ROOT=/opt/proj`**, which does not exist here
+  (`/c/opt/proj` does). A wrong value does not error — it makes every absolute
+  path look external, so the guard silently allowed the source reads it exists to
+  block. Both roots are now treated as in-repo. `tests/test_grep_guard.py` 40/40.
+- **`set -o pipefail` + `grep -q` reported every registered job as missing.**
+  `grep -q` exits at the first match and closes the pipe; `printf` is still
+  writing schtasks' ~75KB and takes SIGPIPE; pipefail then turns a successful
+  match into a failed pipeline. Invisible against a short `crontab -l`, fatal
+  against schtasks. Replaced with native `[[ "$tab" == *"$label"* ]]`.
+- **`schtasks /query` reached the binary as `C:/util/apps/Git/query`** — MSYS
+  rewrites arguments that look like POSIX paths. Suppressed with
+  `MSYS2_ARG_CONV_EXCL='*'`.
+- **The two commit gates no longer disagree.** `.session-end.yml` declares
+  CHANGELOG + HANDOFF mandatory; the PreToolUse guard hardcoded those *plus*
+  `docs/RELIABILITY.md`, and ignored the config's `trigger.file_types` gate that
+  exists so doc-only commits pass freely. The guard now reads `.session-end.yml`,
+  making it the single source of truth. (Pre-existing on Linux — the inline hook
+  it replaced hardcoded the same third file.)
+- `run-job.sh` re-asserts `venv-compat.sh` before every job **and after
+  auto-maintain**, which runs `uv sync --inexact` at 03:00 and destroys the
+  `.venv/bin` shims that the 01:00 reindex depends on the following night.
+- Reindex lock dirs are reclaimed after 2h. The `EXIT` trap cannot fire on kill —
+  a machine sleeping mid-reindex at 01:00 does exactly that — and a stale dir
+  then skips every later run while logging "already running".
+- `hook.sh` puts `.venv/Scripts`, jq and uv on PATH. The SessionStart probe
+  recorded `uv`, `uvx` and `jq` as MISSING; all three are called by hooks and
+  every failure is swallowed.
+
+### Known issues
+- `flock` still absent (by design — `mkdir` locks replace it).
+- duckdb/serena/context7 remain unregistered; reported as `--` not a failure.
+  duckdb and serena would work through `uvx` now that it is on PATH; context7
+  needs Node.js.
+- 106 pre-existing test failures, unchanged and still unexplained.
+
+---
+
+## 2026-07-30 — feat(platform): Windows 11 + Git Bash port
+
+### Added
+- `.mcp.json` — project-scoped registration for all three jMunch servers, pinned
+  to `.venv\Scripts\*.exe`. Chosen over `jcodemunch-mcp init`, which registers via
+  floating `uvx`, appends policy to *global* `~/.claude/CLAUDE.md`, writes hooks
+  into *global* `~/.claude/settings.json`, and resolves "project" against the cwd
+  rather than this repo.
+
+  **The three CLIs are not uniform** — this is the easiest thing to get wrong.
+  `jcodemunch-mcp` takes `serve --transport stdio`; `jdatamunch-mcp` takes **no
+  arguments at all**; `jdocmunch-mcp` has `serve` but **no** `--transport`.
+  Passing `--transport stdio` to the latter two makes them exit instantly, which
+  surfaces only as `MCP error -32000: Connection closed`.
+- `scripts/win/` — `hook.sh` (single dispatcher), `checkpoint.sh`,
+  `commit-doc-guard.sh`, `mcp-log.sh`, `venv-compat.sh`, `shell-probe.sh`.
+  The dispatcher exists because `bash` is not on the Windows PATH (so the
+  interpreter must be named absolutely) and because settings.json invoking a
+  script directly silently drops shell redirection — there is no shell to
+  interpret `>> log 2>&1`.
+- `scripts/win/venv-compat.sh` — recreates `.venv/bin` → `Scripts` and a
+  `python3.exe`, for both `.venv` and `.venv-memweave`. ~20 call sites hardcode
+  `.venv/bin/<tool>`; MSYS appends `.exe` on exec, so one symlink fixes all of
+  them. `.venv/` is gitignored, so **`uv sync` destroys both** — `hook.sh autofix`
+  re-asserts them every SessionStart.
+- `docs/WINDOWS-PORT.md` — host prerequisites, what changed, what stays Linux-only.
+
+### Fixed
+- **`flock` absence was a silent-failure generator, not a cosmetic gap.** MSYS
+  ships no `flock`, so every `flock -n` guard returned non-zero and took its
+  "already running" branch — the guarded work was skipped while callers logged
+  success. Affected `jcodemunch-reindex.sh` (reported `reindex: OK` without
+  indexing), `jdocmunch-reindex.sh`, `telegram-gateway-poll.sh` (exited on every
+  run, so the gateway never polled), `memweave/sync_memory.sh`, and
+  `session-start-autofix.sh`. All now use an atomic `mkdir` lock with an `EXIT`
+  trap — no external binary, identical behaviour on Linux.
+- **The PostToolUse checkpoint hook never fired — on Linux either.** It compared
+  `git rev-parse --show-toplevel` against the literal `/opt/proj/Uncle-J-s-Refinery`.
+  Now `scripts/win/checkpoint.sh`, comparing with `[ a -ef b ]` (device+inode).
+  String normalisation was tried first and is *insufficient*: under MSYS one
+  directory has several spellings and mount aliases rewrite more
+  (`C:/Users/<u>/AppData/Local/Temp` → `/tmp`). Caught by testing, not review.
+- `healthcheck.sh` asserted `sqlite_version == "3.51.3"` exactly, so a strictly
+  *safer* SQLite failed the check. The stated intent is "WAL data-race fix
+  present", which landed in 3.51.3 — now `>= 3.51.3`. The uv CPython 3.11.15 links
+  3.53.1, and no `_pysqlite3_patch.pth` is generated, so the vendored pysqlite3
+  pin is moot on this platform. Do not re-tighten to equality.
+- `healthcheck.sh` `check_jcodemunch_path` grepped `claude mcp get` output for the
+  binary path, but that command now reports scope and status only — broken on
+  every platform, not just Windows. Falls back to `claude mcp list`, and accepts
+  the `Scripts\*.exe` layout.
+- `scripts/lib/tg_security.py` imported `fcntl` at module scope, which made
+  **`pytest` fail collection for the entire suite** on Windows. Now selects
+  `fcntl`/`msvcrt` at import and locks best-effort. Unblocked 71 tests
+  (514 → 585 passing). Note `msvcrt.locking` gives up after ~10s where `flock`
+  waits indefinitely.
+- `session-start-autofix.sh` and `memweave/sync_memory.sh` hardcoded
+  `/opt/proj/Uncle-J-s-Refinery`; both now derive the root from `${BASH_SOURCE[0]}`.
+- `sync_memory.sh` derived the transcript dir as the Linux slug
+  `-opt-proj-Uncle-J-s-Refinery`. Claude maps `:` `/` `\` → `-` over the **native**
+  path, so on Windows it is `C--opt-proj-Uncle-J-s-Refinery`; the slug is now built
+  via `cygpath -w`. It also raised `FileNotFoundError` into the Stop hook when a
+  project had no transcripts yet — now exits clean.
+- `session-start-autofix.sh` invoked a bare `uv`, which depends on the user's PATH.
+  Resolves the venv copy first (`uv` is a declared dependency, so it always exists).
+
+### Known issues
+- `healthcheck.sh --quick`: 21 → 8 failures. The 8 remaining are 7 absent cron jobs
+  (no `crontab` on Windows — judged redundant, since SessionStart autofix already
+  reindexes when stale and the Stop hook already syncs memweave), the uninstalled
+  `features/` extras (`/stats`, `/dream`, `dream-synthesizer`), and
+  serena/context7/MotherDuck (context7 needs Node.js, absent).
+- **The hook runner's shell on win32 is assumed, not proven.** Hooks assume Git
+  Bash, consistent with the originals being bash (`[[ ]]`). `scripts/win/shell-probe.sh`
+  writes `state/win-port-probe.log` on SessionStart; if it ever reports `NOT BASH`,
+  the hook command format needs revisiting.
+- 106 pre-existing test failures (`test_skills.py` 45, `test_session_end_check.py`
+  and siblings 61). Confirmed pre-existing by running the identical subset against
+  a pristine `HEAD` worktree and getting identical counts — no regression from this
+  port.
+- `.session-end.yml` mandates CHANGELOG + HANDOFF, but the PreToolUse commit guard
+  also demands `docs/RELIABILITY.md`. The two gates disagree; not reconciled.
+
+---
+
 ## 2026-07-23 — feat(skills): occams-razor explanation-selection discipline
 
 ### Added

@@ -295,6 +295,40 @@ The SessionStart staleness check scans `MEMORY.md` for stale tracking entries (`
 
 (memweave memory operational details — freshness, store layout, recovery — are in the "memweave memory freshness" section above. mempalace was decommissioned 2026-06-13; with it gone, the `chromadb==1.5.8` HNSW-corruption-workaround pin + `chroma-hnswlib` dep were also removed from `pyproject.toml` — chromadb was a mempalace-only transitive dependency.)
 
+### Guards that fail *open* (found during the 2026-07-30 Windows port)
+
+A reliability layer is only as good as its failure direction. Five scripts used
+this shape:
+
+```bash
+exec 9>"$LOCK"
+flock -n 9 || { log "Already running — skipping."; exit 0; }
+```
+
+MSYS/Git Bash ships no `flock`. The missing binary returns non-zero, which is
+indistinguishable from "lock held", so **every run took the skip branch and
+exited 0** — and callers reported success. `jcodemunch-reindex.sh` logged
+`reindex: OK` while indexing nothing; `telegram-gateway-poll.sh` exited on every
+invocation, so the gateway never polled at all. Nothing looked broken.
+
+All five now use an atomic `mkdir` lock directory with an `EXIT` trap, which needs
+no external binary and behaves identically on Linux:
+
+```bash
+if ! mkdir "$LOCK.d" 2>/dev/null; then log "Already running — skipping."; exit 0; fi
+trap 'rmdir "$LOCK.d" 2>/dev/null || true' EXIT
+```
+
+**Generalisable rule:** a guard that conflates "the tool is missing" with "the
+condition is satisfied" will silently disable the work it guards. When a check
+short-circuits to success, verify the check itself ran. Two other latent bugs
+surfaced the same way and were *not* Windows-specific — the PostToolUse checkpoint
+hook compared `git rev-parse --show-toplevel` to a hardcoded path and so never
+fired on any platform, and `healthcheck.sh` asserted an exact SQLite version so a
+*newer, safer* SQLite failed the check.
+
+Platform specifics: `docs/WINDOWS-PORT.md`.
+
 ---
 
 ## Skills

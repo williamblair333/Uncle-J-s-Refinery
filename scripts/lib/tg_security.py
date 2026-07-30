@@ -2,7 +2,6 @@
 Security helpers for the Telegram gateway.
 All functions are pure (no I/O) except check_rate_limit which reads/writes a JSON state file.
 """
-import fcntl
 import html
 import json
 import os
@@ -10,6 +9,51 @@ import re
 import time
 import unicodedata
 from typing import Optional
+
+# Exclusive file locking, portably. fcntl is POSIX-only; on Windows the stdlib
+# equivalent is msvcrt.locking, which needs a non-empty byte range to lock.
+# Importing fcntl unconditionally made this module — and therefore the whole test
+# suite, which imports it at collection time — fail to load on Windows.
+try:
+    import fcntl as _fcntl
+
+    _msvcrt = None
+except ImportError:  # Windows
+    _fcntl = None
+    import msvcrt as _msvcrt
+
+
+def _lock_exclusive(fh) -> bool:
+    """Take an exclusive lock on an open file handle. Returns True if acquired.
+
+    Best-effort by design: check_rate_limit already fails open on read/write
+    errors, so a lock we cannot take must not raise and block a legitimate
+    message. Note msvcrt.locking gives up after ~10s where flock waits forever.
+    """
+    try:
+        if _fcntl is not None:
+            _fcntl.flock(fh, _fcntl.LOCK_EX)
+        else:
+            fh.write('\0')  # msvcrt cannot lock a zero-length range
+            fh.flush()
+            fh.seek(0)
+            _msvcrt.locking(fh.fileno(), _msvcrt.LK_LOCK, 1)
+        return True
+    except OSError:
+        return False
+
+
+def _unlock(fh, locked: bool) -> None:
+    if not locked:
+        return
+    try:
+        if _fcntl is not None:
+            _fcntl.flock(fh, _fcntl.LOCK_UN)
+        else:
+            fh.seek(0)
+            _msvcrt.locking(fh.fileno(), _msvcrt.LK_UNLCK, 1)
+    except OSError:
+        pass
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -298,7 +342,7 @@ def check_rate_limit(chat_id: str, state_file: str) -> tuple:
 
     lock_path = state_file + '.lock'
     with open(lock_path, 'w') as lock_fd:
-        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        _locked = _lock_exclusive(lock_fd)
         try:
             if os.path.exists(state_file):
                 try:
@@ -328,4 +372,4 @@ def check_rate_limit(chat_id: str, state_file: str) -> tuple:
 
             return True, None
         finally:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            _unlock(lock_fd, _locked)

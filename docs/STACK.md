@@ -5,6 +5,40 @@ and `../README.md` for install/uninstall.
 
 ---
 
+## MCP registration (and the Windows variant)
+
+On Linux the servers are registered through `install.sh` / `claude mcp add`.
+On the Windows host they are registered by a checked-in **project-scoped**
+`.mcp.json` at the repo root, pinned to the venv binaries:
+
+| Server | Invocation | Note |
+| ------ | ---------- | ---- |
+| jcodemunch | `serve --transport stdio` | |
+| jdatamunch | *(no arguments)* | bare invocation **is** the stdio server |
+| jdocmunch  | `serve` | has the subcommand, **no** `--transport` flag |
+
+**The three CLIs are not uniform.** Passing `--transport stdio` to jdatamunch or
+jdocmunch makes them exit immediately; the only symptom is
+`MCP error -32000: Connection closed`. Verify with `claude mcp list`, which prints
+the resolved command — `claude mcp get <name>` no longer does.
+
+Project scope means the servers are live only when Claude Code runs from this
+repo, and that first run would normally raise a trust prompt; the three names are
+pre-approved under `projects[<repo>].enabledMcpjsonServers` in `~/.claude.json`.
+
+**Do not run `jcodemunch-mcp init` / `install claude-code` on this host.** It
+registers via floating `uvx` (unpinning the stack), appends the Code Exploration
+Policy to *global* `~/.claude/CLAUDE.md`, writes hooks into *global*
+`~/.claude/settings.json`, and resolves "project" against the current working
+directory rather than this repo.
+
+`.mcp.json` deliberately names `.venv\Scripts\*.exe` explicitly rather than the
+`.venv/bin` compat symlink: Claude Code launches MCP servers via `CreateProcess`,
+not through bash, so neither MSYS `.exe` suffixing nor the directory symlink can
+be relied on there. Full detail in `WINDOWS-PORT.md`.
+
+---
+
 ## jMunch Console (optional browser GUI)
 
 **What it does.** Local browser control panel for the jMunch MCP suite.

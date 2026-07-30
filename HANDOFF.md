@@ -1,6 +1,169 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-23 — occams-razor skill added and merged (PR #96); jdocmunch index re-synced to HEAD.*
+*Last updated: 2026-07-30 — Windows port + follow-on gap closure. `HEALTHCHECK: ok`.*
+
+## 2026-07-30 (session 2) — fix(platform): close the port's silent-failure gaps
+
+**Status:** `HEALTHCHECK: ok` (was fail (7)). Working tree committed — see the
+commit for the file list.
+
+**The headline finding: none of the 7 healthcheck failures were broken
+components.** All seven were the checker asserting a Linux install — three MCP
+servers never registered here, three deliberately-uninstalled feature extras, and
+ten cron entries on a host with no cron daemon. The stack was working. What was
+*actually* broken sat underneath, reporting success.
+
+**Four guards were dead, and the way they were dead is the point.**
+
+1. `grep-guard.sh` and `edit-surface-guard.sh` parse their hook payload with
+   `jq`, which is not on this host. The failure is swallowed by
+   `2>/dev/null || true`, so the guard exits 0 with no decision — and Claude Code
+   reads "no decision" as **allow**.
+2. `edit-surface-guard` is documented FAIL CLOSED. But every deny it emits is
+   produced by `jq -n`. Without jq the deny printed nothing and the edit went
+   through: **fail-closed inverted to fail-open.** A guard whose failure mode is
+   the opposite of its documented one is worse than no guard.
+3. `install-reliability.sh:107-138` uses `jq` to *do the wiring*, and warns-and-
+   continues when it fails — so the guards were never in `settings.json` at all.
+   Global `hooks` was `{}`.
+4. `grep-guard.sh` hardcodes `REPO_ROOT=/opt/proj`. Here the repo is
+   `/c/opt/proj`. A wrong root does not error; it makes every absolute path look
+   *external to the repo*, which is the guard's own "allow" condition.
+
+**This is the same shape as the `flock` bug the port entry below documents, three
+more times.** When porting anything else, the question is not "does it run" but
+"what does it do when its dependency is missing". Grep for `|| true`,
+`2>/dev/null`, and warn-and-continue around any external binary.
+
+**Two bugs found by the fix, not by review — both worth internalising.**
+
+- **`set -o pipefail` + `grep -q` on large input reports false negatives.**
+  `grep -q` exits at the first match and closes the pipe; the upstream `printf`
+  is still writing schtasks' ~75KB, takes SIGPIPE, and pipefail propagates that
+  as pipeline failure. So a *successful* match read as "job missing". It never
+  surfaced on Linux because `crontab -l` output is small enough that printf
+  finishes first. Cost about forty minutes: every isolated test passed while the
+  full run failed, because `set -o pipefail` is set at healthcheck.sh:23 and my
+  interactive shell did not have it.
+- **`schtasks /query` arrives as `C:/util/apps/Git/query`** — MSYS rewrites any
+  argument that looks like a POSIX path. `MSYS2_ARG_CONV_EXCL='*'` suppresses it.
+
+**`write-clearance-token.sh` was in no repository at all.** Both
+`edit-surface-guard.sh` and the pre-mortem skill reference
+`~/.claude/hooks/pre-mortem-guard/write-clearance-token.sh`; it existed only on
+the original Linux box. Wiring the guard here therefore created a lock with no
+key — and because `settings.json` is itself a surface file, it locked out its own
+un-wiring. It is now in `hooks/pre-mortem-guard/` beside the guard that consumes
+it. **If you port to a third machine, this is the file to check first.**
+
+**Crons are now Task Scheduler jobs** (`scripts/win/schedule-tasks.ps1`), names
+matching the cron labels so `healthcheck.sh` probes either scheduler through one
+accessor. PowerShell, not `schtasks.exe`, for one reason: **schtasks has no flag
+for `StartWhenAvailable` and defaults it to false**, so a 01:00 job on a machine
+that sleeps is skipped rather than deferred. Registering via schtasks would have
+produced four tasks that never fire — automation that looks present and does
+nothing. Verified end-to-end by triggering a real task and reading its log, not
+by trusting `LastTaskResult: 0`.
+
+Registered: jcodemunch-reindex 01:00, jdocmunch-reindex 01:30, memweave-sync
+02:30, auto-maintain 03:00. `--remove` unregisters all four.
+
+**A coupling worth remembering:** auto-maintain runs `uv sync --inexact` at 03:00,
+which destroys the `.venv/bin` shims that the 01:00 reindex needs *the next
+night*. `run-job.sh` re-asserts `venv-compat.sh` before every job and again after
+auto-maintain. Without that the stack breaks 22h later, silently, unless someone
+happens to open a session.
+
+**The two commit gates now agree.** `.session-end.yml` declares CHANGELOG +
+HANDOFF; the guard hardcoded those plus `docs/RELIABILITY.md` and ignored the
+config's `trigger.file_types` gate. The guard reads the config now. This was
+pre-existing on Linux, not a Windows artifact.
+
+**Open, not chased:**
+- `state/disabled-features` lists dreaming, session-stats, healthcheck-notify.
+  The first two are uninstalled; the third has no `TELEGRAM_BOT_TOKEN` so it
+  would run and do nothing. Delete a line to re-enable a feature's checks.
+- duckdb and serena would likely work now that `uvx` is on PATH — not attempted.
+  context7 still needs Node.js.
+- The shell probe has served its purpose: hooks **are** Git Bash. It now also
+  confirms uv/jq/python3 resolve. Safe to delete once you trust it.
+- 106 pre-existing test failures, untouched and still unexplained.
+- `install.sh` still registers nothing on Windows — `schedule-tasks.sh` is a
+  manual step. Wiring it into `install.sh` behind a platform check is the obvious
+  next move.
+
+---
+
+## 2026-07-30 (session 1) — feat(platform): Windows port
+
+## 2026-07-30 — feat(platform): Windows port
+
+**Status:** working tree **uncommitted** on `main` at `7746b31`. 10 modified
+files, 3 new paths (`.mcp.json`, `docs/WINDOWS-PORT.md`, `scripts/win/`). Nothing
+was committed — no branch was cut. Full detail in `docs/WINDOWS-PORT.md`.
+
+**What landed:** the stack runs on Windows. `uv sync` succeeds, all three jMunch
+MCP servers report `√ Connected`, jcodemunch exposes 86 tools over a verified
+stdio handshake, the Refinery is indexed (653 symbols / 91 files), memweave has a
+working index, and all 9 hook actions exit 0.
+
+**The one thing next session should know — `.venv/bin` is load-bearing and
+gitignored.** About 20 call sites across `install.sh`, `healthcheck.sh` and
+`scripts/` hardcode `$ROOT/.venv/bin/<tool>`. Windows venvs use `Scripts/` and
+ship no bare `python3`. Rather than rewrite every site, `scripts/win/venv-compat.sh`
+creates `.venv/bin` → `Scripts` plus a `python3.exe` (MSYS appends `.exe` on exec,
+so `.venv/bin/jcodemunch-mcp` resolves). **Any `uv sync` / `uv venv` silently
+destroys both**, and every one of those 20 call sites breaks at once. `hook.sh
+autofix` re-asserts them on SessionStart; run the script by hand after a rebuild
+outside a session. This also needs `MSYS=winsymlinks:nativestrict` (set in
+`.claude/settings.json`) and Windows Developer Mode — without native symlinks it
+degrades to directory copies and `skill-link.sh`'s `[[ -L ]]` tests stop matching.
+
+**The bug class worth internalising: `flock` failed *open*.** MSYS has no `flock`,
+so `flock -n 9 || { log "already running"; exit 0; }` took the skip branch every
+time. Five scripts were affected and none of them looked broken — `jcodemunch-reindex.sh`
+logged `reindex: OK` while indexing nothing, and `telegram-gateway-poll.sh` exited
+on every invocation so the gateway never polled at all. This is not a Windows
+cosmetic issue; it is a missing-binary guard that reports success. When porting
+the remaining Linux-only pieces, grep for the same shape (`command || { log; exit 0; }`)
+before trusting any "already running" message.
+
+**Two fixes were latent bugs on Linux too, not Windows artifacts.** The checkpoint
+hook compared `git rev-parse --show-toplevel` to a hardcoded absolute path (never
+matched anywhere), and `healthcheck.sh` asserted `sqlite_version == 3.51.3` when
+its own comment says the requirement is the WAL fix — so the newer, safer 3.53.1
+failed. Both corrected at the root, not papered over per-platform.
+
+**Verification pattern worth reusing:** the checkpoint fix was wrong on the first
+attempt and *testing* caught it, not review. String normalisation of paths cannot
+work under MSYS — one directory has multiple spellings and mount aliases rewrite
+`C:/Users/<u>/AppData/Local/Temp` → `/tmp`, which is exactly where the throwaway
+test repo lived. Final version compares device+inode with `[ a -ef b ]`. Likewise,
+"no test regressions" was established by running the identical subset against a
+pristine `HEAD` worktree and matching counts (106 failed / 585 passed both sides),
+not by asserting it.
+
+**Open, not chased:**
+- **The hook runner's shell is assumed.** Everything assumes Git Bash. That was
+  not directly verifiable without a live session, so `scripts/win/shell-probe.sh`
+  runs on SessionStart and appends to `state/win-port-probe.log`. **Read that file
+  first next session.** If it says `NOT BASH`, every hook command format is wrong
+  and needs rework; nothing else depends on it. Delete the probe once trusted.
+- 7 cron jobs have no Windows equivalent. Judged redundant for interactive use
+  (SessionStart autofix reindexes when stale; the Stop hook syncs memweave). Task
+  Scheduler if real background scheduling is ever wanted.
+- serena and MotherDuck would work through the now-installed `uvx`; context7 needs
+  Node.js, which is absent. Left out as supplementary to the jMunch trio.
+- `features/` extras uninstalled: `/stats`, `/dream`, `dream-synthesizer` skill.
+- `.session-end.yml` mandates CHANGELOG + HANDOFF; the PreToolUse commit guard also
+  demands `docs/RELIABILITY.md`. **The two gates disagree** — reconcile or expect
+  the guard to block commits that the session-end check just passed.
+- Two *global* files were edited (both backed up to `*.bak.winport`):
+  `MCP_TIMEOUT=60000` into `~/.claude/settings.json`, and the three servers into
+  `~/.claude.json` → `enabledMcpjsonServers` to skip the first-run trust prompt.
+- 106 pre-existing test failures remain untouched and unexplained.
+
+---
 
 ## 2026-07-23 — feat(skills): occams-razor
 

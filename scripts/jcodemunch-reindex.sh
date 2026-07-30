@@ -66,9 +66,28 @@ stamp_success() {
 # Prevent concurrent reindex runs (cron + session-start can overlap).
 # exec failure (disk full, /tmp not writable) is an error — log and bail rather
 # than silently masquerading as a concurrency skip.
-LOCK="/tmp/uncle-j-jcodemunch-reindex.lock"
-exec 9>"$LOCK" || { log "ERROR: cannot create lock file $LOCK (disk full or /tmp not writable)"; exit 1; }
-flock -n 9 || { log "Reindex already running — skipping."; exit 0; }
+# mkdir is atomic everywhere and needs no flock, which MSYS/Git Bash does not ship.
+# With flock missing the old form failed open: `flock: command not found` made the
+# guard take its "already running" branch, so the reindex was skipped while the
+# caller still logged success.
+LOCK="${TMPDIR:-/tmp}/uncle-j-jcodemunch-reindex.lock.d"
+# Reclaim a lock older than the 2h task time limit. The EXIT trap below cannot
+# fire if the run is killed rather than exited — a machine sleeping mid-reindex
+# at 01:00 does exactly that — and a stale dir would then skip every subsequent
+# run while logging "already running", which reads as healthy.
+if [[ -d "$LOCK" ]] && [[ -n "$(find "$LOCK" -maxdepth 0 -mmin +120 2>/dev/null)" ]]; then
+    log "Stale lock (>2h) — reclaiming $LOCK"
+    rmdir "$LOCK" 2>/dev/null || true
+fi
+if ! mkdir "$LOCK" 2>/dev/null; then
+    if [[ -d "$LOCK" ]]; then
+        log "Reindex already running — skipping."
+        exit 0
+    fi
+    log "ERROR: cannot create lock dir $LOCK (disk full or TMPDIR not writable)"
+    exit 1
+fi
+trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 if [[ ! -x "$JCODEMUNCH" ]]; then
     log "ERROR: jcodemunch-mcp not found at $JCODEMUNCH"

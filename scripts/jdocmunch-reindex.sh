@@ -35,9 +35,24 @@ log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; 
 # Prevent concurrent runs (cron + manual invocation can overlap).
 # exec failure (disk full, /tmp not writable) is an error — log and bail rather
 # than silently masquerading as a concurrency skip.
-LOCK="/tmp/uncle-j-jdocmunch-reindex.lock"
-exec 9>"$LOCK" || { log "ERROR: cannot create lock file $LOCK (disk full or /tmp not writable)"; exit 1; }
-flock -n 9 || { log "Reindex already running — skipping."; exit 0; }
+# mkdir is atomic everywhere and needs no flock, which MSYS/Git Bash does not ship.
+# See scripts/jcodemunch-reindex.sh for why the flock form failed open on Windows.
+LOCK="${TMPDIR:-/tmp}/uncle-j-jdocmunch-reindex.lock.d"
+# See scripts/jcodemunch-reindex.sh: a killed run leaves the dir behind and the
+# EXIT trap never fires, silently skipping every later run.
+if [[ -d "$LOCK" ]] && [[ -n "$(find "$LOCK" -maxdepth 0 -mmin +120 2>/dev/null)" ]]; then
+    log "Stale lock (>2h) — reclaiming $LOCK"
+    rmdir "$LOCK" 2>/dev/null || true
+fi
+if ! mkdir "$LOCK" 2>/dev/null; then
+    if [[ -d "$LOCK" ]]; then
+        log "Reindex already running — skipping."
+        exit 0
+    fi
+    log "ERROR: cannot create lock dir $LOCK (disk full or TMPDIR not writable)"
+    exit 1
+fi
+trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 if [[ ! -x "$JDOCMUNCH" ]]; then
     log "ERROR: jdocmunch-mcp not found at $JDOCMUNCH"
