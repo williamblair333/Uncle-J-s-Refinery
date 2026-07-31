@@ -11,13 +11,17 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **`memweave/sync_memory.sh` dies on `UnicodeEncodeError` (Windows).** Repeated
-  tracebacks in `state/memweave-sync.log`, most recently 2026-07-31 01:28:
-  `'charmap' codec can't encode character '�'`. Python defaults to cp1252
-  for stdout/file writes on Windows; a replacement char in the transcript corpus
-  kills the pass. The index is still inside the 48h freshness window so the
-  healthcheck reads OK — it will not catch this until the store goes stale.
-  Fix is `PYTHONIOENCODING=utf-8` plus explicit `encoding="utf-8"` on the writes.
+- **auto-maintain's upgrade path is dead on Windows.** The 03:00 run logs
+  `Upgrade FAILED`: `uv lock` cannot read
+  `vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl` — a Linux-only
+  wheel being resolved on a Windows host — plus `Failed to deserialize cache
+  entry`. Nothing will ever upgrade here until the vendored wheel is made
+  platform-conditional in `pyproject.toml`. Three packages are 186/113/29
+  commits behind and stuck.
+- **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
+  defect just fixed in the memweave scripts, 77 local failures. Separate from
+  CI's `Skill frontmatter regression`, which fails on Linux for a reason not
+  readable without a token.
 - **Report jdocmunch's `str.lstrip("./")` directory-pruning bug upstream**
   (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
   in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion

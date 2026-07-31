@@ -37,6 +37,15 @@ LOCK="${TMPDIR:-/tmp}/memweave-sync.lock"
 
 mkdir -p "$REPO/state"
 
+# Defence in depth, not the fix. Every call site in export_transcripts.py and
+# mw_search.py now names its encoding explicitly, which is what actually makes
+# this correct. These two say the same thing at the process level so that any
+# print() or open() added later — by us or by the memweave library, which
+# index_workspace.py calls and we do not control — cannot silently fall back to
+# cp1252 under Task Scheduler, where no console codepage is inherited.
+export PYTHONUTF8=1
+export PYTHONIOENCODING=utf-8
+
 if [ ! -x "$VENV" ]; then
   echo "[$(date -Iseconds)] sync ERROR — memweave venv missing at $VENV" >&2
   exit 1
@@ -82,6 +91,21 @@ fi
 [ -n "$LIMIT" ] && export_args+=(--limit "$LIMIT")
 
 echo "===== [$(date -Iseconds)] memweave sync: $scope limit=${LIMIT:-all} ====="
-"$VENV" "$REPO/scripts/memweave/export_transcripts.py" "${export_args[@]}"
+
+# export_transcripts.py now exits non-zero when any single transcript failed,
+# while still exporting all the others. Under `set -e` that would abort the run
+# here and skip indexing entirely — so one bad transcript would keep every good
+# one that was just written out of the index, which is the opposite of why the
+# per-file handler exists. Capture the status, index regardless, and carry the
+# failure to the exit code so the run still reports itself unsuccessful.
+export_rc=0
+"$VENV" "$REPO/scripts/memweave/export_transcripts.py" "${export_args[@]}" || export_rc=$?
+
 "$VENV" "$REPO/scripts/memweave/index_workspace.py"
 echo "===== [$(date -Iseconds)] sync complete ====="
+
+if [ "$export_rc" -ne 0 ]; then
+  echo "[$(date -Iseconds)] sync FAILED — export reported errors above (rc=$export_rc);" \
+       "the documents that did export were still indexed" >&2
+  exit "$export_rc"
+fi

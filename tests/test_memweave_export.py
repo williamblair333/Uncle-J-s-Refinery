@@ -162,11 +162,12 @@ def test_export_all_projects_covers_every_project_dir(tmp_path):
     (proot / "stray-file.txt").write_text("ignore me")
 
     out = tmp_path / "store"
-    written, small, empty, projects = export_all_projects(
+    written, small, empty, failed, projects = export_all_projects(
         projects_root=proot, out_workspace=out, min_chars=50)
 
     assert projects == 2
     assert written == 2
+    assert failed == 0
     mem = out / "memory"
     assert (mem / "aaaaaaaa-1111.md").exists()
     assert (mem / "bbbbbbbb-2222.md").exists()
@@ -199,9 +200,44 @@ def test_export_project_removes_stale_md_when_now_too_small(tmp_path):
     stale = mem / f"{sid}.md"
     stale.write_text("# Session cccccccc-3333\n\nstale pre-fix content with the skill body baked in")
 
-    written, small, empty = export_project(
+    written, small, empty, failed = export_project(
         "-proj-x", projects_root=proot, out_workspace=out, min_chars=200)
     # Real text ("hi") is < 200 chars after the skill body is filtered → skipped...
-    assert written == 0 and small == 1
+    assert written == 0 and small == 1 and failed == 0
     # ...and the stale doc must be gone, not left behind.
     assert not stale.exists()
+
+
+def test_export_round_trips_characters_cp1252_cannot_encode(tmp_path):
+    """The regression that started this: transcripts are UTF-8, but Python picks the
+    locale encoding when none is given — cp1252 on Windows. Reading UTF-8 as cp1252
+    substituted U+FFFD silently, and writing it back raised UnicodeEncodeError, which
+    aborted the whole run.
+
+    Every character below is representable in UTF-8 and NOT in cp1252, so this test
+    fails on Windows the moment either encoding= argument is dropped. It passes
+    trivially on Linux, where the locale default is already UTF-8 — that asymmetry is
+    exactly why the bug survived review, so the assertion is on content, not on the
+    absence of an exception."""
+    from export_transcripts import export_project  # noqa: E402
+
+    proot = tmp_path / "projects"
+    pdir = proot / "-proj-utf8"
+    pdir.mkdir(parents=True)
+    sid = "dddddddd-4444"
+    # em dash + box drawing + CJK + emoji + the replacement char itself.
+    exotic = "— ─ 日本語 🚀 café "
+    line = json.dumps({"type": "user",
+                       "message": {"role": "user", "content": exotic * 30}})
+    (pdir / f"{sid}.jsonl").write_text(line + "\n", encoding="utf-8")
+
+    out = tmp_path / "store"
+    written, small, empty, failed = export_project(
+        "-proj-utf8", projects_root=proot, out_workspace=out, min_chars=50)
+
+    assert failed == 0, "export must not fail on characters cp1252 cannot represent"
+    assert written == 1
+    md = (out / "memory" / f"{sid}.md").read_text(encoding="utf-8")
+    for ch in ("—", "─", "日本語", "🚀", "café"):
+        assert ch in md, f"{ch!r} did not survive the export round-trip"
+    assert "�" not in md, "U+FFFD in output means a lossy decode happened"
