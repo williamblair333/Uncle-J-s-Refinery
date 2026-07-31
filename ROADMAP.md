@@ -9,6 +9,27 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Planned
+
+- **`memweave/sync_memory.sh` dies on `UnicodeEncodeError` (Windows).** Repeated
+  tracebacks in `state/memweave-sync.log`, most recently 2026-07-31 01:28:
+  `'charmap' codec can't encode character '�'`. Python defaults to cp1252
+  for stdout/file writes on Windows; a replacement char in the transcript corpus
+  kills the pass. The index is still inside the 48h freshness window so the
+  healthcheck reads OK — it will not catch this until the store goes stale.
+  Fix is `PYTHONIOENCODING=utf-8` plus explicit `encoding="utf-8"` on the writes.
+- **Report jdocmunch's `str.lstrip("./")` directory-pruning bug upstream**
+  (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
+  in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion
+  once it lands.
+
+## Recently completed (2026-07-30/31 — Windows port + silent-failure closure)
+
+- **The Windows port** (sessions 1–3): Task Scheduler jobs replacing cron, `jq`
+  and `uv` on PATH, `serena` + `duckdb` registered, four dead hook guards
+  revived, and the nightly jdocmunch reindex unfrozen. `HEALTHCHECK: ok`, and
+  the 01:00/01:30 jobs verified running unattended.
+
 ## Recently completed (2026-06-29 — jMunch Console integration)
 
 - **jMunch Console integrated (light):** `scripts/jmunch-console.sh` launcher; `check-stack-freshness.sh` now tracks

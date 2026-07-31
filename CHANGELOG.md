@@ -50,6 +50,21 @@ nothing.
 
   Delete the shim once upstream fixes the `lstrip`. Worth reporting.
 
+### Verified unattended (2026-07-31)
+- `01:00` jcodemunch-reindex and `01:30` jdocmunch-reindex both fired under Task
+  Scheduler and returned 0. jdocmunch logged `skip — at HEAD 5fcdc6a4` — the
+  drift check talking, **not** the `index lock held by another process` line
+  that had stood in for it every previous run. First clean unattended pass.
+
+### Found, not fixed
+- **`scripts/memweave/sync_memory.sh` dies on `UnicodeEncodeError`.** Six
+  tracebacks in `state/memweave-sync.log`, latest 2026-07-31 01:28:
+  `'charmap' codec can't encode character '�'`. Python picks cp1252 for
+  stdout and file writes on Windows, and one replacement character in the
+  transcript corpus ends the pass. The index is still under the 48h freshness
+  bar, so `healthcheck.sh` reports OK — it cannot catch this until the store
+  has already gone stale. Tracked in ROADMAP; same port family, different file.
+
 ---
 
 ## 2026-07-30 — fix(platform): close the Windows port's silent-failure gaps

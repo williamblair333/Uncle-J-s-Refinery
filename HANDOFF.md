@@ -33,7 +33,26 @@ matches its own gitignore pattern. Every top-level dot-directory leaks.
 was masked and only `.venv-memweave`, `.git` and `.pytest_cache` got through.
 The corpus had gone 104 → 357 documents, mostly numpy out of the memweave venv.
 
+**Confirmed at 01:36 on 07-31, after the jobs ran:** jcodemunch-reindex (01:00)
+and jdocmunch-reindex (01:30) both returned 0, and jdocmunch logged
+`skip — at HEAD 5fcdc6a4`. That line is the drift check speaking. Every prior
+unattended run had printed `index lock held by another process` instead. The
+fix holds outside a session, which is the only place it mattered.
+
+**Do not read the `auto-maintain` healthcheck line as proof it ran.** It says
+`no recent shell errors` because a `--dry-run` this session created the log
+file; the real 03:00 pass had not yet fired at time of writing. The check greps
+for shell errors and has no notion of "never actually ran" once the file exists.
+
 **Open items for the next session:**
+- **`memweave/sync_memory.sh` is crashing.** `UnicodeEncodeError: 'charmap'
+  codec can't encode character '�'` — six tracebacks in
+  `state/memweave-sync.log`, latest 01:28 today. Python defaults to cp1252 for
+  writes on Windows and one replacement char in the corpus ends the run. The
+  healthcheck still says `memweave index fresh (11h old)` because the index is
+  inside the 48h window — **it will report healthy right up until the store is
+  already stale.** Same shape as everything else this port has surfaced. Fix is
+  `PYTHONIOENCODING=utf-8` plus explicit `encoding="utf-8"` on the file writes.
 - **Report the `lstrip` bug upstream** (`jgravelle/jdocmunch-mcp`,
   `tools/index_local.py:167`). One-character class of fix; our shim in
   `run_index_local()` is marked for deletion once it lands.
