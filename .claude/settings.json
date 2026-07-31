@@ -1,14 +1,34 @@
 {
   "env": {
-    "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI"
+    "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI",
+    "MSYS": "winsymlinks:nativestrict"
   },
   "permissions": {
     "allow": [
+      "mcp__jcodemunch__plan_turn",
+      "mcp__jcodemunch__resolve_repo",
+      "mcp__jcodemunch__suggest_queries",
+      "mcp__jcodemunch__search_symbols",
       "mcp__jcodemunch__search_text",
-      "mcp__jcodemunch__index_file",
-      "mcp__jcodemunch__get_file_content",
-      "mcp__jcodemunch__list_repos",
+      "mcp__jcodemunch__search_columns",
+      "mcp__jcodemunch__get_file_outline",
       "mcp__jcodemunch__get_symbol_source",
+      "mcp__jcodemunch__get_context_bundle",
+      "mcp__jcodemunch__get_file_content",
+      "mcp__jcodemunch__get_repo_outline",
+      "mcp__jcodemunch__get_file_tree",
+      "mcp__jcodemunch__find_importers",
+      "mcp__jcodemunch__find_references",
+      "mcp__jcodemunch__check_references",
+      "mcp__jcodemunch__get_dependency_graph",
+      "mcp__jcodemunch__get_blast_radius",
+      "mcp__jcodemunch__get_changed_symbols",
+      "mcp__jcodemunch__find_dead_code",
+      "mcp__jcodemunch__get_class_hierarchy",
+      "mcp__jcodemunch__get_session_context",
+      "mcp__jcodemunch__index_file",
+      "mcp__jcodemunch__list_repos",
+      "mcp__jcodemunch__register_edit",
       "Bash(crontab -l)"
     ]
   },
@@ -19,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[[ \"$(git rev-parse --show-toplevel 2>/dev/null)\" == \"/opt/proj/Uncle-J-s-Refinery\" ]] || exit 0; git add -u 2>/dev/null; git diff --cached --quiet && exit 0; git commit -m \"chk: $(date +%H:%M:%S)\" -q 2>/dev/null || true",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh checkpoint",
             "statusMessage": "Checkpointing..."
           }
         ]
@@ -31,8 +51,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // \"\"'); echo \"$CMD\" | grep -qE '\\bgit\\b.*\\bcommit\\b' || exit 0; echo \"$CMD\" | grep -qE '\\-m\\s+.?chk:' && exit 0; STAGED=$(git -C /opt/proj/Uncle-J-s-Refinery diff --cached --name-only 2>/dev/null || true); MISSING=\"\"; echo \"$STAGED\" | grep -qF \"CHANGELOG.md\" || MISSING=\"${MISSING}CHANGELOG.md \"; echo \"$STAGED\" | grep -qF \"HANDOFF.md\" || MISSING=\"${MISSING}HANDOFF.md \"; echo \"$STAGED\" | grep -qF \"docs/RELIABILITY.md\" || MISSING=\"${MISSING}docs/RELIABILITY.md \"; [ -z \"$MISSING\" ] && exit 0; jq -n --arg m \"Commit blocked — update first: $MISSING\" '{\"continue\":false,\"stopReason\":$m}'",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh commit-guard",
             "statusMessage": "Checking docs are staged..."
+          },
+          {
+            "type": "command",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh grep-guard",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh edit-surface-guard",
+            "timeout": 10
           }
         ]
       },
@@ -41,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import json,sys,datetime,os; d=json.load(sys.stdin); p=os.path.expanduser('~/.claude/state/mcp-tool-log.txt'); os.makedirs(os.path.dirname(p),exist_ok=True); open(p,'a').write('[{}] {}\\n'.format(datetime.datetime.now().strftime('%H:%M:%S'),d.get('tool_name','?')))\" 2>/dev/null || true",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh mcp-log",
             "async": true
           }
         ]
@@ -52,7 +87,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/session-notify.sh  # uncle-j-session-notify",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh session-notify",
             "async": true
           }
         ]
@@ -61,7 +96,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-suggest.sh  # uncle-j-auto-skill",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh skill-suggest",
             "async": true
           }
         ]
@@ -70,7 +105,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh unlink  # uncle-j-skill-manager-stop",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh skill-link unlink",
             "async": true
           }
         ]
@@ -79,8 +114,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/memweave/sync_memory.sh '' 15 >> /opt/proj/Uncle-J-s-Refinery/state/memweave-sync.log 2>&1  # uncle-j-memweave-sync",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh memweave-sync",
             "async": true
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh unpushed-warn",
+            "timeout": 8
           }
         ]
       }
@@ -90,7 +134,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh link  # uncle-j-skill-manager-session"
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh skill-link link"
           }
         ]
       },
@@ -98,7 +142,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/review-check.sh 2>/dev/null || true",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh review-check",
             "timeout": 30,
             "statusMessage": "Checking _review/..."
           }
@@ -108,7 +152,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /opt/proj/Uncle-J-s-Refinery/scripts/session-start-autofix.sh",
+            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh autofix",
             "timeout": 60,
             "statusMessage": "Health check + auto-fix..."
           }

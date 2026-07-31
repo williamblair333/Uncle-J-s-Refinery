@@ -9,6 +9,27 @@ Completed items age out after ~4 weeks.
 
 - _(nothing in flight)_
 
+## Planned
+
+- **`memweave/sync_memory.sh` dies on `UnicodeEncodeError` (Windows).** Repeated
+  tracebacks in `state/memweave-sync.log`, most recently 2026-07-31 01:28:
+  `'charmap' codec can't encode character '�'`. Python defaults to cp1252
+  for stdout/file writes on Windows; a replacement char in the transcript corpus
+  kills the pass. The index is still inside the 48h freshness window so the
+  healthcheck reads OK — it will not catch this until the store goes stale.
+  Fix is `PYTHONIOENCODING=utf-8` plus explicit `encoding="utf-8"` on the writes.
+- **Report jdocmunch's `str.lstrip("./")` directory-pruning bug upstream**
+  (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
+  in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion
+  once it lands.
+
+## Recently completed (2026-07-30/31 — Windows port + silent-failure closure)
+
+- **The Windows port** (sessions 1–3): Task Scheduler jobs replacing cron, `jq`
+  and `uv` on PATH, `serena` + `duckdb` registered, four dead hook guards
+  revived, and the nightly jdocmunch reindex unfrozen. `HEALTHCHECK: ok`, and
+  the 01:00/01:30 jobs verified running unattended.
+
 ## Recently completed (2026-06-29 — jMunch Console integration)
 
 - **jMunch Console integrated (light):** `scripts/jmunch-console.sh` launcher; `check-stack-freshness.sh` now tracks
@@ -136,6 +157,7 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 | Date | Item |
 |------|------|
+| 2026-07-30 | **Stack ported to Windows 11 + Git Bash** (uncommitted). All three jMunch servers `√ Connected` via project-scoped `.mcp.json` (their CLIs are *not* uniform — jdatamunch takes no args, jdocmunch has no `--transport`); hooks routed through `scripts/win/hook.sh` because `bash` is off-PATH and direct invocation drops shell redirection; `.venv/bin`→`Scripts` compat symlink self-healed on SessionStart since `uv sync` destroys it. `healthcheck.sh --quick` 21 → 8 fails. **Three latent non-Windows bugs found:** `flock` absence made five lock guards fail *open* (reindex logged `OK` while indexing nothing; Telegram gateway never polled), the checkpoint hook's hardcoded root comparison meant it never fired on any platform, and `check_sqlite_version` asserted an exact version so a newer/safer SQLite failed. `tg_security.py`'s module-scope `import fcntl` had been breaking `pytest` collection for the whole suite (+71 tests). Remaining 8: 7 crons (no `crontab`), `features/` extras, serena/context7/duckdb. See `docs/WINDOWS-PORT.md`. |
 | 2026-07-05 | **grep-guard false positives narrowed** (PR #89). Three over-broad patterns fixed from real `hook-blocks.log` entries: hyphenated words (`-MORTEM`, `-opt-proj-…`) matched as `-r` flags → token-anchored flag detection; grep pattern args (`"ytd\.sh"`) matched as file operands → pattern/flag tokens skipped; recursive branch ignored the out-of-repo allowance → path-operand walk. Closes the `~/.uncle-j-memory/` reads item. +13 test regressions (40/40); code-reviewer caught a numeric-pattern MEDIUM pre-merge. |
 | 2026-06-13 | **pysqlite3 3.51.3 wheel vendored + "duckdb" healthcheck bug root-caused** (PR #65). The recurring `mcp-servers-down(duckdb)` fail was a checkmark codepoint bug (`✓` U+2713 grep vs `✔` U+2714 output) matching zero servers → headlined `missing[0]`=duckdb; fixed to `[✓✔]`. Vendored the pysqlite3-3.51.3 wheel (`scripts/build-vendored-pysqlite3.sh` → `vendor/wheels/`), marker-conditional pin in `pyproject.toml` (PyPI fallback off-platform), `check_sqlite_version` healthcheck assert. Ends the `uv sync` clobber dance permanently. |
 | 2026-06-13 | **memweave migration complete — mempalace decommissioned** (PRs #50–#55). 2b-2 freshness cron + Stop-hook; 3b project CLAUDE.md routing → `mw_search.py`; 4a cross-project corpus (`--all-projects`); 4b decommission (scripts/crons/MCP/probes removed, palace staged not deleted, dreaming + 3 global skills repointed); 4c in-repo residue (dead `check_mempalace`, 6 obsolete repair skills, RELIABILITY scrub); 4d removed mempalace/chromadb deps from pyproject/uv.lock; 4e docs sync (README/STACK/ROADMAP + mcp-clients templates). Memory is now offline cross-project memweave (`~/.uncle-j-memory`). Deferred: global `~/.claude/` edits (harness-denied), control-invariant audit-sink repoint, trash purge. |

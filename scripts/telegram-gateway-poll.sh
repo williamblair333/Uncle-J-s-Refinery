@@ -24,12 +24,16 @@ if [[ -z "${TELEGRAM_BOT_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]]; then
 fi
 
 # Prevent concurrent cron runs from corrupting offset file or spawning duplicate Claude sessions
-LOCK_FILE="$PROJ_ROOT/state/telegram-gateway.lock"
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
+# mkdir is atomic everywhere and needs no flock, which MSYS/Git Bash does not ship.
+# With flock absent the old form failed OPEN in the dangerous direction: the
+# `flock: command not found` non-zero status took the "another instance" branch,
+# so every run exited immediately and the gateway never polled at all.
+LOCK_FILE="$PROJ_ROOT/state/telegram-gateway.lock.d"
+if ! mkdir "$LOCK_FILE" 2>/dev/null; then
   log "Another instance is running — exiting."
   exit 0
 fi
+trap 'rmdir "$LOCK_FILE" 2>/dev/null || true' EXIT
 
 # Read current offset (default 0)
 OFFSET="0"

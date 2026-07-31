@@ -35,9 +35,24 @@ log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; 
 # Prevent concurrent runs (cron + manual invocation can overlap).
 # exec failure (disk full, /tmp not writable) is an error — log and bail rather
 # than silently masquerading as a concurrency skip.
-LOCK="/tmp/uncle-j-jdocmunch-reindex.lock"
-exec 9>"$LOCK" || { log "ERROR: cannot create lock file $LOCK (disk full or /tmp not writable)"; exit 1; }
-flock -n 9 || { log "Reindex already running — skipping."; exit 0; }
+# mkdir is atomic everywhere and needs no flock, which MSYS/Git Bash does not ship.
+# See scripts/jcodemunch-reindex.sh for why the flock form failed open on Windows.
+LOCK="${TMPDIR:-/tmp}/uncle-j-jdocmunch-reindex.lock.d"
+# See scripts/jcodemunch-reindex.sh: a killed run leaves the dir behind and the
+# EXIT trap never fires, silently skipping every later run.
+if [[ -d "$LOCK" ]] && [[ -n "$(find "$LOCK" -maxdepth 0 -mmin +120 2>/dev/null)" ]]; then
+    log "Stale lock (>2h) — reclaiming $LOCK"
+    rmdir "$LOCK" 2>/dev/null || true
+fi
+if ! mkdir "$LOCK" 2>/dev/null; then
+    if [[ -d "$LOCK" ]]; then
+        log "Reindex already running — skipping."
+        exit 0
+    fi
+    log "ERROR: cannot create lock dir $LOCK (disk full or TMPDIR not writable)"
+    exit 1
+fi
+trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 
 if [[ ! -x "$JDOCMUNCH" ]]; then
     log "ERROR: jdocmunch-mcp not found at $JDOCMUNCH"
@@ -148,14 +163,159 @@ PY_EOF
 
 # jdocmunch keeps its own <name>.json.lock. If a serve process or another indexer
 # holds it, rewriting the manifest underneath risks a torn read — skip this pass.
+#
+# The probe runs in Python, not flock. MSYS/Git Bash ships no flock (see the LOCK
+# block above), and the old `flock -n 8 8>>"$lockfile"` form failed CLOSED here:
+# `command not found` is non-zero, so the guard took its "held" branch for every
+# repo whose lockfile merely EXISTS. jdocmunch's writer opens that file with
+# O_CREAT on every index write and never removes it, so once a repo had been
+# indexed once the file was permanent — and this guard then skipped that repo on
+# every run, forever, while the script still logged Done and exited 0.
+#
+# The probe deliberately mirrors the writer it guards, jdocmunch_mcp's
+# storage/doc_store.py::_index_write_lock: fcntl.flock on POSIX, and on Windows
+# msvcrt.locking of one byte at offset 0. Matching the primitive AND the offset
+# is what makes the answer meaningful — a Windows byte-range lock is mandatory,
+# so a lock held at byte 0 cannot probe as free. Hence the explicit seek(0).
+#
+# When neither primitive is importable the probe fails OPEN and says so: a guard
+# that cannot evaluate must not silently disable the job it guards. Runs racing
+# ourselves are already covered by the mkdir lock above.
+#
+# Probe exit codes: 0 = held, 1 = free, 2 = cannot determine.
 repo_locked() {
     local lockfile="$IDX/$1.json.lock"
     [[ -f "$lockfile" ]] || return 1
-    if flock -n 8 8>>"$lockfile" 2>/dev/null; then
-        exec 8>&-   # acquired => nobody else holds it
-        return 1
-    fi
-    return 0
+
+    "$PY" - "$lockfile" 2>>"$LOG" <<'PY_EOF'
+import os, sys
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
+
+if fcntl is None and msvcrt is None:
+    sys.exit(2)
+
+try:
+    fd = os.open(sys.argv[1], os.O_RDWR)
+except OSError:
+    sys.exit(2)
+
+try:
+    os.lseek(fd, 0, os.SEEK_SET)
+    if fcntl is not None:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            sys.exit(0)
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    else:
+        try:
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+        except OSError:
+            sys.exit(0)
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+    sys.exit(1)
+finally:
+    os.close(fd)
+PY_EOF
+
+    local rc=$?
+    case "$rc" in
+        0) return 0 ;;
+        1) return 1 ;;
+        *) log "WARN    $1 — lock probe unusable (rc=$rc); proceeding without the guard"
+           return 1 ;;
+    esac
+}
+
+# Run one repo's index refresh.
+#
+# Not `jdocmunch-mcp index-local`, because that CLI exposes no way to pass
+# ignore patterns and jdocmunch's own directory pruning is broken for top-level
+# dot-directories. In jdocmunch_mcp/tools/index_local.py the prune test is
+#
+#     _should_skip(f"{dir_rel}/{d}/".lstrip("./"))
+#
+# and at the repo root dir_rel is ".", so the argument is "./.venv-memweave/".
+# str.lstrip takes a CHARACTER SET, not a prefix — it strips every leading "."
+# and "/" — so the string becomes "venv-memweave/" and no longer matches the
+# ".venv-memweave/" pattern that was supposed to exclude it. Every top-level
+# dot-directory therefore leaks into the corpus. ".venv/" survives only by
+# coincidence, because the mangled "venv/" happens to match a separate entry in
+# jdocmunch's SKIP_PATTERNS; ".venv-memweave/", ".git/" and ".pytest_cache/" do
+# not, and this repo's index grew from 104 documents to 357 — most of them
+# numpy and onnx files out of the memweave virtualenv — as a result.
+#
+# So compute the compensating patterns ourselves and pass them through the
+# Python API. For each top-level dot-directory that SHOULD have been excluded
+# but is not, emit the de-dotted, root-anchored form ("/venv-memweave/") that
+# does match post-mangling. Deriving them per-root keeps this generic across
+# the repos this script manages and cannot over-exclude a nested directory.
+#
+# Delete this whole shim once upstream fixes the lstrip — the plain CLI call is
+# the fallback below and stays correct either way.
+run_index_local() {
+    local root=$1 name=$2
+
+    "$PY" - "$root" "$name" >>"$LOG" 2>&1 <<'PY_EOF'
+import contextlib
+import json
+import sys
+from pathlib import Path
+
+try:
+    from jdocmunch_mcp.tools.index_local import index_local
+except ImportError as exc:
+    print(f"jdocmunch python api unavailable ({exc})", file=sys.stderr)
+    sys.exit(3)
+
+root, name = Path(sys.argv[1]).resolve(), sys.argv[2]
+
+patterns = []
+try:
+    from jdocmunch_mcp.tools.index_local import _load_gitignore, _should_skip
+
+    spec = _load_gitignore(root)
+
+    def excluded(candidate):
+        return _should_skip(candidate) or bool(spec and spec.match_file(candidate))
+
+    for child in root.iterdir():
+        if not child.is_dir() or not child.name.startswith("."):
+            continue
+        correct = f"{child.name}/"
+        mangled = f"./{correct}".lstrip("./")
+        if excluded(correct) and not excluded(mangled):
+            patterns.append(f"/{mangled}")
+except Exception as exc:  # private helpers moved or renamed upstream
+    print(f"prune compensation unavailable ({exc}) — indexing unpatched",
+          file=sys.stderr)
+
+if patterns:
+    print(f"prune compensation: {' '.join(patterns)}", file=sys.stderr)
+
+# jdoc#65: providers chatter on stdout; keep it off the JSON.
+with contextlib.redirect_stdout(sys.stderr):
+    result = index_local(path=str(root), name=name,
+                         extra_ignore_patterns=patterns or None)
+
+print(json.dumps(result, indent=2))
+sys.exit(0 if result.get("success") else 1)
+PY_EOF
+
+    local rc=$?
+    [[ "$rc" -ne 3 ]] && return "$rc"
+
+    log "WARN    $name — python api unavailable; falling back to the CLI (dot-directories will leak)"
+    "$JDOCMUNCH" index-local --path "$root" --name "$name" >>"$LOG" 2>&1
 }
 
 log "Scanning $IDX for drifted doc indexes ..."
@@ -170,6 +330,10 @@ schema_error=0
 failed=0
 reindexed=0
 skipped=0
+# Counted separately from `reindexed` so the summary can tell "nothing drifted"
+# apart from "everything drifted and every one was skipped" — see the closing
+# WARN below.
+drifted=0
 
 while IFS=$'\t' read -r verdict name root reason; do
     [[ -z "$verdict" ]] && continue
@@ -183,13 +347,14 @@ while IFS=$'\t' read -r verdict name root reason; do
             skipped=$((skipped + 1))
             ;;
         REINDEX)
+            drifted=$((drifted + 1))
             if repo_locked "$name"; then
                 log "skip    $name — index lock held by another process"
                 skipped=$((skipped + 1))
                 continue
             fi
             log "reindex $name — $reason"
-            if "$JDOCMUNCH" index-local --path "$root" --name "$name" >>"$LOG" 2>&1; then
+            if run_index_local "$root" "$name"; then
                 reindexed=$((reindexed + 1))
             else
                 log "ERROR   $name — index-local failed (see above)"
@@ -199,7 +364,18 @@ while IFS=$'\t' read -r verdict name root reason; do
     esac
 done <<<"$PLAN"
 
-log "Done. reindexed=$reindexed skipped=$skipped failed=$failed"
+log "Done. drifted=$drifted reindexed=$reindexed skipped=$skipped failed=$failed"
+
+# "reindexed=0 failed=0" is the same shape whether nothing needed doing or the
+# guard rejected everything that did — and that ambiguity is exactly what let a
+# permanently-stuck lock guard read as healthy for the life of the Windows port.
+# Name the difference out loud. Not an exit-code failure: a serve process holding
+# the lock during an interactive session is legitimate and would otherwise alarm
+# every night.
+if [[ "$drifted" -gt 0 && "$reindexed" -eq 0 && "$failed" -eq 0 ]]; then
+    log "WARN: ${drifted} repo(s) drifted but none were reindexed — all skipped by the lock guard."
+    log "WARN: if this repeats nightly the index is silently frozen; check for a stuck lock in $IDX"
+fi
 
 if [[ "$schema_error" -eq 1 ]]; then
     log "ERROR: manifest schema changed — this script needs updating for the new index_version."

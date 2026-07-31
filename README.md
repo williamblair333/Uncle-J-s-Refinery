@@ -191,6 +191,13 @@ Everything outside the `/ee` folder is MIT — free for commercial use with no u
 
 The installers detect missing prerequisites and either auto-install them (where safe — e.g., `uv`) or tell you what to `apt` and exit cleanly.
 
+> **Windows:** `install.sh` targets Linux and is **not** the install path on
+> Windows. The stack runs on Windows 11 + Git Bash, but registration, hook wiring
+> and the venv layout all differ — and `jcodemunch-mcp init` must not be used.
+> Follow **[`docs/WINDOWS-PORT.md`](docs/WINDOWS-PORT.md)** instead. Requires
+> Windows Developer Mode (for native symlinks); Node.js-dependent Context7 and all
+> cron jobs are unavailable there.
+
 ---
 
 ## Quick start

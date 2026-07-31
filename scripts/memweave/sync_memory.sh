@@ -25,11 +25,15 @@
 #     LIMIT    optional: only the N most recent transcripts per project (default: all)
 set -euo pipefail
 
-REPO="/opt/proj/Uncle-J-s-Refinery"
-VENV="$REPO/.venv-memweave/bin/python"
+# Derived from this script's location rather than hardcoded, so the same file works
+# on Linux (/opt/proj/...) and Windows Git Bash (C:/opt/proj/...).
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Resolve both venv layouts: Windows puts the interpreter in Scripts/, POSIX in bin/.
+VENV="$REPO/.venv-memweave/Scripts/python.exe"
+[ -x "$VENV" ] || VENV="$REPO/.venv-memweave/bin/python"
 MODE="${1:-}"
 LIMIT="${2:-}"
-LOCK="/tmp/memweave-sync.lock"
+LOCK="${TMPDIR:-/tmp}/memweave-sync.lock"
 
 mkdir -p "$REPO/state"
 
@@ -39,20 +43,41 @@ if [ ! -x "$VENV" ]; then
 fi
 
 # Serialize: a concurrent sync (cron vs Stop-hook) must not race the sqlite index.
-exec 200>"$LOCK"
-if ! flock -n 200; then
-  echo "[$(date -Iseconds)] sync skipped — another sync holds $LOCK"
+# mkdir is atomic on every filesystem and needs no flock, which MSYS/Git Bash
+# does not ship.
+if ! mkdir "$LOCK.d" 2>/dev/null; then
+  echo "[$(date -Iseconds)] sync skipped — another sync holds $LOCK.d"
   exit 0
 fi
+trap 'rmdir "$LOCK.d" 2>/dev/null || true' EXIT
 
 if [ "$MODE" = "--all" ]; then
   export_args=(--all-projects)
   scope="all-projects"
 else
   # MODE empty (Stop-hook passes '') falls back to this project.
-  PROJECT="${MODE:--opt-proj-Uncle-J-s-Refinery}"
+  # Claude names each transcript dir after the project path with ':' '/' '\' → '-'
+  # (Linux /opt/proj/X → -opt-proj-X; Windows C:\opt\proj\X → C--opt-proj-X), so
+  # derive the slug instead of hardcoding the Linux form.
+  #
+  # The slug must be built from the NATIVE path: under MSYS $REPO is the mounted
+  # form (/c/opt/proj/X), which would yield "-c-opt-proj-X" instead of the
+  # "C--opt-proj-X" Claude actually uses. cygpath -w recovers the Windows form.
+  REPO_NATIVE="$REPO"
+  if command -v cygpath >/dev/null 2>&1; then
+    REPO_NATIVE="$(cygpath -w "$REPO" 2>/dev/null || printf '%s' "$REPO")"
+  fi
+  REPO_SLUG="$(printf '%s' "$REPO_NATIVE" | tr ':\\/' '---')"
+  PROJECT="${MODE:-$REPO_SLUG}"
   export_args=(--project="$PROJECT")
   scope="project=$PROJECT"
+
+  # No session has run in this project yet — nothing to export. Exit clean rather
+  # than letting export_transcripts.py raise FileNotFoundError into the Stop hook.
+  if [ ! -d "$HOME/.claude/projects/$PROJECT" ]; then
+    echo "[$(date -Iseconds)] sync skipped — no transcripts yet for $PROJECT"
+    exit 0
+  fi
 fi
 [ -n "$LIMIT" ] && export_args+=(--limit "$LIMIT")
 

@@ -1,0 +1,46 @@
+{
+  "mcpServers": {
+    "jcodemunch": {
+      "command": "C:\\opt\\proj\\Uncle-J-s-Refinery\\.venv\\Scripts\\jcodemunch-mcp.exe",
+      "args": ["serve", "--transport", "stdio"],
+      "env": {
+        "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI"
+      }
+    },
+    "jdatamunch": {
+      "comment": "jdatamunch-mcp takes no subcommand and no --transport; a bare invocation IS the stdio server.",
+      "command": "C:\\opt\\proj\\Uncle-J-s-Refinery\\.venv\\Scripts\\jdatamunch-mcp.exe",
+      "args": [],
+      "env": {
+        "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI"
+      }
+    },
+    "jdocmunch": {
+      "comment": "jdocmunch-mcp has a serve subcommand but no --transport flag.",
+      "command": "C:\\opt\\proj\\Uncle-J-s-Refinery\\.venv\\Scripts\\jdocmunch-mcp.exe",
+      "args": ["serve"],
+      "env": {
+        "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI"
+      }
+    },
+    "serena": {
+      "comment": "uvx by absolute path: the MCP launcher does not reliably inherit the user PATH, the same way hooks do not (see docs/WINDOWS-PORT.md). A bare 'uvx' resolves only by luck.",
+      "command": "C:\\util\\apps\\uv\\uvx.exe",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "ide-assistant"
+      ]
+    },
+    "duckdb": {
+      "command": "C:\\util\\apps\\uv\\uvx.exe",
+      "args": [
+        "mcp-server-motherduck",
+        "--db-path", ":memory:",
+        "--read-write",
+        "--allow-switch-databases"
+      ]
+    }
+  }
+}
+

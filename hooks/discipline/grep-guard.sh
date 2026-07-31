@@ -12,8 +12,37 @@
 # Behaviour is pinned by tests/test_grep_guard.py.
 set -uo pipefail
 
-LOG="/opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log"
-REPO_ROOT="/opt/proj"
+# Projects root differs by platform: /opt/proj on Linux, /c/opt/proj under Git
+# Bash (MSYS maps C:\ to /c). REPO_ROOT drives the "is this path inside the repo
+# tree?" test below, so a wrong value does not error — it makes every absolute
+# path look external and the guard silently allows what it should deny. Probe
+# instead of hardcoding.
+# Both spellings are treated as in-repo regardless of which platform we are on:
+# the test is a containment check, and denying a path that happens not to exist
+# here costs nothing, while missing one silently allows a source read.
+REPO_ROOTS="${UNCLE_J_PROJ_ROOT:+$UNCLE_J_PROJ_ROOT }/opt/proj /c/opt/proj"
+
+in_repo() {
+  local p="$1" r
+  for r in $REPO_ROOTS; do
+    case "$p" in "$r"/*) return 0 ;; esac
+  done
+  return 1
+}
+
+# LOG must point at a directory that exists, so pick the root actually present.
+LOG_ROOT=/opt/proj
+for _cand in $REPO_ROOTS; do
+  [ -d "$_cand" ] && { LOG_ROOT="$_cand"; break; }
+done
+LOG="$LOG_ROOT/Uncle-J-s-Refinery/state/hook-blocks.log"
+
+# jq is required. Without it the parse below yields an empty CMD and the guard
+# exits 0 — allowing every command it exists to screen. Fail loudly instead.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "grep-guard: jq not found on PATH — guard cannot evaluate commands" >&2
+  exit 1
+fi
 
 INPUT=$(cat)
 CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
@@ -93,11 +122,14 @@ while IFS= read -r seg; do
         # PATTERN (`grep -rl 500 /home/...`) can't swallow the path operand.
         echo "$tok" | grep -qE '^[0-9]+$' && continue
         has_path=1
-        case "$tok" in
-          ${REPO_ROOT}/*) repo_path=1 ;;
-          /*|"~"*) ;;
-          *) repo_path=1 ;;
-        esac
+        if in_repo "$tok"; then
+          repo_path=1
+        else
+          case "$tok" in
+            /*|"~"*) ;;
+            *) repo_path=1 ;;
+          esac
+        fi
       done
       set +f
       if [[ $has_path -eq 0 || $repo_path -eq 1 ]]; then deny=1; break; fi
@@ -121,7 +153,7 @@ while IFS= read -r seg; do
     if echo "$tok" | grep -qE "$SRC_EXT"; then
       [[ "$prev" == ">" || "$prev" == ">>" || "$tok" == ">"* ]] && { prev="$tok"; continue; }   # redirect target
       echo "$tok" | grep -qE "$ALLOWED_RE" && { prev="$tok"; continue; }                          # allowed location
-      [[ "$tok" == /* && "$tok" != ${REPO_ROOT}/* ]] && { prev="$tok"; continue; }                # source outside repo
+      [[ "$tok" == /* ]] && ! in_repo "$tok" && { prev="$tok"; continue; }                        # source outside repo
       deny=1; break
     fi
     prev="$tok"

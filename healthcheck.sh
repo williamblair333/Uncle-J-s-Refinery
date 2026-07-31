@@ -39,10 +39,22 @@ for arg in "$@"; do
     esac
 done
 
+# Platform. Several invariants below are Linux-shaped (cron, systemd) and have a
+# different implementation or none at all on Windows. Asserting them unchanged
+# reports a working install as broken, which is how a Windows host showed 7
+# failures while every component it actually has was healthy.
+case "$(uname -s 2>/dev/null || echo unknown)" in
+    MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;
+    Darwin)               PLATFORM="macos"   ;;
+    *)                    PLATFORM="linux"   ;;
+esac
+
 step() { printf '\n==> %s\n' "$*" >&2; }
 ok()   { printf '    OK  %s\n' "$*" >&2; }
 warn() { printf '    W   %s\n' "$*" >&2; }
 bad()  { printf '    X   %s\n' "$*" >&2; }
+# Not applicable on this platform — reported, but never counted as a failure.
+na()   { printf '    --  %s\n' "$*" >&2; }
 hint() {
     printf '        fix: %s\n' "$*" >&2
     # When hint is a runnable command: auto-run under --fixall, or offer [y/N] interactively.
@@ -61,6 +73,30 @@ hint() {
                 bash -c "$cmd" || printf '        Command exited non-zero — check output above\n' >&2
             fi
         fi
+    fi
+}
+
+# A feature can be deliberately not installed on a host — the Windows port omits
+# dreaming and session-stats. Without this, an intentional omission is reported
+# forever as a failure, which is indistinguishable from a broken install. One
+# feature name per line in state/disabled-features (gitignored, per-host).
+feature_disabled() {
+    local f="$REPO_ROOT/state/disabled-features"
+    [ -f "$f" ] && grep -qxF "$1" "$f"
+}
+
+# Scheduled jobs. Linux registers them with cron; Windows has no cron daemon and
+# uses Task Scheduler under the same job names. One accessor so the checks below
+# do not care which is in use.
+scheduled_jobs() {
+    if [ "$PLATFORM" = "windows" ]; then
+        # MSYS rewrites any argument that looks like a POSIX path, so a bare
+        # /query reaches schtasks as C:/util/apps/Git/query and it exits with a
+        # usage error. Suppressing that conversion is the difference between
+        # reading the real task list and silently reporting every job missing.
+        MSYS2_ARG_CONV_EXCL='*' schtasks /query /fo list 2>/dev/null || true
+    else
+        crontab -l 2>/dev/null || true
     fi
 }
 
@@ -85,7 +121,7 @@ check_verify() {
 
 # ----- 2. all 6 stack MCP servers connected ---------------------------------
 check_mcp_connected() {
-    step "MCP servers — 6 stack servers connected"
+    step "MCP servers — configured stack servers connected"
     local output
     output="$(claude mcp list 2>&1)" || {
         bad "claude mcp list failed"
@@ -93,12 +129,36 @@ check_mcp_connected() {
         record_fail "mcp-list"
         return
     }
-    local missing=()
-    for name in duckdb jcodemunch jdatamunch jdocmunch serena context7; do
+    # `claude mcp list` only lists CONFIGURED servers, so a server that was never
+    # registered on this host is indistinguishable from one that is down if we
+    # assert a fixed list of six. Split the difference: the jMunch trio is the
+    # core stack and must be present and Connected; duckdb/serena/context7 are
+    # supplementary (duckdb+serena need uvx, context7 needs Node) and are only
+    # asserted when this host actually registered them.
+    local missing=() unconfigured=() pending=()
+    for name in jcodemunch jdatamunch jdocmunch; do
         if ! printf '%s\n' "$output" | grep -qE "^${name}: .*[✓✔] Connected"; then
             missing+=("$name")
         fi
     done
+    # A newly added .mcp.json server sits in "Pending approval" until a human
+    # approves it once. That is a distinct state from down: nothing is broken and
+    # no re-registration helps, so counting it as a failure sends the reader at
+    # the wrong fix (--auto-register cannot approve anything).
+    for name in duckdb serena context7; do
+        if ! printf '%s\n' "$output" | grep -qE "^${name}:"; then
+            unconfigured+=("$name")
+        elif printf '%s\n' "$output" | grep -qE "^${name}: .*Pending approval"; then
+            pending+=("$name")
+        elif ! printf '%s\n' "$output" | grep -qE "^${name}: .*[✓✔] Connected"; then
+            missing+=("$name")
+        fi
+    done
+    [ ${#unconfigured[@]} -gt 0 ] && na "not registered on this host: ${unconfigured[*]} (supplementary — core jMunch trio is what the routing policy depends on)"
+    if [ ${#pending[@]} -gt 0 ]; then
+        warn "awaiting one-time approval: ${pending[*]}"
+        hint "run \`claude\` and approve the project .mcp.json servers (one time; --auto-register does not apply)"
+    fi
     # duckdb launches via uvx (mcp-server-motherduck); its first MCP handshake at
     # session-open can outrun a single probe on a cold machine. It cold-starts in
     # <1s once the uvx cache is warm, so poll up to ~15s before declaring failure:
@@ -109,7 +169,7 @@ check_mcp_connected() {
             sleep 3
             output="$(claude mcp list 2>&1)"
             if printf '%s\n' "$output" | grep -qE "^duckdb: .*[✓✔] Connected"; then
-                ok "all 6 stack servers Connected (duckdb warmed after ${i} retr$([ "$i" -eq 1 ] && echo y || echo ies))"
+                ok "all configured stack servers Connected (duckdb warmed after ${i} retr$([ "$i" -eq 1 ] && echo y || echo ies))"
                 return
             fi
         done
@@ -118,9 +178,10 @@ check_mcp_connected() {
         record_fail "mcp-servers-down(duckdb)"
         return
     fi
+    local configured=$((6 - ${#unconfigured[@]} - ${#pending[@]}))
     if [ ${#missing[@]} -eq 0 ]; then
-        ok "all 6 stack servers Connected"
-    elif [ ${#missing[@]} -ge 5 ]; then
+        ok "all $configured configured stack server(s) Connected"
+    elif [ ${#missing[@]} -ge 3 ] && [ ${#missing[@]} -eq "$configured" ]; then
         # All (or nearly all) servers down = Claude Code not running or not restarted.
         # Re-registering with --auto-register cannot fix a missing session.
         bad "not Connected: ${missing[*]}"
@@ -138,13 +199,23 @@ check_jcodemunch_path() {
     step "jcodemunch — stack venv binary (not uvx)"
     local output
     local project_venv="$REPO_ROOT/.venv/bin/jcodemunch-mcp"
+    # Windows venvs expose Scripts/<tool>.exe instead of bin/<tool>.
+    local project_venv_win="$REPO_ROOT/.venv/Scripts/jcodemunch-mcp.exe"
     output="$(claude mcp get jcodemunch 2>&1)" || {
         bad "claude mcp get jcodemunch failed"
         record_fail "jcodemunch-get"
         return
     }
-    if printf '%s\n' "$output" | grep -qF "$project_venv"; then
-        ok "jcodemunch -> $project_venv"
+    # `claude mcp get` no longer prints the server command (it reports scope and
+    # status only), so fall back to `mcp list`, which still shows the full path.
+    if ! printf '%s\n' "$output" | grep -q 'jcodemunch-mcp'; then
+        output="$output
+$(claude mcp list 2>&1 | grep -F 'jcodemunch:' || true)"
+    fi
+    if printf '%s\n' "$output" | grep -qF "$project_venv" \
+       || printf '%s\n' "$output" | grep -qF "$project_venv_win" \
+       || printf '%s\n' "$output" | grep -qF "$(cygpath -w "$project_venv_win" 2>/dev/null || echo "$project_venv_win")"; then
+        ok "jcodemunch -> stack venv binary"
     elif printf '%s\n' "$output" | grep -qE "$HOME/.code-index/local-.+/jcodemunch-mcp"; then
         local actual_path
         actual_path=$(printf '%s\n' "$output" | grep -oE "[^ ]+jcodemunch-mcp" | head -1)
@@ -161,18 +232,27 @@ check_jcodemunch_path() {
 # (WAL data-race bug). pyproject pins a vendored 3.51.3 wheel; this asserts the
 # pin held, so a future Python-bump fallback to PyPI fails LOUD instead of silent.
 check_sqlite_version() {
-    step "venv SQLite — 3.51.3 (vendored pysqlite3, WAL-race fix)"
-    local want="3.51.3" got
-    got="$("$REPO_ROOT/.venv/bin/python" -c 'import sqlite3; print(sqlite3.sqlite_version)' 2>/dev/null)" || {
+    step "venv SQLite — >= 3.51.3 (WAL data-race fix present)"
+    local want="3.51.3" got py
+    # Windows venvs use Scripts/; .venv/bin is a compat symlink that may be absent
+    # if the venv was just rebuilt (see scripts/win/venv-compat.sh).
+    py="$REPO_ROOT/.venv/bin/python"
+    [ -x "$py" ] || py="$REPO_ROOT/.venv/Scripts/python.exe"
+    got="$("$py" -c 'import sqlite3; print(sqlite3.sqlite_version)' 2>/dev/null)" || {
         bad "could not query venv sqlite3 version"
         hint "run: $REPO_ROOT/install.sh   # rebuilds the venv + pysqlite3 patch"
         record_fail "sqlite-version-unknown"
         return
     }
-    if [ "$got" = "$want" ]; then
-        ok "venv sqlite3 = $got (vendored wheel)"
+    # The requirement is the WAL data-race FIX, which landed in 3.51.3 — so any
+    # LATER version also satisfies it. Asserting equality made a strictly safer
+    # SQLite fail the check: the uv-managed CPython 3.11.15 on Windows statically
+    # links 3.53.1, which is past the fix and needs no vendored pysqlite3 at all.
+    if [ "$got" = "$want" ] || \
+       [ "$(printf '%s\n%s\n' "$want" "$got" | sort -V | head -1)" = "$want" ]; then
+        ok "venv sqlite3 = $got (>= $want, WAL-race fix present)"
     else
-        bad "venv sqlite3 = $got, expected $want — pin reverted (likely PyPI 3.51.1 WAL bug)"
+        bad "venv sqlite3 = $got, need >= $want — WAL data-race bug present"
         hint "run: bash $REPO_ROOT/scripts/build-vendored-pysqlite3.sh   # rebuild wheel for this Python, then uv lock && uv sync"
         record_fail "sqlite-version($got)"
     fi
@@ -283,6 +363,10 @@ check_skills() {
     step "skills — dreaming, outcomes, orchestrator installed"
     local missing=0
     for skill in "${_REQUIRED_SKILLS[@]}"; do
+        if [ "$skill" = dream-synthesizer ] && feature_disabled dreaming; then
+            na "skill: $skill (dreaming disabled on this host)"
+            continue
+        fi
         if [ -f "$HOME/.claude/skills/$skill/SKILL.md" ]; then
             ok "skill: $skill"
         else
@@ -292,12 +376,18 @@ check_skills() {
             missing=$((missing+1))
         fi
     done
-    if [ -f "$HOME/.claude/commands/dream.md" ]; then
+    if feature_disabled dreaming; then
+        na "/dream slash command (dreaming disabled on this host)"
+    elif [ -f "$HOME/.claude/commands/dream.md" ]; then
         ok "/dream slash command installed"
     else
         bad "/dream command missing"
         hint "run: bash $REPO_ROOT/features/dreaming/install.sh"
         record_fail "dream-command"
+    fi
+    if feature_disabled session-stats; then
+        na "/stats slash command + stats cron (session-stats disabled on this host)"
+        return
     fi
     if [ -f "$HOME/.claude/commands/stats.md" ]; then
         ok "/stats slash command installed"
@@ -313,7 +403,7 @@ check_skills() {
         hint "check: bash $REPO_ROOT/features/session-stats/stats.sh --dry-run"
         record_fail "stats-dry-run"
     fi
-    if crontab -l 2>/dev/null | grep -q 'uncle-j-session-stats'; then
+    if [[ "$(scheduled_jobs)" == *uncle-j-session-stats* ]]; then
         ok "session-stats cron registered"
     else
         bad "session-stats cron not registered"
@@ -385,31 +475,43 @@ check_agents() {
 
 # ----- 9d. crons: all expected jobs registered -----------------------------
 check_crons() {
-    step "crontab — Uncle J jobs registered"
+    step "scheduled jobs — Uncle J jobs registered"
     local tab
-    tab="$(crontab -l 2>/dev/null || true)"
+    tab="$(scheduled_jobs)"
     local missing=()
-    declare -A EXPECTED=(
-        [uncle-j-session-stats]="features/session-stats/stats.sh"
-        [uncle-j-dreaming]="features/dreaming/dream.sh"
-        [uncle-j-auto-maintain]="bash $REPO_ROOT/scripts/auto-maintain.sh"
-        [uncle-j-healthcheck-notify]="bash $REPO_ROOT/scripts/healthcheck-notify.sh"
-        [uncle-j-jcodemunch-reindex]="bash $REPO_ROOT/scripts/jcodemunch-reindex.sh"
-        [uncle-j-jdocmunch-reindex]="bash $REPO_ROOT/scripts/jdocmunch-reindex.sh"
-        [uncle-j-memweave-sync]="scripts/memweave/sync_memory.sh"
+    local expected=(
+        uncle-j-auto-maintain
+        uncle-j-healthcheck-notify
+        uncle-j-jcodemunch-reindex
+        uncle-j-jdocmunch-reindex
+        uncle-j-memweave-sync
     )
-    for label in "${!EXPECTED[@]}"; do
-        if printf '%s\n' "$tab" | grep -q "$label"; then
-            ok "cron: $label"
+    feature_disabled session-stats || expected+=(uncle-j-session-stats)
+    feature_disabled dreaming      || expected+=(uncle-j-dreaming)
+    feature_disabled healthcheck-notify && expected=("${expected[@]/uncle-j-healthcheck-notify}")
+
+    # Native pattern match, not `printf | grep -q`: under `set -o pipefail`
+    # grep -q exits at the first hit and closes the pipe, printf takes SIGPIPE,
+    # and pipefail turns a successful match into a non-zero pipeline. Harmless
+    # against a short crontab, but schtasks emits ~75KB, so printf is always
+    # still writing — every registered job reported as missing.
+    for label in "${expected[@]}"; do
+        [ -z "$label" ] && continue
+        if [[ "$tab" == *"$label"* ]]; then
+            ok "job: $label"
         else
             missing+=("$label")
         fi
     done
     if [ ${#missing[@]} -gt 0 ]; then
         for m in "${missing[@]}"; do
-            bad "cron missing: $m"
+            bad "job missing: $m"
         done
-        hint "run: bash $REPO_ROOT/install.sh   (re-registers crons)"
+        if [ "$PLATFORM" = "windows" ]; then
+            hint "run: bash $REPO_ROOT/scripts/win/schedule-tasks.sh   (registers Task Scheduler jobs)"
+        else
+            hint "run: bash $REPO_ROOT/install.sh   (re-registers crons)"
+        fi
         record_fail "cron-missing(${missing[0]})"
     fi
 }
@@ -689,22 +791,27 @@ check_embedding_canary() {
 
 # ----- 9k. auto-maintain crons registered ----------------------------------
 check_auto_maintain_cron() {
-    step "crontab — auto-maintain crons registered"
+    step "scheduled jobs — auto-maintain jobs registered"
     local tab
-    tab="$(crontab -l 2>/dev/null || true)"
+    tab="$(scheduled_jobs)"
     local missing=()
+    # See check_crons: pipefail + grep -q on large input reports false misses.
     for label in uncle-j-auto-maintain uncle-j-jcodemunch-reindex uncle-j-jdocmunch-reindex; do
-        if printf '%s\n' "$tab" | grep -q "$label"; then
-            ok "cron: $label"
+        if [[ "$tab" == *"$label"* ]]; then
+            ok "job: $label"
         else
             missing+=("$label")
         fi
     done
     if [[ "${#missing[@]}" -gt 0 ]]; then
         for m in "${missing[@]}"; do
-            bad "cron missing: $m"
+            bad "job missing: $m"
         done
-        hint "run: bash $REPO_ROOT/install.sh   (re-registers crons)"
+        if [ "$PLATFORM" = "windows" ]; then
+            hint "run: bash $REPO_ROOT/scripts/win/schedule-tasks.sh   (registers Task Scheduler jobs)"
+        else
+            hint "run: bash $REPO_ROOT/install.sh   (re-registers crons)"
+        fi
         record_fail "cron-missing(${missing[0]})"
     fi
 }

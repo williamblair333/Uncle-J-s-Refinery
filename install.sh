@@ -441,9 +441,24 @@ else:
     print("    OK  MCP_TIMEOUT already 60000 in settings.json env block")
 PY
 
-# --- 5c. Maintenance cron jobs ----------------------------------------------
-step "Setting up maintenance cron jobs"
+# --- 5c. Maintenance jobs ---------------------------------------------------
+# Windows has no cron daemon, so the block below registers nothing there and the
+# maintenance jobs simply never run — with no warning, because `install_cron`'s
+# failure is not fatal. Task Scheduler is the equivalent; scripts/win/schedule-tasks.sh
+# registers the same four jobs under the same names so healthcheck.sh can probe
+# either scheduler. See docs/WINDOWS-PORT.md.
 mkdir -p "$STACK_ROOT/state"
+case "$(uname -s 2>/dev/null || echo unknown)" in
+  MINGW*|MSYS*|CYGWIN*)
+    step "Registering maintenance jobs with Task Scheduler"
+    if bash "$STACK_ROOT/scripts/win/schedule-tasks.sh"; then
+        ok "Task Scheduler jobs registered"
+    else
+        warn "Task Scheduler registration failed — run scripts/win/schedule-tasks.sh manually"
+    fi
+    ;;
+  *)
+step "Setting up maintenance cron jobs"
 for entry in \
     "uncle-j-jcodemunch-reindex|0 1 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin bash $STACK_ROOT/scripts/jcodemunch-reindex.sh >> $STACK_ROOT/state/jcodemunch-reindex.log 2>&1" \
     "uncle-j-auto-maintain|0 3 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin CLAUDE_BIN=/home/bill/.local/bin/claude bash $STACK_ROOT/scripts/auto-maintain.sh >> $STACK_ROOT/state/auto-maintain.log 2>&1" \
@@ -455,6 +470,8 @@ do
     install_cron "$tag" "$line"
     ok "cron registered: $tag"
 done
+    ;;
+esac
 
 # --- 5d. Skills (reliability layer) ----------------------------------------
 step "Installing global skills (reliability layer)"
