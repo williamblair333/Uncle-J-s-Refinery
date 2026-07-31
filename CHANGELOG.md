@@ -2,6 +2,43 @@
 
 ---
 
+## 2026-07-31 — fix(auto-maintain): survive a uv cache-deserialization failure
+
+### Corrected diagnosis
+- **The vendored pysqlite3 wheel was never the problem, and neither was its
+  marker.** Yesterday's entry blamed "a Linux wheel being resolved on Windows".
+  That was wrong: `[tool.uv.sources]` already scopes it with
+  `python_version == '3.11' and sys_platform == 'linux' and platform_machine ==
+  'x86_64'`, so Windows never resolves it. The wheel appeared in the error only
+  because it was the first cache entry uv happened to read. The real message was
+  the line underneath — `Failed to deserialize cache entry` — i.e. uv's on-disk
+  cache schema, not the package.
+
+  Re-running the identical `uv lock --upgrade-package …` by hand succeeded twice,
+  upgrading jcodemunch 1.108.102→1.108.204, jdatamunch 1.16.0→1.29.0 and
+  jdocmunch 1.92.0→1.120.0. `uv lock --check` also passed. **No repository change
+  was required to unblock it** — the lockfile was reverted, since performing that
+  upgrade is a separate deliberate act.
+
+### Fixed
+- **`scripts/auto-maintain.sh` no longer loses a night to a stale uv cache.**
+  `run_upgrade()` captures the upgrade output, and *only* on the
+  `Failed to deserialize cache entry` signature runs `uv cache clean` and retries
+  exactly once. Any other failure returns immediately, untouched.
+
+  This mattered because the old behaviour compounded: warn, exit 0, and do not
+  try again for 24h — while `check_auto_maintain_runtime` in `healthcheck.sh`
+  greps only for *shell* errors, so the stack could fall arbitrarily far behind
+  with auto-maintain still reporting itself healthy. Observed on uv 0.12.0, three
+  days old at the time.
+
+  Verified by extracting the shipped function and running it against a stubbed
+  `uv`: the cache signature recovers after a clean (rc=0, cache cleaned), and an
+  unrelated resolver error neither cleans the cache nor retries (1 attempt,
+  original rc preserved).
+
+---
+
 ## 2026-07-31 — fix(memweave): the sync was truncating the corpus, not just crashing
 
 ### Fixed
