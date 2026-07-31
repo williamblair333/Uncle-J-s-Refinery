@@ -1,6 +1,42 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-30 — jdocmunch reindex unbroken. `HEALTHCHECK: ok`.*
+*Last updated: 2026-07-31 — memweave corpus repaired. `HEALTHCHECK: ok`.*
+
+## 2026-07-31 (session 4) — fix(memweave): the sync was eating the corpus
+
+**Status:** sync green — `wrote 4 markdown files; 0 failed`, 4 indexed, 118
+chunks. The two 0-byte corpus documents are back at 40KB and 45KB.
+
+**The bug was worse than the traceback suggested, in a way worth remembering:
+`write_text` truncates before it encodes.** The file is opened for writing —
+which zeroes it — and only then does the encode raise. So each failed run did
+not "skip" a document, it *destroyed* the one already there. Two of four corpus
+files were 0 bytes when I found them. If a crash report ever says "failed to
+write", check whether the old content survived; often it did not.
+
+**And the loud half of the bug was hiding the dangerous half.** cp1252 maps most
+byte values, so reading UTF-8 as cp1252 yields *valid but wrong* text (`—` →
+`â€"`) with no error at all. Only five byte values are undefined in cp1252 and
+those produce U+FFFD, which is what finally crashed the write. Every export that
+succeeded had been writing mojibake silently. I verified this on the live host
+rather than reasoning about it — see the demo in the session log.
+
+**Correcting my own earlier note:** I first reported the corpus damage as
+"U+FFFD replacement chars" and scanned for those. That scan understated it,
+because mojibake is valid text and does not match. Scan for both.
+
+**Open items for the next session:**
+- **auto-maintain cannot upgrade anything on this host.** 03:00 logged
+  `Upgrade FAILED` — `uv lock` chokes on
+  `vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl`, a Linux wheel
+  being resolved on Windows. It reported the failure honestly rather than
+  claiming success, but the practical effect is that jcodemunch/jdocmunch/
+  jdatamunch stay 186/113/29 commits behind indefinitely. Needs a
+  platform-conditional marker on that vendored wheel. **Silver lining: the
+  jdocmunch prune shim's dependency on private helpers is safe only because this
+  upgrade cannot run.** Fix the wheel and that risk goes live.
+- `tests/test_skills.py` has the identical cp1252 defect (reads `SKILL.md` with
+  no `encoding=`), 77 local failures. Not the cause of CI's red job.
 
 ## 2026-07-30 (session 3) — fix(jdocmunch): the nightly doc reindex was frozen
 

@@ -19,6 +19,18 @@ import os
 import sys
 from pathlib import Path
 
+# Search hits are snippets of real transcripts — em dashes, box drawing, CJK,
+# emoji. Python binds stdout to the locale encoding (cp1252 on Windows), so
+# printing a hit that contains any of them raises UnicodeEncodeError and the
+# search dies *after* doing all the work. CLAUDE.md routes every prior-art check
+# through this script, so that failure lands in front of an agent mid-task.
+# errors="replace" keeps a mangled character from killing an otherwise good result.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass  # already-wrapped or non-reconfigurable stream; not worth failing over
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from onnx_provider import OnnxMiniLMProvider  # noqa: E402
 

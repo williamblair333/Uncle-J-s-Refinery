@@ -2,6 +2,66 @@
 
 ---
 
+## 2026-07-31 — fix(memweave): the sync was truncating the corpus, not just crashing
+
+### Fixed
+- **`scripts/memweave/export_transcripts.py` — two encoding defects, the quieter
+  one worse.** Line 145 read UTF-8 transcripts with no `encoding=`, so Python
+  used the locale default — cp1252 on Windows. Line 160 wrote them back the same
+  way. Both now name `utf-8` explicitly.
+
+  The visible symptom was `UnicodeEncodeError` in `state/memweave-sync.log`. The
+  invisible one: `write_text` **opens for writing before it encodes**, so the
+  file was truncated to zero and *then* the encode failed. Two of the four
+  corpus documents were 0 bytes — including the session that was mid-export.
+  The crash was not failing to update the store, it was destroying it.
+
+  Measured on this host: cp1252 maps most byte values, so a UTF-8 read decodes
+  to *valid but wrong* characters (`—` → `â€"`) rather than anything that
+  errors. Only the five bytes cp1252 leaves undefined (`0x81 0x8D 0x8F 0x90
+  0x9D`) become U+FFFD and reach the crashing write. Every export that
+  *succeeded* was therefore writing mojibake silently.
+- **One bad transcript no longer aborts the run.** The raise escaped
+  `export_project` into `main()`, so every transcript after it — and under
+  `--all-projects`, every remaining project — was never exported. Now contained
+  per file, but deliberately loud: the path and exception go to stderr, a
+  `failed` counter appears in the summary line, and the process exits non-zero.
+  Resilient, not silent.
+- **`scripts/memweave/mw_search.py`** reconfigures stdout/stderr to UTF-8.
+  Snippets contain em dashes and box drawing; printing one on Windows raised
+  `UnicodeEncodeError` *after* the search had done all its work. CLAUDE.md routes
+  every prior-art check through this script, so the failure landed in front of an
+  agent mid-task.
+- **`scripts/memweave/sync_memory.sh`** exports `PYTHONUTF8=1` and
+  `PYTHONIOENCODING=utf-8`. Defence in depth only — the call sites above are what
+  make this correct — but it covers `index_workspace.py`, which calls into the
+  memweave library we do not control.
+
+### Added
+- `tests/test_memweave_export.py::test_export_round_trips_characters_cp1252_cannot_encode`
+  — feeds em dash, box drawing, CJK, emoji and an accented latin char through the
+  exporter and asserts they survive. Fails on Windows the moment either
+  `encoding=` is dropped; passes trivially on Linux, which is exactly why the bug
+  survived review. Full suite: 77 failed / 614 passed on main → 77 failed /
+  **615** passed here — same failure set, one net-new passing test.
+
+### Found, not fixed
+- **auto-maintain can never upgrade on this host.** The 03:00 run reported
+  `Upgrade FAILED`: `uv lock` cannot resolve
+  `vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl` — a **linux_x86_64**
+  wheel pinned in a lockfile now being resolved on Windows — alongside a
+  `Failed to deserialize cache entry` error. To its credit it logged the failure
+  and continued rather than claiming success. Consequence: jcodemunch (186),
+  jdocmunch (113) and jdatamunch (29) commits behind will stay behind, and the
+  jdocmunch prune shim keeps working only because the upgrade that would threaten
+  it cannot run.
+- **`tests/test_skills.py` has the same cp1252 defect**, reading `SKILL.md`
+  files without `encoding=` — 77 local failures, all `UnicodeDecodeError`. This
+  is *not* the cause of CI's `Skill frontmatter regression` failure, which is on
+  Linux and predates this branch; that log is not readable without auth.
+
+---
+
 ## 2026-07-30 (session 3) — fix(jdocmunch): unbreak the nightly doc reindex
 
 `healthcheck.sh --quick`: **fail (1) `jdocmunch-index-stale` → ok**. The stale

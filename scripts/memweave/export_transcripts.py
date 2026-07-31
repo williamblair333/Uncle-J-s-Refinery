@@ -21,6 +21,7 @@ import argparse
 import json
 import os
 import re
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -140,26 +141,51 @@ def export_project(project, *, projects_root=PROJECTS_ROOT, out_workspace=DEFAUL
     mem_dir = Path(out_workspace).expanduser() / "memory"
     mem_dir.mkdir(parents=True, exist_ok=True)
 
-    written = skipped_small = skipped_empty = 0
+    written = skipped_small = skipped_empty = failed = 0
     for tp in transcripts:
-        turns = iter_turns(tp.read_text(errors="replace").splitlines())
-        date_iso = datetime.fromtimestamp(tp.stat().st_mtime, timezone.utc).strftime("%Y-%m-%d")
-        md = render_markdown(tp.stem, turns, project=project, date_iso=date_iso)
-        out_path = mem_dir / f"{tp.stem}.md"
-        if not md or len(md) < min_chars:
-            # Too-small/empty after filtering. Remove any stale .md left by a prior
-            # export so a newly-tightened filter (e.g. skill-body stripping that
-            # shrinks a session below min_chars) actually sheds the old, larger doc
-            # instead of leaving it behind. export stays authoritative over the store.
-            out_path.unlink(missing_ok=True)
-            if not md:
-                skipped_empty += 1
-            else:
-                skipped_small += 1
-            continue
-        out_path.write_text(md)
-        written += 1
-    return written, skipped_small, skipped_empty
+        try:
+            # encoding= is NOT redundant, however much it looks it on Linux.
+            # Claude writes these transcripts as UTF-8, but Python picks the
+            # locale encoding when none is given — cp1252 on Windows. Decoding
+            # UTF-8 as cp1252 with errors="replace" does not fail loudly; it
+            # quietly substitutes U+FFFD for every byte it cannot map, and the
+            # corrupted text is what gets rendered into the corpus. The write
+            # below then dies trying to encode that same U+FFFD back to cp1252.
+            # The crash was the visible half of the bug; the silent mojibake was
+            # the dangerous half. errors="replace" is kept only for genuinely
+            # malformed bytes, which is what it was meant for.
+            raw = tp.read_text(encoding="utf-8", errors="replace")
+            turns = iter_turns(raw.splitlines())
+            date_iso = datetime.fromtimestamp(tp.stat().st_mtime, timezone.utc).strftime("%Y-%m-%d")
+            md = render_markdown(tp.stem, turns, project=project, date_iso=date_iso)
+            out_path = mem_dir / f"{tp.stem}.md"
+            if not md or len(md) < min_chars:
+                # Too-small/empty after filtering. Remove any stale .md left by a prior
+                # export so a newly-tightened filter (e.g. skill-body stripping that
+                # shrinks a session below min_chars) actually sheds the old, larger doc
+                # instead of leaving it behind. export stays authoritative over the store.
+                out_path.unlink(missing_ok=True)
+                if not md:
+                    skipped_empty += 1
+                else:
+                    skipped_small += 1
+                continue
+            out_path.write_text(md, encoding="utf-8")
+            written += 1
+        except Exception as exc:
+            # One unreadable transcript used to abort the whole run: the raise
+            # escaped export_project into main(), so every transcript after it in
+            # the loop — and under --all-projects, every remaining project — was
+            # never exported at all. Contain the blast radius to the one file.
+            #
+            # Deliberately loud. A bare `continue` here would trade a crash for a
+            # silently partial corpus, and nothing downstream would notice: the
+            # healthcheck measures index *freshness*, not completeness. The
+            # counter is surfaced in the summary and forces a non-zero exit.
+            print(f"export_transcripts: FAILED {tp.name}: {type(exc).__name__}: {exc}",
+                  file=sys.stderr)
+            failed += 1
+    return written, skipped_small, skipped_empty, failed
 
 
 def export_all_projects(*, projects_root=PROJECTS_ROOT, out_workspace=DEFAULT_WORKSPACE,
@@ -172,15 +198,16 @@ def export_all_projects(*, projects_root=PROJECTS_ROOT, out_workspace=DEFAULT_WO
     (written, skipped_small, skipped_empty, projects).
     """
     root = Path(projects_root).expanduser()
-    written = skipped_small = skipped_empty = projects = 0
+    written = skipped_small = skipped_empty = failed = projects = 0
     for proj_dir in sorted(p for p in root.iterdir() if p.is_dir()):
-        w, s, e = export_project(proj_dir.name, projects_root=root,
-                                 out_workspace=out_workspace, limit=limit, min_chars=min_chars)
+        w, s, e, f = export_project(proj_dir.name, projects_root=root,
+                                    out_workspace=out_workspace, limit=limit, min_chars=min_chars)
         written += w
         skipped_small += s
         skipped_empty += e
+        failed += f
         projects += 1
-    return written, skipped_small, skipped_empty, projects
+    return written, skipped_small, skipped_empty, failed, projects
 
 
 def main() -> int:
@@ -199,17 +226,20 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.all_projects:
-        written, small, empty, projects = export_all_projects(
+        written, small, empty, failed, projects = export_all_projects(
             out_workspace=args.out, limit=args.limit, min_chars=args.min_chars)
         print(f"export_transcripts: all-projects ({projects} projects) -> "
               f"{Path(args.out).expanduser()}/memory")
     else:
-        written, small, empty = export_project(
+        written, small, empty, failed = export_project(
             args.project, out_workspace=args.out, limit=args.limit, min_chars=args.min_chars)
         print(f"export_transcripts: project={args.project} -> {Path(args.out).expanduser()}/memory")
     print(f"  wrote {written} markdown files; skipped {small} too-small, {empty} empty "
-          f"(no conversational text)")
-    return 0
+          f"(no conversational text); {failed} failed")
+    # Non-zero on any per-file failure. The loop above deliberately keeps going so
+    # one bad transcript cannot starve the corpus, but the run must still report
+    # itself as unsuccessful — otherwise "resilient" degrades into "silent".
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
