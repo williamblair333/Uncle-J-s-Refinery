@@ -2,6 +2,45 @@
 
 ---
 
+## 2026-07-31 — chore(stack): pre-flight the upgrade instead of applying it
+
+Attempted the supervised upgrade; it cannot be applied from inside a session on
+this host, so the supervision went into de-risking the unattended run instead.
+**No package was upgraded and `uv.lock` is deliberately unchanged.**
+
+### Two hard findings
+- **`uv sync` cannot run from inside a Claude Code session on Windows.** The
+  three MCP servers run as `.venv/Scripts/{jcodemunch,jdatamunch,jdocmunch}-mcp.exe`
+  and Windows write-locks a running image; probing all three with `open(p,"ab")`
+  raised `PermissionError`. `uv sync --inexact` must rewrite exactly those entry
+  points. This is why the 03:00 job is the right place for it — nothing holds
+  those files then — and why doing it "supervised, now" is the one context
+  guaranteed to fail.
+- **Committing an upgraded lockfile alone would have disarmed the nightly sync.**
+  `commits_behind()` derives from the SHA in `uv.lock` via `parse_lock_sha`, so
+  a bumped lock drops `behind` under the threshold, nothing queues, and
+  `run_upgrade` is never called — leaving the venv on old packages while the
+  lockfile claims new ones. Lock and sync have to move together.
+
+### Pre-flight result (jdocmunch 1.120.0, throwaway venv)
+- `_load_gitignore` and `_should_skip` — **both still present**, so the prune
+  shim in `scripts/jdocmunch-reindex.sh` survives the 28-version jump.
+- The `str.lstrip("./")` pruning bug is **still present** at all three call
+  sites; `_should_skip('venv-memweave/')` still returns `False`, so a top-level
+  dot-directory still leaks. The shim remains necessary as well as compatible.
+- Net: the upgrade is safe to let auto-maintain apply unattended, which was the
+  open question.
+
+### Not applicable on this host
+The skill's pysqlite3 landmine (re-apply the 3.51.3 source build after `uv
+sync`) does not apply here. The vendored wheel is correctly scoped to
+linux/x86_64, so Windows installs PyPI pysqlite3 **3.51.1** — but no
+`_pysqlite3_patch.pth` exists, nothing swaps stdlib, and `check_sqlite_version`
+asserts on `import sqlite3`, which is the interpreter's **3.53.1**. The WAL fix
+comes from the interpreter here, not from pysqlite3.
+
+---
+
 ## 2026-07-31 — fix(auto-maintain): survive a uv cache-deserialization failure
 
 ### Corrected diagnosis

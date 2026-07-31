@@ -11,16 +11,18 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Supervise the first real stack upgrade.** The uv cache failure is resolved
-  and `uv lock` now upgrades cleanly (jcodemunch →1.108.204, jdatamunch →1.29.0,
-  jdocmunch →**1.120.0**), so auto-maintain will do all three unattended at the
-  next 03:00. jdocmunch jumping 28 minor versions is the specific risk: the prune
-  shim in `scripts/jdocmunch-reindex.sh` binds two private helpers
-  (`_load_gitignore`, `_should_skip`). It degrades safely — logs
-  `prune compensation unavailable` and falls back to the CLI — but the doc corpus
-  silently re-pollutes if that fires. Consider running it supervised via
-  `stack-not-at-head-remediation` instead, and check whether 1.120 already fixes
-  the `lstrip` bug (jdocmunch is a private repo; needs auth to read).
+- **Apply the stack upgrade** (jcodemunch →1.108.204, jdatamunch →1.29.0,
+  jdocmunch →1.120.0). Pre-flighted 2026-07-31 against 1.120.0 in a throwaway
+  venv, so the risk that motivated supervising it is closed: `_load_gitignore`
+  and `_should_skip` both still exist, and the `lstrip("./")` prune bug is
+  **still present** at all three call sites — the shim in
+  `scripts/jdocmunch-reindex.sh` therefore remains both compatible and
+  necessary. Report the `lstrip` bug upstream when auth allows.
+
+  `uv sync` cannot run from inside a Claude Code session on Windows: the three
+  MCP servers run as `.venv/Scripts/*munch-mcp.exe` and Windows write-locks a
+  running image (probed — `PermissionError` on all three). The 03:00 job is the
+  correct place for it, since nothing holds those files then.
 - **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
   defect just fixed in the memweave scripts, 77 local failures. Separate from
   CI's `Skill frontmatter regression`, which fails on Linux for a reason not

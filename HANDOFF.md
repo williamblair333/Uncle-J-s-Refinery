@@ -1,6 +1,43 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-31 — auto-maintain unblocked. `HEALTHCHECK: ok`.*
+*Last updated: 2026-07-31 — stack upgrade pre-flighted, not applied. `HEALTHCHECK: ok`.*
+
+## 2026-07-31 (session 6) — the supervised upgrade that could not be supervised
+
+**Status:** nothing upgraded, `uv.lock` untouched, and that is the correct
+outcome. `HEALTHCHECK: ok`.
+
+**You cannot `uv sync` from inside a Claude Code session on Windows.** The three
+MCP servers run as `.venv/Scripts/*munch-mcp.exe`, Windows write-locks a running
+image, and `uv sync --inexact` has to rewrite exactly those entry points. Probed
+all three with `open(p, "ab")` — `PermissionError` on every one. So the nightly
+03:00 job is not the risky option, it is the *only* option that can work, because
+it runs when no session holds those files. Attempting it live would have risked a
+half-synced venv and taken the retrieval stack down mid-session, and the guards
+route around `Read`/`Grep` to jcodemunch — losing it would have been genuinely
+hard to work through.
+
+**Nearly walked into a second trap.** Committing an upgraded `uv.lock` without
+syncing looks harmless. It is not: `commits_behind()` reads the SHA out of
+`uv.lock`, so a bumped lock puts every package under threshold, nothing queues,
+`run_upgrade` never fires, and the venv stays old forever while the lockfile
+claims otherwise. **Lock and sync must move together** — never commit one alone.
+
+**The supervision that mattered was the pre-flight.** Installed jdocmunch
+**1.120.0** into a throwaway venv and answered the open question directly:
+- `_load_gitignore` and `_should_skip` — both still present → the prune shim
+  survives the 28-version jump.
+- The `lstrip("./")` bug — **still present**, all three call sites;
+  `_should_skip('venv-memweave/')` is still `False` → the shim is still needed.
+
+So the unattended upgrade is safe to let run. **Still check
+`state/jdocmunch-reindex.log` for `prune compensation unavailable` after the
+first post-upgrade reindex** — cheap, and it is the one signal that says
+otherwise.
+
+**Next session:** confirm the 03:00 run actually applied it (`uv.lock` should
+show new SHAs and `auto-maintain.log` should say `Upgrade succeeded`), then
+re-index and re-run `/health`.
 
 ## 2026-07-31 (session 5) — fix(auto-maintain): I misdiagnosed this yesterday
 
