@@ -1,6 +1,41 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-31 — memweave corpus repaired. `HEALTHCHECK: ok`.*
+*Last updated: 2026-07-31 — auto-maintain unblocked. `HEALTHCHECK: ok`.*
+
+## 2026-07-31 (session 5) — fix(auto-maintain): I misdiagnosed this yesterday
+
+**Status:** upgrade path verified working; `run_upgrade()` now retries once on a
+uv cache failure. Committed on `fix/auto-maintain-uv-cache-retry`.
+
+**Read the last line of the error, not the first.** Yesterday I recorded the
+03:00 failure as "a Linux-only pysqlite3 wheel being resolved on Windows" and
+filed a ROADMAP item to make the wheel platform-conditional. It already *was*
+platform-conditional — `sys_platform == 'linux' and platform_machine ==
+'x86_64'` in `[tool.uv.sources]`. The wheel was simply the first cache entry uv
+happened to read; the actual fault was the line under it, `Failed to deserialize
+cache entry`, i.e. uv's own cache schema. I pattern-matched a filename to a
+platform story and stopped reading. **The repo needed no change at all** — the
+identical `uv lock` succeeded by hand, twice.
+
+**What was worth fixing was the blast radius, not the trigger.** A failed
+upgrade warns, exits 0, and waits 24h — and `check_auto_maintain_runtime` greps
+only for *shell* errors, so it keeps reporting `no recent shell errors` while the
+stack falls behind indefinitely. That is the third blind spot found in that one
+healthcheck function. `run_upgrade()` now clears the cache and retries once, but
+only for that exact signature; anything else returns untouched.
+
+**Next session, the important one:**
+- **Tonight's 03:00 will upgrade all three MCP servers unattended** — jcodemunch
+  →1.108.204, jdatamunch →1.29.0, jdocmunch 1.92→**1.120.0**. That last one is 28
+  minor versions and the jdocmunch prune shim binds two private helpers. It fails
+  safe (WARN + CLI fallback), but the doc corpus re-pollutes silently if it
+  fires. **Grep `state/jdocmunch-reindex.log` for `prune compensation
+  unavailable` after the first post-upgrade reindex.** Running it supervised via
+  `stack-not-at-head-remediation` is the safer path.
+- `healthcheck.sh::check_auto_maintain_runtime` now has three known blind spots
+  (dry-run log masks "never ran"; greps shell errors only, so `Upgrade FAILED`
+  reads healthy; no notion of staleness). Worth rewriting to assert on
+  auto-maintain's own INFO/WARN vocabulary instead of shell syntax.
 
 ## 2026-07-31 (session 4) — fix(memweave): the sync was eating the corpus
 

@@ -11,13 +11,16 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **auto-maintain's upgrade path is dead on Windows.** The 03:00 run logs
-  `Upgrade FAILED`: `uv lock` cannot read
-  `vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl` — a Linux-only
-  wheel being resolved on a Windows host — plus `Failed to deserialize cache
-  entry`. Nothing will ever upgrade here until the vendored wheel is made
-  platform-conditional in `pyproject.toml`. Three packages are 186/113/29
-  commits behind and stuck.
+- **Supervise the first real stack upgrade.** The uv cache failure is resolved
+  and `uv lock` now upgrades cleanly (jcodemunch →1.108.204, jdatamunch →1.29.0,
+  jdocmunch →**1.120.0**), so auto-maintain will do all three unattended at the
+  next 03:00. jdocmunch jumping 28 minor versions is the specific risk: the prune
+  shim in `scripts/jdocmunch-reindex.sh` binds two private helpers
+  (`_load_gitignore`, `_should_skip`). It degrades safely — logs
+  `prune compensation unavailable` and falls back to the CLI — but the doc corpus
+  silently re-pollutes if that fires. Consider running it supervised via
+  `stack-not-at-head-remediation` instead, and check whether 1.120 already fixes
+  the `lstrip` bug (jdocmunch is a private repo; needs auth to read).
 - **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
   defect just fixed in the memweave scripts, 77 local failures. Separate from
   CI's `Skill frontmatter regression`, which fails on Linux for a reason not

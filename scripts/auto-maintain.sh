@@ -91,6 +91,58 @@ except Exception:
 " 2>/dev/null || true
 }
 
+# Run the upgrade, retrying exactly once if uv's cache is what failed.
+#
+# uv's on-disk cache is versioned, and a schema change between uv releases can
+# leave behind an entry the new binary refuses to read. Observed 2026-07-31
+# 03:00 on uv 0.12.0 (three days old at the time):
+#
+#     × Failed to read `pysqlite3 @ file:///.../pysqlite3-...-linux_x86_64.whl`
+#     ├─▶ Failed to deserialize cache entry
+#     ╰─▶ array had incorrect length, expected 4
+#
+# The wheel is a red herring — it is merely the first entry uv happened to read,
+# and its marker already scopes it to linux/x86_64 so Windows never installs it.
+# Re-running the identical `uv lock` by hand succeeded, twice. Nothing about the
+# package, the marker, or the lockfile was wrong.
+#
+# Left alone this costs a whole night and then some: the job warns, exits 0, and
+# does not try again for 24h — and because check_auto_maintain_runtime in
+# healthcheck.sh greps only for *shell* errors, the stack can fall arbitrarily
+# far behind while auto-maintain still reports itself healthy. Clearing the cache
+# is the decisive repair, so do it once, loudly, and only for this signature.
+#
+# Output is captured rather than streamed because the signature has to be
+# grepped; both attempts are appended to the log verbatim, so the record is
+# strictly richer than the redirection it replaces.
+run_upgrade() {
+    local out rc
+    out="$( (cd "$PROJ_ROOT" && uv lock $UPGRADE_FLAGS && uv sync --inexact) 2>&1 )"
+    rc=$?
+    printf '%s\n' "$out" >> "$LOG"
+    [[ "$rc" -eq 0 ]] && return 0
+
+    if ! printf '%s' "$out" | grep -q 'Failed to deserialize cache entry'; then
+        return "$rc"
+    fi
+
+    warn "uv cache entry unreadable (uv schema change?) — clearing cache, retrying once"
+    if ! (cd "$PROJ_ROOT" && uv cache clean) >> "$LOG" 2>&1; then
+        warn "uv cache clean failed — not retrying"
+        return "$rc"
+    fi
+
+    out="$( (cd "$PROJ_ROOT" && uv lock $UPGRADE_FLAGS && uv sync --inexact) 2>&1 )"
+    rc=$?
+    printf '%s\n' "$out" >> "$LOG"
+    if [[ "$rc" -eq 0 ]]; then
+        info "Retry after cache clean succeeded."
+    else
+        warn "Retry after cache clean also failed (rc=$rc)"
+    fi
+    return "$rc"
+}
+
 # ── Part A: threshold-based upgrade ──────────────────────────────────────────
 info "=== Part A: Package freshness check ==="
 PACKAGES_TO_UPGRADE=()
@@ -125,7 +177,7 @@ if [[ "${#PACKAGES_TO_UPGRADE[@]}" -gt 0 ]]; then
     if [[ "$DRY_RUN" -eq 1 ]]; then
         info "DRY RUN: would run: cd $PROJ_ROOT && uv lock $UPGRADE_FLAGS && uv sync --inexact"
     else
-        if (cd "$PROJ_ROOT" && uv lock $UPGRADE_FLAGS && uv sync --inexact) >> "$LOG" 2>&1; then
+        if run_upgrade; then
             info "Upgrade succeeded."
             UPGRADED=1
         else
