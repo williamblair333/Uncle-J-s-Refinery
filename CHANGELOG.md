@@ -2,6 +2,56 @@
 
 ---
 
+## 2026-07-30 (session 3) — fix(jdocmunch): unbreak the nightly doc reindex
+
+`healthcheck.sh --quick`: **fail (1) `jdocmunch-index-stale` → ok**. The stale
+index was a symptom; two independent defects sat under it, and both are the
+port's signature failure class — automation that runs, logs success, and does
+nothing.
+
+### Fixed
+- `scripts/jdocmunch-reindex.sh::repo_locked()` — **the one `flock` caller the
+  previous session missed.** Git Bash ships no `flock`, so `command not found`
+  is non-zero and the guard took its "lock held" branch for every repo whose
+  `<name>.json.lock` merely *exists*. jdocmunch opens that file `O_CREAT` on
+  every index write and never removes it, so once a repo had been indexed once
+  the skip was permanent: `reindexed=0 skipped=1 failed=0`, exit 0, every night.
+
+  Replaced with a Python probe that mirrors the writer it guards —
+  `fcntl.flock` on POSIX, `msvcrt.locking` of **byte 0** on Windows, matching
+  `jdocmunch_mcp/storage/doc_store.py::_index_write_lock`. Matching the offset
+  is what makes the answer meaningful: a Windows byte-range lock is mandatory,
+  so a lock held at byte 0 cannot probe as free. When neither primitive is
+  importable the probe fails **open** with a `WARN` — a guard that cannot
+  evaluate must not silently disable the job it guards.
+- The terminal summary now counts drifted repos separately. `reindexed=0
+  failed=0` previously read identically whether nothing needed doing or the
+  guard had rejected everything — which is precisely what let the frozen index
+  look healthy.
+
+### Worked around (upstream bug, jdocmunch 1.92.0)
+- **`str.lstrip` takes a character set, not a prefix.**
+  `jdocmunch_mcp/tools/index_local.py:167` prunes directories with
+  `_should_skip(f"{dir_rel}/{d}/".lstrip("./"))`. At the repo root `dir_rel` is
+  `"."`, so `"./.venv-memweave/"` is stripped of every leading `.` and `/` and
+  arrives as `"venv-memweave/"` — which no longer matches the
+  `.venv-memweave/` pattern meant to exclude it. **Every top-level
+  dot-directory leaks into the corpus.** `.venv` escapes only by coincidence,
+  because the mangled `venv/` happens to match a separate `SKIP_PATTERNS`
+  entry; `.venv-memweave`, `.git` and `.pytest_cache` do not.
+
+  This index had grown **104 → 357 documents / 1,957 → 17,982 sections**, most
+  of it numpy and onnx files out of the memweave virtualenv. The CLI exposes no
+  ignore flag, so `run_index_local()` now calls the Python API with
+  compensating patterns derived per source root — for each top-level
+  dot-directory that *should* be excluded but is not, the de-dotted
+  root-anchored form (`/venv-memweave/`) that does match post-mangling. Falls
+  back to the plain CLI, with a `WARN`, if the import fails.
+
+  Delete the shim once upstream fixes the `lstrip`. Worth reporting.
+
+---
+
 ## 2026-07-30 — fix(platform): close the Windows port's silent-failure gaps
 
 Follow-on to the port below. `healthcheck.sh --quick`: **fail (7) → ok**. None of

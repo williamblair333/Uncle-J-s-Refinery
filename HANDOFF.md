@@ -1,6 +1,50 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-30 — Windows port + follow-on gap closure. `HEALTHCHECK: ok`.*
+*Last updated: 2026-07-30 — jdocmunch reindex unbroken. `HEALTHCHECK: ok`.*
+
+## 2026-07-30 (session 3) — fix(jdocmunch): the nightly doc reindex was frozen
+
+**Status:** `HEALTHCHECK: ok` (was fail (1) `jdocmunch-index-stale`). Committed
+as `fe61d51`.
+
+**Session 2's closing advice — "grep for `|| true`, `2>/dev/null`, and
+warn-and-continue around any external binary" — had one more hit, in a file that
+session had already edited.** `scripts/jdocmunch-reindex.sh` converted its
+top-level lock from `flock` to `mkdir` and wrote the comment explaining why, but
+`repo_locked()` forty lines lower still called `flock -n 8 8>>"$lockfile"
+2>/dev/null`. It failed **closed**, which is worse than the fail-open cases:
+`command not found` is non-zero, so every repo whose lockfile merely existed was
+reported as locked. jdocmunch creates that lockfile `O_CREAT` on every write and
+never unlinks it, so the skip was permanent — and the script still printed
+`Done.` and exited 0.
+
+**The lesson to carry: converting a file's *primary* lock is not converting the
+file.** When you fix a pattern, grep the whole file for the pattern again, not
+just the site you came for.
+
+**A second bug, upstream, found only because the first fix made the reindex
+actually run.** jdocmunch 1.92.0 prunes directories with
+`_should_skip(f"{dir_rel}/{d}/".lstrip("./"))`. `str.lstrip` takes a **character
+set, not a prefix** — at the repo root the argument is `"./.venv-memweave/"` and
+every leading `.` and `/` is eaten, yielding `"venv-memweave/"`, which no longer
+matches its own gitignore pattern. Every top-level dot-directory leaks.
+`.venv` survives *by coincidence* (mangled `venv/` matches a separate
+`SKIP_PATTERNS` entry), which is why this went unnoticed — the obvious offender
+was masked and only `.venv-memweave`, `.git` and `.pytest_cache` got through.
+The corpus had gone 104 → 357 documents, mostly numpy out of the memweave venv.
+
+**Open items for the next session:**
+- **Report the `lstrip` bug upstream** (`jgravelle/jdocmunch-mcp`,
+  `tools/index_local.py:167`). One-character class of fix; our shim in
+  `run_index_local()` is marked for deletion once it lands.
+- **The shim leans on two private helpers** (`_load_gitignore`, `_should_skip`).
+  auto-maintain will upgrade jdocmunch **113 commits** tonight at 03:00. If they
+  move, the shim logs `prune compensation unavailable` and indexes unpatched —
+  safe, but the corpus re-pollutes silently. Check
+  `state/jdocmunch-reindex.log` for that string after the first post-upgrade run.
+- `auto-maintain --dry-run` is clean on Windows, but tonight is its **first real
+  run**: jcodemunch 186, jdocmunch 113, jdatamunch 29 commits behind threshold,
+  all three upgrading unattended in one pass.
 
 ## 2026-07-30 (session 2) — fix(platform): close the port's silent-failure gaps
 
