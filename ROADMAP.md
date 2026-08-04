@@ -11,18 +11,12 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Apply the stack upgrade** (jcodemunch →1.108.204, jdatamunch →1.29.0,
-  jdocmunch →1.120.0). Pre-flighted 2026-07-31 against 1.120.0 in a throwaway
-  venv, so the risk that motivated supervising it is closed: `_load_gitignore`
-  and `_should_skip` both still exist, and the `lstrip("./")` prune bug is
-  **still present** at all three call sites — the shim in
-  `scripts/jdocmunch-reindex.sh` therefore remains both compatible and
-  necessary. Report the `lstrip` bug upstream when auth allows.
-
-  `uv sync` cannot run from inside a Claude Code session on Windows: the three
-  MCP servers run as `.venv/Scripts/*munch-mcp.exe` and Windows write-locks a
-  running image (probed — `PermissionError` on all three). The 03:00 job is the
-  correct place for it, since nothing holds those files then.
+- **Make Part B's success criterion assert a file changed.** `auto-maintain.sh:247`
+  treats `claude -p` exiting 0 as success, so three permission-blocked evals recorded
+  `evaluation complete` on 2026-08-04 having written nothing. A headless session can
+  never clear the edit-surface guard — `write-clearance-token.sh` needs an approval it
+  cannot grant — so either the criterion checks for a diff, or the guard grows a path
+  for the nightly job. Until then Part B's CLAUDE.md/HANDOFF tasks are decorative.
 - **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
   defect just fixed in the memweave scripts, 77 local failures. Separate from
   CI's `Skill frontmatter regression`, which fails on Linux for a reason not
@@ -31,6 +25,22 @@ Completed items age out after ~4 weeks.
   (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
   in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion
   once it lands.
+
+## Recently completed (2026-08-04 — stack upgrade applied)
+
+- **Stack upgrade landed**, further than planned: jcodemunch 1.108.235 (not .204),
+  jdatamunch 1.29.1, jdocmunch 1.121.1 (not 1.120.0). Ran `uncle-j-auto-maintain` by
+  hand — same code path as 03:00 — because `uv sync` cannot run from inside a session
+  on this host. Lock and sync moved together; `uv.lock` committed in `05722de`.
+- **The `uv` cache-retry guard fired in production for the first time** and recovered:
+  stale `pysqlite3` cache entry → cleared 1.1 GiB → retry succeeded.
+- **Prune shim confirmed on 1.121.1** — `prune compensation` fired on a forced reindex,
+  and `unavailable` has never appeared in the log. Closes the 2026-07-31 open question.
+  Caveat: the nightly reindex skips when the repo is at HEAD, so it only got exercised
+  because a commit moved HEAD.
+- **Breaking-change detection fixed** (`54fc502`) after it missed jcodemunch v1.108.208
+  removing `content_hash` from `get_symbol_source` responses, while its only hit in 239
+  commits was `unbreaking CI lint`.
 
 ## Recently completed (2026-07-30/31 — Windows port + silent-failure closure)
 

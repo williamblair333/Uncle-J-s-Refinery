@@ -2,6 +2,56 @@
 
 ---
 
+## 2026-08-04 — chore(stack): the upgrade lands, and the gate that should have caught it did not
+
+Ran `uncle-j-auto-maintain` early by hand rather than waiting for 03:00. It is the
+same code path, and it worked: **all three servers upgraded and `uv.lock` is
+committed.**
+
+### Changed
+- **Stack upgraded** — jcodemunch `1.108.102`→`1.108.235`, jdatamunch `1.16.0`→`1.29.1`,
+  jdocmunch `1.92.0`→`1.121.1`, plus `watchfiles 1.2.0` as a new transitive dep.
+  Lock and sync moved together, satisfying the invariant from `6f7f0c9`: the sync
+  completed at 07:58:21 and the installed dist-infos match the locked versions.
+- **`CLAUDE.md` routing** — added `get_parity_map`, `get_architecture_metrics`,
+  `get_decorator_census`, `finalize_handoff` (jcodemunch + jdatamunch),
+  `compress=True` on `get_ranked_context`, and the absence-verdict rule.
+
+### Fixed
+- **`scripts/auto-maintain.sh` breaking-change detection.** Over 239 commits the old
+  regex fired exactly once — on `unbreaking CI lint`, matching `breaking` as a
+  substring of "un**breaking**" — while missing the only real contract change in the
+  range. `\b` anchoring fixes the false positive; the false negative is not fixable by
+  keyword, so the grep is demoted to a hint and the prompt now asks the model to judge
+  contract changes from the whole log. Also removed `BREAKING.CHANGE` from the pattern:
+  `fetch_commit_log` keeps only subject lines, so a footer marker was never in the
+  string being searched.
+- **Four bugs in the Part B eval prompt**, each observed failing today: it asked for
+  edits to a `~/.claude/CLAUDE.md` that does not exist on this host; pointed at a
+  `What happened` heading that is a legacy May section; invited an `uv.lock` sweep that
+  would disarm `commits_behind()`; and did not account for `scripts/win/checkpoint.sh`
+  auto-committing after every edit.
+
+### Verified
+- **`get_symbol_source` no longer returns `content_hash`** unless `verify=True`
+  (jcodemunch v1.108.208). Confirmed by calling the installed server both ways, not
+  inferred from the commit log.
+- **The `uv` cache-retry guard from `ba7dcd0` fired in production for the first time** —
+  the vendored `pysqlite3` wheel's cache entry failed to deserialize, the guard cleared
+  1.1 GiB and re-ran, and the retry succeeded.
+- **The jdocmunch prune shim survives the 29-version jump.** Forced a reindex on
+  1.121.1: `prune compensation: /git/ /pytest_cache/ /venv-memweave/` fired, and
+  `unavailable` has never appeared in `state/jdocmunch-reindex.log`. This closes the
+  open question from 2026-07-31.
+
+### Known gap — not fixed
+**Part B cannot distinguish a successful no-op from a silent failure.** All three evals
+were permission-blocked and wrote nothing; the log records `evaluation complete` for
+each, because `exit 0` is the only success criterion (`auto-maintain.sh:247`). Their
+analysis survived only as prose in `state/auto-maintain.log`, and was applied by hand
+this session. A headless `claude -p` can never clear the edit-surface guard, since
+`write-clearance-token.sh` needs an approval it cannot grant.
+
 ## 2026-07-31 — chore(stack): pre-flight the upgrade instead of applying it
 
 Attempted the supervised upgrade; it cannot be applied from inside a session on

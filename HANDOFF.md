@@ -1,6 +1,71 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-07-31 — stack upgrade pre-flighted, not applied. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-04 — stack upgrade applied and committed. `HEALTHCHECK: ok`.*
+
+## 2026-08-04 (session 7) — the upgrade landed; the gate that should have caught it did not
+
+**Status:** all three servers upgraded, `uv.lock` committed, prune shim confirmed
+working on 1.121.1. `HEALTHCHECK: ok`.
+
+**The unattended path was the right call.** Ran `uncle-j-auto-maintain` by hand at
+07:57 — identical code path to 03:00, just early. Upgrade succeeded: jcodemunch
+1.108.102→1.108.235, jdatamunch 1.16.0→1.29.1, jdocmunch 1.92.0→1.121.1, plus
+`watchfiles 1.2.0`. Lock and sync moved together, so the `6f7f0c9` invariant holds.
+
+**The uv cache guard from `ba7dcd0` fired for real.** The vendored `pysqlite3` wheel's
+cache entry failed to deserialize, exactly the signature it was written for. It cleared
+1.1 GiB and retried once; the retry succeeded. First production firing.
+
+**The open question from session 6 is closed.** Forced a jdocmunch reindex on 1.121.1 —
+`prune compensation: /git/ /pytest_cache/ /venv-memweave/` fired, and `unavailable` has
+never appeared in `state/jdocmunch-reindex.log`. The shim survives the 29-version jump.
+Note the nightly reindex *skips* when the repo is at HEAD, so this only got exercised
+because committing moved HEAD; a "no drift" line is not evidence the shim ran.
+
+**One real breaking change, and the gate missed it.** jcodemunch v1.108.208 stopped
+returning `content_hash` on `get_symbol_source` unless `verify=True`. Verified by
+calling the installed server both ways rather than trusting the commit log. Any caller
+reading that digest off a plain response now gets nothing and no error.
+
+**Why it missed is worth knowing.** Across the 239 commits in the range, the old regex
+fired exactly once — on `unbreaking CI lint`, matching `breaking` inside "un-breaking".
+That was its only hit ever. Meanwhile the real change read *"content_hash stops riding
+every get_symbol_source response"*. Widening to `stops` is not the fix: upstream uses
+that verb for ordinary fixes 17 times in the same range. No keyword set separates them,
+so the grep is now a hint and the prompt does the judging. Fixed in `54fc502`.
+
+**Part B wrote nothing, and nothing said so.** All three evals hit the edit-surface
+guard, produced correct analysis, and exited 0 — which `auto-maintain.sh:247` records as
+`evaluation complete`. Their work survived only as prose in `state/auto-maintain.log`
+and was applied by hand this session. **This is the most important thing to know:** a
+headless `claude -p` can never clear that guard, because `write-clearance-token.sh`
+needs an approval a non-interactive session cannot grant. So Part B's CLAUDE.md/HANDOFF
+tasks are structurally dead until either the success criterion asserts a file changed,
+or the guard grows a path for the nightly job. Added a task-6 instruction to say so out
+loud, which helps a reader but does not fix the job.
+
+**Two of the evals' own instructions were wrong, and I did not follow them:**
+- `~/.claude/CLAUDE.md` does not exist on this host — it is a Linux deployment target.
+  The repo copy is the only one. Two of three evals wasted a step on it.
+- `_meta.verdict` should not be documented as readable. This install ships the default
+  `meta_fields: []` (`config.py:347`), which deletes the verdict before an agent sees
+  it; only `_meta.absence_evidence` survives (`server.py:6668`). CLAUDE.md now states
+  the rule — only `absent` proves absence — instead of a field you cannot observe.
+
+**Watch out for `scripts/win/checkpoint.sh`.** It auto-commits `chk: HH:MM:SS` after
+every edit. Nine such commits were made and squashed this session. To land a named
+commit, pin `BASE=$(git rev-parse HEAD)` before editing and soft-reset to that exact SHA
+— a wider reset sweeps in unrelated work.
+
+**Also noted:** `audit_agent_config` against this repo emits 225 warnings that are
+almost entirely false positives — it flags every backticked MCP tool name as a stale
+symbol because those tools live in `.venv`, not this repo's index. It even flags `delve`
+and `tapestry` from CLAUDE.md's own vocabulary avoid-list. CLAUDE.md tells us to run it
+periodically; as configured it is noise. CLAUDE.md is now 4,105 tokens per turn.
+
+**Next session:** run `/health` and confirm the stack reports at-head. Consider whether
+Part B's success criterion should assert a file actually changed — that is the gap that
+let three silent no-ops read as green.
 
 ## 2026-07-31 (session 6) — the supervised upgrade that could not be supervised
 
