@@ -211,7 +211,34 @@ if [[ "$UPGRADED" -eq 1 || ( "$DRY_RUN" -eq 1 && "${#PACKAGES_TO_UPGRADE[@]}" -g
             continue
         fi
 
-        breaking=$(printf '%s\n' "$commits" | grep -iE 'breaking|BREAKING.CHANGE|deprecated|removed|incompatible|[a-z]+!:' || true)
+        # A keyword grep cannot decide this, and pretending it can is how the
+        # one real breaking change in this upgrade reached us unflagged. Both
+        # failure directions were measured against the actual 1e177b0..9d720c1
+        # range (239 commits):
+        #
+        #   False positive — unanchored `breaking` matched "unbreaking CI lint".
+        #     That was the ONLY hit in 239 commits, so the single thing this
+        #     gate ever reported was noise. `\b` fixes it: "unbreaking" has no
+        #     word boundary before "breaking".
+        #
+        #   False negative — the real contract change announced itself as
+        #     "content_hash stops riding every get_symbol_source response".
+        #     No marker, no "breaking", no "removed". Widening to `stops` is
+        #     NOT the fix: upstream uses it for ordinary bug fixes 17 times in
+        #     the same range ("stops calling a valid license unlicensed"), so
+        #     that trade buys one true positive for sixteen false ones.
+        #
+        # Nothing here parses BREAKING CHANGE footers, because fetch_commit_log
+        # keeps only the subject line (see the split at its python filter) —
+        # a footer is not present in $commits to be matched. Zero commits in
+        # the range used one anyway, so parsing them would add cost and no
+        # recall. Fix the fetch first if that ever changes.
+        #
+        # So this grep is demoted to a HINT that widens the prompt, and is no
+        # longer the gate on whether breaking changes get considered. Recall
+        # now comes from the model reading the whole log — which identified
+        # v1.108.208 correctly today with no help from this regex at all.
+        breaking=$(printf '%s\n' "$commits" | grep -iE '\bbreaking\b|BREAKING[ -]CHANGE|\bdeprecat|\bincompatible\b|^[a-z]+(\([^)]*\))?!:' || true)
         [[ -n "$breaking" ]] && BREAKING_FLAGS+=("$pkg")
 
         jcm_tools=""
@@ -232,17 +259,43 @@ if [[ "$UPGRADED" -eq 1 || ( "$DRY_RUN" -eq 1 && "${#PACKAGES_TO_UPGRADE[@]}" -g
 Commit log (one subject line per commit):
 $commits
 ${breaking:+
-BREAKING CHANGES DETECTED in the commit log above:
+KEYWORD HINT — these subjects matched a breaking-change pattern. This is a
+hint, not a finding: judge each one yourself, and do not treat a match as
+proof. Past matches have been false positives.
 $breaking
 }${jcm_tools:+
 NEW JCODEMUNCH TOOLS not yet in CLAUDE.md:
 $jcm_tools
 }
 Your tasks — do all that apply, nothing else:
-1. If new tools or routing changes are needed: update $PROJ_ROOT/CLAUDE.md and ~/.claude/CLAUDE.md. Keep existing formatting and section structure.
-2. If breaking changes are present: append a brief entry under the most recent date heading in the 'What happened' section of $PROJ_ROOT/HANDOFF.md. Format exactly: '- **$pkg breaking change**: <one sentence — what changed and what callers must update>'.
-3. Commit any file changes with message 'chore: post-upgrade sync — $pkg ${old_sha}→${new_sha}'.
-4. If nothing requires a change, do nothing and exit cleanly."
+1. Read the WHOLE commit log above and decide for yourself whether any change is
+   caller-visible: a field that stopped being returned, a default that flipped, a
+   renamed or removed argument, a response shape that changed. Do this whether or
+   not the keyword hint fired — it usually will not. Subject lines here rarely say
+   'breaking'; the last real one read 'X stops riding every Y response'. Where the
+   log is ambiguous, check the installed package under $PROJ_ROOT/.venv rather than
+   guessing from the subject.
+2. If new tools or routing changes are needed: update $PROJ_ROOT/CLAUDE.md. Keep
+   existing formatting and section structure. Do NOT edit ~/.claude/CLAUDE.md — on
+   this host it does not exist; the repo copy is the only one, and install.sh is
+   what propagates it where that path does exist.
+3. If a caller-visible change is present: append a brief entry under the TOPMOST
+   '## <date>' heading in $PROJ_ROOT/HANDOFF.md — that is the current session's
+   section. Do not search for a heading named 'What happened'; the only literal one
+   is a legacy section thousands of lines down. Format exactly:
+   '- **$pkg breaking change**: <one sentence — what changed and what callers must update>'.
+4. Commit ONLY the files you edited, staged by explicit path — 'git add CLAUDE.md
+   HANDOFF.md', never 'git add -a' or '.'. uv.lock is frequently dirty here and must
+   never be swept into a per-package commit: commits_behind() reads its SHAs, so a
+   lock that moves under the wrong message disarms this job. Message:
+   'chore: post-upgrade sync — $pkg ${old_sha}→${new_sha}'.
+   Note that scripts/win/checkpoint.sh auto-commits 'chk: HH:MM:SS' after each edit,
+   so pin BASE=\$(git rev-parse HEAD) BEFORE your first edit and soft-reset to that
+   exact SHA before committing — a wider reset would sweep in unrelated commits.
+5. If nothing requires a change, do nothing and exit cleanly.
+6. If a write is blocked by a permission or guard, say so explicitly in your final
+   message and name the file — a silent no-op is indistinguishable from success in
+   the log, and this job cannot tell the difference."
 
         if "$CLAUDE_BIN" -p "$EVAL_PROMPT" >> "$LOG" 2>&1; then
             info "$pkg: evaluation complete."
