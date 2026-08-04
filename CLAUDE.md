@@ -4,11 +4,27 @@ You have a dedicated retrieval stack installed. **Always consult it before
 falling back to brute-force file reading, grep, or bash.** Brute-force
 reading is a last resort, not a default.
 
-The stack lives at `/opt/proj/Uncle-J-s-Refinery` (referred to below as
-`$STACK_ROOT`). The jcodemunch, jdatamunch, and jdocmunch MCP servers run as
-entry points under `$STACK_ROOT/.venv/bin/`; serena, context7, and duckdb are
-launched via `uvx`/`npx`. Registered commands are in
+The stack lives at `$STACK_ROOT` — `/opt/proj/Uncle-J-s-Refinery` on Linux,
+`/c/opt/proj/Uncle-J-s-Refinery` in Git Bash on Windows. **Never paste a literal
+`/opt/proj/...` path into a shell without checking the host first.** On Windows
+that path does not exist, and the command fails with a bare "No such file or
+directory" that reads like a missing tool rather than a wrong prefix.
+
+The jcodemunch, jdatamunch, and jdocmunch MCP servers run as entry points under
+`$STACK_ROOT/.venv/bin/`; serena, context7, and duckdb are launched via
+`uvx`/`npx`. Registered commands are in
 `$STACK_ROOT/mcp-clients/claude-code-mcp.json`.
+
+**This policy is global — it applies in every project, not just the stack repo.**
+The servers are registered at user scope, so they are reachable from any working
+directory. But reachable is not indexed: **a new project has no index until you
+make one.** Call `list_repos` first; on a miss run `index_folder` (jcodemunch)
+and `index_local` (jdocmunch) before concluding anything is absent. An unindexed
+repo returns empty results that are indistinguishable from a genuine absence —
+see the absence contract below, and treat a bare empty result as `degraded`.
+
+`context7` exists only where Node.js is installed. If it is not registered, use
+WebSearch/WebFetch for third-party library docs and say that you fell back.
 
 ## Tools by modality — first choice wins
 
@@ -175,8 +191,12 @@ tools can answer structurally.
 ### 4. Memory — memweave before WebSearch or re-asking
 - Start every non-trivial task with a memory search for prior work on the same topic.
   "Have we solved this before?" is always question #1. Run:
-  `/opt/proj/Uncle-J-s-Refinery/.venv-memweave/bin/python \`
-  `  /opt/proj/Uncle-J-s-Refinery/scripts/memweave/mw_search.py "your query" --k 5`
+  `"$STACK_ROOT/.venv-memweave/bin/python" \`
+  `  "$STACK_ROOT/scripts/memweave/mw_search.py" "your query" --k 5`
+  Substitute the real `$STACK_ROOT` for the host (see top of file) — the shell
+  does not have it exported. From inside the stack repo, the relative form
+  `.venv-memweave/bin/python scripts/memweave/mw_search.py "..." --k 5` works
+  as-is and is the safer default.
   (offline ONNX semantic + BM25 over `~/.uncle-j-memory`; add `--json` for machine-parseable
   output, `--min-score N` to threshold). It opens the existing index read-only — no writes.
 - **memweave ships no MCP server** — it's a separate-process Bash CLI, not an MCP tool. Use Bash
@@ -268,7 +288,9 @@ Then serialize: `json.dumps(result, separators=(',',':'))` (no indent; whitespac
 
 ---
 
-*Stack source and installer live at `/opt/proj/Uncle-J-s-Refinery` — see
-`README.md` there for install / verify / re-register instructions. This file is
-deployed to `~/.claude/CLAUDE.md` by `install.sh`; edit the repo copy, not the
-deployed one.*
+*Stack source and installer live at `$STACK_ROOT` (see top of file for the
+per-host path) — see `README.md` there for install / verify / re-register
+instructions. This file is deployed to `~/.claude/CLAUDE.md` by `install.sh` and
+re-synced by `scripts/refinery-doctor.sh --fix`, both of which compare against
+the repo copy and overwrite the deployed one. **Edit the repo copy. Edits made
+only to `~/.claude/CLAUDE.md` are reverted on the next install or doctor run.***

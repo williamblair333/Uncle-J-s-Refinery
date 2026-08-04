@@ -1,6 +1,64 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-04 — stack upgrade applied and committed. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-04 (session 8) — stack registered at user scope, routing
+policy now global. `HEALTHCHECK: ok`.*
+
+## 2026-08-04 (session 8) — the stack is now reachable everywhere, not just here
+
+**Status:** five servers registered at user scope, routing policy deployed to
+`~/.claude/CLAUDE.md`, `HEALTHCHECK: ok`. Three `chk:` snapshots squashed into one
+named commit. Not pushed.
+
+**The question was "can we use Uncle J's tools on all projects?" The answer was
+no, and now it is closer to yes.** Two gaps, both closed: (1) all five MCP servers
+lived only in the project `.mcp.json`, so any other cwd got zero stack tools —
+`C:/util/work` was already registered as a project with none. (2) `~/.claude/CLAUDE.md`
+did not exist, so even a reachable server had nothing telling the agent to prefer it.
+Registered all five at user scope (`claude mcp add --scope user`), verified
+`✔ Connected` from `C:/util/work`. Deployed the policy. Backup at
+`~/.claude.json.bak.userscope-20260804`.
+
+**"All projects" is a set of one on this box.** `/c/opt/proj/` contains only this
+repo; jcodemunch and jdocmunch each hold one indexed repo. Nothing is queued — a new
+project just needs `index_folder`/`index_local` when it appears. The preamble now says
+so, because an unindexed repo returns empty results indistinguishable from absence —
+the exact false-negative shape the 2026-07-19 entry documents.
+
+**The approach flipped once I read the sync machinery, and that is the reusable
+lesson.** My first plan was to hand-author a lean global file. Wrong:
+`install.sh:491-499` and `refinery-doctor.sh:140-217` both treat the **repo** copy as
+source and sha256-overwrite the deployed copy. A custom global file is drift and gets
+clobbered on the next `--fix`. Edited the repo copy and deployed it verbatim — now both
+mechanisms are self-healing instead of destructive. `refinery-doctor` confirms `in sync`.
+
+**One live defect fixed in passing:** the memweave command the policy documents was
+unrunnable here — hardcoded `/opt/proj/...`, absent under Git Bash. Anyone following
+CLAUDE.md's own memory-search instruction on Windows hit "No such file or directory."
+Now `$STACK_ROOT`-relative with both host paths named.
+
+**Two MEDIUM follow-ups from the pre-mortem, neither blocking:**
+- `healthcheck.sh` does not check `~/.claude/CLAUDE.md` exists. Delete it and every
+  project silently reverts to plain Claude Code — no error, unbounded detection lag.
+  Worth a `check_global_claude_md`.
+- The policy likely now loads twice in this repo (user + project scope), ~4.1k→~8.2k
+  tokens/turn. Could not verify from this session — the global file did not exist yet.
+  **Check next session's context.** If real, make the project copy a short pointer;
+  that changes `refinery-doctor`'s source-of-truth model, so it needs its own pass.
+
+**Corrected my own pre-mortem:** I claimed user-scope registration defuses
+`refinery-doctor --fix` stripping the stack. It does not apply —
+`check_jcodemunch_scope` greps scope words from `claude mcp list`, which prints
+commands not scopes, so it reports "not registered at local/project scope" and never
+fires. A no-op detector. Harmless today.
+
+**Also carried:** the `.summary` sub-index still fails to reindex (`index-local
+failed`) — same one flagged 0-sections on 2026-07-23. Non-blocking, still undiagnosed.
+And the checkpoint hook auto-committed this session's edits as three `chk:` snapshots
+before the named commit, per the standing warning below — squashed via `BASE` pin +
+soft-reset.
+
+**Next session:** confirm the CLAUDE.md double-load token cost is real or not; if
+real, decide the pointer question. Consider the `check_global_claude_md` healthcheck.
 
 ## 2026-08-04 (session 7) — the upgrade landed; the gate that should have caught it did not
 

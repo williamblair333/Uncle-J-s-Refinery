@@ -2,6 +2,50 @@
 
 ---
 
+## 2026-08-04 — feat(routing): register the stack at user scope; make the routing policy global
+
+The stack was reachable in exactly one directory — this repo — because all five MCP
+servers were declared only in the project `.mcp.json`, and no `~/.claude/CLAUDE.md`
+existed on this host. Both are now fixed: the servers follow you into any project, and
+the routing policy loads everywhere.
+
+### Added
+- **Five servers registered at user scope** in `~/.claude.json` (`jcodemunch`,
+  `jdatamunch`, `jdocmunch`, `serena`, `duckdb`). Verified `✔ Connected` from a neutral
+  cwd (`C:/util/work`), not just this repo. As a side effect `serena` and `duckdb` left
+  "Pending approval" — user scope skips the per-project trust prompt. Backup:
+  `~/.claude.json.bak.userscope-20260804`.
+- **Global-scope preamble in `CLAUDE.md`.** States the policy applies in every project;
+  that user-scope reachability is not the same as an index, so `list_repos` then
+  `index_folder`/`index_local` before concluding absence; and that `context7` exists
+  only where Node.js is installed.
+
+### Fixed
+- **The documented memweave command was unrunnable on this host.** It hardcoded
+  `/opt/proj/...`, which does not exist under Git Bash on Windows. Rewritten
+  `$STACK_ROOT`-relative with both host paths named and the repo-relative form given as
+  the safer default. The two other literal `/opt/proj` references (stack-root footer,
+  memweave invocation) were made host-qualified in the same pass.
+- **The "edit the repo copy" warning now names the mechanism.** `install.sh:491` and
+  `refinery-doctor.sh --fix` both overwrite `~/.claude/CLAUDE.md` from the repo copy
+  after a sha256 compare, so an edit to the deployed copy alone is silently reverted.
+  The footer says so explicitly now.
+
+### Deployed
+- `CLAUDE.md` → `~/.claude/CLAUDE.md`; `refinery-doctor.sh` reports `in sync`.
+  `HEALTHCHECK: ok`.
+
+### Known follow-ups (not addressed)
+- `healthcheck.sh` has no check that `~/.claude/CLAUDE.md` exists — if deleted, every
+  project silently loses routing with no error.
+- The policy likely now loads twice in this repo (user + project), ~4.1k→~8.2k
+  tokens/turn. Unverified this session; if real, the project copy should become a pointer.
+- `refinery-doctor.sh::check_jcodemunch_scope` matches scope words against
+  `claude mcp list` output, which prints commands not scopes — so it is a no-op that
+  never fires. Harmless; noted for a future fix.
+
+---
+
 ## 2026-08-04 — chore(stack): the upgrade lands, and the gate that should have caught it did not
 
 Ran `uncle-j-auto-maintain` early by hand rather than waiting for 03:00. It is the
