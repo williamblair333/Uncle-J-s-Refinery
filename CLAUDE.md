@@ -57,6 +57,13 @@ tools can answer structurally.
 - `search_columns` for column metadata in dbt/SQLMesh repos — 77% fewer tokens than grep.
 - Use `winnow_symbols` when you have multiple constraints (kind + complexity + decorator + churn + importance). One call instead of five.
 - Results carry `_meta.confidence` — prefer high-confidence hits; re-query or fall back to serena when confidence is low.
+- **A zero-result scan is not proof of absence.** The server distinguishes `absent` (the scan
+  covered the tree and found nothing) from `degraded` (stale, partial, truncated, or mid-rebuild —
+  it could not have found it). Only `absent` licenses "this symbol does not exist"; on `degraded`,
+  re-index and re-query before reporting absence. This install runs the default `meta_fields: []`,
+  which strips `_meta.verdict` before you see it — what survives is `_meta.absence_evidence`
+  carrying `citable` and `blocked_by`. Treat a bare empty result as `degraded` until something
+  says otherwise.
 - Run `check_embedding_drift` (or via `/health`) to catch index staleness before it silently degrades retrieval quality.
 
 **References & call graph**:
@@ -74,6 +81,7 @@ tools can answer structurally.
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
+- `get_parity_map` — migration/port parity between a source and target tree (two subpaths or two repos): `ported`, `ported_diverged` (the counterpart drifted — the case a name-only check calls done), `unported`, `orphaned`, `added`. Rename-aware; `include_port_plan` orders unported symbols leaves-first with `blocking_deps`. Read-only and plan-only.
 - `get_coupling_metrics` — afferent/efferent coupling + instability score for a module. `get_extraction_candidates` — functions worth extracting (high complexity + multi-file callers).
 
 **Quality & risk**:
@@ -83,7 +91,7 @@ tools can answer structurally.
 - `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
 - `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal).
 - `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
-- Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks).
+- Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks), `get_architecture_metrics` (Gini concentration over symbols/size/fan-in/fan-out, Lakos depth, DSM modularity — answers "is coupling piling up in a few files?", which a ranked list of peaks cannot), `get_decorator_census` (normalized repo-wide `@route`/`@fixture`/`[Serializable]` histogram + sites; pairs with `get_signal_chains`/`get_endpoint_impact`).
 - Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols` for consolidation candidates; `get_dead_code_v2` for multi-signal dead code; `diff_health_radar` to compare health before/after a PR.
 - For security/quality gate before merge: `search_ast(category="security")` + `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
 - Periodically run `audit_agent_config` to catch stale symbol refs and dead paths in CLAUDE.md itself — keeps routing rules lean.
@@ -99,6 +107,13 @@ tools can answer structurally.
 - `analyze_perf` — per-tool latency telemetry; identify slow tools and cold caches.
 - `tune_weights` — learn per-repo BM25 retrieval weights from the ranking ledger; run after search-quality changes to recalibrate relevance.
 - `test_summarizer` — verify AI summarizer connectivity and output; debug missing or stale symbol summaries.
+- `finalize_handoff` — close a completed audit with one canonical Markdown handoff
+  (`jcodemunch.handoff/v1`). The server validates every `evidence_refs` entry against what this
+  session actually retrieved and fails closed on unknown refs, so the handoff attests rather than
+  asserts; returns `{handoff_id, resource_uri, sha256}` and the immutable body reads from
+  `munch://handoff/<id>`. To claim absence, cite the `absent:` ref from the scan that found
+  nothing — a truncated or non-`absent` scan is refused. Never writes to the repo. Same contract
+  in jdatamunch and jdocmunch.
 
 ### 2. Data work — jDataMunch for CSVs, DuckDB for real SQL
 - For any CSV / TSV: `describe_dataset` first, `get_rows` with filters next,
@@ -114,6 +129,8 @@ tools can answer structurally.
 - **Quality & risk:** `data_health_radar` (six-axis: null, type, cardinality, pk, semantic, stability + A-F grade) + `diff_data_health_radar` for snapshot deltas; mirrors jcm/jdoc health-radar pattern.
 - **Schema safety:** `check_column_drop_safe` before any column drop (fuses PK/FK/runtime signals); `get_schema_impact` for transitive blast-radius of a schema change; `get_schema_drift` to compare two indexed dataset versions.
 - **Discovery:** `find_similar_columns` for cross-dataset column dedup; `suggest_joins` for FK candidates; `find_unused_columns` (requires `ingest_sql_log` runtime data); `get_session_stats` for token savings.
+- **Absence:** `search_data` carries the same verdict contract as jcodemunch — a non-`ok` state means the scan could not answer, not that the data is missing. Re-query or widen scope before concluding absence.
+- **Handoff:** close a multi-step data audit with `finalize_handoff` — `evidence_refs` accept only column ids (`<dataset>::<column>#column`) or dataset names this session actually retrieved.
 
 ### 3. Docs work — jDocMunch (mine), Context7 (theirs)
 - For project docs, runbooks, and internal markdown: **jdocmunch**. Ask for
@@ -192,6 +209,12 @@ tools can answer structurally.
 - Pass `format="auto"` on any jCodeMunch tool call that might return a large
   response. This triggers the MUNCH compact wire format when savings are
   ≥15%.
+- On `get_ranked_context`, pass `compress=True` to fit more symbols into the same token budget —
+  keystone-protected structural compression prunes low-signal lines from oversized bodies while
+  always keeping signatures, control flow, and returns. Pruned items carry `source_pruned`.
+- `get_symbol_source` no longer returns `content_hash` by default (since v1.108.208). Pass
+  `verify=True` when you need the digest — e.g. to detect source drift, or to cite the symbol in
+  a `finalize_handoff` evidence ref.
 
 ## When to fall back to Read / Grep / Bash
 
