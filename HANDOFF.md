@@ -1,7 +1,33 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-04 (session 8) — stack registered at user scope, routing
-policy now global. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-07 — force-rules non-optional Stop-hook engine (rebased onto current main after PR #99 closed on a stale-branch conflict).*
+
+## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
+
+**Status:** rebased onto current `main` (`f3a7ed9`) after PR #99 was closed by a
+stale-branch merge conflict; re-PR pending. `uv.lock` still carries the unrelated
+auto-maintain bump, deliberately uncommitted. **Lesson:** branch was cut from a
+16-commit-stale local `main` — run the session-start stale-code check first.
+
+**What landed:** `scripts/force-rules.sh` + `scripts/force-rules.d/10-terse-reply.sh`
+— a rules-driven Stop hook that blocks turn-end until each rule verifies. First
+rule forces the terse-reply skill per turn.
+
+**The load-bearing invariant: it cannot brick a session.** `MAX=5` blocks/turn
+then fail-open, plus fail-open on every error path. A rule whose compliance can
+never be detected would otherwise freeze the session permanently. Do not remove
+the cap. Compliance is verified from the transcript, not self-asserted.
+
+**Add a rule later:** drop a `*.sh` in `scripts/force-rules.d/`. Contract: read
+`$TURN_SLICE`; exit 0 = satisfied, non-zero = unmet (printed line = block reason).
+
+**Enablement is manual + global:** the Stop hook lives in `~/.claude/settings.json`
+(Bill ran a `jq` command; Claude has no write access under `~/.claude`). Must be
+**synchronous** — async Stop hooks can't block. Reload via `/hooks` or restart.
+
+**Cascade caveat:** at Stop-time the reply is already emitted, so a forced
+terse-reply appends rather than shrinks. Engine best suits action-rules
+(search/lint/test), not rewrites of the sent message.
 
 ## 2026-08-04 (session 8) — the stack is now reachable everywhere, not just here
 
