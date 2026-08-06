@@ -18,6 +18,7 @@ makes sure Claude *actually uses them correctly*. Four components:
 | Telegram multi-agent routing  | `/work <msg>` → project-context Claude (proj_root cwd, CLAUDE.md loaded); unqualified → restricted default (cwd=/tmp, disclosure ban); config in `config/telegram-agents.toml`; hardcoded fallback if TOML missing | never; missing TOML = safe restricted-only mode |
 | ralph / Telegram billing      | Strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env so `claude -p` uses OAuth subscription auth (Agent SDK credit, effective 2026-06-15: Pro=$20/mo, Max5x=$100/mo, Max20x=$200/mo); `--use-api` flag restores API billing for heavy parallel runs | never strip before 2026-06-15 |
 | session-status-briefing skill | Step 3 runs `git fetch origin main && git log HEAD..origin/main` — reports if local is behind remote before any work starts (stale-code detection); fetch failure is surfaced via 2>&1, not swallowed | never; offline-safe (fetch error shown, briefing continues) |
+| force-rules engine            | `scripts/force-rules.sh` (global sync Stop hook) blocks turn-end until every `scripts/force-rules.d/*.sh` rule verifies against the transcript; caps at 5 blocks/turn then fails OPEN (anti-brick), fails open on any error. Add a rule = drop one `*.sh` file. First rule: force terse-reply per turn | disable a single rule: remove its file; disable engine: remove the Stop hook |
 
 ## How the pieces compose
 

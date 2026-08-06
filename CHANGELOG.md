@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
+
+### Added
+- `scripts/force-rules.sh` — generic Stop-hook enforcement engine. Blocks
+  turn-end until every rule in `scripts/force-rules.d/*.sh` is satisfied, then
+  emits `{"decision":"block","reason":...}` (compact JSON). Adding a non-optional
+  rule later is a one-file drop into the rules dir — no `settings.json` edit.
+- `scripts/force-rules.d/10-terse-reply.sh` — first rule: the terse-reply skill
+  must be invoked each turn. Compliance is **verified** against the transcript
+  (`"skill":"terse-reply"` marker), not self-asserted; the prose reminder never
+  false-matches.
+
+### Reliability
+- **Anti-brick invariant.** A Stop hook that can never release a turn permanently
+  freezes a session. This engine caps at `MAX=5` blocks/turn (key = transcript +
+  last-user line, stable within a turn, resets next prompt) then fails OPEN.
+  Every internal error path (no jq, unreadable transcript, mktemp failure) also
+  fails open. Verified: block-when-unmet, allow-when-met, and 5-then-open all
+  pass on synthetic transcripts.
+- Wired via a **synchronous** global Stop hook (async hooks cannot block). Paired
+  with a `UserPromptSubmit` reminder that fires pre-draft — the reminder is the
+  effective lever; the Stop hook enforces. Cascade caveat: at Stop-time the reply
+  is already shown, so a forced terse-reply *appends* rather than shrinks. The
+  engine suits rules whose compliance is an action (search/lint/test).
+
+---
+
 ## 2026-07-23 — feat(skills): occams-razor explanation-selection discipline
 
 ### Added
