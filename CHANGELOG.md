@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
+
+### Fixed
+- **Infinite-loop / session-brick bug in `scripts/force-rules.sh`.** The turn
+  anchor (`LAST_USER`) matched `type:user` lines, but Claude Code injects the
+  hook's OWN block feedback as a user turn. So the anchor advanced past the
+  model's compliance every iteration → perpetual re-block, and the cap key moved
+  with it → the `MAX=5` fail-open never tripped. Confirmed live this session.
+  Two independent brakes now:
+  1. `stop_hook_active` backstop — the documented loop-breaker; blocks at most
+     once per stop-chain. Enforcement semantics are now "one forced retry," not
+     "block until complied" (a hook that never releases is unrecoverable).
+  2. Anchor excludes the dispatcher's own block-reason signature, so compliance
+     in the same turn is recognized and the cap key stays stable.
+  Verified: block-when-unmet, `stop_hook_active` allow, complied-then-feedback
+  allow (the bug), no-compliance-plus-feedback block.
+
+### Removed
+- `scripts/force-rules.d/10-terse-reply.sh` — the terse-reply enforcement rule.
+  It forced a skill invocation whose compliance the Stop-hook can't cleanly
+  verify (Stop fires after the reply is emitted), which surfaced the anchor bug.
+  Terse-reply is now invoked manually. The engine remains, ruleless and inert.
+
+---
+
 ## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
 
 ### Added

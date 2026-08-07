@@ -25,9 +25,22 @@ command -v jq >/dev/null 2>&1 || exit 0             # no jq → can't emit block
 TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // ""')
 [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] || exit 0   # can't verify compliance → allow
 
+# Documented loop backstop: Claude Code sets stop_hook_active=true on any Stop that is
+# itself a continuation from a prior Stop-hook block. Honoring it means the hook blocks
+# at most ONCE per stop-chain — a hard guarantee against an infinite loop, independent
+# of the anchor logic below. (This is why enforcement is "one forced retry", not "block
+# until complied": a Stop hook that never releases the turn is unrecoverable in-session.)
+ACTIVE=$(printf '%s' "$INPUT" | jq -r '.stop_hook_active // false')
+[ "$ACTIVE" = "true" ] && exit 0
+
 # --- Current-turn slice: lines since the last GENUINE user prompt ------------
-# Tool results are also recorded as type=user, so exclude tool_result lines.
-LAST_USER=$(grep -n '"type":"user"' "$TRANSCRIPT" | grep -v 'tool_result' | tail -1 | cut -d: -f1)
+# type=user covers three things: real user prompts, tool_result lines, AND this hook's
+# OWN block feedback (Claude Code injects the block reason as a user turn). Exclude the
+# latter two. If we anchored to our own feedback, the anchor would advance past the
+# model's compliance every iteration (perpetual re-block) and the cap key below would
+# move with it (defeating the fail-open cap) — the brick bug this fix closes.
+# The exclusion phrase MUST stay in sync with the block reason emitted at end of script.
+LAST_USER=$(grep -n '"type":"user"' "$TRANSCRIPT" | grep -v 'tool_result' | grep -v 'non-optional rules are not yet satisfied' | tail -1 | cut -d: -f1)
 SLICE=$(mktemp) || exit 0
 trap 'rm -f "$SLICE"' EXIT
 if [ -n "$LAST_USER" ]; then
