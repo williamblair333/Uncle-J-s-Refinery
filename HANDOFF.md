@@ -1,6 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-07 — force-rules non-optional Stop-hook engine (rebased onto current main after PR #99 closed on a stale-branch conflict).*
+*Last updated: 2026-08-07 — force-rules brick bug fixed; terse-reply enforcement rule removed (invoked manually now).*
+
+## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
+
+**Status:** on branch `fix/force-rules-anchor-brick`, PR pending.
+
+**What broke:** the terse-reply Stop-rule bricked a live turn. `LAST_USER`
+anchored to `type:user` lines, but Claude Code injects the hook's own block
+feedback as a user turn — so the anchor jumped past the model's compliance every
+iteration (perpetual re-block), and the moving anchor made the `MAX=5` cap key
+unstable so fail-open never fired. The pre-mortem missed this: it assumed the
+anchor was stable within a turn.
+
+**Fix (two independent brakes):** (1) `stop_hook_active` backstop — blocks at
+most once per stop-chain, the documented loop-breaker; enforcement is now "one
+forced retry," not "block until complied." (2) anchor excludes the dispatcher's
+own block-reason signature (`non-optional rules are not yet satisfied`) — keep
+that phrase in sync with the emitted reason. Verified on synthetic transcripts.
+
+**terse-reply rule removed** (`10-terse-reply.sh`): Stop fires after the reply is
+emitted, so it can't cleanly verify a same-turn skill invocation — the mismatch
+that exposed the bug. Invoke terse-reply manually. Engine stays, ruleless/inert.
+
+**Lesson:** a Stop hook's own feedback re-enters the transcript as a user turn —
+any turn-slice logic must exclude it, or the anchor/cap it drives is unstable.
+
+
 
 ## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
 
