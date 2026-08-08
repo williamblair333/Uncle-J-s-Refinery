@@ -7,9 +7,12 @@ and `../README.md` for install/uninstall.
 
 ## MCP registration (and the Windows variant)
 
-On Linux the servers are registered through `install.sh` / `claude mcp add`.
-On the Windows host they are registered by a checked-in **project-scoped**
-`.mcp.json` at the repo root, pinned to the venv binaries:
+On Linux the servers are registered through `install.sh` / `claude mcp add`
+(user scope). On the Windows host they are registered by a **machine-local,
+gitignored** project-scoped `.mcp.json` at the repo root — one-time setup
+`cp scripts/win/mcp.json .mcp.json` — pinned to the venv binaries. The file
+must never be committed: project scope shadows user scope per server name, so
+a shared copy with `C:\...` paths kills all five stack servers on Linux.
 
 | Server | Invocation | Note |
 | ------ | ---------- | ---- |
@@ -32,10 +35,10 @@ Policy to *global* `~/.claude/CLAUDE.md`, writes hooks into *global*
 `~/.claude/settings.json`, and resolves "project" against the current working
 directory rather than this repo.
 
-`.mcp.json` deliberately names `.venv\Scripts\*.exe` explicitly rather than the
-`.venv/bin` compat symlink: Claude Code launches MCP servers via `CreateProcess`,
-not through bash, so neither MSYS `.exe` suffixing nor the directory symlink can
-be relied on there. Full detail in `WINDOWS-PORT.md`.
+`scripts/win/mcp.json` deliberately names `.venv\Scripts\*.exe` explicitly rather
+than the `.venv/bin` compat symlink: Claude Code launches MCP servers via
+`CreateProcess`, not through bash, so neither MSYS `.exe` suffixing nor the
+directory symlink can be relied on there. Full detail in `WINDOWS-PORT.md`.
 
 ---
 

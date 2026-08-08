@@ -1,6 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-08 — jdocmunch nightly reindex fixed: new .summary.json sidecar was being reindexed as a phantom repo.*
+*Last updated: 2026-08-08 — committed Windows .mcp.json was shadowing user-scope MCP registration on Linux (all five stack servers absent in-session); unshared it. Also: jdocmunch nightly reindex .summary.json sidecar fix.*
+
+## 2026-08-08 — fix: unshare the Windows .mcp.json (stack servers absent on Linux)
+
+**Status:** on branch `fix/unshare-windows-mcp-json`, PR pending.
+
+**What broke:** no `mcp__jcodemunch/jdocmunch/jdatamunch/serena/duckdb` tools in
+Linux sessions (context7 fine). `claude mcp list` showed every user-scope server
+✔ Connected *and* a "[Conflicting scopes]" diagnostic: each stack server was
+also defined at **project scope** by the committed `.mcp.json` with
+`C:\opt\proj\...\.venv\Scripts\*.exe` commands (Windows port, commits
+500bbef/4548972 — same pair as the PR #103 hook clobbering). Project scope
+shadows user scope per server name; the `C:\` commands can't exec on Linux, so
+all five died at session start.
+
+**Fix:** `git mv .mcp.json scripts/win/mcp.json`; gitignore `/.mcp.json`;
+docs updated (WINDOWS-PORT.md §MCP server registration, STACK.md §MCP
+registration). Same pattern as `scripts/win/settings.local.json`.
+
+**⚠ Windows follow-up (one-time, after pull):** `cp scripts/win/mcp.json .mcp.json`.
+Root filename unchanged → existing `enabledMcpjsonServers` approval still applies.
+
+**Linux:** tools return on the next session (registration is read at session
+start; the current session stays without them).
+
+**Follow-ups:** extend doctor's `check_jcodemunch_scope` to all five servers;
+consider `scripts/win/hook.sh autofix` re-asserting the `.mcp.json` copy.
 
 ## 2026-08-08 — fix: jdocmunch-reindex .summary.json sidecar
 

@@ -112,12 +112,24 @@ recreates the layout they expect:
 `uv venv`). `hook.sh autofix` therefore re-asserts them on every SessionStart.
 Run `bash scripts/win/venv-compat.sh` manually after a rebuild outside a session.
 
-`.mcp.json` deliberately points at the explicit `.venv\Scripts\*.exe` paths rather
-than the `bin` shim: Claude Code launches MCP servers via `CreateProcess`, not
-through bash, so neither the `.exe` suffixing nor the directory symlink can be
-relied on there.
+The Windows MCP wiring deliberately points at the explicit `.venv\Scripts\*.exe`
+paths rather than the `bin` shim: Claude Code launches MCP servers via
+`CreateProcess`, not through bash, so neither the `.exe` suffixing nor the
+directory symlink can be relied on there.
 
 ## MCP server registration
+
+The Windows registration lives at `scripts/win/mcp.json` — copy it to the
+machine-local, **gitignored** `.mcp.json` at the repo root on this host:
+
+    cp scripts/win/mcp.json .mcp.json
+
+It is not committed at the root because project-scope `.mcp.json` shadows the
+user-scope registration for the same server names, and its `C:\...` commands
+cannot exec on Linux — which silently killed all five stack servers in every
+Linux session (same shared-file trap as the hook block, see the settings
+restore in PR #103). The root copy keeps the same filename, so the existing
+`enabledMcpjsonServers` approval in `~/.claude.json` still applies.
 
 `.mcp.json` (project scope) registers three servers. Their CLIs are **not**
 uniform — this is the single easiest thing to get wrong:
