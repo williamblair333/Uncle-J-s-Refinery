@@ -119,3 +119,6 @@ _review/
 _reviewed/
 review/
 reviewed/
+
+# Machine-local MCP registration (Windows copies scripts/win/mcp.json here)
+/.mcp.json
