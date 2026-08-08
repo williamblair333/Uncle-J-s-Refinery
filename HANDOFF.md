@@ -1,6 +1,26 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-08 — Linux project hooks restored (Windows port had clobbered them); global force-rules Stop command newline bug fixed.*
+*Last updated: 2026-08-08 — jdocmunch nightly reindex fixed: new .summary.json sidecar was being reindexed as a phantom repo.*
+
+## 2026-08-08 — fix: jdocmunch-reindex .summary.json sidecar
+
+**Status:** on branch `fix/jdocmunch-reindex-summary-sidecar`, PR pending.
+
+**What broke:** session-start healthcheck failed `jdocmunch-index-stale`. Running
+`scripts/jdocmunch-reindex.sh` refreshed the two drifted indexes but then failed
+(exit 1) on "Uncle-J-s-Refinery.summary" and "proj-fog-of-chess.summary" with
+`Indexing failed: 'owner'`. Those aren't repos: the 2026-08 jdocmunch writes a
+`<name>.summary.json` sidecar during `index_local` (its `indexed_at` matches the
+main manifest to the microsecond), and the script's `SIDECARS` allowlist didn't
+know the new suffix, so the drift scanner treated it as a manifest.
+
+**Fix:** added `.summary.json` to `SIDECARS` in `scripts/jdocmunch-reindex.sh`.
+Verified: `drifted=0 failed=0` exit 0; healthcheck green.
+
+**Follow-ups:** report upstream — `index_local` KeyError `'owner'` on names in
+the sidecar namespace. Note: jcodemunch/jdocmunch MCP tools were not loaded in
+this session (ToolSearch found no `mcp__j*` tools); fix was done via CLI/native
+fallback.
 
 ## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
 
