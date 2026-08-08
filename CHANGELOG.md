@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-08-08 — fix: jdocmunch-reindex treats .summary.json as a sidecar
+
+### Fixed
+- **Nightly jdocmunch reindex failed (exit 1) on two phantom repos.** The
+  2026-08 jdocmunch writes a `<name>.summary.json` sidecar during
+  `index_local` (same `indexed_at` as the manifest, to the microsecond).
+  `scripts/jdocmunch-reindex.sh`'s `SIDECARS` allowlist predated it, so the
+  drift scanner classified the sidecar as a repo manifest and tried to
+  reindex "Uncle-J-s-Refinery.summary" / "proj-fog-of-chess.summary" —
+  each failing upstream with `KeyError 'owner'`. Added `.summary.json` to
+  `SIDECARS`. Verified post-fix: `drifted=0 reindexed=0 skipped=9 failed=0`,
+  exit 0, session-start healthcheck green.
+- Upstream note for the contribution backlog: `index_local` crashes with
+  `KeyError 'owner'` when given a name colliding with its own sidecar
+  namespace.
+
+---
+
 ## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
 
 ### Fixed

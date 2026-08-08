@@ -77,7 +77,11 @@ idx = pathlib.Path(sys.argv[1])
 expected_version = int(sys.argv[2])
 
 # Sidecar files share the <name>.*.json shape; only <name>.json is the manifest.
-SIDECARS = (".related.json", ".terms.json", ".boilerplate.json", ".duplicates.json")
+# .summary.json is written by index_local itself alongside the manifest (same
+# indexed_at) since the 2026-08 jdocmunch — treating it as a repo named
+# "<name>.summary" makes index_local fail with KeyError 'owner'.
+SIDECARS = (".related.json", ".terms.json", ".boilerplate.json", ".duplicates.json",
+            ".summary.json")
 
 
 def emit(verdict, name, root, reason):
