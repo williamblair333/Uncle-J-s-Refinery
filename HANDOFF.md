@@ -1,6 +1,29 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-07 — force-rules brick bug fixed; terse-reply enforcement rule removed (invoked manually now).*
+*Last updated: 2026-08-08 — Linux project hooks restored (Windows port had clobbered them); global force-rules Stop command newline bug fixed.*
+
+## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
+
+**Status:** on branch `fix/linux-hook-restore-and-force-rules-newline`, PR pending.
+
+**What broke:** launching Claude Code on Linux threw `C:/util/apps/Git/bin/bash.exe: not found`
+on every SessionStart hook and `uncle-j-force-rules: not found` on every Stop.
+Two independent causes:
+1. The Windows port committed its `C:/...bash.exe` hook block into the *shared*
+   `.claude/settings.json`, overwriting the Linux hooks. On Linux the `.exe` path
+   is absent, so all project hooks failed and the Linux-only hooks were missing.
+2. The global `~/.claude/settings.json` force-rules Stop command had an embedded
+   newline, so the shell tried to run the identifying tag `uncle-j-force-rules`
+   as its own command.
+
+**Fix:** restored the pre-port Linux hook block to committed `.claude/settings.json`
+(dropped Windows-only `MSYS`); saved the Windows hooks to
+`scripts/win/settings.local.json` for copy into the gitignored
+`.claude/settings.local.json` on Windows; collapsed the force-rules tag onto the
+comment line in the global settings. `force-rules.sh` itself was already correct
+and unchanged.
+
+**Windows follow-up (on the Windows box):** `cp scripts/win/settings.local.json .claude/settings.local.json`.
 
 ## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
 

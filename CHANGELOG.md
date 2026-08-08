@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
+
+### Fixed
+- **Every project hook failed on Linux.** The Windows port (commits 500bbef,
+  4548972) overwrote the committed `.claude/settings.json` hook block with
+  `C:/util/apps/Git/bin/bash.exe C:/opt/proj/...` commands. That file is shared
+  with the Linux host, where the `.exe` path does not exist — so SessionStart and
+  Stop hooks died with `/bin/sh: 1: C:/util/apps/Git/bin/bash.exe: not found`,
+  and the real Linux hooks (skill-link, review-check, session-start-autofix,
+  session-notify, skill-suggest, memweave-sync, checkpoint, commit-guard) were
+  gone entirely. Restored the pre-port Linux hook block; dropped the Windows-only
+  `MSYS` env key from the committed file. Each restored command is prefixed with
+  `[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0;` so it runs on Linux and skips
+  cleanly (exit 0, no error line) on Windows — Claude Code merges local+committed
+  hooks, so the committed Linux entries would otherwise re-error on the Windows box.
+- **Windows hook wiring relocated** to `scripts/win/settings.local.json` — copy
+  it to the machine-local, gitignored `.claude/settings.local.json` on Windows.
+  A shared committed file must not carry host-absolute paths. See
+  `docs/WINDOWS-PORT.md`.
+- **Global `~/.claude/settings.json` force-rules Stop hook.** The command string
+  held an embedded newline (`force-rules.sh  #\n  uncle-j-force-rules`), so the
+  hook shell ran `uncle-j-force-rules` as a second command every turn →
+  `/bin/sh: 2: uncle-j-force-rules: not found` on every Stop. Collapsed the
+  identifying tag onto the same comment line.
+
+---
+
 ## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
 
 ### Fixed
