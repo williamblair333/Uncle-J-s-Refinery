@@ -44,12 +44,35 @@ equality.
 
 ## Hook wiring
 
-All hooks live in `.claude/settings.json` (project scope) and route through one
-dispatcher, `scripts/win/hook.sh <action>`:
+Windows hooks route through one dispatcher, `scripts/win/hook.sh <action>`:
 
 ```
 C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh <action>
 ```
+
+**These hooks must NOT live in the committed `.claude/settings.json`.** That file
+is shared with the Linux host, where the absolute `C:/util/apps/Git/bin/bash.exe`
+path does not exist — every hook then fails at SessionStart/Stop with a bare
+"No such file or directory". The committed `.claude/settings.json` therefore
+carries only the Linux hook wiring (`bash /opt/proj/.../scripts/*.sh`).
+
+On Windows, put the hook block in the machine-local, gitignored
+`.claude/settings.local.json` instead. A ready-made copy lives at
+`scripts/win/settings.local.json` — on first setup (and after any pull that
+touches it) copy it over:
+
+```
+cp scripts/win/settings.local.json .claude/settings.local.json
+```
+
+Claude Code **merges** hooks from `settings.local.json` and `settings.json`
+(both fire) — a local file cannot suppress a committed hook. So the committed
+Linux commands are each prefixed with `[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0;`.
+On Windows that path does not resolve, so each committed Linux hook exits 0
+before doing anything — no "not found" noise alongside the real Windows hooks.
+
+It also carries `MSYS=winsymlinks:nativestrict` (see below), which likewise must
+not sit in the committed file.
 
 The dispatcher exists because (a) `bash` is not on the Windows PATH, so the
 interpreter must be named absolutely, and (b) several original hooks relied on
@@ -57,9 +80,10 @@ shell redirection (`>> log 2>&1`, `2>/dev/null || true`) which is silently
 dropped when settings.json invokes a script directly — there is no shell to
 interpret it.
 
-`.claude/settings.json` also sets `MSYS=winsymlinks:nativestrict`, without which
-`skill-link.sh` degrades symlinks to directory copies. Native symlinks require
-Windows Developer Mode (or an elevated shell).
+`.claude/settings.local.json` (the Windows-local file above) also sets
+`MSYS=winsymlinks:nativestrict`, without which `skill-link.sh` degrades symlinks
+to directory copies. Native symlinks require Windows Developer Mode (or an
+elevated shell).
 
 ### Hook shell — confirmed
 

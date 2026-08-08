@@ -2,6 +2,85 @@
 
 ---
 
+## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
+
+### Fixed
+- **Every project hook failed on Linux.** The Windows port (commits 500bbef,
+  4548972) overwrote the committed `.claude/settings.json` hook block with
+  `C:/util/apps/Git/bin/bash.exe C:/opt/proj/...` commands. That file is shared
+  with the Linux host, where the `.exe` path does not exist — so SessionStart and
+  Stop hooks died with `/bin/sh: 1: C:/util/apps/Git/bin/bash.exe: not found`,
+  and the real Linux hooks (skill-link, review-check, session-start-autofix,
+  session-notify, skill-suggest, memweave-sync, checkpoint, commit-guard) were
+  gone entirely. Restored the pre-port Linux hook block; dropped the Windows-only
+  `MSYS` env key from the committed file. Each restored command is prefixed with
+  `[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0;` so it runs on Linux and skips
+  cleanly (exit 0, no error line) on Windows — Claude Code merges local+committed
+  hooks, so the committed Linux entries would otherwise re-error on the Windows box.
+- **Windows hook wiring relocated** to `scripts/win/settings.local.json` — copy
+  it to the machine-local, gitignored `.claude/settings.local.json` on Windows.
+  A shared committed file must not carry host-absolute paths. See
+  `docs/WINDOWS-PORT.md`.
+- **Global `~/.claude/settings.json` force-rules Stop hook.** The command string
+  held an embedded newline (`force-rules.sh  #\n  uncle-j-force-rules`), so the
+  hook shell ran `uncle-j-force-rules` as a second command every turn →
+  `/bin/sh: 2: uncle-j-force-rules: not found` on every Stop. Collapsed the
+  identifying tag onto the same comment line.
+
+---
+
+## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
+
+### Fixed
+- **Infinite-loop / session-brick bug in `scripts/force-rules.sh`.** The turn
+  anchor (`LAST_USER`) matched `type:user` lines, but Claude Code injects the
+  hook's OWN block feedback as a user turn. So the anchor advanced past the
+  model's compliance every iteration → perpetual re-block, and the cap key moved
+  with it → the `MAX=5` fail-open never tripped. Confirmed live this session.
+  Two independent brakes now:
+  1. `stop_hook_active` backstop — the documented loop-breaker; blocks at most
+     once per stop-chain. Enforcement semantics are now "one forced retry," not
+     "block until complied" (a hook that never releases is unrecoverable).
+  2. Anchor excludes the dispatcher's own block-reason signature, so compliance
+     in the same turn is recognized and the cap key stays stable.
+  Verified: block-when-unmet, `stop_hook_active` allow, complied-then-feedback
+  allow (the bug), no-compliance-plus-feedback block.
+
+### Removed
+- `scripts/force-rules.d/10-terse-reply.sh` — the terse-reply enforcement rule.
+  It forced a skill invocation whose compliance the Stop-hook can't cleanly
+  verify (Stop fires after the reply is emitted), which surfaced the anchor bug.
+  Terse-reply is now invoked manually. The engine remains, ruleless and inert.
+
+---
+
+## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
+
+### Added
+- `scripts/force-rules.sh` — generic Stop-hook enforcement engine. Blocks
+  turn-end until every rule in `scripts/force-rules.d/*.sh` is satisfied, then
+  emits `{"decision":"block","reason":...}` (compact JSON). Adding a non-optional
+  rule later is a one-file drop into the rules dir — no `settings.json` edit.
+- `scripts/force-rules.d/10-terse-reply.sh` — first rule: the terse-reply skill
+  must be invoked each turn. Compliance is **verified** against the transcript
+  (`"skill":"terse-reply"` marker), not self-asserted; the prose reminder never
+  false-matches.
+
+### Reliability
+- **Anti-brick invariant.** A Stop hook that can never release a turn permanently
+  freezes a session. This engine caps at `MAX=5` blocks/turn (key = transcript +
+  last-user line, stable within a turn, resets next prompt) then fails OPEN.
+  Every internal error path (no jq, unreadable transcript, mktemp failure) also
+  fails open. Verified: block-when-unmet, allow-when-met, and 5-then-open all
+  pass on synthetic transcripts.
+- Wired via a **synchronous** global Stop hook (async hooks cannot block). Paired
+  with a `UserPromptSubmit` reminder that fires pre-draft — the reminder is the
+  effective lever; the Stop hook enforces. Cascade caveat: at Stop-time the reply
+  is already shown, so a forced terse-reply *appends* rather than shrinks. The
+  engine suits rules whose compliance is an action (search/lint/test).
+
+---
+
 ## 2026-08-04 — feat(routing): register the stack at user scope; make the routing policy global
 
 The stack was reachable in exactly one directory — this repo — because all five MCP

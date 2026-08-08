@@ -1,7 +1,82 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-04 (session 8) — stack registered at user scope, routing
-policy now global. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-08 — Linux project hooks restored (Windows port had clobbered them); global force-rules Stop command newline bug fixed.*
+
+## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
+
+**Status:** on branch `fix/linux-hook-restore-and-force-rules-newline`, PR pending.
+
+**What broke:** launching Claude Code on Linux threw `C:/util/apps/Git/bin/bash.exe: not found`
+on every SessionStart hook and `uncle-j-force-rules: not found` on every Stop.
+Two independent causes:
+1. The Windows port committed its `C:/...bash.exe` hook block into the *shared*
+   `.claude/settings.json`, overwriting the Linux hooks. On Linux the `.exe` path
+   is absent, so all project hooks failed and the Linux-only hooks were missing.
+2. The global `~/.claude/settings.json` force-rules Stop command had an embedded
+   newline, so the shell tried to run the identifying tag `uncle-j-force-rules`
+   as its own command.
+
+**Fix:** restored the pre-port Linux hook block to committed `.claude/settings.json`
+(dropped Windows-only `MSYS`); saved the Windows hooks to
+`scripts/win/settings.local.json` for copy into the gitignored
+`.claude/settings.local.json` on Windows; collapsed the force-rules tag onto the
+comment line in the global settings. `force-rules.sh` itself was already correct
+and unchanged.
+
+**Windows follow-up (on the Windows box):** `cp scripts/win/settings.local.json .claude/settings.local.json`.
+
+## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
+
+**Status:** on branch `fix/force-rules-anchor-brick`, PR pending.
+
+**What broke:** the terse-reply Stop-rule bricked a live turn. `LAST_USER`
+anchored to `type:user` lines, but Claude Code injects the hook's own block
+feedback as a user turn — so the anchor jumped past the model's compliance every
+iteration (perpetual re-block), and the moving anchor made the `MAX=5` cap key
+unstable so fail-open never fired. The pre-mortem missed this: it assumed the
+anchor was stable within a turn.
+
+**Fix (two independent brakes):** (1) `stop_hook_active` backstop — blocks at
+most once per stop-chain, the documented loop-breaker; enforcement is now "one
+forced retry," not "block until complied." (2) anchor excludes the dispatcher's
+own block-reason signature (`non-optional rules are not yet satisfied`) — keep
+that phrase in sync with the emitted reason. Verified on synthetic transcripts.
+
+**terse-reply rule removed** (`10-terse-reply.sh`): Stop fires after the reply is
+emitted, so it can't cleanly verify a same-turn skill invocation — the mismatch
+that exposed the bug. Invoke terse-reply manually. Engine stays, ruleless/inert.
+
+**Lesson:** a Stop hook's own feedback re-enters the transcript as a user turn —
+any turn-slice logic must exclude it, or the anchor/cap it drives is unstable.
+
+
+
+## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
+
+**Status:** rebased onto current `main` (`f3a7ed9`) after PR #99 was closed by a
+stale-branch merge conflict; re-PR pending. `uv.lock` still carries the unrelated
+auto-maintain bump, deliberately uncommitted. **Lesson:** branch was cut from a
+16-commit-stale local `main` — run the session-start stale-code check first.
+
+**What landed:** `scripts/force-rules.sh` + `scripts/force-rules.d/10-terse-reply.sh`
+— a rules-driven Stop hook that blocks turn-end until each rule verifies. First
+rule forces the terse-reply skill per turn.
+
+**The load-bearing invariant: it cannot brick a session.** `MAX=5` blocks/turn
+then fail-open, plus fail-open on every error path. A rule whose compliance can
+never be detected would otherwise freeze the session permanently. Do not remove
+the cap. Compliance is verified from the transcript, not self-asserted.
+
+**Add a rule later:** drop a `*.sh` in `scripts/force-rules.d/`. Contract: read
+`$TURN_SLICE`; exit 0 = satisfied, non-zero = unmet (printed line = block reason).
+
+**Enablement is manual + global:** the Stop hook lives in `~/.claude/settings.json`
+(Bill ran a `jq` command; Claude has no write access under `~/.claude`). Must be
+**synchronous** — async Stop hooks can't block. Reload via `/hooks` or restart.
+
+**Cascade caveat:** at Stop-time the reply is already emitted, so a forced
+terse-reply appends rather than shrinks. Engine best suits action-rules
+(search/lint/test), not rewrites of the sent message.
 
 ## 2026-08-04 (session 8) — the stack is now reachable everywhere, not just here
 
