@@ -4,7 +4,7 @@
 
 ## 2026-08-08 — fix: unshare the Windows .mcp.json (stack servers absent on Linux)
 
-**Status:** on branch `fix/unshare-windows-mcp-json`, PR pending.
+**Status:** merged (PR #105), back on `main`.
 
 **What broke:** no `mcp__jcodemunch/jdocmunch/jdatamunch/serena/duckdb` tools in
 Linux sessions (context7 fine). `claude mcp list` showed every user-scope server
@@ -30,7 +30,7 @@ consider `scripts/win/hook.sh autofix` re-asserting the `.mcp.json` copy.
 
 ## 2026-08-08 — fix: jdocmunch-reindex .summary.json sidecar
 
-**Status:** on branch `fix/jdocmunch-reindex-summary-sidecar`, PR pending.
+**Status:** merged (PR #104).
 
 **What broke:** session-start healthcheck failed `jdocmunch-index-stale`. Running
 `scripts/jdocmunch-reindex.sh` refreshed the two drifted indexes but then failed
@@ -50,7 +50,7 @@ fallback.
 
 ## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
 
-**Status:** on branch `fix/linux-hook-restore-and-force-rules-newline`, PR pending.
+**Status:** merged (PR #103).
 
 **What broke:** launching Claude Code on Linux threw `C:/util/apps/Git/bin/bash.exe: not found`
 on every SessionStart hook and `uncle-j-force-rules: not found` on every Stop.

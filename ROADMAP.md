@@ -24,7 +24,24 @@ Completed items age out after ~4 weeks.
 - **Report jdocmunch's `str.lstrip("./")` directory-pruning bug upstream**
   (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
   in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion
-  once it lands.
+  once it lands. Also report (same repo): `index_local` crashes with
+  `KeyError 'owner'` when given a name colliding with its own sidecar namespace
+  (e.g. `X.summary`) — found 2026-08-08.
+- **Extend `refinery-doctor.sh check_jcodemunch_scope` to all five stack servers**
+  (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
+  currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
+  autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-08-08 — MCP scope shadowing + reindex sidecar)
+
+- **All five stack MCP servers restored on Linux** (PR #105). The Windows port's
+  committed project-scope `.mcp.json` (`C:\...` commands) shadowed the user-scope
+  registration per server name — the missed second half of the PR #103 damage.
+  Unshared: moved to `scripts/win/mcp.json`, `/.mcp.json` gitignored, docs updated.
+  One-time Windows follow-up: `cp scripts/win/mcp.json .mcp.json`.
+- **Nightly jdocmunch reindex no longer fails on phantom `.summary` repos**
+  (PR #104). The 2026-08 jdocmunch writes a `<name>.summary.json` sidecar that the
+  drift scanner's `SIDECARS` allowlist predated → `KeyError 'owner'`, exit 1.
 
 ## Recently completed (2026-08-04 — stack upgrade applied)
 
