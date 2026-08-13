@@ -1,12 +1,18 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-13 — grep-guard `~`-path and log-corruption fixes on
-`fix/grep-guard-tilde-and-log-newlines`. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-13 — grep-guard `~`-path and log-corruption fixes merged
+(PR #106). Local main 13 ahead of `origin/main`, unpushed — see the divergence
+warning. `HEALTHCHECK: ok`.*
 
 ## 2026-08-13 — finished the hook-blocks review, and it found two guard bugs
 
-**Status:** branch `fix/grep-guard-tilde-and-log-newlines`, based on **`origin/main`**
-(not local main — see the divergence warning below). 45 tests pass.
+**Status:** **PR #106 merged.** Remote `main` verified live at `7a5301e` via
+`git ls-remote` (not trusted from the PR's MERGED state — see the divergence warning
+below for why that distinction matters here). Merged back into local main as `7718135`,
+resolving the predicted CHANGELOG/HANDOFF conflict. 45 tests pass; the fix is confirmed
+live in the working tree. **Local main is 13 ahead of `origin/main` and has NOT been
+pushed** — pushing it would re-land the 12 orphaned commits directly to main without a
+PR, which is the separate decision described below.
 
 **The task was to finish a weekly `state/hook-blocks.log` review a prior session
 started and abandoned.** It reported "attempts to tally today's entries returned empty
@@ -35,11 +41,23 @@ command.
 list` shows #100–#105 all MERGED, but `git ls-remote origin refs/heads/main` returns
 `f3a7ed9`, which contains none of them; local main is 12 commits ahead. PR #102 was
 already titled "restore: re-land force-rules engine (main was force-reset)", so this
-has now happened twice before. **This branch is deliberately based on `origin/main`, not
-local main**, to keep the fix PR focused — `grep-guard.sh` and its test file are
-byte-identical in both, so nothing is lost by doing so. The re-land of those 12 commits
-is a separate PR and remains outstanding. Expect a CHANGELOG/HANDOFF conflict when it
-lands; that PR already has 123 lines of CHANGELOG divergence to resolve regardless.
+has now happened twice before. PR #106 was deliberately based on `origin/main`, not local
+main, to keep the fix focused — `grep-guard.sh` and its test file were byte-identical in
+both, so nothing was lost by doing so.
+
+**What the recovery actually requires, verified per commit.** The substantive work is
+NOT uniquely local: `59755f8`, `8210fc7`, `1606d64` and `892cd41` are all still
+reachable from their `origin/fix/*` branches, which were never deleted. But **`3f70ec2`
+(the session-end docs commit) is contained in no remote branch at all** — this machine
+is its only copy. So the re-land is recoverable, with one exception that is not.
+Consequence: **never `git reset --hard origin/main` on this repo.** The reconcile after
+PR #106 was done by merge (`7718135`) precisely for this reason, and `git branch
+--contains 3f70ec2` was checked afterward to confirm nothing was dropped.
+
+The re-land of those 12 commits is still outstanding and is a separate PR. The
+CHANGELOG/HANDOFF conflict it will hit is now larger, not smaller — this session's entry
+sits on top of the same region. It is a mechanical newest-first reorder; the 2026-08-13
+resolution is the worked example.
 
 **Two follow-ups the user explicitly reserved as separate calls:** log rotation for
 `state/hook-blocks.log` (492K, unrotated since 2026-05-25), and whether to pull

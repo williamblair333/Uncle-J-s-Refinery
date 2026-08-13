@@ -2,7 +2,7 @@
 
 ---
 
-## 2026-08-13 — fix(hooks): grep-guard denied `~` source reads and corrupted its own log
+## 2026-08-13 — fix(hooks): grep-guard denied `~` source reads and corrupted its own log (PR #106, merged)
 
 Both defects surfaced while completing a weekly `state/hook-blocks.log` review that a
 prior session had started and could not finish.

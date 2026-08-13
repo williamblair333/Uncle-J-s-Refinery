@@ -363,6 +363,26 @@ Note that `surface-write-guard.sh` lives under `~/.claude/hooks/pre-mortem-guard
 real file rather than a symlink into this repo, so it is not covered by `install.sh` or
 `refinery-doctor --fix` and cannot be repaired through version control.
 
+### Path guards must be spelling-independent
+
+A PreToolUse guard receives the **raw, unexpanded** command string — `~` never arrives as
+`/`. Any path test that matches only `/*` therefore treats `~/x.sh` and `/home/bill/x.sh`
+as different files and can return opposite verdicts for the same target. That was PR
+#106's bug, and it survived because `grep-guard.sh` had two path branches (recursive and
+non-recursive) that drifted apart: one accepted `/*|"~"*`, the other only `/*`.
+
+Two rules follow for any new or edited guard:
+
+- **Expand, then test.** Substitute `$HOME` for a leading `~` and apply the same
+  containment check to both spellings. Do not special-case `~` into a blanket allow — that
+  converts a test into an escape hatch.
+- **A guard with two path branches has two chances to drift.** If you touch one, check the
+  other in the same edit, and add the case to `tests/test_grep_guard.py` in both forms.
+
+Related caveat: `in_repo()` is a literal string-prefix test with no `realpath` resolution,
+so repo source reachable through a home-directory symlink is allowed by *either* spelling.
+This is a known open gap, tracked in ROADMAP — not a regression.
+
 ---
 
 ## Disable / uninstall

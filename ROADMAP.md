@@ -19,8 +19,32 @@ Completed items age out after ~4 weeks.
   for the nightly job. Until then Part B's CLAUDE.md/HANDOFF tasks are decorative.
 - **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
   defect just fixed in the memweave scripts, 77 local failures. Separate from
-  CI's `Skill frontmatter regression`, which fails on Linux for a reason not
-  readable without a token.
+  CI's `Skill frontmatter regression` — **whose cause is now known** (2026-08-13):
+  `skills/occams-razor` declares `category: reasoning`, which is absent from
+  `VALID_CATEGORIES` (`analysis, git, infrastructure, memory, review, security,
+  utility`) in `tests/test_skills.py:92`. One assertion, `1 failed / 527 passed`.
+  It is the sole red check on every PR, so CI currently carries no signal — fix by
+  either adding `reasoning` to the valid set or recategorising the skill.
+- **`state/hook-blocks.log` has no rotation** — 492K and unbroken since 2026-05-25.
+  The weekly review has to scan the whole file to find one session's entries. Needs a
+  rotation policy that does not break the review (the log is gitignored session history
+  and is NOT reconstructible, so rotation must archive rather than truncate).
+- **Version `surface-write-guard.sh`** — it is a real file under
+  `~/.claude/hooks/pre-mortem-guard/`, unlike `grep-guard.sh` and
+  `edit-surface-guard.sh` which are symlinks into this repo. It is therefore outside
+  `install.sh` / `refinery-doctor --fix` sync and would be lost on a machine rebuild.
+  It also still carries the `head -c` newline bug fixed in `grep-guard.sh` by PR #106,
+  which no PR can reach until it is versioned.
+- **Resolve symlinks in `grep-guard.sh::in_repo()`** — it is a literal string-prefix
+  test, so repo source reachable through a home-dir symlink
+  (`~/.claude/hooks/discipline/grep-guard.sh` → this repo) is allowed by *either*
+  spelling. Pre-existing and unchanged by PR #106. Closing it needs `realpath` plus its
+  own test pass, since it newly denies reads that work today.
+- **Re-land the 12 commits `origin/main` lost** (PRs #100–#105 plus `3f70ec2`). Third
+  force-reset occurrence. `59755f8`/`8210fc7`/`1606d64`/`892cd41` survive on their
+  `origin/fix/*` branches, but `3f70ec2` exists only on this machine — so **never
+  `git reset --hard origin/main` here.** Expect a CHANGELOG/HANDOFF conflict; the
+  2026-08-13 resolution is the worked example.
 - **Report jdocmunch's `str.lstrip("./")` directory-pruning bug upstream**
   (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
   in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion
@@ -31,6 +55,20 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-08-13 — grep-guard `~` paths + hook-blocks log integrity)
+
+- **`grep-guard.sh` denied `~`-prefixed source outside the repo** (PR #106). The guard
+  receives the raw unexpanded command string, so `~/…` never arrives as `/…` and the
+  out-of-repo exemption (`== /*`) missed it — the same file was blocked by one spelling
+  and allowed by the other. `~` is now expanded to `$HOME` before the containment test,
+  matching the recursive branch.
+- **Multi-line blocked commands corrupted `state/hook-blocks.log`** (PR #106). `head -c`
+  truncates bytes, not lines, so one command wrote N rows and only the last carried
+  `session=`. 385 of 3452 lines were continuation junk — the real entry count was 3067.
+- **Weekly hook-blocks review completed** for 2026-08-13: 33 entries, 23 ALLOWED / 10
+  BLOCKED, 9 of 10 blocks confirmed as the guards working correctly. The tenth is
+  permanently undiagnosable because the 120-byte truncation cut away the trigger.
 
 ## Recently completed (2026-08-08 — MCP scope shadowing + reindex sidecar)
 
