@@ -339,6 +339,31 @@ The `auto-maintain-commit-and-deploy` skill documents the pattern: dynamic glob 
 
 ---
 
+## The hook-blocks log must stay parseable to be reviewable
+
+`state/hook-blocks.log` is the audit trail for the discipline guards, and the weekly
+review reads it one-entry-per-line. Guards append with `printf '%s' "$CMD" | tr '\n\r\t' ' ' | head -c N`
+— **collapse whitespace before truncating, never after**. `head -c` cuts bytes, not
+lines, so an unsanitised multi-line command writes N rows into the log and only the last
+one carries its `session=` field. When this was found (2026-08-13) 385 of 3452 lines
+were continuation junk, meaning the file over-reported its own entry count by 12% and
+some blocks could not be attributed to a session at all.
+
+Two properties follow, and both are worth preserving in any new guard that writes here:
+
+- **Truncation is lossy for diagnosis.** A block truncated at 120 bytes can be
+  permanently undiagnosable if the trigger sat past the cut. One of the 2026-08-13
+  blocks is exactly this and cannot now be explained.
+- **Verify the format, not just the count.** `awk '$0 !~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} /'`
+  over the log reports malformed lines directly; a plain `wc -l` silently counts the
+  corruption as data.
+
+Note that `surface-write-guard.sh` lives under `~/.claude/hooks/pre-mortem-guard/` as a
+real file rather than a symlink into this repo, so it is not covered by `install.sh` or
+`refinery-doctor --fix` and cannot be repaired through version control.
+
+---
+
 ## Disable / uninstall
 
 ```bash
