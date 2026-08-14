@@ -1,7 +1,63 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-13 — CI signal restored (occams-razor skill category).
+*Last updated: 2026-08-14 — `main` protected against force-push; 15 commits re-landed.
 `HEALTHCHECK: fail (1) — jdocmunch-index-stale`.*
+
+## 2026-08-14 — found who was eating `origin/main`, and stopped them
+
+**Status:** branch `restore/main-reland-2026-08-14` at local `main` (`6df6cfc`), PR open
+against `main`. Ruleset applied to the remote **before** the push, deliberately.
+
+**The divergence was never unexplained — it just hadn't been attributed.** Prior handoffs
+called it "the third occurrence" of an unknown cause. It is the **fifth**, and the writer
+is identifiable: a second clone whose local `main` is pinned at `f3a7ed9`, pushing it
+non-fast-forward.
+
+- `git reflog show origin/main` records `f3a7ed9 … fetch origin -q: forced-update` at
+  `@{2}` and `@{8}` — each immediately after a legitimate advance (`@{3}` =
+  `3f70ec2 update by push`, `@{9}` = `53d95aa`).
+- GitHub push-event runs carry `head_sha f3a7ed9`, actor `williamblair333`, on
+  **2026-08-04, 2026-08-07 (×2), 2026-08-09, 2026-08-14T11:23:30Z**. The last landed
+  **four minutes before PR #107 merged.**
+
+**Why it kept happening: every prior fix was applied at the wrong layer.** PR #102 was
+already titled "restore: re-land force-rules engine (main was force-reset)". Re-landing
+content does nothing to the write path that removes it. The repo had **no branch
+protection and zero rulesets** — `/branches/main/protection` returned 404 "Branch not
+protected" and `/rulesets` returned `[]` — so no push was ever rejected.
+
+**Now:** ruleset `protect-main-no-force-push` (id `20854165`), `enforcement: active`,
+rules `non_fast_forward` + `deletion`, `bypass_actors: []`,
+`current_user_can_bypass: "never"`. Confirmed live on the ref via
+`GET /repos/:owner/:repo/rules/branches/main`. **It applies to the owner too** — a
+genuinely needed force-push now requires disabling the ruleset first, which is the
+intended friction.
+
+**⚠ The other machine is not fixed, only contained.** Its `main` is still at `f3a7ed9`
+and its next push will now be *rejected* rather than silently destructive. Someone has to
+fast-forward it. Until then, expect a confusing push failure on that box — that failure
+is the control working.
+
+**A correction to the record below: the `restore/main-reland-2026-08-13` "backup" was
+not one.** `git branch -a --contains 3f70ec2` listed
+`remotes/origin/restore/main-reland-2026-08-13`, which reads as a remote copy;
+`git ls-remote --heads origin` returns only `refs/heads/main` — that remote branch does
+not exist and the tracking ref is stale from a deletion. `3f70ec2` was on exactly one
+disk, and the ref layout actively disguised it. Pushing this branch is its first copy off
+this machine. **Trust `ls-remote`, never `branch -a`, for remote existence.**
+
+**Verification run before pushing.** Secret scan over the full `origin/main...main` diff:
+0 hits. Tests: 704 passed / 2 failed — both in `tests/test_memweave_search.py`, caused by
+running pytest under `.venv` instead of `.venv-memweave`; 3/3 pass under the correct
+interpreter, no test file is touched by this diff, and CI does not run them. Not a
+regression. `scripts/force-rules.sh`, `scripts/win/settings.local.json` and
+`scripts/win/mcp.json` confirmed absent from `origin/main` via `git cat-file -e`.
+
+**Still open:** log rotation for `state/hook-blocks.log`; pulling
+`surface-write-guard.sh` into the repo as a symlink; the per-segment push-guard fix that
+only Bill can apply to global `~/.claude/settings.json`; and an `ls-remote`-based
+divergence check in `session-start-autofix.sh` so occurrence #6 is detected by a machine
+rather than by hand.
 
 ## 2026-08-13 (later) — restored CI signal; diagnosed the push guard but could not fix it
 
@@ -42,9 +98,11 @@ deployed text likely differs from the rendering. Worth checking when the file is
 `git ls-remote` (not trusted from the PR's MERGED state — see the divergence warning
 below for why that distinction matters here). Merged back into local main as `7718135`,
 resolving the predicted CHANGELOG/HANDOFF conflict. 45 tests pass; the fix is confirmed
-live in the working tree. **Local main is 13 ahead of `origin/main` and has NOT been
+live in the working tree. **Local main is now 15 ahead of `origin/main` and has NOT been
 pushed** — pushing it would re-land the 12 orphaned commits directly to main without a
-PR, which is the separate decision described below.
+PR, which is the separate decision described below. The working copy is backed up on
+`restore/main-reland-2026-08-13`, which is kept in step with local main.
+*(Superseded 2026-08-14: that branch is local-only — see the correction above.)*
 
 **The task was to finish a weekly `state/hook-blocks.log` review a prior session
 started and abandoned.** It reported "attempts to tally today's entries returned empty

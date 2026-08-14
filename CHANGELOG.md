@@ -2,6 +2,55 @@
 
 ---
 
+## 2026-08-14 — restore: re-land 15 commits and close the force-reset loop that kept eating them
+
+### Fixed
+- **`origin/main` has been force-reset to `f3a7ed9` five times, not three.** The prior
+  handoff recorded the divergence as recurring-but-unexplained. It is neither. The
+  writer is a second clone whose local `main` is pinned at `f3a7ed9` and pushes it
+  non-fast-forward. Evidence: `git reflog show origin/main` records
+  `f3a7ed9 … fetch origin -q: forced-update` at `@{2}` and `@{8}`, each immediately
+  after a legitimate advance (`@{3}` = `3f70ec2 update by push`, `@{9}` = `53d95aa`);
+  GitHub push-event runs carry `head_sha f3a7ed9` on **2026-08-04, 2026-08-07 (×2),
+  2026-08-09 and 2026-08-14T11:23:30Z** — the last of those four minutes before PR #107
+  merged. Every re-land before this one replayed the content without touching the write
+  path that removes it, which is why it recurred.
+- **`main` is now covered by ruleset `protect-main-no-force-push` (id 20854165)**,
+  `enforcement: active`, rules `non_fast_forward` + `deletion`, `bypass_actors: []`,
+  `current_user_can_bypass: "never"`. Verified live via
+  `GET /repos/:owner/:repo/rules/branches/main`. The repo previously had **no branch
+  protection and zero rulesets** (`/branches/main/protection` → 404, `/rulesets` → `[]`),
+  so nothing had ever rejected the force-push. The next one fails loudly on the
+  offending machine instead of silently destroying merged work.
+- **`3f70ec2` existed on exactly one disk, and the local refs disguised it.**
+  `git branch -a --contains 3f70ec2` listed `remotes/origin/restore/main-reland-2026-08-13`,
+  implying a remote backup; `git ls-remote --heads origin` showed that branch does not
+  exist — the remote-tracking ref was stale from a deleted branch. Pushing this branch is
+  its first copy off this machine.
+
+### Re-landed
+`59755f8`, `8210fc7`, `1606d64`, `892cd41`, `8ef6075`, `3f70ec2` and their merges —
+12 files, +646/−64. Restores `scripts/force-rules.sh`, `scripts/win/settings.local.json`
+and `scripts/win/mcp.json`, all three of which were **absent from `origin/main`**
+(verified per-file with `git cat-file -e`). `force-rules.sh` is invoked from the global
+`~/.claude/settings.json` Stop hook and from nothing in-repo — a repo-wide `search_text`
+for `force-rules` matches only inside the script itself — so a clone taken from the wiped
+remote had a global Stop hook aimed at a missing path.
+
+### ⚠ Windows follow-up (one-time, after pull)
+```
+cp scripts/win/mcp.json .mcp.json
+cp scripts/win/settings.local.json .claude/settings.local.json
+```
+Committed `.claude/settings.json` is now Linux-only, guarded by
+`[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0` — on Windows those hooks exit 0
+**silently**, so a missed copy shows up as absent enforcement rather than an error.
+`scripts/win/settings.local.json` carries `MSYS: winsymlinks:nativestrict` plus the
+`grep-guard`, `edit-surface-guard` and `unpushed-warn` hooks; nothing is lost, but
+nothing is automatic either.
+
+---
+
 ## 2026-08-13 — fix(skills): restore CI signal by fixing the one invalid skill category
 
 ### Fixed
