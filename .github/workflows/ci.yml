@@ -131,3 +131,24 @@ jobs:
 
       - name: pytest tests/test_install_update.py (unit tests only)
         run: uv run pytest tests/test_install_update.py -v -k "not guard"
+
+  # ── 8. origin/main regression detector ───────────────────────────────────
+  # Guards the guard: this detector is what catches a force-reset of origin/main
+  # (five occurred between 2026-08-04 and 2026-08-14 before anyone counted them).
+  # Needs only pytest + git — the cases build a real bare repo as `origin`.
+  test-origin-main-regression:
+    name: origin/main regression detector tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_origin_main_regression.py
+        run: python -m pytest tests/test_origin_main_regression.py -v
