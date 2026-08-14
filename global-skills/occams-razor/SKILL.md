@@ -3,7 +3,7 @@ name: occams-razor
 description: Use when diagnosing a bug/failure or choosing between competing explanations, hypotheses, or root causes — especially when an exotic, elaborate, or "interesting" cause is tempting. Triggers on "why is this happening", "what's the root cause", intermittent/nondeterministic failures, and any moment you're about to commit to a multi-assumption theory.
 version: 1.0.0
 platforms: [linux, macos]
-category: reasoning
+category: analysis
 tags: [debugging, root-cause, diagnosis, reasoning, hypothesis, parsimony]
 prerequisites:
   commands: []

@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-08-13 — fix(skills): restore CI signal by fixing the one invalid skill category
+
+### Fixed
+- **`Skill frontmatter regression` had been the sole red check on every PR**, so CI
+  carried no signal — a genuine failure on a later PR would have looked identical to the
+  standing red. Cause: `global-skills/occams-razor/SKILL.md` declared
+  `category: reasoning`, which is absent from `VALID_CATEGORIES` in
+  `tests/test_skills.py:19`. One assertion, `1 failed / 527 passed`.
+- Recategorised to `analysis` rather than widening the taxonomy. Only 5 of the global
+  skills declare a category at all, and `analysis`, `infrastructure` and `utility` are
+  already defined but unused — so `reasoning` was drift, not a missing slot, and the
+  test file is the declared contract. The `reasoning` **tag** is unchanged; tags are
+  free-form and not validated. 528 pass.
+
 ## 2026-08-13 — fix(hooks): grep-guard denied `~` source reads and corrupted its own log (PR #106, merged)
 
 Both defects surfaced while completing a weekly `state/hook-blocks.log` review that a
