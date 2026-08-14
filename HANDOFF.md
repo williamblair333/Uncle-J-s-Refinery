@@ -1,7 +1,63 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-13 — CI signal restored (occams-razor skill category).
+*Last updated: 2026-08-14 — `main` protected against force-push; 15 commits re-landed.
 `HEALTHCHECK: fail (1) — jdocmunch-index-stale`.*
+
+## 2026-08-14 — found who was eating `origin/main`, and stopped them
+
+**Status:** branch `restore/main-reland-2026-08-14` at local `main` (`6df6cfc`), PR open
+against `main`. Ruleset applied to the remote **before** the push, deliberately.
+
+**The divergence was never unexplained — it just hadn't been attributed.** Prior handoffs
+called it "the third occurrence" of an unknown cause. It is the **fifth**, and the writer
+is identifiable: a second clone whose local `main` is pinned at `f3a7ed9`, pushing it
+non-fast-forward.
+
+- `git reflog show origin/main` records `f3a7ed9 … fetch origin -q: forced-update` at
+  `@{2}` and `@{8}` — each immediately after a legitimate advance (`@{3}` =
+  `3f70ec2 update by push`, `@{9}` = `53d95aa`).
+- GitHub push-event runs carry `head_sha f3a7ed9`, actor `williamblair333`, on
+  **2026-08-04, 2026-08-07 (×2), 2026-08-09, 2026-08-14T11:23:30Z**. The last landed
+  **four minutes before PR #107 merged.**
+
+**Why it kept happening: every prior fix was applied at the wrong layer.** PR #102 was
+already titled "restore: re-land force-rules engine (main was force-reset)". Re-landing
+content does nothing to the write path that removes it. The repo had **no branch
+protection and zero rulesets** — `/branches/main/protection` returned 404 "Branch not
+protected" and `/rulesets` returned `[]` — so no push was ever rejected.
+
+**Now:** ruleset `protect-main-no-force-push` (id `20854165`), `enforcement: active`,
+rules `non_fast_forward` + `deletion`, `bypass_actors: []`,
+`current_user_can_bypass: "never"`. Confirmed live on the ref via
+`GET /repos/:owner/:repo/rules/branches/main`. **It applies to the owner too** — a
+genuinely needed force-push now requires disabling the ruleset first, which is the
+intended friction.
+
+**⚠ The other machine is not fixed, only contained.** Its `main` is still at `f3a7ed9`
+and its next push will now be *rejected* rather than silently destructive. Someone has to
+fast-forward it. Until then, expect a confusing push failure on that box — that failure
+is the control working.
+
+**A correction to the record below: the `restore/main-reland-2026-08-13` "backup" was
+not one.** `git branch -a --contains 3f70ec2` listed
+`remotes/origin/restore/main-reland-2026-08-13`, which reads as a remote copy;
+`git ls-remote --heads origin` returns only `refs/heads/main` — that remote branch does
+not exist and the tracking ref is stale from a deletion. `3f70ec2` was on exactly one
+disk, and the ref layout actively disguised it. Pushing this branch is its first copy off
+this machine. **Trust `ls-remote`, never `branch -a`, for remote existence.**
+
+**Verification run before pushing.** Secret scan over the full `origin/main...main` diff:
+0 hits. Tests: 704 passed / 2 failed — both in `tests/test_memweave_search.py`, caused by
+running pytest under `.venv` instead of `.venv-memweave`; 3/3 pass under the correct
+interpreter, no test file is touched by this diff, and CI does not run them. Not a
+regression. `scripts/force-rules.sh`, `scripts/win/settings.local.json` and
+`scripts/win/mcp.json` confirmed absent from `origin/main` via `git cat-file -e`.
+
+**Still open:** log rotation for `state/hook-blocks.log`; pulling
+`surface-write-guard.sh` into the repo as a symlink; the per-segment push-guard fix that
+only Bill can apply to global `~/.claude/settings.json`; and an `ls-remote`-based
+divergence check in `session-start-autofix.sh` so occurrence #6 is detected by a machine
+rather than by hand.
 
 ## 2026-08-13 (later) — restored CI signal; diagnosed the push guard but could not fix it
 
@@ -38,8 +94,15 @@ deployed text likely differs from the rendering. Worth checking when the file is
 
 ## 2026-08-13 — finished the hook-blocks review, and it found two guard bugs
 
-**Status:** branch `fix/grep-guard-tilde-and-log-newlines`, based on **`origin/main`**
-(not local main — see the divergence warning below). 45 tests pass.
+**Status:** **PR #106 merged.** Remote `main` verified live at `7a5301e` via
+`git ls-remote` (not trusted from the PR's MERGED state — see the divergence warning
+below for why that distinction matters here). Merged back into local main as `7718135`,
+resolving the predicted CHANGELOG/HANDOFF conflict. 45 tests pass; the fix is confirmed
+live in the working tree. **Local main is now 15 ahead of `origin/main` and has NOT been
+pushed** — pushing it would re-land the 12 orphaned commits directly to main without a
+PR, which is the separate decision described below. The working copy is backed up on
+`restore/main-reland-2026-08-13`, which is kept in step with local main.
+*(Superseded 2026-08-14: that branch is local-only — see the correction above.)*
 
 **The task was to finish a weekly `state/hook-blocks.log` review a prior session
 started and abandoned.** It reported "attempts to tally today's entries returned empty
@@ -68,11 +131,23 @@ command.
 list` shows #100–#105 all MERGED, but `git ls-remote origin refs/heads/main` returns
 `f3a7ed9`, which contains none of them; local main is 12 commits ahead. PR #102 was
 already titled "restore: re-land force-rules engine (main was force-reset)", so this
-has now happened twice before. **This branch is deliberately based on `origin/main`, not
-local main**, to keep the fix PR focused — `grep-guard.sh` and its test file are
-byte-identical in both, so nothing is lost by doing so. The re-land of those 12 commits
-is a separate PR and remains outstanding. Expect a CHANGELOG/HANDOFF conflict when it
-lands; that PR already has 123 lines of CHANGELOG divergence to resolve regardless.
+has now happened twice before. PR #106 was deliberately based on `origin/main`, not local
+main, to keep the fix focused — `grep-guard.sh` and its test file were byte-identical in
+both, so nothing was lost by doing so.
+
+**What the recovery actually requires, verified per commit.** The substantive work is
+NOT uniquely local: `59755f8`, `8210fc7`, `1606d64` and `892cd41` are all still
+reachable from their `origin/fix/*` branches, which were never deleted. But **`3f70ec2`
+(the session-end docs commit) is contained in no remote branch at all** — this machine
+is its only copy. So the re-land is recoverable, with one exception that is not.
+Consequence: **never `git reset --hard origin/main` on this repo.** The reconcile after
+PR #106 was done by merge (`7718135`) precisely for this reason, and `git branch
+--contains 3f70ec2` was checked afterward to confirm nothing was dropped.
+
+The re-land of those 12 commits is still outstanding and is a separate PR. The
+CHANGELOG/HANDOFF conflict it will hit is now larger, not smaller — this session's entry
+sits on top of the same region. It is a mechanical newest-first reorder; the 2026-08-13
+resolution is the worked example.
 
 **Two follow-ups the user explicitly reserved as separate calls:** log rotation for
 `state/hook-blocks.log` (492K, unrotated since 2026-05-25), and whether to pull
@@ -82,6 +157,128 @@ lands; that PR already has 123 lines of CHANGELOG divergence to resolve regardle
 `grep-guard.sh` and `edit-surface-guard.sh`, which are symlinks into this repo. Its
 copy of the `head -c` newline bug cannot be fixed by a PR for that reason; the one-line
 fix needs to be applied to the global file directly.
+
+## 2026-08-08 — fix: unshare the Windows .mcp.json (stack servers absent on Linux)
+
+**Status:** merged (PR #105), back on `main`.
+
+**What broke:** no `mcp__jcodemunch/jdocmunch/jdatamunch/serena/duckdb` tools in
+Linux sessions (context7 fine). `claude mcp list` showed every user-scope server
+✔ Connected *and* a "[Conflicting scopes]" diagnostic: each stack server was
+also defined at **project scope** by the committed `.mcp.json` with
+`C:\opt\proj\...\.venv\Scripts\*.exe` commands (Windows port, commits
+500bbef/4548972 — same pair as the PR #103 hook clobbering). Project scope
+shadows user scope per server name; the `C:\` commands can't exec on Linux, so
+all five died at session start.
+
+**Fix:** `git mv .mcp.json scripts/win/mcp.json`; gitignore `/.mcp.json`;
+docs updated (WINDOWS-PORT.md §MCP server registration, STACK.md §MCP
+registration). Same pattern as `scripts/win/settings.local.json`.
+
+**⚠ Windows follow-up (one-time, after pull):** `cp scripts/win/mcp.json .mcp.json`.
+Root filename unchanged → existing `enabledMcpjsonServers` approval still applies.
+
+**Linux:** tools return on the next session (registration is read at session
+start; the current session stays without them).
+
+**Follow-ups:** extend doctor's `check_jcodemunch_scope` to all five servers;
+consider `scripts/win/hook.sh autofix` re-asserting the `.mcp.json` copy.
+
+## 2026-08-08 — fix: jdocmunch-reindex .summary.json sidecar
+
+**Status:** merged (PR #104).
+
+**What broke:** session-start healthcheck failed `jdocmunch-index-stale`. Running
+`scripts/jdocmunch-reindex.sh` refreshed the two drifted indexes but then failed
+(exit 1) on "Uncle-J-s-Refinery.summary" and "proj-fog-of-chess.summary" with
+`Indexing failed: 'owner'`. Those aren't repos: the 2026-08 jdocmunch writes a
+`<name>.summary.json` sidecar during `index_local` (its `indexed_at` matches the
+main manifest to the microsecond), and the script's `SIDECARS` allowlist didn't
+know the new suffix, so the drift scanner treated it as a manifest.
+
+**Fix:** added `.summary.json` to `SIDECARS` in `scripts/jdocmunch-reindex.sh`.
+Verified: `drifted=0 failed=0` exit 0; healthcheck green.
+
+**Follow-ups:** report upstream — `index_local` KeyError `'owner'` on names in
+the sidecar namespace. Note: jcodemunch/jdocmunch MCP tools were not loaded in
+this session (ToolSearch found no `mcp__j*` tools); fix was done via CLI/native
+fallback.
+
+## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
+
+**Status:** merged (PR #103).
+
+**What broke:** launching Claude Code on Linux threw `C:/util/apps/Git/bin/bash.exe: not found`
+on every SessionStart hook and `uncle-j-force-rules: not found` on every Stop.
+Two independent causes:
+1. The Windows port committed its `C:/...bash.exe` hook block into the *shared*
+   `.claude/settings.json`, overwriting the Linux hooks. On Linux the `.exe` path
+   is absent, so all project hooks failed and the Linux-only hooks were missing.
+2. The global `~/.claude/settings.json` force-rules Stop command had an embedded
+   newline, so the shell tried to run the identifying tag `uncle-j-force-rules`
+   as its own command.
+
+**Fix:** restored the pre-port Linux hook block to committed `.claude/settings.json`
+(dropped Windows-only `MSYS`); saved the Windows hooks to
+`scripts/win/settings.local.json` for copy into the gitignored
+`.claude/settings.local.json` on Windows; collapsed the force-rules tag onto the
+comment line in the global settings. `force-rules.sh` itself was already correct
+and unchanged.
+
+**Windows follow-up (on the Windows box):** `cp scripts/win/settings.local.json .claude/settings.local.json`.
+
+## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
+
+**Status:** on branch `fix/force-rules-anchor-brick`, PR pending.
+
+**What broke:** the terse-reply Stop-rule bricked a live turn. `LAST_USER`
+anchored to `type:user` lines, but Claude Code injects the hook's own block
+feedback as a user turn — so the anchor jumped past the model's compliance every
+iteration (perpetual re-block), and the moving anchor made the `MAX=5` cap key
+unstable so fail-open never fired. The pre-mortem missed this: it assumed the
+anchor was stable within a turn.
+
+**Fix (two independent brakes):** (1) `stop_hook_active` backstop — blocks at
+most once per stop-chain, the documented loop-breaker; enforcement is now "one
+forced retry," not "block until complied." (2) anchor excludes the dispatcher's
+own block-reason signature (`non-optional rules are not yet satisfied`) — keep
+that phrase in sync with the emitted reason. Verified on synthetic transcripts.
+
+**terse-reply rule removed** (`10-terse-reply.sh`): Stop fires after the reply is
+emitted, so it can't cleanly verify a same-turn skill invocation — the mismatch
+that exposed the bug. Invoke terse-reply manually. Engine stays, ruleless/inert.
+
+**Lesson:** a Stop hook's own feedback re-enters the transcript as a user turn —
+any turn-slice logic must exclude it, or the anchor/cap it drives is unstable.
+
+
+
+## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
+
+**Status:** rebased onto current `main` (`f3a7ed9`) after PR #99 was closed by a
+stale-branch merge conflict; re-PR pending. `uv.lock` still carries the unrelated
+auto-maintain bump, deliberately uncommitted. **Lesson:** branch was cut from a
+16-commit-stale local `main` — run the session-start stale-code check first.
+
+**What landed:** `scripts/force-rules.sh` + `scripts/force-rules.d/10-terse-reply.sh`
+— a rules-driven Stop hook that blocks turn-end until each rule verifies. First
+rule forces the terse-reply skill per turn.
+
+**The load-bearing invariant: it cannot brick a session.** `MAX=5` blocks/turn
+then fail-open, plus fail-open on every error path. A rule whose compliance can
+never be detected would otherwise freeze the session permanently. Do not remove
+the cap. Compliance is verified from the transcript, not self-asserted.
+
+**Add a rule later:** drop a `*.sh` in `scripts/force-rules.d/`. Contract: read
+`$TURN_SLICE`; exit 0 = satisfied, non-zero = unmet (printed line = block reason).
+
+**Enablement is manual + global:** the Stop hook lives in `~/.claude/settings.json`
+(Bill ran a `jq` command; Claude has no write access under `~/.claude`). Must be
+**synchronous** — async Stop hooks can't block. Reload via `/hooks` or restart.
+
+**Cascade caveat:** at Stop-time the reply is already emitted, so a forced
+terse-reply appends rather than shrinks. Engine best suits action-rules
+(search/lint/test), not rewrites of the sent message.
 
 ## 2026-08-04 (session 8) — the stack is now reachable everywhere, not just here
 

@@ -2,6 +2,55 @@
 
 ---
 
+## 2026-08-14 — restore: re-land 15 commits and close the force-reset loop that kept eating them
+
+### Fixed
+- **`origin/main` has been force-reset to `f3a7ed9` five times, not three.** The prior
+  handoff recorded the divergence as recurring-but-unexplained. It is neither. The
+  writer is a second clone whose local `main` is pinned at `f3a7ed9` and pushes it
+  non-fast-forward. Evidence: `git reflog show origin/main` records
+  `f3a7ed9 … fetch origin -q: forced-update` at `@{2}` and `@{8}`, each immediately
+  after a legitimate advance (`@{3}` = `3f70ec2 update by push`, `@{9}` = `53d95aa`);
+  GitHub push-event runs carry `head_sha f3a7ed9` on **2026-08-04, 2026-08-07 (×2),
+  2026-08-09 and 2026-08-14T11:23:30Z** — the last of those four minutes before PR #107
+  merged. Every re-land before this one replayed the content without touching the write
+  path that removes it, which is why it recurred.
+- **`main` is now covered by ruleset `protect-main-no-force-push` (id 20854165)**,
+  `enforcement: active`, rules `non_fast_forward` + `deletion`, `bypass_actors: []`,
+  `current_user_can_bypass: "never"`. Verified live via
+  `GET /repos/:owner/:repo/rules/branches/main`. The repo previously had **no branch
+  protection and zero rulesets** (`/branches/main/protection` → 404, `/rulesets` → `[]`),
+  so nothing had ever rejected the force-push. The next one fails loudly on the
+  offending machine instead of silently destroying merged work.
+- **`3f70ec2` existed on exactly one disk, and the local refs disguised it.**
+  `git branch -a --contains 3f70ec2` listed `remotes/origin/restore/main-reland-2026-08-13`,
+  implying a remote backup; `git ls-remote --heads origin` showed that branch does not
+  exist — the remote-tracking ref was stale from a deleted branch. Pushing this branch is
+  its first copy off this machine.
+
+### Re-landed
+`59755f8`, `8210fc7`, `1606d64`, `892cd41`, `8ef6075`, `3f70ec2` and their merges —
+12 files, +646/−64. Restores `scripts/force-rules.sh`, `scripts/win/settings.local.json`
+and `scripts/win/mcp.json`, all three of which were **absent from `origin/main`**
+(verified per-file with `git cat-file -e`). `force-rules.sh` is invoked from the global
+`~/.claude/settings.json` Stop hook and from nothing in-repo — a repo-wide `search_text`
+for `force-rules` matches only inside the script itself — so a clone taken from the wiped
+remote had a global Stop hook aimed at a missing path.
+
+### ⚠ Windows follow-up (one-time, after pull)
+```
+cp scripts/win/mcp.json .mcp.json
+cp scripts/win/settings.local.json .claude/settings.local.json
+```
+Committed `.claude/settings.json` is now Linux-only, guarded by
+`[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0` — on Windows those hooks exit 0
+**silently**, so a missed copy shows up as absent enforcement rather than an error.
+`scripts/win/settings.local.json` carries `MSYS: winsymlinks:nativestrict` plus the
+`grep-guard`, `edit-surface-guard` and `unpushed-warn` hooks; nothing is lost, but
+nothing is automatic either.
+
+---
+
 ## 2026-08-13 — fix(skills): restore CI signal by fixing the one invalid skill category
 
 ### Fixed
@@ -16,7 +65,7 @@
   test file is the declared contract. The `reasoning` **tag** is unchanged; tags are
   free-form and not validated. 528 pass.
 
-## 2026-08-13 — fix(hooks): grep-guard denied `~` source reads and corrupted its own log
+## 2026-08-13 — fix(hooks): grep-guard denied `~` source reads and corrupted its own log (PR #106, merged)
 
 Both defects surfaced while completing a weekly `state/hook-blocks.log` review that a
 prior session had started and could not finish.
@@ -54,6 +103,131 @@ prior session had started and could not finish.
   → this repo) is allowed by either spelling. Pre-existing and unchanged by this PR;
   closing it needs `realpath` plus its own test pass.
 - `state/hook-blocks.log` has no rotation — 492K, unbroken since 2026-05-25.
+
+---
+
+## 2026-08-08 — fix: stop the committed Windows .mcp.json from shadowing Linux MCP registration
+
+### Fixed
+- **All five stack MCP servers (jcodemunch, jdatamunch, jdocmunch, serena,
+  duckdb) silently absent from Linux sessions.** The Windows port (commits
+  500bbef, 4548972 — the same pair whose hook clobbering PR #103 fixed)
+  committed a project-scope `.mcp.json` with `C:\...` commands. Project scope
+  shadows the user-scope registration for the same server names, and the
+  Windows paths can't exec on Linux, so every stack server failed at session
+  start; only context7 (no project-scope entry) survived. `claude mcp list`
+  reported all six user-scope servers ✔ Connected, which is what made the
+  in-session absence confusing. Fix: `git mv .mcp.json scripts/win/mcp.json`,
+  gitignore `/.mcp.json`, document the one-time Windows copy step
+  (`cp scripts/win/mcp.json .mcp.json`) in WINDOWS-PORT.md and STACK.md.
+- **Windows follow-up (one-time, after pulling this):**
+  `cp scripts/win/mcp.json .mcp.json` on the Windows box. The root filename is
+  unchanged, so the existing `enabledMcpjsonServers` approval still applies.
+
+### Follow-ups
+- Extend `refinery-doctor.sh check_jcodemunch_scope` to all five servers so a
+  reappearing local/project scope is caught for more than jcodemunch.
+- Consider teaching `scripts/win/hook.sh autofix` to re-assert the `.mcp.json`
+  copy the way it re-asserts the venv compat shims.
+
+---
+
+## 2026-08-08 — fix: jdocmunch-reindex treats .summary.json as a sidecar
+
+### Fixed
+- **Nightly jdocmunch reindex failed (exit 1) on two phantom repos.** The
+  2026-08 jdocmunch writes a `<name>.summary.json` sidecar during
+  `index_local` (same `indexed_at` as the manifest, to the microsecond).
+  `scripts/jdocmunch-reindex.sh`'s `SIDECARS` allowlist predated it, so the
+  drift scanner classified the sidecar as a repo manifest and tried to
+  reindex "Uncle-J-s-Refinery.summary" / "proj-fog-of-chess.summary" —
+  each failing upstream with `KeyError 'owner'`. Added `.summary.json` to
+  `SIDECARS`. Verified post-fix: `drifted=0 reindexed=0 skipped=9 failed=0`,
+  exit 0, session-start healthcheck green.
+- Upstream note for the contribution backlog: `index_local` crashes with
+  `KeyError 'owner'` when given a name colliding with its own sidecar
+  namespace.
+
+---
+
+## 2026-08-08 — fix: restore Linux project hooks + repair global force-rules Stop command
+
+### Fixed
+- **Every project hook failed on Linux.** The Windows port (commits 500bbef,
+  4548972) overwrote the committed `.claude/settings.json` hook block with
+  `C:/util/apps/Git/bin/bash.exe C:/opt/proj/...` commands. That file is shared
+  with the Linux host, where the `.exe` path does not exist — so SessionStart and
+  Stop hooks died with `/bin/sh: 1: C:/util/apps/Git/bin/bash.exe: not found`,
+  and the real Linux hooks (skill-link, review-check, session-start-autofix,
+  session-notify, skill-suggest, memweave-sync, checkpoint, commit-guard) were
+  gone entirely. Restored the pre-port Linux hook block; dropped the Windows-only
+  `MSYS` env key from the committed file. Each restored command is prefixed with
+  `[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0;` so it runs on Linux and skips
+  cleanly (exit 0, no error line) on Windows — Claude Code merges local+committed
+  hooks, so the committed Linux entries would otherwise re-error on the Windows box.
+- **Windows hook wiring relocated** to `scripts/win/settings.local.json` — copy
+  it to the machine-local, gitignored `.claude/settings.local.json` on Windows.
+  A shared committed file must not carry host-absolute paths. See
+  `docs/WINDOWS-PORT.md`.
+- **Global `~/.claude/settings.json` force-rules Stop hook.** The command string
+  held an embedded newline (`force-rules.sh  #\n  uncle-j-force-rules`), so the
+  hook shell ran `uncle-j-force-rules` as a second command every turn →
+  `/bin/sh: 2: uncle-j-force-rules: not found` on every Stop. Collapsed the
+  identifying tag onto the same comment line.
+
+---
+
+## 2026-08-07 — fix: force-rules brick bug + remove terse-reply rule
+
+### Fixed
+- **Infinite-loop / session-brick bug in `scripts/force-rules.sh`.** The turn
+  anchor (`LAST_USER`) matched `type:user` lines, but Claude Code injects the
+  hook's OWN block feedback as a user turn. So the anchor advanced past the
+  model's compliance every iteration → perpetual re-block, and the cap key moved
+  with it → the `MAX=5` fail-open never tripped. Confirmed live this session.
+  Two independent brakes now:
+  1. `stop_hook_active` backstop — the documented loop-breaker; blocks at most
+     once per stop-chain. Enforcement semantics are now "one forced retry," not
+     "block until complied" (a hook that never releases is unrecoverable).
+  2. Anchor excludes the dispatcher's own block-reason signature, so compliance
+     in the same turn is recognized and the cap key stays stable.
+  Verified: block-when-unmet, `stop_hook_active` allow, complied-then-feedback
+  allow (the bug), no-compliance-plus-feedback block.
+
+### Removed
+- `scripts/force-rules.d/10-terse-reply.sh` — the terse-reply enforcement rule.
+  It forced a skill invocation whose compliance the Stop-hook can't cleanly
+  verify (Stop fires after the reply is emitted), which surfaced the anchor bug.
+  Terse-reply is now invoked manually. The engine remains, ruleless and inert.
+
+---
+
+## 2026-08-06 — feat: force-rules non-optional Stop-hook engine
+
+### Added
+- `scripts/force-rules.sh` — generic Stop-hook enforcement engine. Blocks
+  turn-end until every rule in `scripts/force-rules.d/*.sh` is satisfied, then
+  emits `{"decision":"block","reason":...}` (compact JSON). Adding a non-optional
+  rule later is a one-file drop into the rules dir — no `settings.json` edit.
+- `scripts/force-rules.d/10-terse-reply.sh` — first rule: the terse-reply skill
+  must be invoked each turn. Compliance is **verified** against the transcript
+  (`"skill":"terse-reply"` marker), not self-asserted; the prose reminder never
+  false-matches.
+
+### Reliability
+- **Anti-brick invariant.** A Stop hook that can never release a turn permanently
+  freezes a session. This engine caps at `MAX=5` blocks/turn (key = transcript +
+  last-user line, stable within a turn, resets next prompt) then fails OPEN.
+  Every internal error path (no jq, unreadable transcript, mktemp failure) also
+  fails open. Verified: block-when-unmet, allow-when-met, and 5-then-open all
+  pass on synthetic transcripts.
+- Wired via a **synchronous** global Stop hook (async hooks cannot block). Paired
+  with a `UserPromptSubmit` reminder that fires pre-draft — the reminder is the
+  effective lever; the Stop hook enforces. Cascade caveat: at Stop-time the reply
+  is already shown, so a forced terse-reply *appends* rather than shrinks. The
+  engine suits rules whose compliance is an action (search/lint/test).
+
+---
 
 ## 2026-08-04 — feat(routing): register the stack at user scope; make the routing policy global
 

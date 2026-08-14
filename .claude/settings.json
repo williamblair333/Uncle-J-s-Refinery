@@ -1,7 +1,6 @@
 {
   "env": {
-    "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI",
-    "MSYS": "winsymlinks:nativestrict"
+    "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI"
   },
   "permissions": {
     "allow": [
@@ -39,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh checkpoint",
+            "command": "[[ \"$(git rev-parse --show-toplevel 2>/dev/null)\" == \"/opt/proj/Uncle-J-s-Refinery\" ]] || exit 0; git add -u 2>/dev/null; git diff --cached --quiet && exit 0; git commit -m \"chk: $(date +%H:%M:%S)\" -q 2>/dev/null || true",
             "statusMessage": "Checkpointing..."
           }
         ]
@@ -51,23 +50,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh commit-guard",
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // \"\"'); echo \"$CMD\" | grep -qE '\\bgit\\b.*\\bcommit\\b' || exit 0; echo \"$CMD\" | grep -qE '\\-m\\s+.?chk:' && exit 0; STAGED=$(git -C /opt/proj/Uncle-J-s-Refinery diff --cached --name-only 2>/dev/null || true); MISSING=\"\"; echo \"$STAGED\" | grep -qF \"CHANGELOG.md\" || MISSING=\"${MISSING}CHANGELOG.md \"; echo \"$STAGED\" | grep -qF \"HANDOFF.md\" || MISSING=\"${MISSING}HANDOFF.md \"; echo \"$STAGED\" | grep -qF \"docs/RELIABILITY.md\" || MISSING=\"${MISSING}docs/RELIABILITY.md \"; [ -z \"$MISSING\" ] && exit 0; jq -n --arg m \"Commit blocked \u2014 update first: $MISSING\" '{\"continue\":false,\"stopReason\":$m}'",
             "statusMessage": "Checking docs are staged..."
-          },
-          {
-            "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh grep-guard",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh edit-surface-guard",
-            "timeout": 10
           }
         ]
       },
@@ -76,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh mcp-log",
+            "command": "python3 -c \"import json,sys,datetime,os; d=json.load(sys.stdin); p=os.path.expanduser('~/.claude/state/mcp-tool-log.txt'); os.makedirs(os.path.dirname(p),exist_ok=True); open(p,'a').write('[{}] {}\\n'.format(datetime.datetime.now().strftime('%H:%M:%S'),d.get('tool_name','?')))\" 2>/dev/null || true",
             "async": true
           }
         ]
@@ -87,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh session-notify",
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; bash /opt/proj/Uncle-J-s-Refinery/scripts/session-notify.sh  # uncle-j-session-notify",
             "async": true
           }
         ]
@@ -96,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh skill-suggest",
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-suggest.sh  # uncle-j-auto-skill",
             "async": true
           }
         ]
@@ -105,7 +89,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh skill-link unlink",
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh unlink  # uncle-j-skill-manager-stop",
             "async": true
           }
         ]
@@ -114,17 +98,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh memweave-sync",
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; bash /opt/proj/Uncle-J-s-Refinery/scripts/memweave/sync_memory.sh '' 15 >> /opt/proj/Uncle-J-s-Refinery/state/memweave-sync.log 2>&1  # uncle-j-memweave-sync",
             "async": true
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh unpushed-warn",
-            "timeout": 8
           }
         ]
       }
@@ -134,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh skill-link link"
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; bash /opt/proj/Uncle-J-s-Refinery/scripts/skill-link.sh link  # uncle-j-skill-manager-session"
           }
         ]
       },
@@ -142,7 +117,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh review-check",
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; bash /opt/proj/Uncle-J-s-Refinery/scripts/review-check.sh 2>/dev/null || true",
             "timeout": 30,
             "statusMessage": "Checking _review/..."
           }
@@ -152,7 +127,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/util/apps/Git/bin/bash.exe C:/opt/proj/Uncle-J-s-Refinery/scripts/win/hook.sh autofix",
+            "command": "[ -d /opt/proj/Uncle-J-s-Refinery ] || exit 0; bash /opt/proj/Uncle-J-s-Refinery/scripts/session-start-autofix.sh",
             "timeout": 60,
             "statusMessage": "Health check + auto-fix..."
           }

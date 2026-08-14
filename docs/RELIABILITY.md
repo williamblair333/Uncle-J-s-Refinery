@@ -18,6 +18,8 @@ makes sure Claude *actually uses them correctly*. Four components:
 | Telegram multi-agent routing  | `/work <msg>` → project-context Claude (proj_root cwd, CLAUDE.md loaded); unqualified → restricted default (cwd=/tmp, disclosure ban); config in `config/telegram-agents.toml`; hardcoded fallback if TOML missing | never; missing TOML = safe restricted-only mode |
 | ralph / Telegram billing      | Strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env so `claude -p` uses OAuth subscription auth (Agent SDK credit, effective 2026-06-15: Pro=$20/mo, Max5x=$100/mo, Max20x=$200/mo); `--use-api` flag restores API billing for heavy parallel runs | never strip before 2026-06-15 |
 | session-status-briefing skill | Step 3 runs `git fetch origin main && git log HEAD..origin/main` — reports if local is behind remote before any work starts (stale-code detection); fetch failure is surfaced via 2>&1, not swallowed | never; offline-safe (fetch error shown, briefing continues) |
+| `main` branch ruleset         | GitHub ruleset `protect-main-no-force-push` (id `20854165`): `non_fast_forward` + `deletion`, `enforcement: active`, `bypass_actors: []`, `current_user_can_bypass: "never"`. Exists because `origin/main` was force-reset to `f3a7ed9` **five times** (2026-08-04 → 2026-08-14) by a second clone pinned at that commit, silently destroying PRs #100–#105. Applies to the owner — a deliberate force-push requires disabling the ruleset first. Verify with `GET /repos/:owner/:repo/rules/branches/main`; **`git ls-remote`, never `gh pr list` or `git branch -a`, is the authority on remote ref state** | never; disable only for an intentional history rewrite, then re-enable |
+| force-rules engine            | `scripts/force-rules.sh` (global sync Stop hook) blocks turn-end until every `scripts/force-rules.d/*.sh` rule verifies against the transcript. Anti-brick: `stop_hook_active` backstop (blocks at most once per stop-chain) + 5-block cap + fail-open on any error; the anchor excludes the hook's own injected feedback (else it perpetually re-blocks). Enforcement = one forced retry, not block-until-complied. Add a rule = drop one `*.sh`. **Currently ruleless/inert** (terse-reply rule removed) | disable a rule: remove its file; disable engine: remove the Stop hook |
 
 ## How the pieces compose
 
@@ -361,6 +363,26 @@ Two properties follow, and both are worth preserving in any new guard that write
 Note that `surface-write-guard.sh` lives under `~/.claude/hooks/pre-mortem-guard/` as a
 real file rather than a symlink into this repo, so it is not covered by `install.sh` or
 `refinery-doctor --fix` and cannot be repaired through version control.
+
+### Path guards must be spelling-independent
+
+A PreToolUse guard receives the **raw, unexpanded** command string — `~` never arrives as
+`/`. Any path test that matches only `/*` therefore treats `~/x.sh` and `/home/bill/x.sh`
+as different files and can return opposite verdicts for the same target. That was PR
+#106's bug, and it survived because `grep-guard.sh` had two path branches (recursive and
+non-recursive) that drifted apart: one accepted `/*|"~"*`, the other only `/*`.
+
+Two rules follow for any new or edited guard:
+
+- **Expand, then test.** Substitute `$HOME` for a leading `~` and apply the same
+  containment check to both spellings. Do not special-case `~` into a blanket allow — that
+  converts a test into an escape hatch.
+- **A guard with two path branches has two chances to drift.** If you touch one, check the
+  other in the same edit, and add the case to `tests/test_grep_guard.py` in both forms.
+
+Related caveat: `in_repo()` is a literal string-prefix test with no `realpath` resolution,
+so repo source reachable through a home-directory symlink is allowed by *either* spelling.
+This is a known open gap, tracked in ROADMAP — not a regression.
 
 ---
 
