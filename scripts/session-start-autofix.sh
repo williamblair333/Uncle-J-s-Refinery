@@ -43,6 +43,19 @@ if [[ -n "$CURRENT_SHA" && "$INDEXED_SHA" != "$CURRENT_SHA" ]]; then
     fi
 fi
 
+# ── 1b. origin/main regression detector ──────────────────────────────────────
+# origin/main was force-reset five times before anyone noticed (see the script's
+# header for why gh/branch -a both missed it). Runs synchronously and cheaply so
+# the alert lands in the session banner; async would bury it in a log nobody
+# reads. Soft-fail like everything else here: exit 1 means "regression found",
+# not "hook broken".
+REG_OUT=$(bash "$REPO_ROOT/scripts/check-origin-main-regression.sh" "$REPO_ROOT" 2>&1)
+REG_RC=$?
+log "origin/main check: ${REG_OUT//$'\n'/ | }"
+if [[ $REG_RC -ne 0 ]]; then
+    printf '%s\n' "$REG_OUT"
+fi
+
 # ── 2. Run healthcheck once — capture output for display + stack detection ────
 HEALTH_OUT=$(CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
     bash "$REPO_ROOT/healthcheck.sh" --quick 2>&1 || true)

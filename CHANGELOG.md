@@ -2,6 +2,49 @@
 
 ---
 
+## 2026-08-14 (later) — feat: detect an `origin/main` regression instead of noticing one days late
+
+### Added
+- **`scripts/check-origin-main-regression.sh`** — fires from the SessionStart hook and
+  reports when `origin/main` moves **backwards**. The GitHub ruleset added earlier today
+  rejects the force-push at the server; this verifies the *outcome* independently, so
+  detection survives the ruleset being disabled for an intentional rewrite, or absent on
+  another clone.
+- **The signal is not "local is ahead of remote"** — that is normal during unpushed work
+  and would alarm constantly. It is "the current `origin/main` is **not a descendant** of
+  the last one we recorded", tested with `merge-base --is-ancestor` against a persisted
+  baseline in `state/origin-main-last-seen.sha`. Regressions append to
+  `state/origin-main-regressions.log`, so an alert that scrolls out of the banner still
+  leaves evidence.
+- **`tests/test_origin_main_regression.py`** — 10 cases, each driving a real bare repo as
+  `origin` so `ls-remote`, `cat-file -e` and `merge-base` all execute for real. No
+  injection seam fakes the remote: the bug class being defended against is exactly "the
+  thing you asked disagreed with the actual remote".
+
+### Fixed during implementation
+- **A first run on a fresh clone printed a bogus `No such file or directory`.** Reading
+  the absent baseline as `tr … < "$SEEN" 2>/dev/null` does not suppress it — redirections
+  are processed left to right, so the input redirect fails and the **shell** reports it
+  before stderr is ever redirected. `session-start-autofix.sh` folds stderr into the
+  banner (`REG_OUT=$(… 2>&1)`), so this would have surfaced as a scary startup error on
+  every new machine. Found by running the script for real, not by the tests — the
+  original matrix asserted on stdout only. Every case now asserts `stderr == ""`.
+
+### Hardening (from the pre-mortem, built in rather than deferred)
+- `GIT_TERMINAL_PROMPT=0` + `BatchMode=yes` + `ConnectTimeout=5` inside `timeout 8`. A
+  SessionStart hook has no tty, so a locked `ssh-agent` would otherwise stall startup
+  against a 60s hook budget. Any existing `GIT_SSH_COMMAND` is appended to, not replaced,
+  so a custom key still works.
+- Offline / DNS / auth failure / timeout all produce an empty result → logged skip, stamp
+  untouched. **Silence, never a false regression report.**
+- The baseline stamp is written atomically (temp + `mv`); concurrent session starts are
+  routine here — three were observed on 2026-08-13.
+- A baseline absent from the clone **cannot** be compared, and that is also what a
+  force-push whose dropped commits were never fetched looks like. Rather than pass
+  quietly, it re-baselines *and* writes a `cannot-compare` line to the regressions log.
+
+---
+
 ## 2026-08-14 — restore: re-land 15 commits and close the force-reset loop that kept eating them
 
 ### Fixed

@@ -1,7 +1,44 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-14 — `main` protected against force-push; 15 commits re-landed.
-`HEALTHCHECK: fail (1) — jdocmunch-index-stale`.*
+*Last updated: 2026-08-14 — `main` protected against force-push; 15 commits re-landed;
+regression detector added. `HEALTHCHECK: ok`.*
+
+## 2026-08-14 (later) — the detector, so occurrence #6 is caught by a machine
+
+**Status:** `scripts/check-origin-main-regression.sh` live in the SessionStart hook.
+714 tests pass (704 + 10 new). `HEALTHCHECK: ok` — the standing `jdocmunch-index-stale`
+failure cleared after the reindex at `ef6f4ab`.
+
+**Why a detector when the ruleset already blocks the push:** the ruleset is the control,
+this is the verification. It still fires if the ruleset is disabled for a deliberate
+rewrite, or if this pattern shows up on a clone without one. Controls that nobody
+verifies are how you get five occurrences before anyone counts.
+
+**The signal is the whole design.** "Local is ahead of remote" is the obvious test and
+the wrong one — that is just unpushed work, and a detector that alarms constantly is a
+detector nobody reads. The real signature is **non-fast-forward**: current `origin/main`
+is not a descendant of the last one recorded. That needs a persisted baseline
+(`state/origin-main-last-seen.sha`) and `merge-base --is-ancestor`.
+
+**⚠ `state/origin-main-last-seen.sha` is evidence, not cache.** It sits beside
+`state/jcodemunch-last-indexed.sha`, which genuinely is disposable. Deleting this one
+silently disarms detection — the next run adopts whatever the remote then says, including
+a regressed SHA, as the new baseline. Both the script header and the file's own comment
+say so.
+
+**A defect the tests missed and the live run caught.** First run on a fresh clone printed
+`No such file or directory`: `tr … < "$SEEN" 2>/dev/null` does **not** suppress a missing
+input file, because redirections are processed left to right and the shell reports the
+failure before stderr is redirected. The caller folds stderr into the session banner, so
+every new machine would have shown a bogus startup error. The matrix asserted stdout only.
+Fixed, and `stderr == ""` is now asserted on **every** case rather than in one dedicated
+test. **Lesson: run the thing, don't just test it** — the tests were green while the
+script was visibly broken.
+
+**Still open, and both need you specifically** (harness denies all writes under
+`~/.claude/`): the per-segment push-guard fix in global `settings.json`, and pulling
+`surface-write-guard.sh` into the repo as a symlink. Also still open: `state/hook-blocks.log`
+rotation, and the second clone's `main` is still pinned at `f3a7ed9`.
 
 ## 2026-08-14 — found who was eating `origin/main`, and stopped them
 
