@@ -1,7 +1,87 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-04 (session 8) — stack registered at user scope, routing
-policy now global. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-13 — CI signal restored (occams-razor skill category).
+`HEALTHCHECK: fail (1) — jdocmunch-index-stale`.*
+
+## 2026-08-13 (later) — restored CI signal; diagnosed the push guard but could not fix it
+
+**Status:** branch `fix/occams-razor-skill-category`, based on `origin/main`. 528 tests
+pass, CI's standing red check is cleared.
+
+**`Skill frontmatter regression` was the only red check on every PR**, which meant CI
+carried no signal at all — a real failure would have been indistinguishable from the
+standing one. `global-skills/occams-razor/SKILL.md` declared `category: reasoning`,
+absent from `VALID_CATEGORIES` (`tests/test_skills.py:19`). Recategorised to `analysis`
+rather than widening the taxonomy: only 5 global skills declare a category, and
+`analysis`/`infrastructure`/`utility` are defined but unused, so `reasoning` was drift.
+
+**⚠ The push-guard diagnosis I gave at the end of the previous session was wrong, and
+the corrected one matters more.** I said its regex "matches `main` anywhere in the
+refspec". It does not. Verified by replaying the exact hook against the exact blocked
+command: the real defect is that **`.*` spans command separators**, so `git push` in a
+compound command combines with a `main` token from any *later, unrelated* command. The
+block fired because the same line ended with `git rev-parse main;` — not because of the
+refspec. A push to a non-main branch is blocked by a mention of main in a different
+command entirely. Same bug class as the grep-guard one fixed in PR #106, which is why
+that guard was rewritten to be per-segment.
+
+**It cannot be fixed by a PR.** The hook lives in the global `~/.claude/settings.json`,
+which the harness denies both read and write. A tested per-segment replacement (13/13 on
+a block/allow matrix, including `HEAD:main`, `main:refs/heads/backup`, and
+`restore/main-reland-…`) is in the session transcript and needs applying by hand.
+
+**Secondary finding, unverified cause:** `(^|[&|;(])` does not anchor at string start in
+this GNU grep — `^` bare matches where the alternation form does not. If the deployed
+regex is byte-identical to what the error message rendered, the guard would never fire on
+a command *beginning* with `git push`, which is the common case. It did fire, so the
+deployed text likely differs from the rendering. Worth checking when the file is opened.
+
+## 2026-08-13 — finished the hook-blocks review, and it found two guard bugs
+
+**Status:** branch `fix/grep-guard-tilde-and-log-newlines`, based on **`origin/main`**
+(not local main — see the divergence warning below). 45 tests pass.
+
+**The task was to finish a weekly `state/hook-blocks.log` review a prior session
+started and abandoned.** It reported "attempts to tally today's entries returned empty
+stdout while exiting 0." I could not reproduce that specific symptom and did not guess
+at it. The tally itself completes fine with
+`awk '$1=="2026-08-13"' state/hook-blocks.log`: 33 entries, 23 ALLOWED / 10 BLOCKED,
+all from three concurrent sessions (fog-of-chess, mafski, `a8ade1e8`) and none from the
+session that raised the question. Nine of the ten blocks are the guards working
+correctly — the `edit-surface-guard` entries show BLOCKED-then-ALLOWED for the same
+path, which is the pre-mortem gate behaving exactly as designed.
+
+**Reviewing the log is what exposed the bugs — the log was lying about its own size.**
+385 of 3452 lines are continuation junk from multi-line commands, so the true entry
+count is 3067. That also made the tenth block (a `curl` download) permanently
+undiagnosable, because the 120-byte truncation cut away whatever actually tripped the
+guard. Fixing the format was a precondition for the review being trustworthy at all.
+
+**The `~` bug was found by hitting it, not by reading for it.** Mid-investigation the
+guard blocked `grep -n … ~/.claude/hooks/pre-mortem-guard/surface-write-guard.sh`, then
+allowed the byte-identical `/home/bill/…` spelling. Both fixes are in
+`hooks/discipline/grep-guard.sh`; the deployed copy is a symlink, so they went live the
+moment the file was written and were confirmed by re-running the original failing
+command.
+
+**⚠ `origin/main` has lost merged work again — this is the third occurrence.** `gh pr
+list` shows #100–#105 all MERGED, but `git ls-remote origin refs/heads/main` returns
+`f3a7ed9`, which contains none of them; local main is 12 commits ahead. PR #102 was
+already titled "restore: re-land force-rules engine (main was force-reset)", so this
+has now happened twice before. **This branch is deliberately based on `origin/main`, not
+local main**, to keep the fix PR focused — `grep-guard.sh` and its test file are
+byte-identical in both, so nothing is lost by doing so. The re-land of those 12 commits
+is a separate PR and remains outstanding. Expect a CHANGELOG/HANDOFF conflict when it
+lands; that PR already has 123 lines of CHANGELOG divergence to resolve regardless.
+
+**Two follow-ups the user explicitly reserved as separate calls:** log rotation for
+`state/hook-blocks.log` (492K, unrotated since 2026-05-25), and whether to pull
+`surface-write-guard.sh` into the repo as a symlink. It is currently a real file under
+`~/.claude/hooks/pre-mortem-guard/`, un-versioned, outside `install.sh` /
+`refinery-doctor` sync, and would be lost on a machine rebuild — unlike
+`grep-guard.sh` and `edit-surface-guard.sh`, which are symlinks into this repo. Its
+copy of the `head -c` newline bug cannot be fixed by a PR for that reason; the one-line
+fix needs to be applied to the global file directly.
 
 ## 2026-08-04 (session 8) — the stack is now reachable everywhere, not just here
 

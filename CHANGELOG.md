@@ -2,6 +2,59 @@
 
 ---
 
+## 2026-08-13 — fix(skills): restore CI signal by fixing the one invalid skill category
+
+### Fixed
+- **`Skill frontmatter regression` had been the sole red check on every PR**, so CI
+  carried no signal — a genuine failure on a later PR would have looked identical to the
+  standing red. Cause: `global-skills/occams-razor/SKILL.md` declared
+  `category: reasoning`, which is absent from `VALID_CATEGORIES` in
+  `tests/test_skills.py:19`. One assertion, `1 failed / 527 passed`.
+- Recategorised to `analysis` rather than widening the taxonomy. Only 5 of the global
+  skills declare a category at all, and `analysis`, `infrastructure` and `utility` are
+  already defined but unused — so `reasoning` was drift, not a missing slot, and the
+  test file is the declared contract. The `reasoning` **tag** is unchanged; tags are
+  free-form and not validated. 528 pass.
+
+## 2026-08-13 — fix(hooks): grep-guard denied `~` source reads and corrupted its own log
+
+Both defects surfaced while completing a weekly `state/hook-blocks.log` review that a
+prior session had started and could not finish.
+
+### Fixed
+- **`~`-prefixed source outside the repo was denied; the identical `/home/bill/…`
+  spelling was allowed.** The guard reads the RAW unexpanded command string from the
+  PreToolUse payload, so a `~/…` operand never arrives as `/…`. The out-of-repo
+  exemption tested `[[ "$tok" == /* ]]` only, so `grep -n foo
+  ~/.claude/hooks/pre-mortem-guard/surface-write-guard.sh` was blocked while the same
+  file by absolute path went through — same file, opposite verdict, purely on spelling.
+  This contradicted the guard's own header contract ("source files OUTSIDE the repo …
+  ALLOWS"). The recursive-grep branch already accepted both spellings; the two are now
+  in sync. `~` is expanded to `$HOME` before the containment test rather than
+  blanket-allowed, so the check stays a real test instead of an escape hatch.
+- **Multi-line blocked commands injected continuation lines into
+  `state/hook-blocks.log`.** `head -c` truncates bytes, not lines, so one blocked
+  multi-line command wrote N rows and only the last carried `session=`. **385 of 3452
+  lines were continuation junk — the real entry count was 3067.** Entries were silently
+  unattributable and the log was not safely parseable one-entry-per-line, which is what
+  the weekly review depends on. Newlines/tabs are now collapsed before truncation.
+
+### Added
+- Four `~`-path ALLOW cases and `test_multiline_blocked_command_logs_exactly_one_line`
+  in `tests/test_grep_guard.py` (45 pass). The log test redirects the sink via
+  `UNCLE_J_PROJ_ROOT` into `tmp_path` so it cannot touch the real log, and asserts the
+  deny actually fired so the line count cannot pass vacuously.
+
+### Known gaps (not fixed here)
+- The same `head -c` newline bug exists at `surface-write-guard.sh:51`. That file is a
+  real file under `~/.claude/hooks/pre-mortem-guard/`, **not** a symlink into this repo,
+  so it is outside `install.sh` / `refinery-doctor` sync and cannot be fixed by a PR.
+- `in_repo()` is a literal string-prefix test with no symlink resolution, so repo source
+  reachable through a home-directory symlink (`~/.claude/hooks/discipline/grep-guard.sh`
+  → this repo) is allowed by either spelling. Pre-existing and unchanged by this PR;
+  closing it needs `realpath` plus its own test pass.
+- `state/hook-blocks.log` has no rotation — 492K, unbroken since 2026-05-25.
+
 ## 2026-08-04 — feat(routing): register the stack at user scope; make the routing policy global
 
 The stack was reachable in exactly one directory — this repo — because all five MCP

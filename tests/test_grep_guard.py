@@ -79,6 +79,14 @@ ALLOW_CASES = [
     "ps aux | grep --include=*.sh -i python",
     # sed script text is not a file operand
     "echo status | sed 's/foo.py/bar/'",
+    # ── 2026-08-13: `~`-prefixed source OUTSIDE the repo. The guard receives the RAW
+    #    unexpanded command string, so `~` never arrives as `/`. Matching only /* denied
+    #    these while the identical /home/bill/… spelling was allowed — same file, opposite
+    #    verdict, purely on spelling. (Found while reviewing state/hook-blocks.log.)
+    "grep -n foo ~/.claude/hooks/pre-mortem-guard/surface-write-guard.sh",
+    "cat ~/.local/bin/git-autobackup/backup.sh",
+    "sed -n '1,20p' ~/scratch/probe.py",
+    "head -20 ~/.local/bin/ytd.sh",
 ]
 
 
@@ -109,3 +117,32 @@ def test_guard_allows_non_source_and_writes(cmd):
 
 def test_substring_exception_does_not_leak_via_comment():
     assert _denied("grep -rn pattern scripts/ # see also state/notes") is True
+
+
+# ── Log hygiene: one blocked command must produce exactly one log entry. ──────
+#    `head -c` truncates BYTES, not lines, so an unsanitised multi-line $CMD wrote N
+#    rows into state/hook-blocks.log and only the last carried `session=`. That broke
+#    the one-entry-per-line parsing the weekly review depends on — 385 of 3452 lines
+#    were continuation junk when this was found (2026-08-13).
+
+def test_multiline_blocked_command_logs_exactly_one_line(tmp_path):
+    root = tmp_path / "root"
+    (root / "Uncle-J-s-Refinery" / "state").mkdir(parents=True)
+    log = root / "Uncle-J-s-Refinery" / "state" / "hook-blocks.log"
+
+    cmd = 'echo "=== one ==="\ngrep -rn needle scripts/\necho "=== two ==="'
+    payload = json.dumps({"tool_input": {"command": cmd}, "session_id": "multiline-test"})
+    env = {**os.environ, "UNCLE_J_PROJ_ROOT": str(root)}
+    r = subprocess.run(
+        ["bash", HOOK], input=payload, capture_output=True, text=True, env=env
+    )
+
+    # Guard the fixture itself: no deny means no log line, and the assertions below
+    # would pass vacuously.
+    assert '"deny"' in r.stdout.replace(" ", ""), f"fixture must deny; got {r.stdout!r}"
+
+    lines = log.read_text().splitlines()
+    assert len(lines) == 1, f"expected exactly 1 log entry, got {len(lines)}: {lines}"
+    assert lines[0].endswith("session=multiline-test"), (
+        f"session id must survive on the same line as the command: {lines[0]!r}"
+    )

@@ -339,6 +339,56 @@ The `auto-maintain-commit-and-deploy` skill documents the pattern: dynamic glob 
 
 ---
 
+## The hook-blocks log must stay parseable to be reviewable
+
+`state/hook-blocks.log` is the audit trail for the discipline guards, and the weekly
+review reads it one-entry-per-line. Guards append with `printf '%s' "$CMD" | tr '\n\r\t' ' ' | head -c N`
+— **collapse whitespace before truncating, never after**. `head -c` cuts bytes, not
+lines, so an unsanitised multi-line command writes N rows into the log and only the last
+one carries its `session=` field. When this was found (2026-08-13) 385 of 3452 lines
+were continuation junk, meaning the file over-reported its own entry count by 12% and
+some blocks could not be attributed to a session at all.
+
+Two properties follow, and both are worth preserving in any new guard that writes here:
+
+- **Truncation is lossy for diagnosis.** A block truncated at 120 bytes can be
+  permanently undiagnosable if the trigger sat past the cut. One of the 2026-08-13
+  blocks is exactly this and cannot now be explained.
+- **Verify the format, not just the count.** `awk '$0 !~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} /'`
+  over the log reports malformed lines directly; a plain `wc -l` silently counts the
+  corruption as data.
+
+Note that `surface-write-guard.sh` lives under `~/.claude/hooks/pre-mortem-guard/` as a
+real file rather than a symlink into this repo, so it is not covered by `install.sh` or
+`refinery-doctor --fix` and cannot be repaired through version control.
+
+---
+
+## A standing red check is worse than no check
+
+`Skill frontmatter regression` failed on every PR for long enough that ROADMAP recorded
+its cause as "not readable without a token". While it stayed red, CI provided **zero**
+signal: a genuine regression on any later PR would have rendered identically to the
+standing failure, and the honest review question — "is this PR's CI clean?" — had no
+answer. It was one skill declaring a category absent from `VALID_CATEGORIES`.
+
+The reliability property is not "CI passes". It is **CI's output distinguishes good from
+bad**. A check that is always red has the same information content as a check that is
+always green.
+
+Practical rules:
+
+- **Fix or delete a persistently failing check.** Leaving it red while merging around it
+  trains everyone, human and agent, to merge past red.
+- **When merging with a red check, prove it is unrelated rather than assuming it.** The
+  cheap proof is running the same test against the base commit in a detached worktree —
+  identical failures there means pre-existing. Record that you did.
+- **"Fails for a reason not readable" is a finding, not a status.** The job log is
+  reachable via `gh api repos/<owner>/<repo>/actions/jobs/<id>/logs`; note that
+  `gh run view --log-failed` returned empty here while the API returned the assertion.
+
+---
+
 ## Disable / uninstall
 
 ```bash

@@ -153,7 +153,17 @@ while IFS= read -r seg; do
     if echo "$tok" | grep -qE "$SRC_EXT"; then
       [[ "$prev" == ">" || "$prev" == ">>" || "$tok" == ">"* ]] && { prev="$tok"; continue; }   # redirect target
       echo "$tok" | grep -qE "$ALLOWED_RE" && { prev="$tok"; continue; }                          # allowed location
-      [[ "$tok" == /* ]] && ! in_repo "$tok" && { prev="$tok"; continue; }                        # source outside repo
+      # Source OUTSIDE the repo — jcode can't help there, so allow it. The guard sees the
+      # RAW unexpanded command string, so a `~/…` operand never arrives as `/…`. Matching
+      # only /* silently denied every home-dir source read (e.g. `grep -n foo
+      # ~/.claude/hooks/discipline/grep-guard.sh`) while the identical /home/bill/…
+      # spelling was allowed. Expand ~ to $HOME first, then apply the same containment
+      # test to both spellings. The recursive branch above also accepts both — keep in sync.
+      case "$tok" in
+        "~"|"~"/*) probe="${HOME:-}${tok#\~}" ;;
+        *)         probe="$tok" ;;
+      esac
+      [[ "$probe" == /* ]] && ! in_repo "$probe" && { prev="$tok"; continue; }                   # source outside repo
       deny=1; break
     fi
     prev="$tok"
@@ -173,7 +183,11 @@ fi
 
 [[ $deny -eq 0 ]] && exit 0
 
-log_entry "BLOCKED grep-guard cmd=$(echo "$CMD" | head -c 120) session=$SESSION_ID"
+# Collapse newlines/tabs BEFORE truncating: `head -c` cuts bytes, not lines, so a
+# multi-line $CMD wrote N lines into the log and only the last carried `session=`.
+# That silently broke one-entry-per-line parsing for the weekly review (385 of 3452
+# lines were continuation junk). tr first, then truncate the now-single line.
+log_entry "BLOCKED grep-guard cmd=$(printf '%s' "$CMD" | tr '\n\r\t' ' ' | head -c 120) session=$SESSION_ID"
 
 REASON="Reading/searching repo source via shell is blocked — use jcodemunch (saves tokens, returns ranked structured results):
 
