@@ -1,7 +1,40 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-13 — grep-guard `~`-path and log-corruption fixes on
-`fix/grep-guard-tilde-and-log-newlines`. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-13 — CI signal restored (occams-razor skill category).
+`HEALTHCHECK: fail (1) — jdocmunch-index-stale`.*
+
+## 2026-08-13 (later) — restored CI signal; diagnosed the push guard but could not fix it
+
+**Status:** branch `fix/occams-razor-skill-category`, based on `origin/main`. 528 tests
+pass, CI's standing red check is cleared.
+
+**`Skill frontmatter regression` was the only red check on every PR**, which meant CI
+carried no signal at all — a real failure would have been indistinguishable from the
+standing one. `global-skills/occams-razor/SKILL.md` declared `category: reasoning`,
+absent from `VALID_CATEGORIES` (`tests/test_skills.py:19`). Recategorised to `analysis`
+rather than widening the taxonomy: only 5 global skills declare a category, and
+`analysis`/`infrastructure`/`utility` are defined but unused, so `reasoning` was drift.
+
+**⚠ The push-guard diagnosis I gave at the end of the previous session was wrong, and
+the corrected one matters more.** I said its regex "matches `main` anywhere in the
+refspec". It does not. Verified by replaying the exact hook against the exact blocked
+command: the real defect is that **`.*` spans command separators**, so `git push` in a
+compound command combines with a `main` token from any *later, unrelated* command. The
+block fired because the same line ended with `git rev-parse main;` — not because of the
+refspec. A push to a non-main branch is blocked by a mention of main in a different
+command entirely. Same bug class as the grep-guard one fixed in PR #106, which is why
+that guard was rewritten to be per-segment.
+
+**It cannot be fixed by a PR.** The hook lives in the global `~/.claude/settings.json`,
+which the harness denies both read and write. A tested per-segment replacement (13/13 on
+a block/allow matrix, including `HEAD:main`, `main:refs/heads/backup`, and
+`restore/main-reland-…`) is in the session transcript and needs applying by hand.
+
+**Secondary finding, unverified cause:** `(^|[&|;(])` does not anchor at string start in
+this GNU grep — `^` bare matches where the alternation form does not. If the deployed
+regex is byte-identical to what the error message rendered, the guard would never fire on
+a command *beginning* with `git push`, which is the common case. It did fire, so the
+deployed text likely differs from the rendering. Worth checking when the file is opened.
 
 ## 2026-08-13 — finished the hook-blocks review, and it found two guard bugs
 

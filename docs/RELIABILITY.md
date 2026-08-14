@@ -364,6 +364,31 @@ real file rather than a symlink into this repo, so it is not covered by `install
 
 ---
 
+## A standing red check is worse than no check
+
+`Skill frontmatter regression` failed on every PR for long enough that ROADMAP recorded
+its cause as "not readable without a token". While it stayed red, CI provided **zero**
+signal: a genuine regression on any later PR would have rendered identically to the
+standing failure, and the honest review question — "is this PR's CI clean?" — had no
+answer. It was one skill declaring a category absent from `VALID_CATEGORIES`.
+
+The reliability property is not "CI passes". It is **CI's output distinguishes good from
+bad**. A check that is always red has the same information content as a check that is
+always green.
+
+Practical rules:
+
+- **Fix or delete a persistently failing check.** Leaving it red while merging around it
+  trains everyone, human and agent, to merge past red.
+- **When merging with a red check, prove it is unrelated rather than assuming it.** The
+  cheap proof is running the same test against the base commit in a detached worktree —
+  identical failures there means pre-existing. Record that you did.
+- **"Fails for a reason not readable" is a finding, not a status.** The job log is
+  reachable via `gh api repos/<owner>/<repo>/actions/jobs/<id>/logs`; note that
+  `gh run view --log-failed` returned empty here while the API returned the assertion.
+
+---
+
 ## Disable / uninstall
 
 ```bash
