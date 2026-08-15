@@ -42,12 +42,11 @@ Completed items age out after ~4 weeks.
   both the upstream and fixed versions. Closing it needs quote/word awareness, which is
   a real change to a security control: a sloppy attempt risks a false **negative**,
   strictly worse than the false positive. Workaround today: `git commit -F -`.
-- **Report the push-guard separator bug upstream** to `dwarvesf/claude-guardrails`
-  (v0.4.0 / `65a41de`, `full/settings.json` and the `lite/` equivalent). `.*` in the
-  push matcher is not anchored to the end of the segment, so it spans `;`/`&&`/`|` and
-  blocks feature-branch pushes whenever a later command mentions `main`. Our fix is
-  `hooks/discipline/push-guard.sh`; until it lands upstream, **re-running
-  `install-guardrails.sh` re-merges the buggy template and restores the bug.**
+- **Track upstream issue [dwarvesf/claude-guardrails#17](https://github.com/dwarvesf/claude-guardrails/issues/17)**
+  (filed 2026-08-15). Until it lands, **re-running `install-guardrails.sh` re-merges the
+  buggy template and restores the bug** over `hooks/discipline/push-guard.sh`. If they
+  accept the direction, offer the PR — the tokenised implementation and its 41-case
+  matrix already exist here.
 - **Fast-forward the second clone off `f3a7ed9`.** Its `main` is still pinned there, and
   the ruleset now *rejects* its push rather than letting it destroy `main`. Until someone
   fixes it, expect a confusing push failure on that machine — that failure is the control
