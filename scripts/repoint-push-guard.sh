@@ -17,6 +17,13 @@
 
 set -uo pipefail
 
+# --restore first rolls back to the newest known-good backup, then repoints.
+# It exists so recovery is ONE SHORT command: the hand-paste failed twice because
+# the terminal hard-wraps a long line, inserting a newline + two spaces at the
+# break. Anything the user must paste has to fit comfortably on one line.
+RESTORE=0
+if [ "${1:-}" = "--restore" ]; then RESTORE=1; shift; fi
+
 SETTINGS="${1:-$HOME/.claude/settings.json}"
 TARGET='bash ~/.claude/hooks/discipline/push-guard.sh'
 MARKER='Direct push to main/master/production'
@@ -27,6 +34,25 @@ note() { printf '  ..    %s\n' "$*"; }
 
 command -v jq >/dev/null 2>&1 || die "jq not found (it is the guardrails hard prerequisite)"
 [ -f "$SETTINGS" ] || die "not found: $SETTINGS"
+
+# ── Optional rollback ────────────────────────────────────────────────────────
+# Runs BEFORE the JSON validity check below, because restoring is exactly what
+# you want when the live file has been damaged.
+if [ "$RESTORE" = "1" ]; then
+    BK=$(ls -1t "$SETTINGS".bak.pushguard* 2>/dev/null | head -1)
+    [ -n "$BK" ] || die "no backup matching $SETTINGS.bak.pushguard*"
+    jq -e . "$BK" >/dev/null 2>&1 || die "backup $BK is not valid JSON — refusing to restore it"
+    # A known-good backup is one that still holds exactly one INLINE guard. This
+    # refuses to "restore" from a backup that is itself mangled or already
+    # repointed, which would quietly reinstate the broken state.
+    jq -e --arg m "$MARKER" \
+        '[.hooks.PreToolUse[]?.hooks[]?.command // "" | select(contains($m))] | length == 1' \
+        "$BK" >/dev/null 2>&1 \
+        || die "backup $BK has no single inline push guard — not a known-good state"
+    cp "$BK" "$SETTINGS" || die "restore failed"
+    ok "restored from $BK"
+fi
+
 jq -e . "$SETTINGS" >/dev/null 2>&1 || die "$SETTINGS is not valid JSON — refusing to touch it"
 
 # The script must exist before we point anything at it, or we would swap a
