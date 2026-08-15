@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-08-15 — chore: post-upgrade sync — jdocmunch-mcp 7e77b20→9235e22
+
+### Changed
+- **CLAUDE.md §3** — `index_local` now needs **explicit paths**. As of jdocmunch v1.130.0
+  an argless refresh no longer widens the corpus, and v1.126.1 skips *all* dot-directories
+  by rule rather than by a list of twelve, so previously-indexed content under e.g.
+  `.claude/` disappears on re-index. Also flags the v1.126.0 confidence rescale.
+- **README** — `state/origin-main-last-seen.sha` added to the `state/` tree with its
+  evidence-not-cache status, so a `state/` cleanup does not silently disarm yesterday's
+  regression detector.
+
+### Documented (no code change)
+- **`uv.lock` is modified every night by the `auto-maintain` cron and is deliberately
+  never committed** — `commits_behind()` reads its SHAs. Today's rewrite (03:00:06):
+  `jcodemunch-mcp 1.108.235 → 1.108.279`, `jdocmunch-mcp 1.121.1 → 1.133.0`. Recorded so
+  the standing decision is looked up rather than re-derived each morning.
+- **jdocmunch breaking changes are NOT live in this session.** Installed on disk is
+  1.133.0, but the *running* server reports **1.129.0** (`jdocmunch_guide`) — the old
+  lockfile pin of 1.121.1 was itself stale. The rescaled confidence and corpus-exclusion
+  behaviour arrive at the next session start.
+
+### Verification boundary
+The upstream analysis was made from the commit log alone. Verified here: installed and
+running versions. **Not verified:** the exact old→new confidence scale, v1.124.0, v1.128.0
+— `index_dependency` fails on this package (`top_level: missing`) and the shell route is
+grep-guard-blocked because `.venv/` sits inside the repo. Those claims stay labelled
+log-level rather than being promoted to fact.
+
+---
+
 ## 2026-08-14 (later) — feat: detect an `origin/main` regression instead of noticing one days late
 
 ### Added

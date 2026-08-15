@@ -874,6 +874,11 @@ Uncle-J-s-Refinery/
 │   └── test_tg_security.py             ← pytest suite for scripts/lib/tg_security.py
 │
 ├── state/                              ← runtime state (gitignored except .gitkeep)
+│   ├── origin-main-last-seen.sha       ← ⚠ EVIDENCE, NOT CACHE — baseline for the
+│   │                                     origin/main regression detector. Deleting it
+│   │                                     silently disarms detection (the next run adopts
+│   │                                     whatever the remote then says as the baseline).
+│   ├── origin-main-regressions.log     ← append-only; empty is the healthy state
 │   ├── stack-alerts-pending.json
 │   ├── telegram-gateway-offset.txt     ← Telegram update_id watermark (dedup)
 │   ├── telegram-gateway.log

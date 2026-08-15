@@ -184,6 +184,16 @@ tools can answer structurally.
   `list_docs` for flat per-doc inventory; `get_doc` (v1.58+) for single-doc detail
   view (section list, role/tag distributions, byte_size, format, indexed_at) —
   pairs with `list_docs`.
+- **`index_local` needs explicit paths as of v1.130.0.** An argless refresh no longer
+  widens the corpus, and v1.126.1 skips **all** dot-directories by rule rather than by a
+  list of twelve — so content previously indexed under e.g. `.claude/` disappears on
+  re-index, and newly added directories are not picked up unless you pass `paths=` (or
+  `include_dot_dirs=` by directory NAME, not path). A refresh that silently shrinks the
+  corpus looks identical to a successful one; check `corpus_selection_changed` and the
+  `deleted` count in the result before trusting it.
+- **v1.126.0 rescaled retrieval confidence.** Any threshold calibrated on the old scale is
+  wrong. The exact old→new scale is **unverified** — treat returned confidence as ordinal
+  (compare hits against each other), not against a remembered absolute cutoff.
 - For third-party library docs (FastAPI, React, Django, etc.), **context7**
   is authoritative and version-pinned. Call it whenever the question
   references a named library.
