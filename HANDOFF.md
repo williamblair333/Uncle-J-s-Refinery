@@ -45,6 +45,13 @@ symlinks by glob. Future fixes are ordinary PRs instead of hand-edits.
 `x=1 git push origin main` are ALLOW under both old and new. Pre-existing upstream
 weaknesses, neither introduced nor closed here.
 
+**A false positive found by hitting it, mid-commit.** The guard matches raw command text
+with no notion of *which* command is running, so a `git commit` whose message quotes a
+subshell-wrapped push is blocked as though it were the push — it fired on the commit for
+this fix. Present upstream too. Not patched here: closing it needs quote/word awareness,
+and on a security control a sloppy attempt risks a false **negative**, which is strictly
+worse. ROADMAP item; workaround is `git commit -F -`.
+
 ## 2026-08-15 — post-upgrade sync, and the parked job that was blocked on access I had
 
 **Status:** docs-only. `main` was clean at `40c8851` (local == `origin/main`, verified by

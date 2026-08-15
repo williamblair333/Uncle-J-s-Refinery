@@ -40,6 +40,14 @@ All 15 BLOCK cases still block — including `&`-terminated, `refs/heads/main`, 
 predicate diverges from upstream on **exactly the 3 intended false positives and nowhere
 else**, so this does not loosen the control.
 
+### Known false positive, both versions — found while committing this change
+The guard matches **raw command text** with no notion of *which* command is running, so a
+`git commit` whose message quotes a subshell-wrapped push is blocked as though it were the
+push. It fired on the commit for this very fix. Recorded in the script header and ROADMAP
+rather than patched: closing it needs quote/word awareness, and on a security control a
+sloppy attempt risks a false **negative**, strictly worse than the false positive it fixes.
+Workaround: `git commit -F -`.
+
 ### Not fixed — pre-existing upstream bypasses
 `git push origin "main"`, `if true; then git push origin main; fi`, and
 `x=1 git push origin main` are ALLOW under **both** the old and new versions. This change

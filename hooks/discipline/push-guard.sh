@@ -36,6 +36,14 @@
 # change neither introduces nor closes them; do not read it as hardening):
 #   `git push origin "main"` · `if true; then git push origin main; fi`
 #   `x=1 git push origin main`   — all ALLOW under both versions.
+#
+# KNOWN FALSE POSITIVE, both versions: this matches raw command text and has no
+# notion of WHICH command is running, so a `git commit` whose message quotes a
+# subshell-wrapped push is blocked as if it were the push. Hit while committing
+# this very file. Closing it needs quote/word awareness; that is a real change to
+# a security control and is tracked in ROADMAP rather than bolted on here, since
+# a sloppy attempt risks a false negative — which is strictly worse.
+# Workaround: keep such text out of the command line (e.g. `git commit -F -`).
 
 set -uo pipefail
 
