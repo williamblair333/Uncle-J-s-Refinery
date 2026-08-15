@@ -1,7 +1,54 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-14 — `main` protected against force-push; 15 commits re-landed;
-regression detector added. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-15 — post-upgrade sync; jdocmunch breaking changes land next
+session. `HEALTHCHECK: ok`.*
+
+## 2026-08-15 — post-upgrade sync, and the parked job that was blocked on access I had
+
+**Status:** docs-only. `main` was clean at `40c8851` (local == `origin/main`, verified by
+`ls-remote`) apart from a modified `uv.lock`, which is **deliberately not committed** —
+see below.
+
+**`uv.lock` is dirty every morning and that is expected.** The `auto-maintain` cron
+(03:00) rewrote it at `2026-08-15 03:00:06`: `jcodemunch-mcp 1.108.235 → 1.108.279`,
+`jdocmunch-mcp 1.121.1 → 1.133.0`. The standing decision, from
+`~/.claude/projects/-home-bill/memory/project_jdocmunch_upgrade_9235e22_parked.md`, is
+**never commit `uv.lock`** — `commits_behind()` reads its SHAs. Recorded here so the next
+session looks it up instead of re-deriving it. The root fix (auto-maintain's Part B
+success criterion) is already a ROADMAP item.
+
+**⚠ jdocmunch-mcp breaking change — takes effect at NEXT session start, not now.**
+v1.126.0 rescaled retrieval confidence onto a new scale and v1.130.0 made corpus
+exclusions hold at every entry point, so callers must recalibrate confidence thresholds
+and pass explicit paths to `index_local` instead of relying on an argless refresh to
+widen the corpus.
+
+**What I actually verified vs what I did not** — the parked analysis was done from the
+commit log alone and says so:
+- **Verified this session:** installed on disk is `jdocmunch-mcp 1.133.0` /
+  `jcodemunch-mcp 1.108.279` (binary `--version`). The **running** server in this session
+  reports **v1.129.0** (`jdocmunch_guide`). So the old lockfile pin (1.121.1) was itself
+  stale, and **the breaking changes are not live in this session** — they arrive when the
+  server process restarts.
+- **Still unverified (log-level only):** the exact old→new confidence scale, v1.124.0 and
+  v1.128.0. Two grounding routes failed: `index_dependency` errors with
+  `Matched distribution 'jdocmunch_mcp-1.133.0.dist-info' but found no importable package
+  directory (top_level: missing)`, and the shell route is grep-guard-blocked because
+  `.venv/` sits inside the repo. **Do not cite the confidence-scale claim as established.**
+
+**The parked job had been blocked three consecutive sessions** because the cron's headless
+Claude runs with working-dir scope `/home/bill` only, so `/opt/proj` was unreachable. That
+is an access problem, not an analysis problem — the note itself flags it as the thing to
+fix. Nothing was stale about the work; it just could not be written down from where it ran.
+`state/post-upgrade-needed` is **absent**, so its step 5 was already satisfied.
+
+**CLAUDE.md §3 gained an `index_local` note, and it will not reach the deployed copy.**
+The repo copy is canonical, but `install.sh` §6b and `refinery-doctor --fix` propagate it
+by wholesale copy, which deletes the global-only Docker Port Registry section (and now the
+auto-generated Dreaming Notes). **Do not run either to propagate this.** The deployed copy
+stays stale by design until the §6b surgical-repoint follow-up lands.
+
+## 2026-08-14 (later) — the detector, so occurrence #6 is caught by a machine
 
 ## 2026-08-14 (later) — the detector, so occurrence #6 is caught by a machine
 

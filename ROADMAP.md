@@ -18,13 +18,9 @@ Completed items age out after ~4 weeks.
   cannot grant — so either the criterion checks for a diff, or the guard grows a path
   for the nightly job. Until then Part B's CLAUDE.md/HANDOFF tasks are decorative.
 - **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
-  defect just fixed in the memweave scripts, 77 local failures. Separate from
-  CI's `Skill frontmatter regression` — **whose cause is now known** (2026-08-13):
-  `skills/occams-razor` declares `category: reasoning`, which is absent from
-  `VALID_CATEGORIES` (`analysis, git, infrastructure, memory, review, security,
-  utility`) in `tests/test_skills.py:92`. One assertion, `1 failed / 527 passed`.
-  It is the sole red check on every PR, so CI currently carries no signal — fix by
-  either adding `reasoning` to the valid set or recategorising the skill.
+  defect fixed in the memweave scripts, 77 local failures on Windows. (The
+  `Skill frontmatter regression` half of this item is **done** — PR #107 recategorised
+  `occams-razor`; CI has carried signal since, and ran 8/8 green on 2026-08-14.)
 - **`state/hook-blocks.log` has no rotation** — 492K and unbroken since 2026-05-25.
   The weekly review has to scan the whole file to find one session's entries. Needs a
   rotation policy that does not break the review (the log is gitignored session history
@@ -40,11 +36,15 @@ Completed items age out after ~4 weeks.
   (`~/.claude/hooks/discipline/grep-guard.sh` → this repo) is allowed by *either*
   spelling. Pre-existing and unchanged by PR #106. Closing it needs `realpath` plus its
   own test pass, since it newly denies reads that work today.
-- **Re-land the 12 commits `origin/main` lost** (PRs #100–#105 plus `3f70ec2`). Third
-  force-reset occurrence. `59755f8`/`8210fc7`/`1606d64`/`892cd41` survive on their
-  `origin/fix/*` branches, but `3f70ec2` exists only on this machine — so **never
-  `git reset --hard origin/main` here.** Expect a CHANGELOG/HANDOFF conflict; the
-  2026-08-13 resolution is the worked example.
+- **Fast-forward the second clone off `f3a7ed9`.** Its `main` is still pinned there, and
+  the ruleset now *rejects* its push rather than letting it destroy `main`. Until someone
+  fixes it, expect a confusing push failure on that machine — that failure is the control
+  working. Needs access to the other box.
+- **Ground-truth the jdocmunch v1.126.0 confidence rescale.** The upstream analysis is
+  commit-log-only; the exact old→new scale, v1.124.0 and v1.128.0 remain unverified.
+  Blocked on two failed routes: `index_dependency` errors with `top_level: missing` for
+  this package, and the shell route is grep-guard-blocked because `.venv/` is inside the
+  repo. Report the `index_dependency` failure upstream too.
 - **Report jdocmunch's `str.lstrip("./")` directory-pruning bug upstream**
   (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
   in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion
@@ -55,6 +55,26 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-08-14 — `origin/main` force-reset: cause, control, detector)
+
+- **The 12 lost commits are re-landed** (PR #108). `origin/main` and local `main` are
+  converged; `3f70ec2`, previously on one disk, is reachable from `origin/main`.
+- **The cause was identified, after three sessions of calling it unexplained.** Not three
+  occurrences but **five** — `f3a7ed9` pushed on 2026-08-04, 08-07 (×2), 08-09 and
+  08-14T11:23Z, the last four minutes before PR #107 merged. Writer: a second clone pinned
+  at that commit. Found via `git reflog show origin/main` (`forced-update` at `@{2}`/`@{8}`)
+  cross-referenced with GitHub push-event `head_sha`. Every prior fix re-landed content
+  without touching the write path that removed it.
+- **`main` is protected** by ruleset `protect-main-no-force-push` (id `20854165`):
+  `non_fast_forward` + `deletion`, no bypass actors, owner included. The repo previously
+  had no protection and zero rulesets.
+- **Regression detector added** (PR #109) — `scripts/check-origin-main-regression.sh`,
+  run from the SessionStart hook, verifying the outcome the ruleset guarantees. Signal is
+  non-fast-forward, **not** "local ahead of remote". 10 tests + their own CI job.
+- **Two instruments were shown to lie** across all five wipes: `gh pr list` reports
+  force-pushed-away PRs as MERGED, and `git branch -a` listed a remote-tracking ref for a
+  branch `ls-remote` shows does not exist. **`ls-remote` is the only authority.**
 
 ## Recently completed (2026-08-13 — grep-guard `~` paths + hook-blocks log integrity)
 
