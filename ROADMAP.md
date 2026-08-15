@@ -36,6 +36,12 @@ Completed items age out after ~4 weeks.
   (`~/.claude/hooks/discipline/grep-guard.sh` → this repo) is allowed by *either*
   spelling. Pre-existing and unchanged by PR #106. Closing it needs `realpath` plus its
   own test pass, since it newly denies reads that work today.
+- **Report the push-guard separator bug upstream** to `dwarvesf/claude-guardrails`
+  (v0.4.0 / `65a41de`, `full/settings.json` and the `lite/` equivalent). `.*` in the
+  push matcher is not anchored to the end of the segment, so it spans `;`/`&&`/`|` and
+  blocks feature-branch pushes whenever a later command mentions `main`. Our fix is
+  `hooks/discipline/push-guard.sh`; until it lands upstream, **re-running
+  `install-guardrails.sh` re-merges the buggy template and restores the bug.**
 - **Fast-forward the second clone off `f3a7ed9`.** Its `main` is still pinned there, and
   the ruleset now *rejects* its push rather than letting it destroy `main`. Until someone
   fixes it, expect a confusing push failure on that machine — that failure is the control

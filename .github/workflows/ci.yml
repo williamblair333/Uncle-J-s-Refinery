@@ -152,3 +152,24 @@ jobs:
 
       - name: pytest tests/test_origin_main_regression.py
         run: python -m pytest tests/test_origin_main_regression.py -v
+
+  # ── 9. push-guard behaviour matrix ───────────────────────────────────────
+  # A security control: the BLOCK cases matter more than the ALLOW ones, since
+  # a fix for false positives that creates a false negative is worse than the
+  # bug. Needs pytest + jq (the guard parses its PreToolUse payload with jq).
+  test-push-guard:
+    name: push-guard behaviour matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_push_guard.py
+        run: python -m pytest tests/test_push_guard.py -v

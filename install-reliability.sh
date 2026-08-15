@@ -85,7 +85,7 @@ else:
     print(f"  OK  OUTCOMES_MAX_ITERATIONS already set ({env['OUTCOMES_MAX_ITERATIONS']})")
 PYPATCH
 
-# ── Discipline hooks (edit-surface-guard, grep-guard) ────────────────────
+# ── Discipline hooks (edit-surface-guard, grep-guard, push-guard) ────────
 step "Installing discipline hooks to $CLAUDE_DIR/hooks/discipline"
 mkdir -p "$CLAUDE_DIR/hooks/discipline"
 if [ ! -d "$STACK_ROOT/hooks/discipline" ]; then
@@ -110,7 +110,8 @@ else
             jq '
               .hooks.PreToolUse += [
                 {"matcher":"Edit|Write","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/edit-surface-guard.sh","timeout":10}]},
-                {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/grep-guard.sh","timeout":10}]}
+                {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/grep-guard.sh","timeout":10}]},
+                {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/push-guard.sh","timeout":10}]}
               ]
             ' "$_settings" > "$_tmp" \
               && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \

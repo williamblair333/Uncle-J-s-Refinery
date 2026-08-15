@@ -1,7 +1,49 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — post-upgrade sync; jdocmunch breaking changes land next
-session. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-15 — push-guard fixed and versioned; one `!`-command left for
+Bill. `HEALTHCHECK: ok`.*
+
+## 2026-08-15 (later) — the push-guard bug, read from source instead of inferred
+
+**Status:** branch `fix/push-guard-per-segment`, PR open. 742 tests pass (714 + 28).
+
+**Two earlier claims in this file were wrong; both are corrected here.**
+
+1. **"It cannot be fixed by a PR" was half right.** The *deployed* hook is inline in
+   `~/.claude/settings.json`, which this harness cannot touch (verified this session:
+   `Read` → "directory denied by permission settings", `Bash` → denied; the upstream
+   template itself denies `Read ~/.claude/settings.json`). But the **source** is
+   `claude-guardrails/full/settings.json` — a checkout of dwarvesf/claude-guardrails at
+   `$STACK_ROOT/claude-guardrails`, cloned by `install-guardrails.sh`, and **readable**.
+   So the regex never had to be guessed.
+2. **The "secondary finding" about `(^|[&|;(])` not anchoring at string start is
+   FALSE.** `git push origin main` — a command *beginning* with `git push` — is
+   correctly blocked by the upstream regex. Verified empirically. Retire that concern.
+
+**The actual regex, v0.4.0 (`65a41de`):**
+`(^|[&|;(])[[:space:]]*git[[:space:]]+push[[:space:]]+.*\b(main|master|production)([[:space:];|&)]|$)`
+— `.*` is not anchored to the end of the segment, so it spans separators.
+
+**A trap worth knowing before touching this regex.** The obvious "clean up" is to replace
+the trailing `([[:space:];|&)]|$)` with `\b`. That would **block every branch with "main"
+in its name** — `restore/main-reland-2026-08-14` is allowed today precisely because the
+character after `main` is `-`, which is not a terminator. That trailing class is
+load-bearing; there is a test pinning it.
+
+**Structural half of the fix:** the guard now lives at `hooks/discipline/push-guard.sh`,
+matching `grep-guard.sh`/`edit-surface-guard.sh`, which `install-reliability.sh` already
+symlinks by glob. Future fixes are ordinary PRs instead of hand-edits.
+
+**⚠ Two things this PR does NOT do.**
+- **The deployed hook is unchanged** until the `!`-command is run. Until then the false
+  positives persist — issue `git push` as a standalone command, never compounded with
+  anything mentioning `main`.
+- **Re-running `install-guardrails.sh` restores the buggy hook**, because upstream
+  `install.sh` jq-deep-merges the template back in. Reporting upstream is a ROADMAP item.
+
+**Not hardening.** `git push origin "main"`, `if true; then git push origin main; fi` and
+`x=1 git push origin main` are ALLOW under both old and new. Pre-existing upstream
+weaknesses, neither introduced nor closed here.
 
 ## 2026-08-15 — post-upgrade sync, and the parked job that was blocked on access I had
 
