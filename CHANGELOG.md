@@ -2,6 +2,66 @@
 
 ---
 
+## 2026-08-15 (later) — fix(hooks): push-guard blocked feature-branch pushes; now versioned
+
+### Fixed
+- **`git push` to a feature branch was blocked whenever any *later* command in the
+  same line mentioned `main`.** `git push -u origin feat/x; git rev-parse main` →
+  BLOCKED, even though the push targeted a feature branch and `main` belonged to a
+  different command. Cause, now read from source rather than inferred: upstream
+  dwarvesf/claude-guardrails v0.4.0 (`65a41de`) ships
+  `(^|[&|;(])[[:space:]]*git[[:space:]]+push[[:space:]]+.*\b(main|master|production)([[:space:];|&)]|$)`
+  in `full/settings.json`, where **`.*` is not anchored to the end of the segment and
+  therefore spans command separators**. Same bug class as the grep-guard defect fixed
+  in PR #106.
+- **The fix splits on `;&|(` first, then applies the same predicate anchored at each
+  segment's start.** Two details are load-bearing and pinned by tests:
+  - The trailing character class is preserved **verbatim** from upstream. It is what
+    keeps `restore/main-reland-2026-08-14` allowed — the character after `main` is `-`,
+    not a terminator. Replacing it with a bare `\b` would block every branch with
+    "main" in its name, a new false positive worse than the original bug.
+  - `(` is in the split set because upstream's leading class included it; without it
+    `(git push origin main)` becomes a false **negative**.
+
+### Added
+- **`hooks/discipline/push-guard.sh`** — the guard as a versioned repo script, matching
+  the existing `grep-guard.sh` / `edit-surface-guard.sh` pattern (symlinked into
+  `~/.claude/hooks/discipline/` by `install-reliability.sh`, which already globs that
+  directory). This is the structural half of the fix: the bug was previously
+  **unfixable by PR** because it lived as an inline regex in `~/.claude/settings.json`,
+  which this harness can neither read nor write. Future fixes are ordinary PRs.
+- **`tests/test_push_guard.py`** — 28 cases, plus CI job `push-guard behaviour matrix`.
+- `install-reliability.sh` wires push-guard on a **fresh** install (its existing
+  `_already` check means established installs are untouched).
+
+### Verified, not asserted
+All 15 BLOCK cases still block — including `&`-terminated, `refs/heads/main`, `+main`,
+`+main:main`, subshell, and `&&`-prefixed forms. Across 30 comparison cases the fixed
+predicate diverges from upstream on **exactly the 3 intended false positives and nowhere
+else**, so this does not loosen the control.
+
+### Known false positive, both versions — found while committing this change
+The guard matches **raw command text** with no notion of *which* command is running, so a
+`git commit` whose message quotes a subshell-wrapped push is blocked as though it were the
+push. It fired on the commit for this very fix. Recorded in the script header and ROADMAP
+rather than patched: closing it needs quote/word awareness, and on a security control a
+sloppy attempt risks a false **negative**, strictly worse than the false positive it fixes.
+Workaround: `git commit -F -`.
+
+### Not fixed — pre-existing upstream bypasses
+`git push origin "main"`, `if true; then git push origin main; fi`, and
+`x=1 git push origin main` are ALLOW under **both** the old and new versions. This change
+neither introduces nor closes them; it should not be read as hardening.
+
+### ⚠ Two manual steps remain
+1. The deployed `~/.claude/settings.json` still runs the inline regex — repointing it is
+   a `!`-command for Bill (harness cannot write there; verified this session via both
+   Read and Bash, and the upstream template itself denies `Read ~/.claude/settings.json`).
+2. Re-running `install-guardrails.sh` re-merges the upstream template and **restores the
+   buggy hook**. Report upstream (ROADMAP).
+
+---
+
 ## 2026-08-15 — chore: post-upgrade sync — jdocmunch-mcp 7e77b20→9235e22
 
 ### Changed
