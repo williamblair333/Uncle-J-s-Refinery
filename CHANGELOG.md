@@ -41,6 +41,13 @@ two-step verify-then-apply mitigation caught it, but only after the write had la
   either fails.
 - Idempotent; timestamped backup before any write.
 
+### Applied
+Repoint completed 2026-08-15 11:46 against the live `~/.claude/settings.json`:
+`found 1 inline push guard` · `repointed (12 PreToolUse hooks preserved)` · smoke test
+passed. The live file holds 12 PreToolUse hooks where the upstream template has 6, so the
+sibling guardrails and the repo's own hooks were all preserved. Effective at the next
+session start, since hooks are read at session start.
+
 ### Verified
 Against a fixture copied from `claude-guardrails/full/settings.json` (confirmed
 byte-identical to the deployed file): fresh apply ✓ · idempotent re-run ✓ · 6 sibling
