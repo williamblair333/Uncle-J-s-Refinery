@@ -930,6 +930,7 @@ Cloned at install time (gitignored):
 │   ├── discipline/                     ← blocking PreToolUse guards + Stop hook (step 6)
 │   │   ├── edit-surface-guard.sh       ← blocks Edit/Write on surface-list files (requires pre-mortem)
 │   │   ├── grep-guard.sh               ← routes source-code reads (grep/rg/cat/sed/head/tail) to jcodemunch; per-segment, allows pipes/logs/writes
+│   │   ├── push-guard.sh               ← blocks direct pushes to main/master/production; tokenises with python3+shlex (not regex), falls back to regex and never fails open. Replaces the upstream guardrails hook — see docs/RELIABILITY.md
 │   │   └── unpushed-warn.sh            ← Stop hook: warns when branch is ahead of remote
 │   ├── langfuse_hook.py                ← Stop hook (step 8)
 │   ├── scan-secrets/                   ← guardrail (step 7)

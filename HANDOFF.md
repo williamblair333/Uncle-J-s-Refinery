@@ -1,7 +1,36 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — jdocmunch local-only allowlist + doc watcher installed.
-`HEALTHCHECK: ok`.*
+*Last updated: 2026-08-15 — jdocmunch local-only allowlist + doc watcher installed;
+push-hook bug reported upstream. `HEALTHCHECK: ok`.*
+
+## 2026-08-15 (session end) — upstream issue #17 filed
+
+**Status:** [dwarvesf/claude-guardrails#17](https://github.com/dwarvesf/claude-guardrails/issues/17)
+open. Nothing else outstanding from the push-guard work; `main` clean.
+
+**The verification step that mattered:** the local `claude-guardrails` checkout **drifted
+mid-session**, from `65a41de` to `4396c03`. Reporting from it would have described a
+version that no longer existed. The regex was re-fetched from **live upstream HEAD via the
+API** and re-reproduced against the maintainers' own hook string before filing. **A
+`--depth 1` vendored checkout is not evidence of upstream state.**
+
+**Confirmed before filing:** present at HEAD · both `full/` and `lite/` (byte-identical
+pattern, only the message differs) · reproduced with their own hook command · not a
+duplicate (all 4 lifetime issues unrelated).
+
+**Deliberately narrow.** No `SECURITY.md`, no private vulnerability reporting (both
+checked), so a public issue is the only channel — and therefore the wrong venue to
+enumerate bypasses in a security tool. The report covers the false positive and the fix
+direction, not an evasion list. If they engage, the tokenised implementation and its
+41-case matrix are ready to offer as a PR.
+
+**⚠ Still true: re-running `install-guardrails.sh` restores the upstream buggy hook** over
+`hooks/discipline/push-guard.sh`.
+
+**Expected guard behaviour worth knowing:** `gh issue create --body "$(cat <<'EOF' … )"`
+is blocked when the body contains push examples — `shlex` cannot lex a heredoc inside
+command substitution, so it exits 3 and the quote-blind regex fallback matches. Fail-closed
+working as designed. Use `--body-file`.
 
 ## 2026-08-15 (later⁴) — some corpora must never reach a provider; now the automation knows
 

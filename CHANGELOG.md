@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-08-15 (session end) — reported the push-hook bug upstream
+
+### Reported
+- **[dwarvesf/claude-guardrails#17](https://github.com/dwarvesf/claude-guardrails/issues/17)**
+  — the PreToolUse push hook matches across command separators. Filed only after
+  verifying, not assuming:
+  - **Present at live upstream HEAD**, fetched via the API — *not* trusted from the local
+    `--depth 1` checkout, which had drifted from `65a41de` to `4396c03` mid-session. Had I
+    reported from the local copy I'd have been describing a version that no longer existed.
+  - **Both `full/` and `lite/`**, byte-identical pattern (only the message text differs).
+  - **Reproduced against the maintainers' own hook string**, so the report ships a runnable
+    repro rather than a description.
+  - **Not a duplicate** — all 4 issues ever filed (#14, #6 open; #2, #1 closed) unrelated.
+- **Scope limited to the false positive, deliberately.** The repo has no `SECURITY.md` and
+  no private vulnerability reporting (both checked), so a public issue is the only channel
+  — which makes it the wrong venue to enumerate bypasses in a security tool. The fix
+  direction is given without an evasion recipe.
+- Body scanned for internal identifiers before posting: no paths, repo names or host
+  details.
+
+### Note — expected guard behaviour, not a defect
+`gh issue create --body "$(cat <<'EOF' … )"` is **blocked** by push-guard when the body
+contains push examples: `shlex` cannot lex a heredoc inside command substitution, so it
+exits 3 and the quote-blind regex fallback matches. That is fail-closed working as
+designed. Use `--body-file` — the right tool for a document-sized body regardless.
+
+---
+
 ## 2026-08-15 (later⁴) — feat(jdocmunch): per-repo local-only allowlist for the reindex cron
 
 Some corpora must never reach a remote provider. Until now nothing in the automated path
