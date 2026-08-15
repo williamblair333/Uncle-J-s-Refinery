@@ -2,6 +2,43 @@
 
 ---
 
+## 2026-08-15 (later²) — fix: script the push-guard repoint after a pasted one-liner disabled it
+
+### Added
+- **`scripts/repoint-push-guard.sh`** — points the deployed PreToolUse hook at
+  `hooks/discipline/push-guard.sh`. Replaces a hand-pasted `jq` one-liner.
+
+### Why
+**The pasted command was line-wrapped by the terminal mid-string**, writing a hook
+command with an embedded newline: `bash\n  ~/.claude/hooks/discipline/push-guard.sh`.
+That parses as **two** commands — a bare `bash`, which swallows the hook's stdin payload,
+then the guard with nothing on stdin, which exits 0. **Net effect: the guard allowed
+everything.** A disabled security control is worse than the false positive it replaced.
+This is exactly the failure the pre-mortem's HUMAN FACTORS finding predicted; the
+two-step verify-then-apply mitigation caught it, but only after the write had landed.
+
+### What the script does that a one-liner cannot
+- **Refuses rather than guesses**: aborts on invalid JSON, 0 matches, or >1 match.
+- **Detects the mangled state explicitly** — a hook that *mentions* `push-guard.sh` but
+  is not byte-equal to the target is reported as "the guard is DISABLED", with restore
+  instructions. Without this, the marker search would report "nothing matched", which is
+  safe but conceals a disabled guard.
+- **Verifies the output before it replaces anything**: result must be valid JSON, must
+  contain exactly one byte-exact match (an embedded newline fails this), and the total
+  PreToolUse hook count must be unchanged.
+- **Smoke-tests through the deployed path** after writing — blocks `git push origin main`,
+  allows `git push -u origin feat/x; git rev-parse main` — and points at the backup if
+  either fails.
+- Idempotent; timestamped backup before any write.
+
+### Verified
+Against a fixture copied from `claude-guardrails/full/settings.json` (confirmed
+byte-identical to the deployed file): fresh apply ✓ · idempotent re-run ✓ · 6 sibling
+guardrail hooks preserved ✓ · 0-match refusal ✓ · 2-match refusal ✓ · invalid-JSON
+refusal ✓ · mangled-state detection ✓ · file unchanged on every refusal ✓.
+
+---
+
 ## 2026-08-15 (later) — fix(hooks): push-guard blocked feature-branch pushes; now versioned
 
 ### Fixed
