@@ -7,6 +7,16 @@
 ### Added
 - **`scripts/repoint-push-guard.sh`** — points the deployed PreToolUse hook at
   `hooks/discipline/push-guard.sh`. Replaces a hand-pasted `jq` one-liner.
+- **`--restore` flag** — rolls back to the newest known-good backup, then repoints, so
+  recovery is **one short command**. Added after a second wrap failure: the restore
+  `cp` was itself split across lines, leaving `cp` with no operands and the backup path
+  being *executed* (`Permission denied`). **Command length is the hazard** — the terminal
+  inserts a hard newline plus two spaces at the break, and inside a JSON string literal
+  or between a command and its operands that is silent. Anything handed over to paste
+  must fit comfortably on one line.
+  `--restore` refuses a backup that is not valid JSON, or that lacks exactly one *inline*
+  guard — so it cannot "restore" from a backup that is itself mangled or already
+  repointed, which would quietly reinstate the broken state.
 
 ### Why
 **The pasted command was line-wrapped by the terminal mid-string**, writing a hook

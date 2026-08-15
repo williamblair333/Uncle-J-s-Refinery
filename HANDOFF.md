@@ -20,6 +20,17 @@ file I cannot read deletes the guard outright"). The two-step verify-then-apply 
 lesson is that the mitigation was the wrong shape:** for an edit to a file the agent
 cannot read, the fix is to remove the paste, not to check it afterwards.
 
+**⚠ The real hazard is COMMAND LENGTH, and it bit twice.** The second failure was the
+*restore* command splitting across lines, leaving `cp` with no operands and the backup
+path being executed (`Permission denied`) — so nothing was restored and the guard stayed
+disabled. The terminal inserts a hard newline plus two spaces at the wrap point; inside a
+JSON string literal, or between a command and its operands, that is silent. **Never hand
+over a command that does not fit comfortably on one line.** Recovery is now:
+
+    bash scripts/repoint-push-guard.sh --restore
+
+run from the repo root — rolls back to the newest known-good backup, then repoints.
+
 **⚠ If the deployed settings.json is still mangled**, `repoint-push-guard.sh` refuses and
 says so explicitly rather than reporting "nothing matched" — restore a backup first:
 `ls -1t ~/.claude/settings.json.bak.* | head`, then `cp <backup> ~/.claude/settings.json`,
