@@ -1,7 +1,59 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — push-guard parses instead of regexing; no workarounds left.
+*Last updated: 2026-08-15 — jdocmunch local-only allowlist + doc watcher installed.
 `HEALTHCHECK: ok`.*
+
+## 2026-08-15 (later⁴) — some corpora must never reach a provider; now the automation knows
+
+**Status:** allowlist landed, doc watcher running, verified end to end.
+
+**The gap was that a privacy choice lived only in a tool call.** `jaredrhod-brain` (the
+Obsidian vault) was indexed by hand with summaries and embeddings off. Nothing persisted
+that. `run_index_local()` passed neither flag, so the 01:30 cron would have re-indexed it
+under `index_local`'s defaults — `use_ai_summaries=True`, `use_embeddings="auto"` — the
+moment any provider key was reachable. No prompt, no log line, no way to un-send.
+
+**`LOCAL_ONLY_REPOS` is an allowlist on purpose.** Forcing summaries off globally would
+have changed behaviour for nine repos that never asked for it. Add a repo to the array to
+opt it in; add exclusions under `LOCAL_ONLY_IGNORE` keyed by the same name.
+
+**Both call sites carry the posture, including the failure path.** The CLI fallback in
+`run_index_local()` originally had no flags — so a missing Python API would have silently
+re-enabled the summarizer on exactly the repo that must never reach one. **When you add a
+guarantee to a happy path, check what the fallback does.** Same lesson as the `|| exit 0`
+fail-open below.
+
+**Exclusions persist in the manifest, flags do not.** Ignore patterns are stored as
+`corpus_shape_patterns` and inherited by any later refresh that omits them — that is what
+makes the doc watcher, which passes no patterns, safe. `use_ai_summaries` has no such
+storage, which is why it must be set at *every* call site.
+
+**⚠ The watcher's flag is NOT in this repo and NOT in the unit file.**
+`service_installer.py::_install_systemd()` rewrites
+`~/.config/systemd/user/jdocmunch-watch.service` with `write_text()` on every run, and
+`_exec_cmd()` hardcodes `[sys.executable, "-m", "jdocmunch_mcp", "watch"]` with no flag
+hook. A hand-edit to ExecStart is silently reverted by the next `watch-install` — which
+the stack-upgrade routine performs. The flag therefore lives in
+`jdocmunch-watch.service.d/override.conf`; the installer never touches drop-ins.
+**If a jdocmunch release renames the service, the drop-in is orphaned silently.** Check
+`systemctl --user show jdocmunch-watch.service -p ExecStart` after any stack upgrade.
+
+**The install shipped broken and systemd reported it healthy.** `awatch` recurses every
+watched source root, and `/opt/proj/proj-fog-of-chess/docker-data/postgres` is mode 0700
+owned by uid 70, so watchfiles raised `PermissionError` and the loop re-raised it every
+~30s rediscover cycle — appending a traceback to `watch.err` forever while the unit stayed
+`active/running` with `NRestarts=0`. **`is-active` is not a health check for a daemon with
+an internal retry loop.** `watch` has no ignore-path option; the drop-in sets
+`WATCHFILES_IGNORE_PERMISSION_DENIED=1`, which watchfiles 1.2.0 reads when the parameter is
+`None`. Do not "fix" it by loosening permissions on a running container's volume.
+
+**Two files, not one, carried the credential.** The vault's own note named only
+`project_foundry_networking.md`; `project_foundry_gm_password.md` has the same value in its
+body *and* its YAML `description:`. Found by auditing what the index had copied, not by
+reading the note. Indexing mirrors file bytes into `~/.doc-index`, so the first index had
+duplicated the secret outside the vault's deliberately remote-less repo. Index was deleted
+and rebuilt: 192 files instead of 194, the other 25 campaign-forge notes retained.
+**Lesson: when a note claims an inventory, verify it against the filesystem.**
 
 ## 2026-08-15 (later³) — the push-guard parses the command now
 

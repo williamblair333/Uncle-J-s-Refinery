@@ -2,6 +2,62 @@
 
 ---
 
+## 2026-08-15 (later⁴) — feat(jdocmunch): per-repo local-only allowlist for the reindex cron
+
+Some corpora must never reach a remote provider. Until now nothing in the automated path
+said so, and the defaults said the opposite.
+
+### Added
+- **`LOCAL_ONLY_REPOS` in `scripts/jdocmunch-reindex.sh`.** Repos listed here are indexed
+  with `use_ai_summaries=False` and `use_embeddings=False`. Deliberately an allowlist:
+  the other nine doc repos are ordinary project documentation and keep their behaviour.
+- **`LOCAL_ONLY_IGNORE`** — per-repo gitignore-style exclusions applied on top of the
+  existing prune compensation, for files that must not enter the corpus *or* the cached
+  raw mirror under `~/.doc-index`.
+- **Per-run posture logging.** Every reindex now emits `mode: local-only` or
+  `mode: default`. `reindexed=1` alone cannot tell you whether a corpus was sent to a
+  summarizer; this line can.
+
+### Why
+`index_local` defaults to `use_ai_summaries=True` and `use_embeddings="auto"`, and
+`run_index_local()` passed neither, so both fell through to whatever provider the
+environment happened to expose — silently, with no log line. The first repo to need the
+guarantee is `jaredrhod-brain`, an Obsidian vault holding a personal-context note that is
+deliberately kept out of model context plus a frozen archive of migrated memory, two files
+of which carry a credential in clear text.
+
+### Fixed
+- **The CLI fallback path carried no posture.** When the Python API is unavailable,
+  `run_index_local()` falls back to `jdocmunch-mcp index-local`. That call had no
+  `--no-ai-summaries`, so a missing API would have re-enabled the summarizer on exactly
+  the repos that must never reach one — the failure path undoing what the happy path
+  enforces. It now carries the flags and the exclusions.
+- **`is_local_only()` uses the `${arr[@]+"${arr[@]}"}` form** so `set -u` cannot abort the
+  whole run if the allowlist is ever emptied. An empty allowlist means "nothing is
+  forced", not "crash".
+
+### Verified
+Full run: `drifted=3 reindexed=3 skipped=7 failed=0`, exit 0. `jaredrhod-brain` logged
+`mode: local-only` with both exclusions; the other repos logged `mode: default`. Exclusions
+persist in the manifest as `corpus_shape_patterns`, so the doc watcher — which passes no
+patterns — inherits them.
+
+### Operational note — not in this repo
+The doc watcher is now installed as a systemd login service. `service_installer.py`
+rewrites the unit on every `watch-install` and `_exec_cmd()` hardcodes the argv, so the
+`--no-ai-summaries` flag and a `WATCHFILES_IGNORE_PERMISSION_DENIED=1` workaround live in
+`~/.config/systemd/user/jdocmunch-watch.service.d/override.conf`, which the installer does
+not touch. That file is outside version control; its rationale is written into it.
+
+### Known upstream gaps
+- `watch-install` accepts no arguments, so a login service cannot be configured without a
+  drop-in.
+- `watch` exposes no embeddings flag, and `_systemd_env_lines()` forwards every
+  `JDOCMUNCH_*` variable into the unit. Setting `JDOCMUNCH_OPENAI_COMPAT_URL` would turn
+  embeddings on for every watched repo. Revisit the drop-in before setting it.
+
+---
+
 ## 2026-08-15 (later³) — fix(hooks): push-guard now parses the command instead of regexing it
 
 No workaround. The `git commit -F -` advice is gone; the guard no longer blocks a commit

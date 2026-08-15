@@ -29,6 +29,53 @@ LOG="$PROJ_ROOT/state/jdocmunch-reindex.log"
 # empty-vs-empty, which silently looks like "nothing drifted". Fail loud instead.
 EXPECTED_INDEX_VERSION=3
 
+# ── Local-only repos ──────────────────────────────────────────────────────────
+#
+# Repos here are indexed with NO summarizer calls and NO embedding calls, so
+# nothing in their corpus can leave the machine. index_local defaults to
+# use_ai_summaries=True and use_embeddings="auto"; both would reach for whatever
+# provider the environment happens to expose, silently, with no log line.
+#
+# jaredrhod-brain is the Obsidian vault at /opt/proj/jaredrhod/vaults/brain. It
+# holds a personal-context note that was deliberately kept out of boot context
+# precisely so it is not transmitted to a model provider, plus a frozen archive
+# of migrated memory. Summarizing it would defeat both.
+#
+# Deliberately an allowlist, not a global default: the other nine doc repos are
+# ordinary project documentation and keep whatever behaviour they had.
+#
+# Repos also get per-repo corpus exclusions via LOCAL_ONLY_IGNORE below.
+LOCAL_ONLY_REPOS=(
+    jaredrhod-brain
+)
+
+# Extra gitignore-style patterns applied on top of the prune compensation, keyed
+# by repo name. Files matched here never enter the corpus OR the cached raw
+# mirror under ~/.doc-index.
+#
+# Two campaign-forge entries in the vault's frozen migrated-memory snapshot hold
+# the same credential in clear text. Indexing copies file bytes into the raw
+# mirror, which would put that secret in a second location outside the vault's
+# own repo — and the vault is deliberately remote-less. Keep them out entirely.
+#
+# Counted by inspection on 2026-08-15, not from the vault's own note, which
+# listed only the networking file. If you add files to that snapshot, re-check.
+declare -A LOCAL_ONLY_IGNORE=(
+    [jaredrhod-brain]="12 - Archive/Migrated Memory 2026-08-15/-opt-proj-campaign-forge/project_foundry_networking.md
+12 - Archive/Migrated Memory 2026-08-15/-opt-proj-campaign-forge/project_foundry_gm_password.md"
+)
+
+# Membership test for the allowlist above.
+is_local_only() {
+    local candidate=$1 entry
+    # The +"..." form keeps `set -u` from aborting the whole run if the allowlist
+    # is ever emptied — an empty allowlist means "nothing is forced", not "crash".
+    for entry in ${LOCAL_ONLY_REPOS[@]+"${LOCAL_ONLY_REPOS[@]}"}; do
+        [[ "$entry" == "$candidate" ]] && return 0
+    done
+    return 1
+}
+
 mkdir -p "$PROJ_ROOT/state"
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; }
 
@@ -268,8 +315,16 @@ PY_EOF
 # the fallback below and stays correct either way.
 run_index_local() {
     local root=$1 name=$2
+    local local_only=0 extra_ignore=""
 
-    "$PY" - "$root" "$name" >>"$LOG" 2>&1 <<'PY_EOF'
+    # See LOCAL_ONLY_REPOS at the top of this file for why these two are forced
+    # off rather than left to index_local's defaults.
+    if is_local_only "$name"; then
+        local_only=1
+        extra_ignore="${LOCAL_ONLY_IGNORE[$name]:-}"
+    fi
+
+    "$PY" - "$root" "$name" "$local_only" "$extra_ignore" >>"$LOG" 2>&1 <<'PY_EOF'
 import contextlib
 import json
 import sys
@@ -282,6 +337,9 @@ except ImportError as exc:
     sys.exit(3)
 
 root, name = Path(sys.argv[1]).resolve(), sys.argv[2]
+local_only = sys.argv[3] == "1"
+# One pattern per line; blank lines dropped so an empty argument is simply "none".
+forced_ignore = [ln for ln in sys.argv[4].splitlines() if ln.strip()]
 
 patterns = []
 try:
@@ -306,10 +364,30 @@ except Exception as exc:  # private helpers moved or renamed upstream
 if patterns:
     print(f"prune compensation: {' '.join(patterns)}", file=sys.stderr)
 
+# Forced exclusions come last so they apply even when the prune-compensation
+# block above raised and left `patterns` empty.
+for pattern in forced_ignore:
+    if pattern not in patterns:
+        patterns.append(pattern)
+
+# State the privacy posture on every run. "reindexed=1" alone cannot tell you
+# whether a corpus was summarized by a remote provider; this line can.
+if local_only:
+    print(f"mode: local-only (no summarizer, no embeddings) — {name}", file=sys.stderr)
+    if forced_ignore:
+        print(f"forced exclusions: {' | '.join(forced_ignore)}", file=sys.stderr)
+else:
+    print(f"mode: default (summaries/embeddings per environment) — {name}", file=sys.stderr)
+
+kwargs = {}
+if local_only:
+    kwargs["use_ai_summaries"] = False
+    kwargs["use_embeddings"] = False
+
 # jdoc#65: providers chatter on stdout; keep it off the JSON.
 with contextlib.redirect_stdout(sys.stderr):
     result = index_local(path=str(root), name=name,
-                         extra_ignore_patterns=patterns or None)
+                         extra_ignore_patterns=patterns or None, **kwargs)
 
 print(json.dumps(result, indent=2))
 sys.exit(0 if result.get("success") else 1)
@@ -319,7 +397,18 @@ PY_EOF
     [[ "$rc" -ne 3 ]] && return "$rc"
 
     log "WARN    $name — python api unavailable; falling back to the CLI (dot-directories will leak)"
-    "$JDOCMUNCH" index-local --path "$root" --name "$name" >>"$LOG" 2>&1
+    # The fallback must carry the same posture. Without --no-ai-summaries here, a
+    # missing Python API would silently re-enable the summarizer on exactly the
+    # repos that must never reach one — the failure path undoing the guarantee
+    # the happy path enforces.
+    local -a cli_args=(index-local --path "$root" --name "$name")
+    if [[ "$local_only" -eq 1 ]]; then
+        cli_args+=(--no-ai-summaries --embeddings off)
+        [[ -n "$extra_ignore" ]] && while IFS= read -r pattern; do
+            [[ -n "$pattern" ]] && cli_args+=(--extra-ignore-pattern "$pattern")
+        done <<<"$extra_ignore"
+    fi
+    "$JDOCMUNCH" "${cli_args[@]}" >>"$LOG" 2>&1
 }
 
 log "Scanning $IDX for drifted doc indexes ..."
