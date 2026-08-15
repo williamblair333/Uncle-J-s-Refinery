@@ -2,6 +2,55 @@
 
 ---
 
+## 2026-08-15 (later³) — fix(hooks): push-guard now parses the command instead of regexing it
+
+No workaround. The `git commit -F -` advice is gone; the guard no longer blocks a commit
+that merely *describes* a push.
+
+### Fixed
+- **A `git commit` whose message mentioned a push was blocked as though it were one.**
+  Root cause was ordering: separator-splitting ran **before** anything knew about quoting,
+  so `git commit -m "... (git push origin main) ..."` split at the `(` and the remainder
+  parsed as a subshell push. Same root cause as the separator bug — the guard had no idea
+  *which* command was running.
+- **The fix parses.** `python3` + `shlex` (a real POSIX lexer) tokenises the command,
+  splits only on **unquoted** separators, and applies the rule only where `git push` is
+  genuinely the invoked command. Ref tokens are judged by their **last component** — the
+  tokenised equivalent of upstream's trailing character class — so
+  `restore/main-reland-2026-08-14` stays allowed while `HEAD:main`, `refs/heads/main` and
+  `+main:main` are still caught.
+
+### Tightened — four bypasses upstream allowed now block
+`git push origin "main"` (quoting no longer hides the ref) · `if true; then git push
+origin main; fi` (leading shell keywords skipped) · `x=1 git push origin main` (env
+prefixes skipped) · `git -C /repo push origin main` (git global options skipped). These
+are genuine pushes to protected branches; blocking them is the control working.
+
+### Fails closed, never open — two degraded paths
+- **Unbalanced quotes**: `shlex` raises, python exits **3** (a distinct code, not 1), and
+  bash falls back to the regex. Verified: `git push origin "main` still blocks.
+- **`python3` absent** (plausible on the Windows Git Bash port): falls back to the regex,
+  which re-introduces the quote false positive but never a false negative. Verified
+  against a purpose-built PATH with `grep`/`jq` but no `python3`.
+
+### Also fixed — a fail-open found while testing the fallback
+`grep -qi push || exit 0` treated **rc 127 (grep missing)** identically to **rc 1 (no
+match)**, so a broken/absent `grep` silently allowed everything. Both the prefilter and
+`regex_verdict` now distinguish "ran and found nothing" from "failed to run"; a matcher
+failure blocks. Found because a test-harness `grep` symlink was dangling — the broken test
+exposed a real defect.
+
+### Performance
+`PreToolUse` fires on **every** Bash call, and `python3` startup measured ~15.5ms vs
+~2.5ms for `grep`. A `grep -qi push` prefilter short-circuits first; since a `git push`
+invocation requires the literal token `push`, the prefilter cannot cause a false negative.
+
+### Verified
+41 push-guard tests (up from 28), 755 total. Live check through the deployed symlink: a
+`git commit` describing a push now returns 0 where it previously returned 2.
+
+---
+
 ## 2026-08-15 (later²) — fix: script the push-guard repoint after a pasted one-liner disabled it
 
 ### Added

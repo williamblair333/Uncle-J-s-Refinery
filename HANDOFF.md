@@ -1,7 +1,44 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — push-guard fixed and versioned; repoint is now a script.
+*Last updated: 2026-08-15 — push-guard parses instead of regexing; no workarounds left.
 `HEALTHCHECK: ok`.*
+
+## 2026-08-15 (later³) — the push-guard parses the command now
+
+**Status:** the `git commit -F -` workaround is retired. 41 push-guard tests, 755 total.
+
+**Both push-guard bugs were one bug.** The separator bug and the quoting bug shared a root
+cause: **the guard matched raw text and had no idea which command was running.** Fixing
+that properly means parsing, not a better regex. `python3` + `shlex` tokenises, splits only
+on **unquoted** separators, and applies the rule only where `git push` is genuinely the
+invoked command.
+
+**Ref tokens are judged by their LAST component** — the tokenised equivalent of upstream's
+trailing character class. That is what keeps `restore/main-reland-2026-08-14` allowed while
+still catching `HEAD:main`, `refs/heads/main`, `+main:main`. Do not "simplify" it to a
+substring match; there is a test pinning it.
+
+**Four upstream bypasses now block** (tightening, not regressions): quoted `"main"`,
+`then`-prefixed, `x=1`-prefixed, and `git -C /repo push`.
+
+**⚠ Two degraded paths, both fail CLOSED.** Unbalanced quotes → python exits **3**, a
+distinct code, and bash falls back to the regex. `python3` absent → same fallback. The
+fallback re-introduces the quote false positive but never a false negative. **Never make
+the parse-error path exit 0** — an unterminated quote would become a universal bypass.
+
+**A real fail-open was found by a broken test.** `grep -qi push || exit 0` treated rc 127
+(grep missing) the same as rc 1 (no match), so an absent `grep` allowed everything. A
+dangling symlink in my test PATH exposed it. Both the prefilter and `regex_verdict` now
+separate "ran and found nothing" from "failed to run". **Lesson: `|| exit 0` on a security
+check conflates no-match with cannot-check.**
+
+**Performance matters here** — PreToolUse fires on every Bash call. `python3` startup is
+~15.5ms vs ~2.5ms for `grep`, so a `grep -qi push` prefilter runs first. Safe because a
+`git push` invocation requires the literal token `push`.
+
+**Correction to the previous entry:** the repoint took effect **immediately**, not at the
+next session start — the hook command is re-read per invocation. Confirmed by the deployed
+guard blocking a test harness of mine mid-session.
 
 ## 2026-08-15 (later²) — a pasted one-liner disabled the guard; the repoint is a script now
 
