@@ -1,7 +1,33 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — push-guard fixed and versioned; one `!`-command left for
-Bill. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-15 — push-guard fixed and versioned; repoint is now a script.
+`HEALTHCHECK: ok`.*
+
+## 2026-08-15 (later²) — a pasted one-liner disabled the guard; the repoint is a script now
+
+**Status:** `scripts/repoint-push-guard.sh` landed. **Bill still runs the repoint** — the
+harness cannot write `~/.claude/settings.json` — but it is now one short command.
+
+**What happened.** The hand-pasted `jq` one-liner was **line-wrapped by the terminal
+mid-string**, so the hook command became `bash\n  ~/.claude/hooks/discipline/push-guard.sh`.
+As a shell command string that is **two** commands: a bare `bash`, which consumes the
+hook's stdin payload, then the guard with nothing on stdin — which exits 0. **The guard
+allowed everything.** Worse than the false positive it was meant to fix.
+
+The pre-mortem predicted this exact failure (HUMAN FACTORS: "a hand-pasted `jq` edit to a
+file I cannot read deletes the guard outright"). The two-step verify-then-apply caught it
+— but only *after* the write landed, because step 2 both applied and verified. **The
+lesson is that the mitigation was the wrong shape:** for an edit to a file the agent
+cannot read, the fix is to remove the paste, not to check it afterwards.
+
+**⚠ If the deployed settings.json is still mangled**, `repoint-push-guard.sh` refuses and
+says so explicitly rather than reporting "nothing matched" — restore a backup first:
+`ls -1t ~/.claude/settings.json.bak.* | head`, then `cp <backup> ~/.claude/settings.json`,
+then re-run. `~/.claude/settings.json.bak.pushguard` is the known-good pre-edit copy.
+
+**One useful confirmation from the incident:** step 1 proved the deployed regex is
+**byte-identical** to `claude-guardrails/full/settings.json`, with exactly one instance.
+That retires the old "the deployed text likely differs from the rendering" worry for good.
 
 ## 2026-08-15 (later) — the push-guard bug, read from source instead of inferred
 
