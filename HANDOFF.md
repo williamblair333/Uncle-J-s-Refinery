@@ -5,8 +5,17 @@
 
 ## 2026-08-15 (later²) — a pasted one-liner disabled the guard; the repoint is a script now
 
-**Status:** `scripts/repoint-push-guard.sh` landed. **Bill still runs the repoint** — the
-harness cannot write `~/.claude/settings.json` — but it is now one short command.
+**Status: DONE — the repoint is applied.** Bill ran
+`cp ~/.claude/settings.json.bak.pushguard ~/.claude/settings.json && bash scripts/repoint-push-guard.sh`
+at 11:46. Output: `found 1 inline push guard` (so the restore recovered the good state and
+the mangled-state detector correctly did not fire) · `repointed (12 PreToolUse hooks
+preserved)` — the live file carries 12 where the upstream template has 6, so the sibling
+guardrails and the repo's own hooks all survived · smoke test passed through the deployed
+path. Backup: `~/.claude/settings.json.bak.pushguard.20260815-114609`.
+
+**Takes effect at the next session start** — hooks are read at session start, so the
+session that applied it still ran the old inline regex. First-session check:
+`git push -u origin some-branch; git rev-parse main` — blocked before, allowed after.
 
 **What happened.** The hand-pasted `jq` one-liner was **line-wrapped by the terminal
 mid-string**, so the hook command became `bash\n  ~/.claude/hooks/discipline/push-guard.sh`.
