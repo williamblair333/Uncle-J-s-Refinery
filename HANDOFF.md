@@ -24,6 +24,14 @@ Then: 0 credential files in the raw mirror, 0 dot-directories in the corpus.
 changelog: a `.gitignore`d dotted directory yields `file_count = 1`; a `SKIP_PATTERNS` case
 (`.pytest_cache/`, `.venv-memweave/`) also yields 1 — both with no compensating patterns.
 
+**Don't panic at this — I nearly did.** `find ~/.doc-index/local/Uncle-J-s-Refinery -path '*venv*'`
+returns ~230 hits. **All of them are empty directories, 0 files**, dated 2026-06-13 — husks left
+over from the original leak, two months before the shim existed and unrelated to its removal. The
+corpus itself is 99 `.md` documents, in the healthy ~104 range, and 0 of them are under a venv,
+numpy or onnx path. Verify with `-type f | wc -l` before concluding anything; the directory count
+is not the document count. Deleting the husks is cosmetic and touches `~/.doc-index` data, so it
+was left alone.
+
 **Worth knowing:** passing explicit `extra_ignore_patterns` **replaces** a manifest's stored
 `corpus_shape_patterns` rather than merging. That is why the vault's stale `/git/` entry
 vanished on this run. Five other manifests still carry `/git/` and friends; harmless, and
