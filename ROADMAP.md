@@ -73,18 +73,11 @@ Completed items age out after ~4 weeks.
   then `diff` against the installed copy to prove the local install is unpatched. That is
   strictly better than reading `.venv/` anyway, because it verifies *upstream* state rather
   than a vendored copy that may have drifted.
-- **Delete the prune-compensation shim — upstream fixed it and we never noticed.** The
-  `str.lstrip("./")` directory-pruning bug was filed as
-  [jgravelle/jdocmunch-mcp#102](https://github.com/jgravelle/jdocmunch-mcp/issues/102)
-  on 2026-08-07 (by @faxik, not us) and **closed the same day**. This item sat here for over
-  a week saying "report upstream" for something already reported *and* fixed — caught
-  2026-08-16 only because the upstream tracker was finally read. Verified at upstream
-  `9235e228`, which is byte-identical to our pinned install: `lstrip("./")` is gone,
-  replaced by `_walk_rel` with a warning comment citing the issue
-  (`tools/index_local.py:1223`, `:1307`). So the shim in
-  `scripts/jdocmunch-reindex.sh::run_index_local()` is dead weight and its stated deletion
-  condition is met. Removing it changes the reindex path, so it needs its own pre-mortem
-  and a forced-reindex check that `prune compensation` no longer fires.
+- **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
+  reason it exists — "the CLI exposes no way to pass ignore patterns" — stopped being true
+  when upstream #108 added `--extra-ignore-pattern`, `--no-ai-summaries` and `--embeddings`.
+  The CLI is already the fallback and already carries all three. The API still buys
+  structured JSON in one call, so this is a simplification, not a fix; weigh it on its own.
 - **Still worth reporting:** `index_local` crashes with `KeyError 'owner'` when given a name
   colliding with its own sidecar namespace (e.g. `X.summary`) — found 2026-08-08, and
   **not** among the 92 issues on the upstream tracker as of 2026-08-16.
@@ -117,6 +110,19 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-08-16 — the workaround outlived the bug)
+
+- **Prune-compensation shim deleted** (PR #123). Upstream #102 fixed the `lstrip("./")` bug
+  on 2026-08-07; we kept compensating for it for nine days because nobody read the tracker.
+  Confirmed fixed by re-running the issue's own repro against our pinned version — both the
+  gitignore path and the `SKIP_PATTERNS` path prune correctly with no compensating patterns.
+  Only the dead block went: the `forced_ignore` loop that keeps credential-bearing files out
+  of the corpus and the raw mirror is untouched, and was re-verified by a live reindex.
+- **Upstream [#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120) filed** for the
+  `watch-install` flag gap, and a **false embeddings claim in our own SECURITY.md corrected**
+  (PR #122) — `openai-compatible` is never auto-selected, and upstream's opt-in gate predated
+  our claim by six days.
 
 ## Recently completed (2026-08-15 — controls that existed but nothing verified)
 
