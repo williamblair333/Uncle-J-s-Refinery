@@ -197,3 +197,26 @@ jobs:
 
       - name: pytest tests/test_vault_session_check.py
         run: python -m pytest tests/test_vault_session_check.py -v
+
+  # ── 11. surface-write-guard behaviour matrix ─────────────────────────────
+  # A security control, same posture as push-guard: the BLOCK cases matter more
+  # than the ALLOW ones, since a fix for a logging bug that narrows detection is
+  # strictly worse than the bug. The KNOWN_GAPS cases are strict xfails — closing
+  # a gap turns one into an unexpected pass and fails this job on purpose, so the
+  # list cannot rot silently. Needs pytest + jq (the guard parses its payload).
+  test-surface-write-guard:
+    name: surface-write-guard behaviour matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_surface_write_guard.py
+        run: python -m pytest tests/test_surface_write_guard.py -v

@@ -25,12 +25,24 @@ Completed items age out after ~4 weeks.
   The weekly review has to scan the whole file to find one session's entries. Needs a
   rotation policy that does not break the review (the log is gitignored session history
   and is NOT reconstructible, so rotation must archive rather than truncate).
-- **Version `surface-write-guard.sh`** — it is a real file under
-  `~/.claude/hooks/pre-mortem-guard/`, unlike `grep-guard.sh` and
-  `edit-surface-guard.sh` which are symlinks into this repo. It is therefore outside
-  `install.sh` / `refinery-doctor --fix` sync and would be lost on a machine rebuild.
-  It also still carries the `head -c` newline bug fixed in `grep-guard.sh` by PR #106,
-  which no PR can reach until it is versioned.
+- **Close `surface-write-guard.sh`'s detection gaps** (measured 2026-08-15, pinned as
+  strict xfails in `tests/test_surface_write_guard.py`). Versioning the guard made these
+  reachable; they are **pre-existing** and were verified to behave identically in the live
+  installed copy, so they are not regressions. Two root causes:
+  - `REDIR_RE`'s `SURF_EXT` and `SURF_FILE` branches both end in a **required** trailing
+    delimiter `[[:space:];|&$"']`. At end-of-command there is no trailing character, so
+    `echo x >> setup.sh`, `echo '{}' > settings.json` and `echo hi > CLAUDE.md` are all
+    allowed — while the same redirect followed by `&& echo done` is blocked.
+  - `SED_RE` / `PERL_RE` permit only `[[:space:]a-zA-Z0-9='"]` between the flag and the
+    filename; neither `/` nor `.` is in that class. **`SED_RE` fires only on
+    `sed -i "" file.sh`** (the macOS empty-suffix form) — `sed -i 's/a/b/' f.sh`,
+    `sed -i.bak … f.yml` and `sed -i -e … f.sh`, i.e. essentially all GNU sed usage,
+    pass straight through.
+
+    Closing these **widens** a security control, so it needs its own change and its own
+    adversarial pass: the failure mode of a careless fix is a false positive that blocks
+    legitimate work, and of a sloppy one a false negative, which is worse. Deliberately not
+    bundled with the logging fix.
 - **Resolve symlinks in `grep-guard.sh::in_repo()`** — it is a literal string-prefix
   test, so repo source reachable through a home-dir symlink
   (`~/.claude/hooks/discipline/grep-guard.sh` → this repo) is allowed by *either*
