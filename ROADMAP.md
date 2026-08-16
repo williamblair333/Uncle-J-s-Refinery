@@ -90,20 +90,32 @@ Completed items age out after ~4 weeks.
   flag at all, and `_systemd_env_lines()` forwards every `JDOCMUNCH_*` variable into the
   unit, so setting `JDOCMUNCH_OPENAI_COMPAT_URL` silently turns `use_embeddings="auto"` ON
   for every watched repo, local-only ones included.
-- **No detector asserts the doc watcher's summaries-off posture** (surfaced 2026-08-15 by the
-  pre-mortem on the SECURITY.md write-up). The `LOCAL_ONLY_REPOS` cron path and its CLI
-  fallback are both in-repo and reviewable, but the watcher path depends on a systemd drop-in
-  living outside this repo, and nothing checks it. `healthcheck.sh` should assert
-  `systemctl --user show jdocmunch-watch.service -p ExecStart` contains `--no-ai-summaries`
-  and that `jdocmunch-watch.service.d/override.conf` exists. Without it, deleting the drop-in
-  restores `use_ai_summaries=True` for a personal-context corpus with no log line and no
-  prompt — the one failure mode the whole allowlist exists to prevent. Companion: the drop-in
-  is not covered by `install.sh` / `refinery-doctor --fix`, so it is lost on a machine rebuild
-  (same class as the unversioned `surface-write-guard.sh` item above).
+- **The drop-in is still not covered by `install.sh` / `refinery-doctor --fix`.** Detection
+  landed (`check_jdocmunch_watch_posture`, below in Completed), so its absence is now *caught*
+  — but nothing *restores* it, so a machine rebuild produces a red healthcheck that a human
+  must fix by hand. Provisioning the drop-in belongs in `install-reliability.sh` alongside the
+  hook symlinks.
 - **Extend `refinery-doctor.sh check_jcodemunch_scope` to all five stack servers**
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-08-15 — controls that existed but nothing verified)
+
+- **`surface-write-guard.sh` versioned + its logging fixed** (PR #120). It was never silent:
+  `head -c 200` truncates bytes not lines, so one multi-line block wrote four physical lines
+  with `session=` stranded on the last. 401 of 3832 lines are continuation junk. Also closed a
+  worse defect found while porting — a missing `jq` made the guard `exit 0`, silently allowing
+  every command it screens.
+- **Two probes for controls nothing was checking** (PR #121). `check_jdocmunch_watch_posture`
+  asserts the watcher's *effective* `ExecStart` carries `--no-ai-summaries` (not that the
+  drop-in file exists, so upstream passthrough landing does not turn it red).
+  `check_vault_hook_registered` asserts the vault Stop hook is still wired.
+- **Vault checkpoint Stop hook** (PR #119) — daily note exists, carries a `## Session N` entry
+  from this session, vault tree clean. Date comes from the transcript, not the wall clock, so
+  midnight-spanning sessions don't false-fire.
+- **The local-only doc-corpora invariant is in SECURITY.md** (PR #118), with all three call
+  sites named and the embeddings-egress residual recorded.
 
 ## Recently completed (2026-08-14 — `origin/main` force-reset: cause, control, detector)
 

@@ -4,6 +4,22 @@
 Stop hook added; jdocmunch local-only allowlist + doc watcher installed; push-hook bug
 reported upstream. `HEALTHCHECK: ok`.*
 
+## 2026-08-15 (later⁷) — the controls now verify themselves
+
+**Status:** both probes live and green; the vault one negative-tested.
+
+`check_jdocmunch_watch_posture` and `check_vault_hook_registered` close the "nothing asserts
+this is still in force" gap that PR #118 and PR #119 each shipped with, honestly documented.
+
+**The jdocmunch probe asserts the effective `ExecStart`, not the drop-in file.** Keep it that
+way. When upstream adds `--no-ai-summaries` passthrough the drop-in is legitimately retired and
+the flag comes from the unit; a file-existence check would go red exactly when things improved,
+and the natural reaction to that is deleting the check.
+
+**Still open:** nothing *restores* the drop-in. Its absence is now caught, but a machine
+rebuild yields a red healthcheck a human has to fix by hand. Provisioning it belongs in
+`install-reliability.sh` next to the hook symlinks — now a ROADMAP item.
+
 ## 2026-08-15 (later⁶) — the guard was logging; the entry was unfindable
 
 **Status:** versioned, two defects fixed, 26 tests + 7 strict xfails green. **The live file

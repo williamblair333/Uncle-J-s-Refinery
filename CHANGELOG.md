@@ -2,6 +2,42 @@
 
 ---
 
+## 2026-08-15 (later⁷) — feat: healthcheck probes for two controls nothing verified
+
+Both of today's earlier PRs shipped a control and documented, honestly, that nothing checked
+it was still in force. This closes both.
+
+### Added
+- **`check_jdocmunch_watch_posture`** — asserts the doc watcher's **effective** `ExecStart`
+  carries `--no-ai-summaries`. The cron path's `LOCAL_ONLY_REPOS` allowlist is in-repo and
+  reviewable; the watcher path depended on a systemd drop-in outside the repo that no
+  installer restored and no check read. Delete it and `use_ai_summaries` returns to `True`
+  for a personal-context corpus — no log line, no prompt, which is the exact failure the
+  allowlist exists to prevent.
+- **`check_vault_hook_registered`** — asserts the vault checkpoint Stop hook is still wired.
+  It lives in a project settings file `install.sh` does not write, so it goes missing on a
+  machine rebuild with no signal.
+
+### The design choice worth keeping
+The jdocmunch probe checks the **effective `ExecStart`, not the drop-in file's existence**.
+When upstream adds `--no-ai-summaries` passthrough to `watch-install`, the drop-in is
+correctly retired and the flag comes from the unit instead. A file-existence check would have
+gone red precisely when the situation improved — and the natural response to that is deleting
+the check, losing the guarantee outright.
+
+### Noise discipline
+Both probes return silently when their subject is absent (no watcher unit, no vault), and the
+jdocmunch one warns-and-skips rather than failing when `systemctl --user` gives indeterminate
+output. That mirrors `check_jcodemunch_watch`, which carries the same handling for the same
+reason: cron healthchecks have no user D-Bus, and a check that cries wolf gets muted.
+
+### Verification
+Both live-fired green on this machine. The vault probe was **negative-tested** — pointed at a
+directory with a vault and no settings file, it correctly failed and incremented the counter.
+A check that can only pass is not a check.
+
+---
+
 ## 2026-08-15 (later⁶) — fix: surface-write-guard versioned; it was logging unfindably
 
 Last session reported that this guard "fired and logged nothing", called it a real defect,
