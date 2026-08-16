@@ -894,6 +894,67 @@ check_jcodemunch_watch() {
     esac
 }
 
+# ----- 9m-2. jdocmunch doc watcher indexes local-only corpora offline -------
+# Closes the gap SECURITY.md documents but nothing enforced: the cron path's
+# LOCAL_ONLY_REPOS allowlist is in-repo and reviewable, but the WATCHER path
+# depends on a systemd drop-in living outside this repo that no installer
+# restores and no check read. Delete the drop-in and use_ai_summaries returns to
+# its default of True for a personal-context corpus — with no log line and no
+# prompt, which is the one failure mode the allowlist exists to prevent.
+#
+# Asserts the EFFECTIVE ExecStart, not the drop-in file. When upstream adds
+# --no-ai-summaries passthrough to `watch-install` the drop-in is retired and the
+# flag comes from the unit instead; that must pass, not fail. Checking for the
+# file would have gone red exactly when the situation improved.
+check_jdocmunch_watch_posture() {
+    # No watcher on this machine — not applicable, not a failure.
+    systemctl --user cat jdocmunch-watch.service >/dev/null 2>&1 || return 0
+
+    step "jdocmunch-watch — summaries off (local-only corpora stay offline)"
+    local exec_start
+    exec_start="$(systemctl --user show jdocmunch-watch.service -p ExecStart 2>/dev/null || true)"
+
+    if [ -z "$exec_start" ] || [ "$exec_start" = "ExecStart=" ]; then
+        # No user systemd bus (cron context) or unit not loaded. Same posture as
+        # check_jcodemunch_watch: indeterminate is not a failure.
+        warn "jdocmunch-watch ExecStart indeterminate — skipping (cron context?)"
+        return
+    fi
+
+    if printf '%s' "$exec_start" | grep -q -- '--no-ai-summaries'; then
+        ok "jdocmunch-watch runs with --no-ai-summaries"
+    else
+        bad "jdocmunch-watch ExecStart has no --no-ai-summaries — a watcher reindex would send local-only corpora to a remote summarizer"
+        hint "run: bash $REPO_ROOT/install-reliability.sh   # or restore ~/.config/systemd/user/jdocmunch-watch.service.d/override.conf, then: systemctl --user daemon-reload && systemctl --user restart jdocmunch-watch"
+        record_fail "jdocmunch-watch-summaries-on"
+    fi
+}
+
+# ----- 9m-3. vault checkpoint Stop hook still registered -------------------
+# The hook lives in a project settings file that install.sh does not write and
+# refinery-doctor --fix does not restore, so it goes missing on a machine rebuild
+# with no signal. Only meaningful where the vault actually exists.
+check_vault_hook_registered() {
+    local vault_root="${VAULT_ROOT:-/opt/proj/jaredrhod}"
+    [ -d "$vault_root/vaults/brain" ] || return 0
+
+    step "vault checkpoint Stop hook — registered"
+    local settings="$vault_root/.claude/settings.json"
+    if [ ! -f "$settings" ]; then
+        bad "no $settings — vault sessions end unchecked"
+        hint "restore the Stop hook entry calling scripts/vault-session-check.sh (see HANDOFF)"
+        record_fail "vault-hook-unregistered"
+        return
+    fi
+    if grep -q 'uncle-j-vault-session-check' "$settings" 2>/dev/null; then
+        ok "vault-session-check registered"
+    else
+        bad "$settings exists but has no vault-session-check Stop hook"
+        hint "restore the Stop hook entry calling scripts/vault-session-check.sh (see HANDOFF)"
+        record_fail "vault-hook-unregistered"
+    fi
+}
+
 # ----- 9n. memweave memory index fresh -------------------------------------
 check_memweave_fresh() {
     step "memweave — memory index fresh (<48h)"
@@ -999,6 +1060,8 @@ check_untracked_skills
 check_auto_maintain_cron
 check_embedding_canary
 check_jcodemunch_watch
+check_jdocmunch_watch_posture
+check_vault_hook_registered
 check_memweave_fresh
 check_dreaming_runtime
 check_auto_maintain_runtime
