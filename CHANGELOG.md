@@ -2,6 +2,57 @@
 
 ---
 
+## 2026-08-15 (later⁶) — fix: surface-write-guard versioned; it was logging unfindably
+
+Last session reported that this guard "fired and logged nothing", called it a real defect,
+and left it. It logged. The entry was unfindable, which is not the same thing — and the
+difference matters, because a prior session had already made this exact claim and retracted it.
+
+### Root cause, from the log itself
+```
+3828: 2026-08-15 20:30:41 BLOCKED surface-write-guard … cmd=mkdir -p ~/.uncle-j-memory/memory
+3829: cat >> ~/.uncle-j-memory/memory/audit-baselines.md <<'EOF'
+3830:
+3831: ## [AUDIT BASELINE] jdocmunch indexing path … session=7fff9c86-ca82-4f0…
+```
+`head -c 200` truncates **bytes, not lines**. The blocked command was a multi-line heredoc,
+so one block wrote four physical lines and stranded `session=` on the fourth. Searching for a
+`BLOCKED` line carrying the session id returns nothing. 401 of 3832 lines are continuation
+junk. Identical defect to the one fixed in `grep-guard.sh` by PR #106.
+
+### Fixed
+- **`tr '\n\r\t' ' '` before `head -c`** — collapse first, truncate the now-single line.
+  One block is now one greppable line. Ported verbatim from `grep-guard.sh:186`.
+- **Fail loudly when `jq` is absent.** The guard did `CMD=$(… jq …) || echo ""` then
+  `[[ -z "$CMD" ]] && exit 0` — so a missing `jq` silently allowed **every command it exists
+  to screen**. Now it says so and exits non-zero, matching `grep-guard.sh:44`.
+- **Versioned** to `hooks/pre-mortem-guard/` with a new `install-reliability.sh` section.
+  It was a real file outside `install.sh` and `refinery-doctor --fix`, lost on any machine
+  rebuild, and unreachable by PR. Deliberately **not** `hooks/discipline/` — the settings.json
+  registration points at `pre-mortem-guard/`, so linking elsewhere would have created a second
+  unregistered copy while the live one ran on.
+
+### Found while testing — pre-existing, pinned not fixed
+Six of my first sixteen BLOCK cases failed. Rather than assume a bad port, I ran the same
+inputs through the **live installed guard**: identical results on every one. The gaps are
+pre-existing, not regressions.
+
+**`SED_RE` fires only on `sed -i "" file.sh`** — the macOS empty-suffix form. `sed -i 's/a/b/'`,
+`sed -i.bak …` and `sed -i -e …` all pass through, because the character class between the flag
+and the filename excludes `/` and `.`. Separately, `REDIR_RE`'s `SURF_EXT`/`SURF_FILE` branches
+require a *trailing* delimiter, so `echo x >> setup.sh` at end-of-command is allowed while
+`echo x > setup.sh && echo done` is blocked.
+
+Pinned as **strict** xfails so closing them fails CI until the list is updated, and written up
+in ROADMAP. Not fixed here: widening a write-guard's detection is a different change with a
+different failure mode, and does not belong in a PR about a log line.
+
+### Verification
+26 passed, 7 strict xfailed, 0 API calls. The existing `hook-blocks.log` is **not** rewritten
+— it is gitignored, not reconstructible, and the 401 junk lines remain parseable with `awk`.
+
+---
+
 ## 2026-08-15 (later⁵) — feat: Stop hook asserting the vault session was checkpointed
 
 The checkpoint-persistence rule was enforced by nothing but memory. A session could end

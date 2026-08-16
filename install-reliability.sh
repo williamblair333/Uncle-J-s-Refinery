@@ -85,6 +85,35 @@ else:
     print(f"  OK  OUTCOMES_MAX_ITERATIONS already set ({env['OUTCOMES_MAX_ITERATIONS']})")
 PYPATCH
 
+# ── Pre-mortem guard hooks (surface-write-guard) ─────────────────────────
+# Separate from discipline/ on purpose: these are registered in settings.json
+# under ~/.claude/hooks/pre-mortem-guard/, so the symlink must land on that
+# exact path. Linking them into discipline/ instead would create a second,
+# unregistered copy while the live one kept running unchanged.
+#
+# surface-write-guard.sh was a real file here for months — outside install.sh
+# and refinery-doctor --fix, so it was lost on a machine rebuild and no PR
+# could reach its defects. This section is what makes it versioned.
+#
+# Existing real files are replaced by symlinks. Content is preserved in git, so
+# nothing is lost; verify afterwards with:
+#   ls -l ~/.claude/hooks/pre-mortem-guard/
+step "Installing pre-mortem guard hooks to $CLAUDE_DIR/hooks/pre-mortem-guard"
+mkdir -p "$CLAUDE_DIR/hooks/pre-mortem-guard"
+if [ ! -d "$STACK_ROOT/hooks/pre-mortem-guard" ]; then
+    warn "hooks/pre-mortem-guard/ not found in repo — skipping"
+else
+    for hook_src in "$STACK_ROOT/hooks/pre-mortem-guard/"*.sh; do
+        [ -f "$hook_src" ] || continue
+        hook_name=$(basename "$hook_src")
+        dst="$CLAUDE_DIR/hooks/pre-mortem-guard/$hook_name"
+        rm -f "$dst"
+        ln -sfn "$(readlink -f "$hook_src")" "$dst"
+        chmod +x "$hook_src"
+        ok "pre-mortem guard linked: $hook_name"
+    done
+fi
+
 # ── Discipline hooks (edit-surface-guard, grep-guard, push-guard) ────────
 step "Installing discipline hooks to $CLAUDE_DIR/hooks/discipline"
 mkdir -p "$CLAUDE_DIR/hooks/discipline"

@@ -1,7 +1,36 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — vault checkpoint Stop hook added; jdocmunch local-only
-allowlist + doc watcher installed; push-hook bug reported upstream. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-15 — surface-write-guard versioned + logging fixed; vault checkpoint
+Stop hook added; jdocmunch local-only allowlist + doc watcher installed; push-hook bug
+reported upstream. `HEALTHCHECK: ok`.*
+
+## 2026-08-15 (later⁶) — the guard was logging; the entry was unfindable
+
+**Status:** versioned, two defects fixed, 26 tests + 7 strict xfails green. **The live file
+has NOT been swapped yet** — see the action below.
+
+**"Fired but logged nothing" was wrong, and had been wrong before.** A prior session made
+the identical claim and retracted it. `head -c 200` truncates bytes, not lines: the blocked
+command was a multi-line heredoc, so one block wrote four physical lines with `session=`
+stranded on the fourth. Searching for a `BLOCKED` line carrying the session id finds nothing.
+401 of 3832 lines are continuation junk. **Use `awk`, not `grep`, on that log until the
+backlog ages out.**
+
+**The worse defect nobody was looking for:** missing `jq` made the guard `exit 0`, silently
+allowing every command it exists to screen. Now fail-loud, matching `grep-guard.sh`.
+
+**⚠ ACTION REQUIRED — the live guard is still the old file.** The repo copy is inert until
+`install-reliability.sh` runs and replaces
+`~/.claude/hooks/pre-mortem-guard/surface-write-guard.sh` with a symlink. Until then there
+are two copies and the old one is what executes. Verify with `ls -l` on that directory: a
+symlink into the repo means done.
+
+**`SED_RE` is close to dead and this is the finding to act on.** Probing every common form:
+it fires **only** on `sed -i "" file.sh` (macOS empty-suffix). All GNU sed usage —
+`sed -i 's/a/b/' f.sh`, `sed -i.bak … f.yml`, `sed -i -e … f.sh` — passes through. Verified
+identical in the live guard, so it is not a porting regression. Pinned as strict xfails and
+written up in ROADMAP. **Closing it widens a security control and needs its own adversarial
+pass**; a sloppy fix yields a false negative, which is worse than the gap.
 
 ## 2026-08-15 (later⁵) — the vault checkpoint rule is now enforced by something
 
