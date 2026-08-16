@@ -67,14 +67,29 @@ Completed items age out after ~4 weeks.
   commit-log-only; the exact old→new scale, v1.124.0 and v1.128.0 remain unverified.
   Blocked on two failed routes: `index_dependency` errors with `top_level: missing` for
   this package, and the shell route is grep-guard-blocked because `.venv/` is inside the
-  repo. Report the `index_dependency` failure upstream too.
-- **Report jdocmunch's `str.lstrip("./")` directory-pruning bug upstream**
-  (`jgravelle/jdocmunch-mcp`, `tools/index_local.py:167`). Our compensating shim
-  in `scripts/jdocmunch-reindex.sh::run_index_local()` is marked for deletion
-  once it lands. Also report (same repo): `index_local` crashes with
-  `KeyError 'owner'` when given a name colliding with its own sidecar namespace
-  (e.g. `X.summary`) — found 2026-08-08.
-- **Report jdocmunch's watcher flag gap upstream** (`jgravelle/jdocmunch-mcp`,
+  repo. Report the `index_dependency` failure upstream too. **Unblocked 2026-08-16 — a third
+  route works:** fetch the file from upstream via
+  `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`,
+  then `diff` against the installed copy to prove the local install is unpatched. That is
+  strictly better than reading `.venv/` anyway, because it verifies *upstream* state rather
+  than a vendored copy that may have drifted.
+- **Delete the prune-compensation shim — upstream fixed it and we never noticed.** The
+  `str.lstrip("./")` directory-pruning bug was filed as
+  [jgravelle/jdocmunch-mcp#102](https://github.com/jgravelle/jdocmunch-mcp/issues/102)
+  on 2026-08-07 (by @faxik, not us) and **closed the same day**. This item sat here for over
+  a week saying "report upstream" for something already reported *and* fixed — caught
+  2026-08-16 only because the upstream tracker was finally read. Verified at upstream
+  `9235e228`, which is byte-identical to our pinned install: `lstrip("./")` is gone,
+  replaced by `_walk_rel` with a warning comment citing the issue
+  (`tools/index_local.py:1223`, `:1307`). So the shim in
+  `scripts/jdocmunch-reindex.sh::run_index_local()` is dead weight and its stated deletion
+  condition is met. Removing it changes the reindex path, so it needs its own pre-mortem
+  and a forced-reindex check that `prune compensation` no longer fires.
+- **Still worth reporting:** `index_local` crashes with `KeyError 'owner'` when given a name
+  colliding with its own sidecar namespace (e.g. `X.summary`) — found 2026-08-08, and
+  **not** among the 92 issues on the upstream tracker as of 2026-08-16.
+- **[FILED 2026-08-16 — [jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120)]**
+  jdocmunch's watcher flag gap (`jgravelle/jdocmunch-mcp`,
   `service_installer.py`) — found 2026-08-15. `watch-install` accepts no arguments and
   `_exec_cmd()` hardcodes `[sys.executable, "-m", "jdocmunch_mcp", "watch"]`, while
   `_install_systemd()` rewrites the unit with `write_text()` on every run. There is therefore
@@ -86,10 +101,13 @@ Completed items age out after ~4 weeks.
   the strength of an upstream release note, which would silently restore
   `use_ai_summaries=True`. Ask for `--no-ai-summaries` / `--embeddings` passthrough on
   `watch-install`. The same
-  report should cover the residual documented in SECURITY.md: `watch` exposes no embeddings
-  flag at all, and `_systemd_env_lines()` forwards every `JDOCMUNCH_*` variable into the
-  unit, so setting `JDOCMUNCH_OPENAI_COMPAT_URL` silently turns `use_embeddings="auto"` ON
-  for every watched repo, local-only ones included.
+  The embeddings half was deliberately **left out** of the filing, per upstream
+  CONTRIBUTING's "one issue, one verdict" — and because the version of it recorded here was
+  wrong. `watch` does expose no embeddings flag, but the claim that setting
+  `JDOCMUNCH_OPENAI_COMPAT_URL` alone turns `use_embeddings="auto"` ON is **false**:
+  `openai-compatible` is not in `_EMBED_AUTO_DETECT_ORDER` and is never auto-selected.
+  Corrected in SECURITY.md with the evidence. If the narrower version is worth tracking,
+  it needs its own issue.
 - **The drop-in is still not covered by `install.sh` / `refinery-doctor --fix`.** Detection
   landed (`check_jdocmunch_watch_posture`, below in Completed), so its absence is now *caught*
   — but nothing *restores* it, so a machine rebuild produces a red healthcheck that a human

@@ -136,11 +136,25 @@ Two properties worth knowing before changing any of it:
   outside that corpus's own repo. Exclude before the first index, or delete the index and rebuild —
   editing the source afterwards does not reach the mirror.
 
-**Residual — not closable at this layer.** `jdocmunch-mcp watch` exposes no embeddings flag, and
-`_systemd_env_lines()` forwards every `JDOCMUNCH_*` variable into the unit. Setting
-`JDOCMUNCH_OPENAI_COMPAT_URL` turns `use_embeddings="auto"` ON for every watched repo, local-only
-ones included. Revisit the drop-in before ever setting that variable. Upstream passthrough is
-tracked in ROADMAP.
+**Residual — narrower than first written; corrected 2026-08-16 against upstream source.**
+`jdocmunch-mcp watch` exposes no embeddings flag (unlike `index-local`, which gained
+`--embeddings` / `--no-embeddings` in upstream #108), and `_systemd_env_lines()` forwards every
+`JDOCMUNCH_*` variable into the unit. So a user who has **deliberately** enabled a provider has
+no way to turn embeddings off on the watcher path specifically.
+
+An earlier version of this section claimed that setting `JDOCMUNCH_OPENAI_COMPAT_URL` alone
+turned `use_embeddings="auto"` ON for every watched repo. **That was wrong.** Verified against
+upstream `9235e228` (= our pinned version): `_EMBED_AUTO_DETECT_ORDER` in
+`embeddings/provider.py` contains only `GOOGLE_API_KEY → gemini` and `OPENAI_API_KEY → openai`,
+both suppressed unless `JDOCMUNCH_ALLOW_PAID_EMBEDDINGS` is set, and `openai-compatible` is
+**never** auto-selected — it requires naming `JDOCMUNCH_EMBEDDING_PROVIDER=openai-compatible`
+plus both a URL and a model. Upstream added that opt-in gate in v1.127.0 (2026-08-09), six days
+before we wrote the claim, so this was our error, not an upstream regression.
+
+Enabling embeddings for a watched local-only corpus therefore takes a deliberate multi-part
+opt-in, not one ambient variable. Still revisit the drop-in before setting any of them.
+Upstream flag passthrough is tracked in ROADMAP as
+[jgravelle/jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120).
 
 **Do not remove the drop-in as cleanup.** It is retired only once `systemctl --user show
 jdocmunch-watch.service -p ExecStart` shows the flag coming from the unit itself — i.e. after

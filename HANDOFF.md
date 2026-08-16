@@ -1,8 +1,40 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — surface-write-guard versioned + logging fixed; vault checkpoint
-Stop hook added; jdocmunch local-only allowlist + doc watcher installed; push-hook bug
-reported upstream. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-16 — jdocmunch#120 filed and a false SECURITY.md claim corrected;
+surface-write-guard versioned + logging fixed; vault checkpoint Stop hook added; jdocmunch
+local-only allowlist + doc watcher installed. `HEALTHCHECK: ok`.*
+
+## 2026-08-16 — the verification found our own error before it found the bug
+
+**Status:** [jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120) open.
+`SECURITY.md` corrected. Two ROADMAP items were wrong and are fixed.
+
+**The method that mattered, and should be reused.** Upstream source was fetched from GitHub
+at the pinned SHA and `diff`ed against `.venv` before any claim was trusted:
+
+```
+gh api "repos/<owner>/<repo>/contents/<path>?ref=<sha>" -H "Accept: application/vnd.github.raw"
+```
+
+All three files came back byte-identical, which is what made the installed copy admissible as
+evidence of upstream state. This also **unblocks the ROADMAP item** that was stuck because
+`.venv/` is grep-guard-blocked — and it is the better route regardless, since it verifies
+upstream rather than a vendored copy.
+
+**⚠ We had a false claim in a public SECURITY.md for a day.** It said setting
+`JDOCMUNCH_OPENAI_COMPAT_URL` turns embeddings on for every watched repo. It does not:
+`openai-compatible` is never auto-selected, and the paid-cloud opt-in gate has existed since
+**v1.127.0, 2026-08-09 — six days before we wrote it**. Not an upstream regression; our error,
+written from the drop-in's own comments instead of from the source. **Corroborating a claim
+against your own earlier note is not verification.**
+
+**A ROADMAP item said "report upstream" for a bug filed and fixed nine days earlier.** #102,
+filed 2026-08-07 by @faxik, closed same day. Nobody had read the upstream tracker. Consequence:
+the prune-compensation shim in `jdocmunch-reindex.sh` is dead weight and can go — needs its own
+pre-mortem plus a forced reindex confirming `prune compensation` no longer fires.
+
+**Still unfiled:** the `index_local` `KeyError 'owner'` sidecar-collision crash. Confirmed
+absent from all 92 upstream issues as of today.
 
 ## 2026-08-15 (later⁷) — the controls now verify themselves
 
