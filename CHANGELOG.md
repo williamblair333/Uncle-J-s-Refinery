@@ -2,6 +2,49 @@
 
 ---
 
+## 2026-08-16 (later) — the prune-compensation shim is gone
+
+Upstream fixed the bug on 2026-08-07. We kept working around it for nine days.
+
+### Removed
+- **The prune-compensation block in `scripts/jdocmunch-reindex.sh::run_index_local()`.** It
+  computed de-dotted ignore patterns to work around `_should_skip(f"{dir_rel}/{d}/".lstrip("./"))`
+  — `str.lstrip` takes a character set, not a prefix, so `./.venv-memweave/` became
+  `venv-memweave/` and stopped matching. Upstream replaced it with `_walk_rel`
+  ([#102](https://github.com/jgravelle/jdocmunch-mcp/issues/102), closed same day it was filed).
+
+### Confirmed fixed, not assumed
+Re-ran the issue's own repro against our pinned version, in an isolated `DOC_INDEX_PATH`:
+a `.gitignore`d dotted directory gives `file_count = 1`, not 2. A second case covering the
+`SKIP_PATTERNS` route (`.pytest_cache/`, `.venv-memweave/`) also gives 1. Both with **no**
+compensating patterns passed.
+
+### What deliberately did NOT go
+The comment said "delete this whole shim", which is wrong and dangerous. `patterns` was shared
+between the dead prune block and the **live `forced_ignore` loop** — the one that keeps two
+credential-bearing files out of the vault corpus *and* out of the cached raw mirror under
+`~/.doc-index`. Only the dead block was removed; the forced-exclusion path, the posture
+logging, and the `extra_ignore_patterns=` wiring are untouched.
+
+Verified by a live reindex of the vault rather than by reading the diff:
+- `mode: local-only (no summarizer, no embeddings)` — still emitted
+- `forced exclusions:` — both credential paths still passed
+- **no** `prune compensation:` line — the dead code is genuinely gone
+- 0 credential files in the raw mirror, 0 dot-directories in the corpus, `failed=0`
+
+### Incidental cleanup
+Passing explicit patterns *replaces* a manifest's stored `corpus_shape_patterns` rather than
+merging, so the vault's now-redundant `/git/` entry dropped out on this run. The other five
+manifests keep theirs; they are harmless (no `/opt/proj/*/git/` directory exists) and clearing
+them would mean a rebuild, which is not worth the risk to the exclusions.
+
+Also corrected: the CLI-fallback warning still claimed "dot-directories will leak", and the
+`LOCAL_ONLY_IGNORE` header still described its patterns as sitting "on top of the prune
+compensation". Both now say what is actually true — those patterns are the only ones this
+script passes, so they are load-bearing rather than supplementary.
+
+---
+
 ## 2026-08-16 — upstream issue #120 filed; and a claim of ours was wrong
 
 Triple-checking the jdocmunch report before filing turned up three things. Only one of them

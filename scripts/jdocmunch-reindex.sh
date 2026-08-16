@@ -49,9 +49,10 @@ LOCAL_ONLY_REPOS=(
     jaredrhod-brain
 )
 
-# Extra gitignore-style patterns applied on top of the prune compensation, keyed
-# by repo name. Files matched here never enter the corpus OR the cached raw
-# mirror under ~/.doc-index.
+# Extra gitignore-style patterns, keyed by repo name. Files matched here never
+# enter the corpus OR the cached raw mirror under ~/.doc-index. Since the
+# prune-compensation shim was removed (2026-08-16), these are the ONLY patterns
+# this script passes — so they are load-bearing, not supplementary.
 #
 # Two campaign-forge entries in the vault's frozen migrated-memory snapshot hold
 # the same credential in clear text. Indexing copies file bytes into the raw
@@ -289,30 +290,38 @@ PY_EOF
 
 # Run one repo's index refresh.
 #
-# Not `jdocmunch-mcp index-local`, because that CLI exposes no way to pass
-# ignore patterns and jdocmunch's own directory pruning is broken for top-level
-# dot-directories. In jdocmunch_mcp/tools/index_local.py the prune test is
+# HISTORY — the prune-compensation shim is GONE (2026-08-16)
 #
-#     _should_skip(f"{dir_rel}/{d}/".lstrip("./"))
+# This function used to compute compensating ignore patterns because jdocmunch's
+# directory pruning was broken for top-level dot-directories: the prune test was
+# `_should_skip(f"{dir_rel}/{d}/".lstrip("./"))`, and `str.lstrip` takes a
+# CHARACTER SET rather than a prefix, so "./.venv-memweave/" became
+# "venv-memweave/" and stopped matching. This repo's index grew from 104 to 357
+# documents as a result, mostly numpy and onnx out of the memweave virtualenv.
 #
-# and at the repo root dir_rel is ".", so the argument is "./.venv-memweave/".
-# str.lstrip takes a CHARACTER SET, not a prefix — it strips every leading "."
-# and "/" — so the string becomes "venv-memweave/" and no longer matches the
-# ".venv-memweave/" pattern that was supposed to exclude it. Every top-level
-# dot-directory therefore leaks into the corpus. ".venv/" survives only by
-# coincidence, because the mangled "venv/" happens to match a separate entry in
-# jdocmunch's SKIP_PATTERNS; ".venv-memweave/", ".git/" and ".pytest_cache/" do
-# not, and this repo's index grew from 104 documents to 357 — most of them
-# numpy and onnx files out of the memweave virtualenv — as a result.
+# Upstream fixed it: filed as jgravelle/jdocmunch-mcp#102 (2026-08-07, @faxik,
+# closed same day), replaced by `_walk_rel` (tools/index_local.py:1220), which
+# carries its own warning comment citing the issue. Verified fixed in the version
+# we pin — both the gitignore path and the SKIP_PATTERNS path now prune
+# correctly with NO compensating patterns. Repro, if it ever needs re-checking:
 #
-# So compute the compensating patterns ourselves and pass them through the
-# Python API. For each top-level dot-directory that SHOULD have been excluded
-# but is not, emit the de-dotted, root-anchored form ("/venv-memweave/") that
-# does match post-mangling. Deriving them per-root keeps this generic across
-# the repos this script manages and cannot over-exclude a nested directory.
+#     mkdir -p r/keepdir r/.worktrees/slug-a && git -C r init -q
+#     printf '.worktrees/\n' > r/.gitignore
+#     printf '# Kept\n\nalpha\n' > r/keepdir/kept.md
+#     printf '# Copy\n\nbeta\n'  > r/.worktrees/slug-a/copy.md
+#     # index_local(path=r, ...) -> file_count 1 when fixed, 2 when broken
 #
-# Delete this whole shim once upstream fixes the lstrip — the plain CLI call is
-# the fallback below and stays correct either way.
+# WHY THE PYTHON API AND NOT THE CLI
+#
+# One call sets all three postures together — use_ai_summaries, use_embeddings
+# and extra_ignore_patterns — and returns structured JSON we can act on. The CLI
+# gained --extra-ignore-pattern / --embeddings / --no-ai-summaries in upstream
+# #108, so it is now a viable route and is already the fallback below; switching
+# to it wholesale is a separate change, not a rider on this one.
+#
+# WHAT IS STILL LOAD-BEARING BELOW: the `forced_ignore` loop. Those patterns keep
+# credential-bearing files out of both the corpus and the cached raw mirror under
+# ~/.doc-index. Do not remove them along with anything else.
 run_index_local() {
     local root=$1 name=$2
     local local_only=0 extra_ignore=""
@@ -341,31 +350,12 @@ local_only = sys.argv[3] == "1"
 # One pattern per line; blank lines dropped so an empty argument is simply "none".
 forced_ignore = [ln for ln in sys.argv[4].splitlines() if ln.strip()]
 
+# The prune-compensation block that used to seed `patterns` is gone — upstream
+# #102 fixed the lstrip bug this script worked around. See the header comment.
+# `patterns` now carries the forced exclusions and nothing else. These are the
+# load-bearing ones: they keep credential-bearing files out of the corpus AND out
+# of the cached raw mirror under ~/.doc-index.
 patterns = []
-try:
-    from jdocmunch_mcp.tools.index_local import _load_gitignore, _should_skip
-
-    spec = _load_gitignore(root)
-
-    def excluded(candidate):
-        return _should_skip(candidate) or bool(spec and spec.match_file(candidate))
-
-    for child in root.iterdir():
-        if not child.is_dir() or not child.name.startswith("."):
-            continue
-        correct = f"{child.name}/"
-        mangled = f"./{correct}".lstrip("./")
-        if excluded(correct) and not excluded(mangled):
-            patterns.append(f"/{mangled}")
-except Exception as exc:  # private helpers moved or renamed upstream
-    print(f"prune compensation unavailable ({exc}) — indexing unpatched",
-          file=sys.stderr)
-
-if patterns:
-    print(f"prune compensation: {' '.join(patterns)}", file=sys.stderr)
-
-# Forced exclusions come last so they apply even when the prune-compensation
-# block above raised and left `patterns` empty.
 for pattern in forced_ignore:
     if pattern not in patterns:
         patterns.append(pattern)
@@ -396,7 +386,7 @@ PY_EOF
     local rc=$?
     [[ "$rc" -ne 3 ]] && return "$rc"
 
-    log "WARN    $name — python api unavailable; falling back to the CLI (dot-directories will leak)"
+    log "WARN    $name — python api unavailable; falling back to the CLI"
     # The fallback must carry the same posture. Without --no-ai-summaries here, a
     # missing Python API would silently re-enable the summarizer on exactly the
     # repos that must never reach one — the failure path undoing the guarantee

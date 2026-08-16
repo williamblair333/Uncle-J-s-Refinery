@@ -4,6 +4,39 @@
 surface-write-guard versioned + logging fixed; vault checkpoint Stop hook added; jdocmunch
 local-only allowlist + doc watcher installed. `HEALTHCHECK: ok`.*
 
+## 2026-08-16 (later) — prune shim deleted; read this before touching that function
+
+**Status:** removed, live-verified, `HEALTHCHECK: ok`.
+
+**⚠ The comment that used to sit above `run_index_local()` said "Delete this whole shim". Do
+not ever follow that literally.** `patterns` was shared between the dead prune-compensation
+block and the **live `forced_ignore` loop**, and that loop is what keeps two credential-bearing
+files out of the vault corpus *and* out of the cached raw mirror under `~/.doc-index`. Deleting
+the function body would have re-copied a plaintext credential into a second store. Only the
+dead block went.
+
+**How it was verified — reading the diff would not have been enough.** A live reindex of the
+vault was run and the log checked for all four properties: `mode: local-only` still emitted,
+`forced exclusions:` still listing both paths, **no** `prune compensation:` line, `failed=0`.
+Then: 0 credential files in the raw mirror, 0 dot-directories in the corpus.
+
+**The upstream fix was confirmed by re-running issue #102's own repro**, not by trusting the
+changelog: a `.gitignore`d dotted directory yields `file_count = 1`; a `SKIP_PATTERNS` case
+(`.pytest_cache/`, `.venv-memweave/`) also yields 1 — both with no compensating patterns.
+
+**Don't panic at this — I nearly did.** `find ~/.doc-index/local/Uncle-J-s-Refinery -path '*venv*'`
+returns ~230 hits. **All of them are empty directories, 0 files**, dated 2026-06-13 — husks left
+over from the original leak, two months before the shim existed and unrelated to its removal. The
+corpus itself is 99 `.md` documents, in the healthy ~104 range, and 0 of them are under a venv,
+numpy or onnx path. Verify with `-type f | wc -l` before concluding anything; the directory count
+is not the document count. Deleting the husks is cosmetic and touches `~/.doc-index` data, so it
+was left alone.
+
+**Worth knowing:** passing explicit `extra_ignore_patterns` **replaces** a manifest's stored
+`corpus_shape_patterns` rather than merging. That is why the vault's stale `/git/` entry
+vanished on this run. Five other manifests still carry `/git/` and friends; harmless, and
+clearing them would need a rebuild that could drop real exclusions. Left alone deliberately.
+
 ## 2026-08-16 — the verification found our own error before it found the bug
 
 **Status:** [jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120) open.
