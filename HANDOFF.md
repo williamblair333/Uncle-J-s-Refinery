@@ -20,6 +20,11 @@ and the natural reaction to that is deleting the check.
 rebuild yields a red healthcheck a human has to fix by hand. Provisioning it belongs in
 `install-reliability.sh` next to the hook symlinks — now a ROADMAP item.
 
+**Note if `hooks/pre-mortem-guard/` shows dirty again:** the installer `chmod +x`'s its
+sources, so a fresh clone at mode `644` goes to `755` on first run. The exec bit is now
+committed, so this should not recur — if it does, check `git diff --summary` before assuming
+a content change.
+
 ## 2026-08-15 (later⁶) — the guard was logging; the entry was unfindable
 
 **Status:** versioned, two defects fixed, 26 tests + 7 strict xfails green. **The live file

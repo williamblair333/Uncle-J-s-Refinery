@@ -36,6 +36,12 @@ Both live-fired green on this machine. The vault probe was **negative-tested** �
 directory with a vault and no settings file, it correctly failed and incremented the counter.
 A check that can only pass is not a check.
 
+### Chore
+- **Exec bit recorded on the two `hooks/pre-mortem-guard/` scripts** (`100644` → `100755`,
+  content byte-identical). The new installer section `chmod +x`'s its sources, which left the
+  repo permanently dirty — and a permanently dirty tree masks real changes, which is the
+  discipline the vault Stop hook added today exists to enforce.
+
 ---
 
 ## 2026-08-15 (later⁶) — fix: surface-write-guard versioned; it was logging unfindably
