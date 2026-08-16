@@ -62,6 +62,32 @@ Completed items age out after ~4 weeks.
   once it lands. Also report (same repo): `index_local` crashes with
   `KeyError 'owner'` when given a name colliding with its own sidecar namespace
   (e.g. `X.summary`) — found 2026-08-08.
+- **Report jdocmunch's watcher flag gap upstream** (`jgravelle/jdocmunch-mcp`,
+  `service_installer.py`) — found 2026-08-15. `watch-install` accepts no arguments and
+  `_exec_cmd()` hardcodes `[sys.executable, "-m", "jdocmunch_mcp", "watch"]`, while
+  `_install_systemd()` rewrites the unit with `write_text()` on every run. There is therefore
+  no supported way to pin the watcher's indexing posture, and a hand-edited `ExecStart` is
+  silently reverted by the next `watch-install` — which the stack-upgrade routine performs.
+  Our workaround is a systemd drop-in under `jdocmunch-watch.service.d/`, which
+  `_install_systemd()` does not touch. Retire it only after `systemctl --user show
+  jdocmunch-watch.service -p ExecStart` shows the flag coming from the unit itself — not on
+  the strength of an upstream release note, which would silently restore
+  `use_ai_summaries=True`. Ask for `--no-ai-summaries` / `--embeddings` passthrough on
+  `watch-install`. The same
+  report should cover the residual documented in SECURITY.md: `watch` exposes no embeddings
+  flag at all, and `_systemd_env_lines()` forwards every `JDOCMUNCH_*` variable into the
+  unit, so setting `JDOCMUNCH_OPENAI_COMPAT_URL` silently turns `use_embeddings="auto"` ON
+  for every watched repo, local-only ones included.
+- **No detector asserts the doc watcher's summaries-off posture** (surfaced 2026-08-15 by the
+  pre-mortem on the SECURITY.md write-up). The `LOCAL_ONLY_REPOS` cron path and its CLI
+  fallback are both in-repo and reviewable, but the watcher path depends on a systemd drop-in
+  living outside this repo, and nothing checks it. `healthcheck.sh` should assert
+  `systemctl --user show jdocmunch-watch.service -p ExecStart` contains `--no-ai-summaries`
+  and that `jdocmunch-watch.service.d/override.conf` exists. Without it, deleting the drop-in
+  restores `use_ai_summaries=True` for a personal-context corpus with no log line and no
+  prompt — the one failure mode the whole allowlist exists to prevent. Companion: the drop-in
+  is not covered by `install.sh` / `refinery-doctor --fix`, so it is lost on a machine rebuild
+  (same class as the unversioned `surface-write-guard.sh` item above).
 - **Extend `refinery-doctor.sh check_jcodemunch_scope` to all five stack servers**
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh

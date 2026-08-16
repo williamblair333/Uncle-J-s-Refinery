@@ -26,6 +26,8 @@ Security-relevant components:
 - `.env` — Credential storage (never committed; covered by `.gitignore`)
 - `hooks/discipline/edit-surface-guard.sh` — PreToolUse guard enforcing pre-mortem before surface file edits
 - `~/.claude/hooks/pre-mortem-guard/` — Token-based enforcement layer: `token-guard.sh`, `surface-write-guard.sh`, `write-clearance-token.sh`
+- `scripts/jdocmunch-reindex.sh` — `LOCAL_ONLY_REPOS` allowlist forcing summaries/embeddings off for personal-context doc corpora
+- `~/.config/systemd/user/jdocmunch-watch.service.d/override.conf` — drop-in pinning the doc watcher's indexing posture (survives `watch-install`)
 
 ## Known Security Model
 
@@ -97,6 +99,54 @@ The gateway is the **sole** `getUpdates` consumer (Telegram is single-consumer-p
 no-offset consumer corrupted the shared offset for 22 days, freezing the bot and re-skipping a stale
 backlog (the message-flood incident). Stack-alert approvals route through the gateway via a state
 file, not a second `getUpdates` call. Re-introducing a second consumer is a regression.
+
+### Local-only doc corpora — no remote egress from indexing (2026-08-15)
+
+Some indexed doc corpora are personal-context and must never reach a remote summarizer or an
+embeddings endpoint — notably a deliberately remote-less Obsidian vault holding personal notes
+and a frozen archive of migrated memory.
+
+`jdocmunch`'s `index_local` defaults are `use_ai_summaries=True` and `use_embeddings="auto"`, and
+both reach for whatever provider the environment exposes with **no log line and no prompt**. The
+posture is therefore forced explicitly, at three independent call sites:
+
+- **Cron path** — `LOCAL_ONLY_REPOS` in `scripts/jdocmunch-reindex.sh` is an allowlist (deliberately
+  not a global default — flipping it would silently change behaviour for every other doc repo). A
+  listed corpus is indexed with `use_ai_summaries=False` **and** `use_embeddings=False`.
+- **Fallback path** — `run_index_local()`'s CLI fallback, used when the Python API is unavailable,
+  carries the same `--no-ai-summaries --embeddings off` plus the repo's exclusions. A guarantee that
+  holds only on the happy path is not a guarantee.
+- **Watcher path** — the watcher's `--no-ai-summaries` lives in a systemd drop-in
+  (`jdocmunch-watch.service.d/override.conf`), **not** in the unit file:
+  `service_installer.py::_install_systemd()` rewrites the unit on every `watch-install` and
+  `_exec_cmd()` hardcodes the argv, so a hand-edited `ExecStart` is silently reverted by the next
+  stack upgrade. Drop-ins are never touched. Verifying the control means reading
+  `~/.doc-index/logs/watch.err` for tracebacks — `systemctl is-active` is **not** a health check
+  here, because the watcher's internal retry loop reports `active/running` with `NRestarts=0` while
+  failing every rediscover cycle.
+
+Two properties worth knowing before changing any of it:
+
+- **File exclusions persist; the summarizer flag does not.** `extra_ignore_patterns` are stored in
+  the manifest as `corpus_shape_patterns` and inherited by any later refresh that omits them — which
+  is what makes the watcher (it passes no patterns) safe. `use_ai_summaries` has no such
+  persistence, which is exactly why it must be re-asserted at every call site above.
+- **Indexing duplicates bytes.** `index_local` copies file contents into a raw mirror under
+  `~/.doc-index/local/<repo>/`, so indexing a secret-bearing corpus copies the secret into a store
+  outside that corpus's own repo. Exclude before the first index, or delete the index and rebuild —
+  editing the source afterwards does not reach the mirror.
+
+**Residual — not closable at this layer.** `jdocmunch-mcp watch` exposes no embeddings flag, and
+`_systemd_env_lines()` forwards every `JDOCMUNCH_*` variable into the unit. Setting
+`JDOCMUNCH_OPENAI_COMPAT_URL` turns `use_embeddings="auto"` ON for every watched repo, local-only
+ones included. Revisit the drop-in before ever setting that variable. Upstream passthrough is
+tracked in ROADMAP.
+
+**Do not remove the drop-in as cleanup.** It is retired only once `systemctl --user show
+jdocmunch-watch.service -p ExecStart` shows the flag coming from the unit itself — i.e. after
+upstream passthrough lands *and* a `watch-install` has been re-run and verified. Deleting it on
+the strength of an upstream release note alone silently restores `use_ai_summaries=True`, and
+nothing logs that it happened.
 
 ## Telegram `/work` Agent — Elevated Access
 
