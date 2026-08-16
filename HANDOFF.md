@@ -4,6 +4,28 @@
 surface-write-guard versioned + logging fixed; vault checkpoint Stop hook added; jdocmunch
 local-only allowlist + doc watcher installed. `HEALTHCHECK: ok`.*
 
+## 2026-08-16 (session end) — where things stand
+
+**Five PRs merged today** (#119 vault Stop hook, #120 guard versioned + logging, #121 healthcheck
+probes, #122 false-claim correction, #123 prune shim deleted), plus upstream
+[jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120) filed.
+`HEALTHCHECK: ok`, no open PRs, `main` and `origin/main` converged.
+
+**The single most important thing for the next session:** `surface-write-guard`'s `SED_RE` fires
+only on the macOS empty-suffix form of in-place sed — **essentially all GNU sed usage passes the
+write-guard**. Measured, verified identical in the live installed guard (so pre-existing, not a
+porting regression), and pinned as strict xfails. Closing it *widens* a security control, so it
+needs its own adversarial pass; a sloppy fix yields a false negative, which is worse than the gap.
+
+**The habit that paid off twice today, and should stick:** verify against the source or against
+upstream fetched at the pinned SHA — never against your own earlier note. Two claims we had been
+carrying were wrong, one of them in a public SECURITY.md, and both had been mutually
+"corroborated" by notes that copied each other.
+
+**Also open:** provisioning the jdocmunch drop-in in `install-reliability.sh` (detected, not
+restored) · the `index_local` `KeyError 'owner'` crash, still unfiled · dropping the Python API for
+the CLI in `run_index_local()` now that `--extra-ignore-pattern` exists.
+
 ## 2026-08-16 (later) — prune shim deleted; read this before touching that function
 
 **Status:** removed, live-verified, `HEALTHCHECK: ok`.

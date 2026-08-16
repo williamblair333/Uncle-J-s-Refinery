@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-08-16 (session end) — README synced to what actually shipped
+
+Step 3 of the session-end checklist exists to force this, and it found a real gap: three of
+today's additions were absent from the repo tree.
+
+### Changed
+- **`README.md`** — added `hooks/pre-mortem-guard/` (both `surface-write-guard.sh` and
+  `write-clearance-token.sh`, noting the symlink target), `scripts/vault-session-check.sh`, and
+  the two new test suites. The guard directory had never appeared in the tree at all, because
+  until today it was not versioned.
+
+### Design memory
+10 invariants + 6 closed attack vectors + 2 named residuals written to the memweave corpus,
+including the method note on how a false claim survived a week. Verified secret-free.
+
+---
+
 ## 2026-08-16 (later) — the prune-compensation shim is gone
 
 Upstream fixed the bug on 2026-08-07. We kept working around it for nine days.
