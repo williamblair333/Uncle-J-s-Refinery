@@ -2,6 +2,53 @@
 
 ---
 
+## 2026-08-16 — upstream issue #120 filed; and a claim of ours was wrong
+
+Triple-checking the jdocmunch report before filing turned up three things. Only one of them
+was the bug.
+
+### Reported
+- **[jgravelle/jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120)** —
+  `watch-install` cannot pass `--no-ai-summaries` to the watcher it installs, and re-running
+  it silently reverts a hand-edited `ExecStart`. Every claim verified against **live upstream
+  source**, not the installed copy:
+  - Upstream `master` HEAD is `9235e228`, **identical to our pinned version** — and
+    `service_installer.py`, `watch.py` and `server.py` fetched from GitHub `diff` clean
+    against `.venv`, proving the local install is unpatched.
+  - `watch` defines `--no-ai-summaries` (`server.py:3005`) and honours it end-to-end
+    (`:3138`); `watch-install` is a bare parser with zero arguments (`:3018`); `_exec_cmd()`
+    returns a constant (`service_installer.py:50`); `_install_systemd()` `write_text()`s the
+    unit unconditionally (`:86`/`:94`).
+  - All three platforms rewrite wholesale — launchd `write_text()`s the plist (`:167`),
+    Windows uses `schtasks /Create /F` — so the systemd drop-in workaround has **no
+    equivalent on macOS or Windows**.
+  - Not a duplicate: all 92 upstream issues enumerated. #108 fixed `index-local`'s flags and
+    explicitly noted `--no-ai-summaries` "belongs to the `watch` subcommand"; nothing covers
+    `watch-install`'s argument surface.
+  - Scoped to one verdict per their CONTRIBUTING, and scanned for host paths before posting.
+
+### Corrected — our claim, not an upstream regression
+**`SECURITY.md` said setting `JDOCMUNCH_OPENAI_COMPAT_URL` turns `use_embeddings="auto"` ON
+for every watched repo. That is false.** `_EMBED_AUTO_DETECT_ORDER` covers only
+`GOOGLE_API_KEY` and `OPENAI_API_KEY`, both suppressed unless `JDOCMUNCH_ALLOW_PAID_EMBEDDINGS`
+is set; `openai-compatible` is never auto-selected and needs the provider named explicitly plus
+a URL and a model. Upstream shipped that opt-in gate in **v1.127.0 on 2026-08-09 — six days
+before we wrote the claim**, so we were wrong when we wrote it. Corrected in place with the
+evidence, and deliberately excluded from the filing.
+
+### Found: a ROADMAP item that was stale for over a week
+The `str.lstrip("./")` prune bug we still listed as "report upstream" was filed as **#102 on
+2026-08-07 by @faxik and closed the same day**, and the fix (`_walk_rel`) is in the version we
+run. Our compensating shim in `jdocmunch-reindex.sh` is dead weight; its stated deletion
+condition is met. Nobody had read the upstream tracker.
+
+### Unblocked
+Reading upstream source via `gh api … -H "Accept: application/vnd.github.raw"` and diffing
+against `.venv` sidesteps the grep-guard block on `.venv/`, and is strictly better: it verifies
+upstream state rather than a vendored copy that may have drifted.
+
+---
+
 ## 2026-08-15 (later⁷) — feat: healthcheck probes for two controls nothing verified
 
 Both of today's earlier PRs shipped a control and documented, honestly, that nothing checked
