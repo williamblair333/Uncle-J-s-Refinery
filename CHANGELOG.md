@@ -2,6 +2,51 @@
 
 ---
 
+## 2026-08-15 (later⁵) — feat: Stop hook asserting the vault session was checkpointed
+
+The checkpoint-persistence rule was enforced by nothing but memory. A session could end
+with the day's work uncommitted and no daily-note entry, and nothing would say so.
+
+### Added
+- **`scripts/vault-session-check.sh`** — a Stop hook asserting three things: the daily
+  note for the session's date exists, it carries a `## Session N` heading *and* was
+  modified at or after the session started, and the vault's git tree is clean. Warns to
+  stderr and Telegram; **always exits 0**, because a Stop hook that exits non-zero can
+  trap session teardown.
+- **`tests/test_vault_session_check.py`** — 18 cases, 0 API calls. Each builds a real
+  vault git repo and a real JSONL transcript.
+- **CI job `test-vault-session-check`.**
+- **`/opt/proj/jaredrhod/.claude/settings.json`** — project-scoped registration, so it
+  fires for vault sessions only rather than globally.
+
+### The two design choices that carry the weight
+- **The date comes from the transcript, not `date +%F`.** Wall-clock at hook time breaks
+  every session crossing midnight: the entry went into yesterday's note and the hook would
+  report today's as missing. Sessions here routinely run late, so this would have fired
+  constantly — and the documented failure mode of the "local ahead of remote" signal is
+  that a control which cries wolf gets muted. The reference date is the timestamp of the
+  first record in the session transcript; wall-clock is a fallback only.
+- **Warnings carry counts and filenames, never content.** `git status --porcelain` is
+  reduced to a count before it reaches any message, and note bodies are never echoed. The
+  vault holds a personal-context note kept out of model context and an archive containing a
+  plaintext credential — the corpus the local-only invariant exists to protect. Two tests
+  pin this by planting a fake credential and a sensitive filename and asserting neither
+  reaches stderr, stdout, or the log.
+
+### Also pinned
+- `[ -t 0 ]` before reading stdin. `INPUT=$(cat)` with no stdin blocks forever, which
+  during manual testing would hang session teardown with no recovery but killing the CLI.
+- Every run appends exactly one line to `state/vault-check.log`, pass or fail. A checker
+  whose own outcome goes unrecorded is indistinguishable from one that passed — the exact
+  defect class this session root-caused in `surface-write-guard.sh`.
+
+### Known limitation, recorded not hidden
+The registration lives in a project settings file that `install.sh` does not write and
+`refinery-doctor --fix` does not restore, so it is silently absent after a machine rebuild.
+Same class as the unversioned `surface-write-guard.sh` item in ROADMAP.
+
+---
+
 ## 2026-08-15 (session end) — reported the push-hook bug upstream
 
 ### Reported
