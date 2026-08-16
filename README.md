@@ -802,6 +802,7 @@ Uncle-J-s-Refinery/
 │   ├── stack-alerts-poll.sh            ← polls Telegram for replies to upgrade pitches
 │   ├── stack-alerts-send.sh            ← sends upgrade pitch to Telegram
 │   ├── telegram-gateway-poll.sh        ← polls Telegram for user messages; routes to claude -p
+│   ├── vault-session-check.sh          ← Stop hook: asserts the vault session was checkpointed (daily note exists, carries this session's entry, tree clean). Warns; never blocks
 │   └── lib/
 │       ├── __init__.py
 │       └── tg_security.py              ← input sanitizer, output scanner, path validator, rate limiter
@@ -871,6 +872,8 @@ Uncle-J-s-Refinery/
 ├── tests/
 │   ├── __init__.py
 │   ├── test_session_end_check.py       ← pytest suite for scripts/session-end-check.sh (10 tests)
+│   ├── test_surface_write_guard.py     ← behaviour matrix for the surface-write guard; KNOWN_GAPS are strict xfails, so closing one fails CI until the list is updated
+│   ├── test_vault_session_check.py     ← pytest suite for scripts/vault-session-check.sh (18 tests); pins the always-exit-0 and no-content-in-warnings invariants
 │   └── test_tg_security.py             ← pytest suite for scripts/lib/tg_security.py
 │
 ├── state/                              ← runtime state (gitignored except .gitkeep)
@@ -932,6 +935,9 @@ Cloned at install time (gitignored):
 │   │   ├── grep-guard.sh               ← routes source-code reads (grep/rg/cat/sed/head/tail) to jcodemunch; per-segment, allows pipes/logs/writes
 │   │   ├── push-guard.sh               ← blocks direct pushes to main/master/production; tokenises with python3+shlex (not regex), falls back to regex and never fails open. Replaces the upstream guardrails hook — see docs/RELIABILITY.md
 │   │   └── unpushed-warn.sh            ← Stop hook: warns when branch is ahead of remote
+│   ├── pre-mortem-guard/               ← versioned pre-mortem enforcement (symlinked to ~/.claude/hooks/pre-mortem-guard/)
+│   │   ├── surface-write-guard.sh      ← blocks Bash writes to surface files that bypass the Edit/Write guard; fails loudly without jq
+│   │   └── write-clearance-token.sh    ← the only sanctioned way to mint a pre-mortem clearance token
 │   ├── langfuse_hook.py                ← Stop hook (step 8)
 │   ├── scan-secrets/                   ← guardrail (step 7)
 │   ├── scan-commit/                    ← guardrail (step 7)
