@@ -1,7 +1,37 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-15 — jdocmunch local-only allowlist + doc watcher installed;
-push-hook bug reported upstream. `HEALTHCHECK: ok`.*
+*Last updated: 2026-08-15 — vault checkpoint Stop hook added; jdocmunch local-only
+allowlist + doc watcher installed; push-hook bug reported upstream. `HEALTHCHECK: ok`.*
+
+## 2026-08-15 (later⁵) — the vault checkpoint rule is now enforced by something
+
+**Status:** `scripts/vault-session-check.sh` landed, 18 tests green, registered for
+jaredrhod sessions, live-fired against the real vault and passing.
+
+**What it asserts at session end:** the daily note for the session's date exists · it
+carries a `## Session N` heading and was modified at or after the session started · the
+vault git tree is clean. Warns to stderr + Telegram, logs one line per run to
+`state/vault-check.log`, and always exits 0.
+
+**The date comes from the transcript, not the wall clock.** This is the part worth
+remembering. `date +%F` at hook time would break every session that crosses midnight — the
+entry went into yesterday's note, so the hook would report today's as missing. Sessions
+here routinely run late, so it would have fired constantly, and a control that cries wolf
+gets muted. The reference date is the first record's timestamp in the session transcript.
+
+**Warnings never carry content.** `git status --porcelain` is reduced to a count before it
+reaches any message; note bodies are never echoed. The vault holds a personal-context note
+and an archive with a plaintext credential. Two tests plant a fake credential and a
+sensitive filename and assert neither reaches stderr, stdout, or the log. **If you extend
+the warning output, keep it to counts and filenames.**
+
+**⚠ The registration is not installer-managed.** It lives in
+`/opt/proj/jaredrhod/.claude/settings.json`, which `install.sh` does not write and
+`refinery-doctor --fix` does not restore. After a machine rebuild this control is silently
+gone. Same class as the unversioned `surface-write-guard.sh` item.
+
+**Escape hatch:** `VAULT_CHECK_SKIP=1`. If it ever produces a bad warning, set the flag —
+don't delete the hook.
 
 ## 2026-08-15 (session end) — upstream issue #17 filed
 
