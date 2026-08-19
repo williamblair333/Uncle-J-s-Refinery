@@ -98,13 +98,30 @@ not just this project's. (The `uncle-j` name is legacy.) It's kept current by tw
 |--------|----------|-------|
 | `uncle-j-memweave-sync` cron | 02:30 nightly (`nice -19`) | `--all` — full cross-project export+index (every project) |
 | Stop-hook (`# uncle-j-memweave-sync`) | end of every session **whose cwd is this repo** (`async`) | incremental — this repo, `LIMIT 15` most-recent transcripts |
+| Stop-hook (`# uncle-j-memweave-sync-vault`) | end of every session **whose cwd is `/opt/proj/jaredrhod`** (`async`) | incremental — `-opt-proj-jaredrhod`, `LIMIT 15`, **plus the vault mirror** |
 
-The Stop-hook's reach is narrower than it looks: it is registered in this repo's
-`.claude/settings.json`, not at user scope, and `sync_memory.sh` with an empty `PROJECT`
-argument derives the slug from its own location — so it always ingests
-`-opt-proj-Uncle-J-s-Refinery` no matter which project the session was working on. Measured
-2026-08-19: 297 hook runs, all of them that project; 45 nightly `--all` runs. Sessions in other
-projects are covered by the cron alone, with up to ~24h of lag.
+Stop-hook reach is narrower than it looks, and the reason is worth understanding before adding a
+third. The hooks are registered per-repo in each project's `.claude/settings.json`, not at user
+scope, so one only fires when that project is the session's cwd. Worse, `sync_memory.sh` with an
+*empty* `PROJECT` argument derives the slug from its own location — so the first hook always
+ingests `-opt-proj-Uncle-J-s-Refinery` no matter which project the session was working on.
+Measured 2026-08-19: 297 hook runs, all of them that project; 45 nightly `--all` runs.
+
+The vault hook (added 2026-08-19) therefore passes its project **explicitly**. Without that it
+would re-ingest this repo and leave the vault's own transcripts to the cron. Every project except
+these two is still covered by the cron alone, with up to ~24h of lag.
+
+**Known race, deliberately not fixed:** two sessions closing within seconds of each other means
+one hook loses the `mkdir` lock and exits 0 with `sync skipped — another sync holds`. It does not
+queue or retry, so that project's ingest defers to the 02:30 cron. The alternative — blocking on
+the lock during session teardown — is a worse failure than a deferred ingest. The skip is logged,
+so it is diagnosable after the fact rather than invisible.
+
+Both hooks are asserted by `healthcheck.sh` (`check_vault_hook_registered`), which greps for each
+marker separately. That matters: a hand-edit preserving the checkpoint hook and dropping the sync
+hook would otherwise pass green, and a missing sync hook is invisible by construction — the corpus
+just reverts to 24h staleness, and a stale prior-art miss reads exactly like a genuine
+"no prior work".
 
 Both redirect to `state/memweave-sync.log`; the script logs to stdout/stderr only (callers own
 the destination). The store is fully reconstructable from the markdown corpus (memweave M2

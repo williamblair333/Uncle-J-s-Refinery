@@ -35,12 +35,17 @@ This hazard already bit once here — the `bill-brain-vault` jdocmunch index ove
 carried both credential-bearing Migrated Memory files (see the section below). Same vault, same
 two folders, second mechanism.
 
-**Known and accepted: the mirror lags up to ~24h.** Vault edits happen in `/opt/proj/jaredrhod`,
-whose only Stop hook is `vault-session-check.sh`, not the memweave sync — so a note written today
-reaches the store at the 02:30 cron. Closing it means registering `sync_memory.sh` as a second
-Stop hook in the jaredrhod repo's `.claude/settings.json`, passing the project explicitly (the
-empty-`PROJECT` slug derivation would otherwise re-ingest *this* repo — see the section below).
-That is a separate surface and was not attempted here.
+**The ~24h lag is closed.** `/opt/proj/jaredrhod/.claude/settings.json` now carries a second Stop
+hook running `sync_memory.sh -opt-proj-jaredrhod 15`. The project argument is **explicit and must
+stay that way** — with an empty argument `sync_memory.sh` derives the slug from its own location
+and would silently re-ingest *this* repo while the vault's transcripts waited for the cron (see
+the section below for how that bit us before). `healthcheck.sh` asserts both markers separately;
+checking only `uncle-j-vault-session-check` would let a hand-edit drop the sync hook and still
+pass green.
+
+Residual, accepted: two sessions closing within seconds means one loses the `mkdir` lock and exits
+0 with `sync skipped`, deferring to the cron. Blocking on the lock during session teardown is the
+worse failure. It is logged, so it stays diagnosable.
 
 **Also open, from the same analysis:** the credential in `12 - Archive` is excluded from every
 index now, but it still exists in plaintext and in that vault's git history. Excluding it is a

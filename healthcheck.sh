@@ -930,28 +930,45 @@ check_jdocmunch_watch_posture() {
     fi
 }
 
-# ----- 9m-3. vault checkpoint Stop hook still registered -------------------
-# The hook lives in a project settings file that install.sh does not write and
-# refinery-doctor --fix does not restore, so it goes missing on a machine rebuild
+# ----- 9m-3. vault Stop hooks still registered -----------------------------
+# Both hooks live in a project settings file that install.sh does not write and
+# refinery-doctor --fix does not restore, so they go missing on a machine rebuild
 # with no signal. Only meaningful where the vault actually exists.
+#
+# Two markers, checked separately on purpose. Asserting only the first would let a
+# hand-edit that preserved the checkpoint hook and dropped the sync hook pass green
+# — and the sync hook's absence is invisible by construction: the corpus just
+# reverts to ~24h staleness, and a stale prior-art miss reads exactly like a
+# genuine "no prior work".
 check_vault_hook_registered() {
     local vault_root="${VAULT_ROOT:-/opt/proj/jaredrhod}"
     [ -d "$vault_root/vaults/brain" ] || return 0
 
-    step "vault checkpoint Stop hook — registered"
+    step "vault Stop hooks — registered"
     local settings="$vault_root/.claude/settings.json"
     if [ ! -f "$settings" ]; then
-        bad "no $settings — vault sessions end unchecked"
-        hint "restore the Stop hook entry calling scripts/vault-session-check.sh (see HANDOFF)"
+        bad "no $settings — vault sessions end unchecked and unsynced"
+        hint "restore both Stop hook entries: scripts/vault-session-check.sh and" \
+             "scripts/memweave/sync_memory.sh (see HANDOFF)"
         record_fail "vault-hook-unregistered"
         return
     fi
+
     if grep -q 'uncle-j-vault-session-check' "$settings" 2>/dev/null; then
         ok "vault-session-check registered"
     else
         bad "$settings exists but has no vault-session-check Stop hook"
         hint "restore the Stop hook entry calling scripts/vault-session-check.sh (see HANDOFF)"
         record_fail "vault-hook-unregistered"
+    fi
+
+    if grep -q 'uncle-j-memweave-sync-vault' "$settings" 2>/dev/null; then
+        ok "vault memweave sync registered"
+    else
+        bad "$settings exists but has no memweave sync Stop hook"
+        hint "restore the Stop hook calling scripts/memweave/sync_memory.sh" \
+             "-opt-proj-jaredrhod 15 — without it the vault mirror waits for the 02:30 cron"
+        record_fail "vault-sync-hook-unregistered"
     fi
 }
 

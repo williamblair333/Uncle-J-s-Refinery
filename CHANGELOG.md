@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-08-19 (latest) — the vault syncs at session close, not at 02:30
+
+Closes the one gap the vault-mirror PR shipped with. The mirror rode `sync_memory.sh`, but the
+only Stop hook in `/opt/proj/jaredrhod` was `vault-session-check.sh` — so a note written today
+waited for the 02:30 cron, and a same-day prior-art search still missed it.
+
+### Added
+- A second Stop hook in `/opt/proj/jaredrhod/.claude/settings.json` running
+  `sync_memory.sh -opt-proj-jaredrhod 15`, same guarded `[ -d … ] || exit 0` + `async` shape as
+  the four hooks already in this repo. The project is passed **explicitly**: with an empty
+  argument `sync_memory.sh` derives the slug from its own location and would re-ingest this repo
+  instead. First run: 7 jaredrhod transcripts exported (never previously ingested at session
+  close), 1 vault note re-mirrored, 29 unchanged.
+- `healthcheck.sh` `check_vault_hook_registered` now asserts **both** markers separately. Checking
+  only the first would let a hand-edit that kept the checkpoint hook and dropped the sync hook
+  pass green — and a missing sync hook is invisible by construction, since a stale prior-art miss
+  reads exactly like a genuine "no prior work". `HEALTHCHECK: ok` with both detected.
+
+### Known race, deliberately not fixed
+Two sessions closing within seconds means one hook loses the `mkdir` lock and exits 0 with
+`sync skipped`, deferring that project to the cron. Blocking on the lock during session teardown
+is the worse failure. The skip is logged, so it stays diagnosable.
+
+---
+
 ## 2026-08-19 (later still) — the vault is now a memweave corpus source
 
 Prior-art search was walking past the store that holds the decisions. `~/.uncle-j-memory` held
