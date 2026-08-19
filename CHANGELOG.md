@@ -2,6 +2,38 @@
 
 ---
 
+## 2026-08-19 (later) — four false claims about memweave freshness corrected
+
+All four were found by measuring the running system rather than re-reading the notes, which is
+how they survived: `CLAUDE.md` and `docs/RELIABILITY.md` had been corroborating each other on
+one point and contradicting each other on another.
+
+### Fixed
+- **"at every session end (Stop-hook)"** (`CLAUDE.md` §4) — the hook is registered in this repo's
+  own `.claude/settings.json`, not at user scope, so it fires only when the session's cwd is this
+  repo. `state/memweave-sync.log`: 297 hook runs, every one
+  `project=-opt-proj-Uncle-J-s-Refinery`; 45 nightly `--all`. Work in any other project reaches
+  the store at 02:30, not at session close.
+- **"`~/.uncle-j-memory` currently holds this project's transcripts"** (`CLAUDE.md` §4) — stale
+  since the cron went `--all`. It is the cross-project store, 34 projects as of today.
+  `docs/RELIABILITY.md` already said so; the two files disagreed.
+- **"Cross-project corpus + global routing are a later decision (tracked in HANDOFF)"** — that
+  decision shipped. Removed rather than re-dated.
+- **"`flock -n`-guarded (`/tmp/memweave-sync.lock`)"** (`docs/RELIABILITY.md`) — `sync_memory.sh`
+  serialises on an atomic `mkdir "$LOCK.d"`. The comment in the script says why: MSYS/Git Bash
+  ships no `flock`. Anyone debugging a stuck sync was looking for the wrong lock at the wrong path.
+
+### Added
+- The mechanism behind the Stop-hook's narrow reach, in `docs/RELIABILITY.md`: with an empty
+  `PROJECT` argument `sync_memory.sh` derives the slug from **its own location**, so it ingests
+  this repo regardless of which project the session was working on.
+
+### Not changed
+No code. `sync_memory.sh`, the cron, and the hook all behave exactly as they did — the
+documentation now describes that behaviour instead of a more generous version of it.
+
+---
+
 ## 2026-08-19 — local-only posture follows the source root, not the repo name
 
 A second index of the vault existed under a different name and got the default posture:

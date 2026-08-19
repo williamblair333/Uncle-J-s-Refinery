@@ -1,7 +1,25 @@
 # Handoff — Uncle J's Refinery
 
 *Last updated: 2026-08-19 — the jdocmunch local-only allowlist is now keyed by source root
-rather than repo name, and the duplicate index that exposed the gap is deleted.*
+rather than repo name, the duplicate index that exposed the gap is deleted, and four false
+claims about memweave freshness are corrected.*
+
+## 2026-08-19 (later) — what the memweave Stop-hook actually covers
+
+**It only fires when the session's cwd is this repo.** The hook lives in this repo's
+`.claude/settings.json`, not at user scope, and `sync_memory.sh` with an empty `PROJECT`
+argument derives the slug from its own location — so it ingests `-opt-proj-Uncle-J-s-Refinery`
+whatever the session was working on. 297 hook runs, all that project; 45 nightly `--all`.
+Sessions in every other project are covered by the 02:30 cron alone, ~24h lag.
+
+`CLAUDE.md` §4 said "at every session end", and separately still called `~/.uncle-j-memory` a
+this-project store long after the cron went `--all` — while `docs/RELIABILITY.md` correctly
+called it cross-project. Both corrected; `RELIABILITY.md`'s `flock -n` claim corrected too (the
+script uses an atomic `mkdir "$LOCK.d"`, because MSYS ships no `flock`).
+
+**If you want the hook everywhere,** promoting it to `~/.claude/settings.json` is not enough on
+its own — `sync_memory.sh` would still slug itself to this repo. It needs the project passed
+explicitly, or the derivation changed to read the session's cwd. Not attempted.
 
 ## 2026-08-19 — read this before touching `jdocmunch-reindex.sh`
 
