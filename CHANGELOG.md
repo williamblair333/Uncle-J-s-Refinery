@@ -2,6 +2,41 @@
 
 ---
 
+## 2026-08-19 (last) — install.sh no longer deletes global-only CLAUDE.md sections
+
+`install.sh` §6b deployed the routing policy with a wholesale `cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"`.
+But the installed copy legitimately holds content that exists in **no other file**:
+`features/dreaming/dream.sh` appends a `## Dreaming Notes (auto-generated)` section to
+`~/.claude/CLAUDE.md` and never to the repo copy. The copy deleted it.
+
+Not hypothetical. `scripts/audit/components.json:26` still lists `"Docker Port Registry"` as a
+routing-policy heading; that heading now appears **zero times** in either file. It wasn't retired,
+it was copied over — by this line.
+
+### Changed
+- §6b delegates to `refinery-doctor.sh --fix --check claude-md-sync`, which already owned the safe
+  merge (repo policy prefix + the installed copy's Dreaming Notes tail) and owns the marker string.
+  Delegating keeps that marker in two files rather than three; a third copy would rot out of sync
+  and silently restore the whole-file comparison it exists to avoid.
+- The one surviving `cp` is the create-when-absent branch, where there is nothing to destroy. With
+  no doctor present the installer now leaves an existing file **alone** rather than falling back to
+  the destructive copy.
+
+### The trap this had to be designed around
+`refinery-doctor.sh` exits 1 whenever it applied a migration — **including in `--fix` mode, where
+that is the success path** — and `install.sh` runs `set -euo pipefail`. An unguarded call would
+abort the installer at §6b on a *working* fix, skipping §6c and everything below it, with a
+success-looking doctor line on screen. The status is captured into `_doctor_rc` and dispatched:
+0 = in sync, 1 = applied, anything else = a real failure. Deliberately not `|| true`, which would
+swallow a genuine crash.
+
+### Added
+- `tests/test_claude_md_deploy.py` (10 cases) and CI job 12. CI never executes `install.sh` — which
+  is how the bug shipped unnoticed — so the invariant is pinned at the shared implementation plus a
+  source-level guard asserting §6b cannot regress to an unguarded copy.
+
+---
+
 ## 2026-08-19 (latest) — the vault syncs at session close, not at 02:30
 
 Closes the one gap the vault-mirror PR shipped with. The mirror rode `sync_memory.sh`, but the

@@ -492,18 +492,49 @@ step "Next steps"
 step "Installing retrieval routing policy (CLAUDE.md)"
 _CLAUDE_SRC="$STACK_ROOT/CLAUDE.md"
 _CLAUDE_DEST="$HOME/.claude/CLAUDE.md"
+_DOCTOR="$STACK_ROOT/scripts/refinery-doctor.sh"
 mkdir -p "$HOME/.claude"
-if [ -f "$_CLAUDE_DEST" ] && ! diff -q "$_CLAUDE_SRC" "$_CLAUDE_DEST" >/dev/null 2>&1; then
-    _BACKUP="$_CLAUDE_DEST.bak.$(date +%Y%m%d%H%M%S)"
-    cp "$_CLAUDE_DEST" "$_BACKUP"
-    ok "backed up existing CLAUDE.md → $(basename "$_BACKUP")"
-    cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"
-    ok "routing policy updated → $_CLAUDE_DEST"
-elif [ ! -f "$_CLAUDE_DEST" ]; then
-    cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"
-    ok "routing policy installed → $_CLAUDE_DEST"
+
+# NEVER `cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"` here. The installed copy legitimately
+# holds content that exists in NO other file: features/dreaming/dream.sh appends a
+# "## Dreaming Notes (auto-generated)" section to ~/.claude/CLAUDE.md only, never to
+# the repo copy. A wholesale copy deletes it silently.
+#
+# This is not a hypothetical. That is exactly how the global-only "Docker Port
+# Registry" section was lost — scripts/audit/components.json still lists it as a
+# routing-policy heading, and it now appears zero times in either file.
+#
+# refinery-doctor.sh owns the safe merge (repo policy prefix + the installed copy's
+# Dreaming Notes tail) and owns the marker string. Delegating keeps that marker in two
+# files instead of three; a third copy here would rot out of sync and silently restore
+# the whole-file comparison it was written to avoid.
+if [ -f "$_DOCTOR" ]; then
+    if [ -f "$_CLAUDE_DEST" ] && ! diff -q "$_CLAUDE_SRC" "$_CLAUDE_DEST" >/dev/null 2>&1; then
+        _BACKUP="$_CLAUDE_DEST.bak.$(date +%Y%m%d%H%M%S)"
+        cp "$_CLAUDE_DEST" "$_BACKUP"
+        ok "backed up existing CLAUDE.md → $(basename "$_BACKUP")"
+    fi
+    # Status must be captured, not propagated. refinery-doctor.sh exits 1 whenever it
+    # applied a migration — including in --fix mode, where that is the SUCCESS path.
+    # Under `set -e` an unguarded call would abort the installer here, on a working
+    # fix, skipping every section below with a success-looking message on screen.
+    # A bare `|| true` is not the answer either: it would also swallow a real crash.
+    _doctor_rc=0
+    bash "$_DOCTOR" --fix --check claude-md-sync || _doctor_rc=$?
+    case "$_doctor_rc" in
+        0) ok "routing policy in sync → $_CLAUDE_DEST" ;;
+        1) ok "routing policy updated → $_CLAUDE_DEST (Dreaming Notes preserved)" ;;
+        *) warn "refinery-doctor exited $_doctor_rc — routing policy NOT updated" ;;
+    esac
 else
-    ok "routing policy unchanged — skipped"
+    # No doctor: install only when there is nothing to destroy. Falling back to a
+    # wholesale copy would reintroduce the exact data loss described above.
+    if [ ! -f "$_CLAUDE_DEST" ]; then
+        cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"
+        ok "routing policy installed → $_CLAUDE_DEST"
+    else
+        warn "$_DOCTOR missing — left $_CLAUDE_DEST alone to avoid discarding Dreaming Notes"
+    fi
 fi
 
 # --- 6c. Wire git post-merge hook (opt-in) ----------------------------------
