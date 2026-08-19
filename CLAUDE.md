@@ -228,11 +228,11 @@ tools can answer structurally.
   per-project notes, and the Jobs). Before the mirror, "have we solved this before?" searched past
   the one store holding the decisions. Both are derived: **never edit `memory/vault/` — edit the
   vault at `/opt/proj/jaredrhod/vaults/brain`**, or the next sync overwrites you.
-- **The vault mirror lags up to ~24h.** It rides `sync_memory.sh`, and vault edits happen in
-  `/opt/proj/jaredrhod`, whose only Stop hook is `vault-session-check.sh` — not the memweave sync.
-  So a note written today reaches the store at the 02:30 cron, not at session close. A same-day
-  miss is staleness, not absence; check the vault directly when the question is about work done
-  today.
+- **The vault syncs at session close**, via a second Stop hook registered in
+  `/opt/proj/jaredrhod/.claude/settings.json` that calls `sync_memory.sh -opt-proj-jaredrhod 15`
+  — so a vault note written this session is searchable at the end of it, not at 02:30. The one
+  gap left: if a jaredrhod session and a stack-repo session close within seconds, one loses the
+  sync lock and defers to the cron (logged as `sync skipped` in `state/memweave-sync.log`).
 - **The mirror excludes `11 - Personal` and `12 - Archive` and fails closed.** Personal Context
   holds health, key people, and beliefs the vault's own rules keep out of every boot-loaded file;
   the Archive carries a plaintext credential. Any top-level vault folder that
