@@ -44,12 +44,26 @@ EXPECTED_INDEX_VERSION=3
 # Deliberately an allowlist, not a global default: the other nine doc repos are
 # ordinary project documentation and keep whatever behaviour they had.
 #
-# Repos also get per-repo corpus exclusions via LOCAL_ONLY_IGNORE below.
-LOCAL_ONLY_REPOS=(
-    jaredrhod-brain
+# Repos also get corpus exclusions via LOCAL_ONLY_IGNORE below.
+#
+# KEYED BY SOURCE ROOT, NOT BY REPO NAME (changed 2026-08-19)
+#
+# jdocmunch lets any number of indexes point at one source tree, each under its
+# own <name>.json manifest. The allowlist used to hold repo NAMES, so a second
+# index of the same tree under a different name was classified "default" and got
+# summaries, embeddings, and the full corpus — the exact posture this list
+# exists to prevent, reachable by typing a different --name.
+#
+# That is not hypothetical: `bill-brain-vault` sat beside `jaredrhod-brain` over
+# /opt/proj/jaredrhod/vaults/brain for a day, and its raw mirror under
+# ~/.doc-index/local/ held both credential-bearing files the exclusion below
+# drops. Keying on the resolved source root makes the bypass unreachable — the
+# posture follows the tree, which is where the risk actually lives.
+LOCAL_ONLY_ROOTS=(
+    /opt/proj/jaredrhod/vaults/brain
 )
 
-# Extra gitignore-style patterns, keyed by repo name. Files matched here never
+# Extra gitignore-style patterns, keyed by source root. Files matched here never
 # enter the corpus OR the cached raw mirror under ~/.doc-index. Since the
 # prune-compensation shim was removed (2026-08-16), these are the ONLY patterns
 # this script passes — so they are load-bearing, not supplementary.
@@ -62,17 +76,30 @@ LOCAL_ONLY_REPOS=(
 # Counted by inspection on 2026-08-15, not from the vault's own note, which
 # listed only the networking file. If you add files to that snapshot, re-check.
 declare -A LOCAL_ONLY_IGNORE=(
-    [jaredrhod-brain]="12 - Archive/Migrated Memory 2026-08-15/-opt-proj-campaign-forge/project_foundry_networking.md
+    [/opt/proj/jaredrhod/vaults/brain]="12 - Archive/Migrated Memory 2026-08-15/-opt-proj-campaign-forge/project_foundry_networking.md
 12 - Archive/Migrated Memory 2026-08-15/-opt-proj-campaign-forge/project_foundry_gm_password.md"
 )
 
-# Membership test for the allowlist above.
+# Resolve a source root to one canonical spelling before comparing. A manifest
+# records whatever path it was indexed with, so a symlinked or trailing-slash
+# variant of the same tree would miss a literal string compare — and missing
+# means "default posture", which is the failure this test exists to stop.
+# Falls back to the trailing-slash-stripped literal when the path is gone, so a
+# vanished root still compares equal to its allowlist entry rather than
+# silently downgrading to default.
+canonical_root() {
+    local p=${1%/}
+    if [[ -d "$p" ]]; then (cd "$p" && pwd -P); else printf '%s' "$p"; fi
+}
+
+# Membership test for the allowlist above. Takes a SOURCE ROOT, not a repo name.
 is_local_only() {
-    local candidate=$1 entry
+    local candidate entry
+    candidate="$(canonical_root "$1")"
     # The +"..." form keeps `set -u` from aborting the whole run if the allowlist
     # is ever emptied — an empty allowlist means "nothing is forced", not "crash".
-    for entry in ${LOCAL_ONLY_REPOS[@]+"${LOCAL_ONLY_REPOS[@]}"}; do
-        [[ "$entry" == "$candidate" ]] && return 0
+    for entry in ${LOCAL_ONLY_ROOTS[@]+"${LOCAL_ONLY_ROOTS[@]}"}; do
+        [[ "$(canonical_root "$entry")" == "$candidate" ]] && return 0
     done
     return 1
 }
@@ -136,6 +163,12 @@ def emit(verdict, name, root, reason):
     print(f"{verdict}\t{name}\t{root}\t{reason}")
 
 
+# realpath(source_root) -> [manifest names]. Populated as manifests are read;
+# drained into DUP lines after the loop so the report is complete before the
+# duplicate verdict is emitted.
+roots_seen = {}
+
+
 def newest_mtime(root):
     """Newest mtime under root, skipping VCS and dependency noise."""
     newest = 0.0
@@ -178,6 +211,14 @@ for manifest in sorted(idx.glob("*.json")):
         emit("SKIP", name, root, "source root no longer exists")
         continue
 
+    # Two manifests over one tree is how a local-only posture got bypassed on
+    # 2026-08-19: the second index carried a different name, so the name-keyed
+    # allowlist did not recognise it. The classification is now root-keyed and
+    # cannot miss — but a duplicate is still worth saying out loud, because the
+    # doc WATCHER refreshes manifests directly and never consults this script.
+    # Nothing here deletes one; that is a human call.
+    roots_seen.setdefault(os.path.realpath(root), []).append(name)
+
     # git root -> compare HEAD against the recorded sha
     git_dir = os.path.join(root, ".git")
     if os.path.exists(git_dir):
@@ -210,6 +251,11 @@ for manifest in sorted(idx.glob("*.json")):
         emit("REINDEX", name, root, f"file modified {when} after index {indexed_at[:16]}")
     else:
         emit("SKIP", name, root, f"no changes since {indexed_at[:16]}")
+
+for shared_root, names in sorted(roots_seen.items()):
+    if len(names) > 1:
+        emit("DUP", ",".join(sorted(names)), shared_root,
+             f"{len(names)} manifests share this source root")
 PY_EOF
 }
 
@@ -326,11 +372,12 @@ run_index_local() {
     local root=$1 name=$2
     local local_only=0 extra_ignore=""
 
-    # See LOCAL_ONLY_REPOS at the top of this file for why these two are forced
-    # off rather than left to index_local's defaults.
-    if is_local_only "$name"; then
+    # See LOCAL_ONLY_ROOTS at the top of this file for why these two are forced
+    # off rather than left to index_local's defaults, and why the test keys on
+    # the source root rather than the repo name.
+    if is_local_only "$root"; then
         local_only=1
-        extra_ignore="${LOCAL_ONLY_IGNORE[$name]:-}"
+        extra_ignore="${LOCAL_ONLY_IGNORE[$(canonical_root "$root")]:-}"
     fi
 
     "$PY" - "$root" "$name" "$local_only" "$extra_ignore" >>"$LOG" 2>&1 <<'PY_EOF'
@@ -417,6 +464,8 @@ skipped=0
 # apart from "everything drifted and every one was skipped" — see the closing
 # WARN below.
 drifted=0
+# Manifests sharing one source root. Reported, never acted on — see the DUP case.
+duplicates=0
 
 while IFS=$'\t' read -r verdict name root reason; do
     [[ -z "$verdict" ]] && continue
@@ -428,6 +477,15 @@ while IFS=$'\t' read -r verdict name root reason; do
         SKIP)
             log "skip    $name — $reason"
             skipped=$((skipped + 1))
+            ;;
+        DUP)
+            # Not an error and not an exit-code failure: a second index over one
+            # tree is legitimate (a scratch copy, a rename mid-flight). It is
+            # reported because the watcher indexes each manifest on its own
+            # stored posture, so a duplicate created by hand inherits nothing
+            # from LOCAL_ONLY_ROOTS until this script next touches it.
+            log "WARN    duplicate source root $root — manifests: $name ($reason)"
+            duplicates=$((duplicates + 1))
             ;;
         REINDEX)
             drifted=$((drifted + 1))
@@ -447,7 +505,7 @@ while IFS=$'\t' read -r verdict name root reason; do
     esac
 done <<<"$PLAN"
 
-log "Done. drifted=$drifted reindexed=$reindexed skipped=$skipped failed=$failed"
+log "Done. drifted=$drifted reindexed=$reindexed skipped=$skipped failed=$failed duplicates=$duplicates"
 
 # "reindexed=0 failed=0" is the same shape whether nothing needed doing or the
 # guard rejected everything that did — and that ambiguity is exactly what let a
