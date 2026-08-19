@@ -1,8 +1,56 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-19 — the jdocmunch local-only allowlist is now keyed by source root
-rather than repo name, the duplicate index that exposed the gap is deleted, and four false
-claims about memweave freshness are corrected.*
+*Last updated: 2026-08-19 — the Obsidian vault is now a second memweave corpus source, the
+jdocmunch local-only allowlist is keyed by source root rather than repo name, the duplicate index
+that exposed the gap is deleted, and four false claims about memweave freshness are corrected.*
+
+## 2026-08-19 (later still) — the vault mirror, and the one line that can delete the corpus
+
+**What changed.** `sync_memory.sh` now has two corpus sources. `scripts/memweave/mirror_vault.py`
+copies vault markdown into `~/.uncle-j-memory/memory/vault/` between the transcript export and the
+index. 30 files today. The gap it closes: the corpus held 2,254 transcript docs and nothing else,
+so the standing "have we solved this before?" rule searched conversations and never decisions —
+the Jobs, the per-project notes, Active Priorities, VAULT-INDEX were all invisible to `mw_search`.
+
+**Read `_resolve_dest` before touching the prune.** The prune deletes files, and it is the only
+part of this that can do real damage. If the destination ever resolves to `memory/` instead of
+`memory/vault/`, the loop deletes all 2,254 transcript docs. Those are re-exportable — but the
+dream-synthesis notes `dream.sh` copies in, and `premortem-audit.md`, are **not**. Three
+assertions run before any unlink (final component is literally `vault`, dest is not the corpus
+root, dest is a strict subpath of `memory/`), only `*.md` the mirror itself wrote is unlinked, and
+`test_empty_vault_does_not_delete_the_corpus` pins the specific way this goes wrong: `VAULT_ROOT`
+pointed at an empty directory makes *every* destination file read as an orphan through the normal,
+non-error path. Do not relax any of the four.
+
+**The exclusions fail closed, and that is load-bearing, not fussiness.** `11 - Personal` (Personal
+Context: health, key people, beliefs) and `12 - Archive` (a plaintext credential — 1
+credential-shaped line, 0 across everything mirrored) are excluded by *normalized* folder name, so
+renumbering cannot silently disable an exclusion. More important: **an unrecognised top-level
+folder is excluded and reported with a non-zero exit**, because a plain denylist fails open on the
+next folder somebody adds and the vault gained twelve in four days. Adding `14 - Whatever` to the
+vault will make the nightly sync exit non-zero until it is classified in `INCLUDED_TOP_LEVEL` or
+`EXCLUDED_TOP_LEVEL`. That noise is the feature.
+
+This hazard already bit once here — the `bill-brain-vault` jdocmunch index over the same vault
+carried both credential-bearing Migrated Memory files (see the section below). Same vault, same
+two folders, second mechanism.
+
+**Known and accepted: the mirror lags up to ~24h.** Vault edits happen in `/opt/proj/jaredrhod`,
+whose only Stop hook is `vault-session-check.sh`, not the memweave sync — so a note written today
+reaches the store at the 02:30 cron. Closing it means registering `sync_memory.sh` as a second
+Stop hook in the jaredrhod repo's `.claude/settings.json`, passing the project explicitly (the
+empty-`PROJECT` slug derivation would otherwise re-ingest *this* repo — see the section below).
+That is a separate surface and was not attempted here.
+
+**Also open, from the same analysis:** the credential in `12 - Archive` is excluded from every
+index now, but it still exists in plaintext and in that vault's git history. Excluding it is a
+guard, not a fix — rotating it is the fix, and that is Bill's call since it is not clear from the
+note which service it belongs to.
+
+**Verified, not assumed:** memweave recurses under `<workspace>/memory/` and ignores anything
+outside it (probed against a throwaway workspace — the package ships no retrievable source, and
+its docstring implies recursion without proving it). And no jdocmunch manifest exists over
+`~/.uncle-j-memory`, so the doc watcher does not pick the mirror up as a second index.
 
 ## 2026-08-19 (later) — what the memweave Stop-hook actually covers
 

@@ -198,6 +198,31 @@ jobs:
       - name: pytest tests/test_vault_session_check.py
         run: python -m pytest tests/test_vault_session_check.py -v
 
+  # ── 11. vault-mirror tests ───────────────────────────────────────────────
+  # The mirror copies vault notes into the memweave corpus, which means it also
+  # deletes from it. Two invariants carry the job: the prune cannot escape
+  # memory/vault/ (a dest resolved one level too high would take out every
+  # transcript doc, plus the dream notes and the pre-mortem audit sink that no
+  # re-export regenerates), and the folder exclusions fail CLOSED — an
+  # unrecognised top-level folder is kept out and reported, never mirrored by
+  # default. Stdlib + pytest only; no memweave, no embeddings, no network.
+  test-mirror-vault:
+    name: vault-mirror tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_mirror_vault.py
+        run: python -m pytest tests/test_mirror_vault.py -v
+
   # ── 11. surface-write-guard behaviour matrix ─────────────────────────────
   # A security control, same posture as push-guard: the BLOCK cases matter more
   # than the ALLOW ones, since a fix for a logging bug that narrows detection is

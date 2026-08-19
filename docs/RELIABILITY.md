@@ -110,6 +110,42 @@ Both redirect to `state/memweave-sync.log`; the script logs to stdout/stderr onl
 the destination). The store is fully reconstructable from the markdown corpus (memweave M2
 crash-recovery: `rm` the index → byte-identical rebuild), so an interrupted sync is recoverable.
 
+### Two corpus sources
+
+`sync_memory.sh` writes two kinds of markdown into `~/.uncle-j-memory/memory/`, and both are
+**derived** — the store is a cache of them, never the original:
+
+| Source | Lands in | Written by | Holds |
+|--------|----------|------------|-------|
+| Claude transcripts | `memory/*.md` | `export_transcripts.py` | what was *said* — the conversations |
+| Obsidian vault | `memory/vault/**` | `mirror_vault.py` | what was *decided* — VAULT-INDEX, Active Priorities, per-project notes, Jobs |
+
+Until 2026-08-19 there was only the first, so prior-art search covered conversations and missed
+decisions entirely. **Never edit `memory/vault/`** — edit `/opt/proj/jaredrhod/vaults/brain` and
+let the next sync carry it; the mirror overwrites and prunes its own directory on every run.
+
+Two invariants in `mirror_vault.py` carry more weight than the copying:
+
+- **The prune cannot escape `memory/vault/`.** Orphans are deleted so a note removed from the
+  vault leaves the index too, and a destination resolved one level too high would delete all
+  ~2,250 transcript docs — re-exportable, except for the dream-synthesis notes `dream.sh` copies
+  in and `premortem-audit.md`, which are not. `_resolve_dest` asserts the target is a strict
+  subpath of `memory/` named exactly `vault` before any unlink, and only `*.md` the mirror wrote
+  is removed. `tests/test_mirror_vault.py` pins the way this actually goes wrong: `VAULT_ROOT`
+  pointed at an empty directory makes *every* destination file read as an orphan via the normal,
+  non-error path.
+- **Folder exclusions fail closed.** `11 - Personal` (health, key people, beliefs — which the
+  vault's own rules keep out of every boot-loaded file) and `12 - Archive` (a plaintext
+  credential) are excluded by *normalized* folder name, so renumbering cannot silently disable an
+  exclusion. An unrecognised top-level folder is **also** excluded and reported with a non-zero
+  exit, because a plain denylist fails open on the next folder somebody adds. A new vault folder
+  therefore breaks the nightly sync loudly until it is classified in `INCLUDED_TOP_LEVEL` or
+  `EXCLUDED_TOP_LEVEL`; that is the intended behaviour, not a bug.
+
+A missing vault (every non-Linux host, any fresh clone) is a clean no-op exit 0, and the call
+site captures the mirror's return code rather than letting `set -e` abort — a mirror failure must
+not keep the transcripts that just exported out of the index.
+
 **Prerequisite:** the py3.12 `.venv-memweave` must exist (memweave requires ≥3.12; it can't live
 in the 3.11 project venv). A missing venv makes `sync_memory.sh` exit 1 with a logged error —
 `install.sh` registers the cron but does **not** yet build this venv, so a fresh provision needs
