@@ -223,6 +223,31 @@ jobs:
       - name: pytest tests/test_mirror_vault.py
         run: python -m pytest tests/test_mirror_vault.py -v
 
+  # ── 12. CLAUDE.md deploy tests ───────────────────────────────────────────
+  # CI never executes install.sh, which is how a wholesale `cp` of the repo
+  # CLAUDE.md over the installed one shipped and silently deleted the
+  # global-only "Docker Port Registry" section. The invariant under test: a
+  # deploy must preserve the installed copy's dream.sh-appended "Dreaming
+  # Notes" tail, which exists in no other file. Also pins refinery-doctor's
+  # exit-1-on-migration-applied, since install.sh runs `set -e` and would
+  # otherwise abort mid-install on a working fix.
+  test-claude-md-deploy:
+    name: CLAUDE.md deploy tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_claude_md_deploy.py
+        run: python -m pytest tests/test_claude_md_deploy.py -v
+
   # ── 11. surface-write-guard behaviour matrix ─────────────────────────────
   # A security control, same posture as push-guard: the BLOCK cases matter more
   # than the ALLOW ones, since a fix for a logging bug that narrows detection is

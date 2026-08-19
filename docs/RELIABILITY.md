@@ -82,6 +82,36 @@ Stop hooks (in order)
 All gates can fire in under 15 seconds for a typical coding turn.
 Ralph runs the per-message loop on every iteration.
 
+## Deploying the routing policy to `~/.claude/CLAUDE.md`
+
+The installed copy is **not** a mirror of the repo copy. `features/dreaming/dream.sh` appends a
+`## Dreaming Notes (auto-generated)` section to `~/.claude/CLAUDE.md` and never to the repo copy,
+so the playbooks under it exist in no other file. Any wholesale `cp repo → installed` deletes them.
+
+That is how the global-only "Docker Port Registry" section was lost: `scripts/audit/
+components.json` still lists it as a routing-policy heading, and it now appears zero times in
+either file.
+
+| Writer | Behaviour |
+|--------|-----------|
+| `refinery-doctor.sh --fix` | Rebuilds as repo policy prefix + the installed copy's Dreaming Notes tail. Backs up to `${installed}.bak`. Compares only the policy prefix, so an appended tail is not reported as permanent drift. |
+| `install.sh` §6b | Delegates to the above. Its one remaining `cp` is the create-when-absent branch. With no doctor present it leaves an existing file alone rather than copying over it. |
+| post-merge git hook | Notifies only — `CLAUDE.md updated — copy to ~/.claude/CLAUDE.md if you use global routing`. Nothing auto-deploys. |
+
+Two things to preserve when editing either writer:
+
+- **The marker string lives in exactly two files** (`dream.sh`, `refinery-doctor.sh`) and they are
+  not linked. `install.sh` deliberately holds no third copy. A mismatch silently restores
+  whole-file comparison, which reports drift forever and rewrites the file on every run.
+- **`refinery-doctor.sh` exits 1 when it applied a migration**, including under `--fix` where that
+  is the success path, and `install.sh` runs `set -euo pipefail`. The call site captures the status
+  into `_doctor_rc` and dispatches on it (0 = in sync, 1 = applied, other = real failure).
+  Unguarded, the installer aborts at §6b on a working fix and silently skips every later section.
+  A bare `|| true` is not an acceptable substitute — it swallows genuine crashes.
+
+`tests/test_claude_md_deploy.py` pins all of this. CI never executes `install.sh`, which is why the
+original defect shipped unnoticed, so §6b's shape is additionally asserted at source level.
+
 ## memweave memory freshness
 
 Project memory routing (`CLAUDE.md` §4) resolves "have we solved this before?" to

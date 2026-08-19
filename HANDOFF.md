@@ -1,5 +1,29 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-08-19 (last) — never `cp` the repo CLAUDE.md over the installed one
+
+**The installed copy is not a mirror of the repo copy, and treating it as one destroys data.**
+`features/dreaming/dream.sh` appends `## Dreaming Notes (auto-generated)` to
+`~/.claude/CLAUDE.md` only. Those playbooks exist nowhere else. `install.sh` §6b used to deploy
+with a wholesale `cp` and deleted them on every run.
+
+The proof it already happened: `scripts/audit/components.json:26` lists `"Docker Port Registry"`
+as a routing-policy heading, and that heading is now in neither file. It was copied over.
+
+§6b now delegates to `refinery-doctor.sh --fix --check claude-md-sync`, which owns both the safe
+merge and the marker string. **Do not add a third copy of the marker to `install.sh`** — the two
+existing copies (dream.sh, refinery-doctor.sh) are already unlinked, and refinery-doctor carries a
+warning that a mismatch silently restores whole-file comparison.
+
+**If you touch that call, keep the exit-status capture.** `refinery-doctor.sh` exits 1 when it
+applied a migration, including in `--fix` mode where that is success, and `install.sh` runs
+`set -euo pipefail`. Unguarded, the installer aborts at §6b on a working fix and skips every
+section below with a success-looking message. `test_fix_exits_nonzero_after_applying` pins that
+behaviour so the guard cannot be "simplified" away on the assumption it returns 0.
+
+CI never runs `install.sh` — that is why this shipped. `tests/test_claude_md_deploy.py` covers the
+merge invariant at the shared implementation and asserts §6b's shape at source level.
+
 *Last updated: 2026-08-19 — the Obsidian vault is now a second memweave corpus source, the
 jdocmunch local-only allowlist is keyed by source root rather than repo name, the duplicate index
 that exposed the gap is deleted, and four false claims about memweave freshness are corrected.*
