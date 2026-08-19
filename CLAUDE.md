@@ -223,6 +223,21 @@ tools can answer structurally.
 - Scope: `~/.uncle-j-memory` is the **cross-project** store — the nightly `--all` export covers
   every project under `~/.claude/projects` (34 as of 2026-08-19), not just this one. Search it for
   prior art regardless of which project you are working in.
+- **Two corpus sources, not one.** Transcripts (`memory/*.md`, what was *said*) and a mirror of the
+  Obsidian vault (`memory/vault/**`, what was *decided* — VAULT-INDEX, Active Priorities, the
+  per-project notes, and the Jobs). Before the mirror, "have we solved this before?" searched past
+  the one store holding the decisions. Both are derived: **never edit `memory/vault/` — edit the
+  vault at `/opt/proj/jaredrhod/vaults/brain`**, or the next sync overwrites you.
+- **The vault mirror lags up to ~24h.** It rides `sync_memory.sh`, and vault edits happen in
+  `/opt/proj/jaredrhod`, whose only Stop hook is `vault-session-check.sh` — not the memweave sync.
+  So a note written today reaches the store at the 02:30 cron, not at session close. A same-day
+  miss is staleness, not absence; check the vault directly when the question is about work done
+  today.
+- **The mirror excludes `11 - Personal` and `12 - Archive` and fails closed.** Personal Context
+  holds health, key people, and beliefs the vault's own rules keep out of every boot-loaded file;
+  the Archive carries a plaintext credential. Any top-level vault folder that
+  `scripts/memweave/mirror_vault.py` does not recognise is **also** excluded and reported with a
+  non-zero exit — classify a new folder there before expecting to search it.
 
 ### 5. Runtime traces (when available)
 - After ingesting OTel/SQL/stack traces via `import_runtime_signal`, use:

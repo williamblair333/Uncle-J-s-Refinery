@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# sync_memory.sh — export Claude transcripts to markdown and index them into the
-# memweave memory store. This is the single seam the future freshness cron and the
-# Stop-hook will both call.
+# sync_memory.sh — export Claude transcripts to markdown, mirror the Obsidian
+# vault alongside them, and index both into the memweave memory store. This is the
+# single seam the freshness cron and the Stop-hook both call.
+#
+# Two corpus sources, not one: transcripts (what was said) and the vault (what was
+# decided). See scripts/memweave/mirror_vault.py for the vault half, including why
+# its folder exclusions fail closed.
 #
 # Idempotent: export overwrites each per-session markdown file; memweave's index()
 # re-embeds only changed files (SHA-256 hash compare), so re-running is cheap and
@@ -101,6 +105,14 @@ echo "===== [$(date -Iseconds)] memweave sync: $scope limit=${LIMIT:-all} ====="
 export_rc=0
 "$VENV" "$REPO/scripts/memweave/export_transcripts.py" "${export_args[@]}" || export_rc=$?
 
+# Second corpus source: the Obsidian vault. Transcripts hold the conversations;
+# the vault holds the decisions those conversations reached, and prior-art search
+# was walking straight past it. Same non-aborting contract as the export above —
+# a missing vault (every non-Linux host) exits 0, and a real mirror failure must
+# still leave the transcripts that just exported reachable, so index regardless.
+mirror_rc=0
+"$VENV" "$REPO/scripts/memweave/mirror_vault.py" || mirror_rc=$?
+
 "$VENV" "$REPO/scripts/memweave/index_workspace.py"
 echo "===== [$(date -Iseconds)] sync complete ====="
 
@@ -108,4 +120,10 @@ if [ "$export_rc" -ne 0 ]; then
   echo "[$(date -Iseconds)] sync FAILED — export reported errors above (rc=$export_rc);" \
        "the documents that did export were still indexed" >&2
   exit "$export_rc"
+fi
+
+if [ "$mirror_rc" -ne 0 ]; then
+  echo "[$(date -Iseconds)] sync FAILED — vault mirror reported errors above (rc=$mirror_rc);" \
+       "everything else was still indexed" >&2
+  exit "$mirror_rc"
 fi

@@ -2,6 +2,53 @@
 
 ---
 
+## 2026-08-19 (later still) — the vault is now a memweave corpus source
+
+Prior-art search was walking past the store that holds the decisions. `~/.uncle-j-memory` held
+2,254 transcript documents and nothing else, so "have we solved this before?" searched what was
+*said* and never what was *decided* — the vault's VAULT-INDEX, Active Priorities, per-project
+notes and Jobs were invisible to it. Probing memweave for a decision recorded in `VAULT-INDEX.md`
+returned transcript noise, not the note.
+
+### Added
+- `scripts/memweave/mirror_vault.py` — copies vault markdown to
+  `~/.uncle-j-memory/memory/vault/<relpath>.md`, byte-identical so memweave's SHA-256 compare
+  skips unchanged files, and prunes orphans so a deleted note leaves the index too. 30 files
+  mirrored from the current vault.
+- `tests/test_mirror_vault.py` (19 cases) and CI job 11.
+
+### Changed
+- `sync_memory.sh` runs the mirror between export and index, capturing its return code rather
+  than letting `set -e` abort the run — the same non-aborting contract `export_rc` already had,
+  and for the same reason: a mirror failure must not keep the transcripts that just exported out
+  of the index.
+- `CLAUDE.md` §4 — two corpus sources documented, plus the ~24h vault lag and the exclusion policy.
+
+### The two things the pre-mortem changed before any code was written
+- **Pruning cannot escape its own directory.** The prune deletes files; a destination resolved one
+  level too high would delete the whole transcript corpus — recoverable by re-export, except for
+  the dream-synthesis notes and `premortem-audit.md`, which are not. `_resolve_dest` now asserts
+  the target is a strict subpath of `memory/` named exactly `vault`, only `*.md` it owns is
+  unlinked, and a test points `VAULT_ROOT` at an empty directory (the plausible mistake that makes
+  *every* destination file read as an orphan) and asserts the corpus survives.
+- **Exclusions fail closed, not open.** `11 - Personal` (Personal Context: health, key people,
+  beliefs) and `12 - Archive` (a plaintext credential — 1 credential-shaped line, confirmed by
+  scan; 0 across everything mirrored) are excluded by *normalized* folder name, so renumbering
+  `11 - Personal` cannot silently disable it. A denylist alone fails open on the next folder
+  somebody adds — the vault gained twelve in four days — so an unrecognised top-level folder is
+  excluded **and** reported with a non-zero exit. This hazard is not hypothetical here: a
+  hand-made `bill-brain-vault` jdocmunch index over the same vault exposed both credential-bearing
+  Migrated Memory files on 2026-08-19.
+
+### Verified, not assumed
+- memweave recurses under `<workspace>/memory/` and ignores files outside it — probed against a
+  throwaway workspace before committing to the nested layout, because the package ships no
+  retrievable source and its docstring implies recursion without proving it.
+- No jdocmunch manifest exists over `~/.uncle-j-memory`, so the doc watcher does not pick the
+  mirror up as a second index.
+
+---
+
 ## 2026-08-19 (later) — four false claims about memweave freshness corrected
 
 All four were found by measuring the running system rather than re-reading the notes, which is
