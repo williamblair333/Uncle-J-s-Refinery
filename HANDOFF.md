@@ -1,6 +1,37 @@
 # Handoff — Uncle J's Refinery
 
-*Last updated: 2026-08-16 — jdocmunch#120 filed and a false SECURITY.md claim corrected;
+*Last updated: 2026-08-19 — the jdocmunch local-only allowlist is now keyed by source root
+rather than repo name, and the duplicate index that exposed the gap is deleted.*
+
+## 2026-08-19 — read this before touching `jdocmunch-reindex.sh`
+
+**The allowlist is keyed by SOURCE ROOT now, not by repo name.** `LOCAL_ONLY_REPOS` is gone;
+`LOCAL_ONLY_ROOTS` and `LOCAL_ONLY_IGNORE` both key on the resolved path, and
+`is_local_only` takes `$root`. Do not "simplify" it back to names. jdocmunch permits any
+number of manifests over one tree, so a name-keyed guard is bypassed by typing a different
+`--name` — which is not hypothetical: `bill-brain-vault` sat beside `jaredrhod-brain` over
+the vault for a day with full-corpus posture, and both credential-bearing Migrated Memory
+files were in its raw mirror. Index deleted, mirror gone, `find ~/.doc-index -name
+'project_foundry_*'` returns nothing for either file.
+
+**The corpus never left the machine** — verified, not assumed. `embeddings/provider.py`
+will not auto-select a paid cloud provider without `JDOCMUNCH_ALLOW_PAID_EMBEDDINGS`, no
+provider env var is set in the shell or the watcher's systemd environment, and the
+watcher's `ExecStart` carries `--no-ai-summaries`. No credential rotation needed.
+
+**The residual, and it is real: the doc watcher is not governed by this script.**
+`jdocmunch-watch.service` re-indexes every manifest on its own *stored* posture, and it
+never reads `LOCAL_ONLY_ROOTS`. `jaredrhod-brain` is safe because its manifest carries
+`corpus_shape_patterns` (an omitted `extra_ignore_patterns` inherits — see invariant 9),
+but a NEW duplicate created by hand would be watched at full posture until a nightly run
+touched it. The new `DUP` warning bounds that window to 24h; it does not close it. Closing
+it properly means either a healthcheck probe or upstream support for per-root policy.
+
+**Also new:** a `local/jaredrhod` manifest appeared over `/opt/proj/jaredrhod` (1 doc,
+`CLAUDE.md` only — the vault is gitignored at that root, so it carries none of it).
+Verified clean, left in place.
+
+*Prior context: 2026-08-16 — jdocmunch#120 filed and a false SECURITY.md claim corrected;
 surface-write-guard versioned + logging fixed; vault checkpoint Stop hook added; jdocmunch
 local-only allowlist + doc watcher installed. `HEALTHCHECK: ok`.*
 

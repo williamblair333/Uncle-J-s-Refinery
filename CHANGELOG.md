@@ -2,6 +2,58 @@
 
 ---
 
+## 2026-08-19 — local-only posture follows the source root, not the repo name
+
+A second index of the vault existed under a different name and got the default posture:
+full corpus, no forced exclusions. Both credential-bearing files the exclusion list drops
+were sitting in its raw mirror under `~/.doc-index/local/bill-brain-vault/`.
+
+### Changed
+- **`scripts/jdocmunch-reindex.sh` — `LOCAL_ONLY_REPOS` → `LOCAL_ONLY_ROOTS`.** The
+  allowlist and `LOCAL_ONLY_IGNORE` are now keyed by **source root**, and `is_local_only`
+  takes `$root` rather than `$name`. jdocmunch allows any number of manifests over one
+  tree; keying on the name meant the whole local-only guarantee could be bypassed by
+  typing a different `--name`. The risk lives in the tree, so the posture now follows the
+  tree.
+- **New `canonical_root()`** resolves symlinks and strips a trailing slash before
+  comparing. A path variant that missed a literal string compare would have fallen through
+  to default posture — the exact failure the test exists to prevent.
+
+### Added
+- **Duplicate-source-root detection in `plan()`.** A new `DUP` verdict fires when two or
+  more manifests share one `realpath(source_root)`, logged as `WARN` and counted in the
+  `Done.` line. Not an error and not an exit-code failure: a duplicate is sometimes
+  legitimate. It is reported because the **doc watcher refreshes each manifest on its own
+  stored posture and never consults this script**, so a hand-made duplicate inherits
+  nothing from `LOCAL_ONLY_ROOTS` until a nightly run touches it.
+
+### Removed (runtime, not code)
+- **The `local/bill-brain-vault` index**, including its cached raw mirror. `delete_index`
+  reports `index_deleted`; `find ~/.doc-index -name 'project_foundry_*'` now returns
+  nothing for either credential file, and `get_watch_status` lists 12 repos with
+  `jaredrhod-brain` the only one over `/opt/proj/jaredrhod/vaults/brain`.
+
+### Exposure, measured rather than assumed
+The corpus never left the machine. `jdocmunch_mcp/embeddings/provider.py` refuses to
+auto-select a paid cloud provider from a bare API key without
+`JDOCMUNCH_ALLOW_PAID_EMBEDDINGS`, and neither `GOOGLE_API_KEY`, `OPENAI_API_KEY`, nor
+`JDOCMUNCH_EMBEDDING_PROVIDER` is set in the shell or in the watcher's systemd
+environment. The watcher's `ExecStart` carries `--no-ai-summaries`. The failure was a
+second on-disk copy, not a transmission — no credential rotation is required.
+
+### Verified, not assumed
+- `bash -n` clean.
+- `is_local_only` sourced from the real file: the vault root and its trailing-slash
+  variant classify local-only; `/opt/proj/Uncle-J-s-Refinery` and `/opt/proj/wine` stay
+  default; the two former **name** keys now correctly classify as default, proving the key
+  actually moved.
+- `LOCAL_ONLY_IGNORE[$(canonical_root …)]` returns both patterns.
+- `plan()` run against the live index emitted
+  `DUP  bill-brain-vault,jaredrhod-brain  2 manifests share this source root` alongside
+  unchanged verdicts for the other twelve manifests.
+
+---
+
 ## 2026-08-16 (session end) — README synced to what actually shipped
 
 Step 3 of the session-end checklist exists to force this, and it found a real gap: three of
