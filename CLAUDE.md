@@ -212,13 +212,17 @@ tools can answer structurally.
 - **memweave ships no MCP server** — it's a separate-process Bash CLI, not an MCP tool. Use Bash
   to invoke `mw_search.py`; do not look for a `memweave_*` MCP tool.
 - A missing/empty store exits nonzero with a clear message — fall back to the session transcript.
-- **Freshness is automatic** — `scripts/memweave/sync_memory.sh` runs nightly (cron
-  `uncle-j-memweave-sync`, 02:30) and at every session end (Stop-hook), so the store stays current.
-  No manual snapshot step at session close.
+- **Freshness is automatic, but not equally everywhere.** The `uncle-j-memweave-sync` cron runs
+  `sync_memory.sh --all` nightly at 02:30 and covers **every** project. The session-end Stop-hook
+  is registered in the stack repo's own `.claude/settings.json`, so it fires **only when the
+  session's cwd is the stack repo** — 297 of 297 hook runs to date were
+  `project=-opt-proj-Uncle-J-s-Refinery`. Work done in any other project reaches the store at the
+  02:30 cron, not at session close. Either way there is no manual snapshot step.
 - The store is **rebuildable from the markdown corpus** at `~/.uncle-j-memory` (rm the sqlite index
   → byte-identical rebuild via `sync_memory.sh`); the markdown is the source of truth, not the index.
-- Scope note: `~/.uncle-j-memory` currently holds **this project's** transcripts. Cross-project
-  corpus + global routing are a later decision (tracked in HANDOFF).
+- Scope: `~/.uncle-j-memory` is the **cross-project** store — the nightly `--all` export covers
+  every project under `~/.claude/projects` (34 as of 2026-08-19), not just this one. Search it for
+  prior art regardless of which project you are working in.
 
 ### 5. Runtime traces (when available)
 - After ingesting OTel/SQL/stack traces via `import_runtime_signal`, use:
