@@ -207,7 +207,30 @@ fi
 info "=== Part B: Post-upgrade evaluation ==="
 JCODEMUNCH="$PROJ_ROOT/.venv/bin/jcodemunch-mcp"
 
-if [[ "$UPGRADED" -eq 1 || ( "$DRY_RUN" -eq 1 && "${#PACKAGES_TO_UPGRADE[@]}" -gt 0 ) ]]; then
+# Verdict handling lives in lib/ so tests can drive every branch. Sourced
+# FAIL-CLOSED on purpose: this script runs `set -uo pipefail` with no `set -e`,
+# so a failed source would not abort it — Part B would call undefined functions,
+# the `while read` below would consume an empty stream, and the package would be
+# evaluated with NO info and NO warn line emitted at all. That silence is
+# indistinguishable from success in the log, which is the exact defect this
+# block exists to prevent. Skip the evaluation loudly instead.
+VERDICT_LIB="$PROJ_ROOT/lib/eval-verdict.sh"
+EVAL_READY=1
+if [[ -r "$VERDICT_LIB" ]] && source "$VERDICT_LIB"; then
+    for _fn in extract_eval_verdict classify_eval_verdict; do
+        if ! declare -F "$_fn" >/dev/null 2>&1; then
+            warn "lib/eval-verdict.sh sourced but $_fn is undefined — Part B evaluation SKIPPED"
+            EVAL_READY=0
+        fi
+    done
+else
+    warn "cannot source $VERDICT_LIB — Part B evaluation SKIPPED (no verdicts will be checked)"
+    EVAL_READY=0
+fi
+
+if [[ "$EVAL_READY" -eq 0 ]]; then
+    info "Part B skipped: verdict handling unavailable."
+elif [[ "$UPGRADED" -eq 1 || ( "$DRY_RUN" -eq 1 && "${#PACKAGES_TO_UPGRADE[@]}" -gt 0 ) ]]; then
     for pkg in "${PACKAGES_TO_UPGRADE[@]}"; do
         old_sha="${OLD_SHAS[$pkg]:-?}"
         new_sha=$(parse_lock_sha "$pkg")
@@ -349,7 +372,7 @@ Your tasks — do all that apply, nothing else:
         eval_rc=$?
         cat "$EVAL_OUT" >> "$LOG"
 
-        verdict="$(grep -oE '^VERDICT: (changed|no-change-required|blocked\b.*)$' "$EVAL_OUT" | tail -1)"
+        verdict="$(extract_eval_verdict "$EVAL_OUT")"
 
         # Scoped to the two files the prompt allows, by path. A bare HEAD
         # comparison would let an unrelated commit — scripts/win/checkpoint.sh
@@ -360,20 +383,21 @@ Your tasks — do all that apply, nothing else:
         fi
         touched+="$(git -C "$PROJ_ROOT" status --porcelain -- CLAUDE.md HANDOFF.md 2>/dev/null)"
 
-        if [[ "$eval_rc" -ne 0 ]]; then
-            warn "$pkg: claude -p exited $eval_rc (non-fatal) — see transcript above"
-        elif [[ -z "$verdict" ]]; then
-            # Failure, deliberately. A missing verdict means the contract was not
-            # met, and treating that as success is the bug being fixed here.
-            warn "$pkg: NO VERDICT LINE — treating as failure. Agent's closing lines:"
-            warn "$pkg: $(tail -3 "$EVAL_OUT" | tr '\n' ' ')"
-        elif [[ "$verdict" == VERDICT:\ blocked* ]]; then
-            warn "$pkg: ${verdict#VERDICT: } — NOTHING WAS WRITTEN"
-        elif [[ "$verdict" == "VERDICT: changed" && -z "$touched" ]]; then
-            warn "$pkg: claimed 'changed' but CLAUDE.md/HANDOFF.md are untouched since $BASE_SHA"
-        else
-            info "$pkg: ${verdict#VERDICT: }"
-        fi
+        # An unconditional line, so the ABSENCE of a classification line below is
+        # bounded by a known-present neighbour. Without it, a classifier that
+        # emits nothing is indistinguishable in the log from Part B never having
+        # reached this package — which is the same read-silence-as-success
+        # failure this whole block exists to prevent.
+        info "$pkg: evaluation returned rc=$eval_rc, classifying"
+
+        while IFS=$'\t' read -r _level _msg; do
+            case "$_level" in
+                WARN) warn "$pkg: $_msg" ;;
+                *)    info "$pkg: $_msg" ;;
+            esac
+        done < <(classify_eval_verdict \
+                     "$eval_rc" "$verdict" "$touched" "$BASE_SHA" \
+                     "$(tail -3 "$EVAL_OUT" | tr '\n' ' ')")
 
         rm -f "$EVAL_OUT"
         trap - EXIT

@@ -53,7 +53,19 @@ tools can answer structurally.
 - **`CODE_INDEX_PATH` relocates the whole index root** (default `~/.code-index`; verified against 1.108.288 at `config.py:109,115`, `cli/receipt.py:161`). Store, lock, and config all honour it. An index built under a different value is simply not found — read that emptiness as `degraded`, never `absent`.
 - `summarize_repo` regenerates AI summaries when skipped or interrupted; `embed_repo` warms the semantic-search cache upfront; `invalidate_cache` forces a full re-index.
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
-- `get_watch_status` — check daemon coverage and staleness before relying on index freshness.
+- `get_watch_status` — daemon coverage. **Do NOT read its `any_stale: false` as "the index is
+  fresh."** Verified against 1.108.288 at `tools/get_watch_status.py:73,90`: staleness comes from
+  `get_reindex_status`, which reads **in-process, in-memory** state. When the querying process
+  never tracked a reindex — the normal case, because the watcher runs in the systemd daemon, a
+  *different* PID — `has_any_reindex_state()` is False and every repo gets the hardcoded default
+  `{"index_stale": False}`. `any_stale` then reports False having measured nothing. Observed here
+  2026-08-21: all 18 repos `index_stale=false` **and** `watched_by_another_process=true`, including
+  a repo whose index was demonstrably behind its working tree. Treat `any_stale: false` as
+  `unknown`; use `_meta.verdict.channels.index` or `check_embedding_drift` for real freshness.
+  (Upstream has the correct tri-state already — `FreshnessProbe.repo_freshness` in
+  `retrieval/freshness.py:245` returns `fresh`/`stale`/`unknown`/`not_tracked`, and its docstring
+  names this exact Boolean-has-nowhere-to-put-"I-could-not-find-out" defect. `get_watch_status` is
+  the caller that still uses the Boolean it was written to replace.)
 - `jcodemunch_guide` — returns the version-current CLAUDE.md policy snippet; prefer it over a static copy in any harness that auto-loads routing rules. **Its output is filtered** by `disabled_tools` and the active tier/profile (#495/#506, verified against 1.108.288), so it is a subset of the full policy — a tool missing from the guide is not a removed tool.
 - `index_dependency` — index an INSTALLED third-party dependency (the exact version in node_modules or the repo's .venv) as its own queryable repo; ground-truth a library's API instead of guessing. Prefer over context7 when you need the installed version's actual source, not published docs.
 
@@ -74,11 +86,20 @@ tools can answer structurally.
 - `search_columns` for column metadata in dbt/SQLMesh repos — 77% fewer tokens than grep.
 - Use `winnow_symbols` when you have multiple constraints (kind + complexity + decorator + churn + importance). One call instead of five.
 - Results carry `_meta.confidence` — prefer high-confidence hits; re-query or fall back to serena
-  when confidence is low. **Ordinal, not absolute** (verified against 1.108.288): v1.108.265
-  rescaled it to grade ranking quality rather than raw score units, because the same ranking was
-  graded four to five times differently depending on whether it came from BM25, cosine, or fusion
-  (`retrieval/confidence.py`). Compare hits against each other; never against a remembered cutoff.
-  The same caveat already applies to jdocmunch — see § 3.
+  when confidence is low. **The scale is 0–1 and always was; what v1.108.265 fixed was the
+  `strength` sub-signal reading a RAW score against a hardcoded BM25 curve in every mode**
+  (verified against 1.108.288, `retrieval/confidence.py:51,110`). BM25 tops out in the tens, a
+  cosine at 1.0, an RRF fused score at ~0.0164 — so the same ranking quality scored ~7x lower in
+  hybrid than in lexical, for nothing but units. Each scorer now declares its ceiling.
+  **Two consequences, and they are opposite:**
+  - **Lexical/BM25 confidences did NOT move.** `BM25_CEILING = 12.0` makes the new
+    `1-exp(-3t/12)` algebraically identical to the historical `1-exp(-t/4)` — the source says
+    "EXACTLY" at `confidence.py:110`. A threshold you calibrated on BM25 is still correct.
+  - **Hybrid/semantic confidences were understated** and moved up. Anything calibrated there was
+    wrong in the direction of distrust, and was disqualifying searches from evidence they earned.
+  Prefer comparing hits against each other. The one meaningful absolute is **0.4** — below it the
+  server itself declines to mint a citable absence claim (`STATE_LOW_CONFIDENCE`). Same mechanism
+  and same numbers in jdocmunch — see § 3.
 - **`identity_type` no longer says `exact` for a normalised match** (#458, verified against
   1.108.288). `search_symbols` grades `exact` only at identity ≥ 50.0; a query that matched after
   tokenization folded case, underscores or punctuation is `normalized` (≥ 40.0), then `prefix`,
@@ -167,6 +188,12 @@ tools can answer structurally.
   `run_sql` — lighter than DuckDB for single-file queries.
 - Before deep analysis: `get_dataset_health` to catch schema issues early.
 - **Quality & risk:** `data_health_radar` (six-axis: null, type, cardinality, pk, semantic, stability + A-F grade) + `diff_data_health_radar` for snapshot deltas; mirrors jcm/jdoc health-radar pattern.
+- **Column profiles disclose their own staleness (v1.30.0+, verified against installed 1.31.7 at
+  `tools/describe_column.py:167-190`).** A profile is served from the indexed snapshot, so
+  `describe_column` re-reads the source file's mtime/size and downgrades `_meta.verdict.state` to
+  `degraded` with `channels.index: "stale"` when it changed. Read that as "these stats describe a
+  file that no longer exists in this form" and re-index before trusting them — the numbers are
+  returned either way.
 - **Schema safety:** `check_column_drop_safe` before any column drop (fuses PK/FK/runtime signals); `get_schema_impact` for transitive blast-radius of a schema change; `get_schema_drift` to compare two indexed dataset versions.
 - **Discovery:** `find_similar_columns` for cross-dataset column dedup; `suggest_joins` for FK candidates; `find_unused_columns` (requires `ingest_sql_log` runtime data); `get_session_stats` for token savings.
 - **Absence:** `search_data` carries the same verdict contract as jcodemunch — a non-`ok` state means the scan could not answer, not that the data is missing. Re-query or widen scope before concluding absence.
@@ -215,9 +242,16 @@ tools can answer structurally.
   `include_dot_dirs=` by directory NAME, not path). A refresh that silently shrinks the
   corpus looks identical to a successful one; check `corpus_selection_changed` and the
   `deleted` count in the result before trusting it.
-- **v1.126.0 rescaled retrieval confidence.** Any threshold calibrated on the old scale is
-  wrong. The exact old→new scale is **unverified** — treat returned confidence as ordinal
-  (compare hits against each other), not against a remembered absolute cutoff.
+- **v1.126.0's confidence change, ground-truthed against installed 1.133.0** (`retrieval/confidence.py:1-45`,
+  `retrieval/verdict.py:37,289`). The scale was **always 0–1** — it was not renumbered. The defect
+  was that `strength` read a raw score against a hardcoded BM25 curve regardless of scorer, so the
+  same ranking scored 0.62 in lexical mode and 0.087 in hybrid. So: **BM25/lexical thresholds are
+  byte-identical to v1.125.0 and were never wrong**; only hybrid/semantic moved, and those were
+  understated. Documented anchors: `top1 ≈ 1.0` trust the top hit, `≈ 0.6` best of several similar,
+  `< 0.4` ambiguous or uncovered — and 0.4 is `LOW_CONFIDENCE_THRESHOLD`, below which
+  `build_verdict` refuses to back an absence claim. Still prefer comparing hits against each other;
+  0.4 is the one absolute worth remembering. (This bullet previously said the old→new scale was
+  unverified and that any old threshold was wrong. Both halves were too strong; corrected 2026-08-21.)
 - For third-party library docs (FastAPI, React, Django, etc.), **context7**
   is authoritative and version-pinned. Call it whenever the question
   references a named library.

@@ -11,17 +11,22 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **`get_watch_status`'s `fresh` field — one narrow scan, not an answer.** The parked notes
-  claimed v1.108.240 made it distinguish "stale" from "could not determine". A search of
-  `*watch_status*` in 1.108.288 returned zero hits for `fresh`/`unknown`/`indeterminate` —
-  but that scanned **one file** (`evidence_ref: absent:444f7e573d54`), and the field could live
-  in a shared verdict or coverage helper. Not refuted, just not found where it was looked for.
-  Re-scan repo-wide before either documenting the tri-state or dropping the claim. This is the
-  absence contract applied to our own work: a narrow zero-result is `degraded`, not `absent`.
-- **Regression test for Part B's verdict handling** — the fix shipped 2026-08-21 was
-  verified by a scratchpad harness driving all six branches, not by anything in `tests/`.
-  This is the failure class `tests/test_surface_write_guard.py` exists for; it deserves
-  the same treatment.
+- **[READY TO FILE — needs Bill's sign-off, do not open unattended] Upstream: `get_watch_status`
+  reports `any_stale: false` without measuring anything** (`jgravelle/jcodemunch-mcp`, verified
+  against installed 1.108.288). Staleness is read from `get_reindex_status`, which is **in-process,
+  in-memory** state (`tools/get_watch_status.py:73,90`). The watcher runs in the systemd daemon —
+  a different PID — so a querying MCP server has no reindex state, `has_any_reindex_state()` is
+  False, and every repo takes the hardcoded `{"index_stale": False}` default. `any_stale` then
+  answers False having measured nothing, on the normal path rather than an edge case.
+  Reproduced 2026-08-21: all 18 repos `index_stale=false` **and** `watched_by_another_process=true`
+  (holder pid 1794), including `/opt/proj/Uncle-J-s-Refinery` whose index was behind its tree at
+  the time. Upstream already has the fix in a sibling module: `FreshnessProbe.repo_freshness`
+  (`retrieval/freshness.py:245`) returns `fresh`/`stale`/`unknown`/`not_tracked`, and its docstring
+  describes precisely this — *"a Boolean has nowhere to put 'I could not find out' … the verdict
+  then rendered False as `fresh`."* `get_watch_status` is the caller still using the Boolean that
+  tri-state was written to replace. **Routing already corrected in CLAUDE.md §1.**
+  This resolves the prior "one narrow scan, not an answer" entry: the tri-state exists, the parked
+  note attached it to the wrong tool, and the repo-wide re-scan (110 files) found where it lives.
 - **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
   defect fixed in the memweave scripts, 77 local failures on Windows. (The
   `Skill frontmatter regression` half of this item is **done** — PR #107 recategorised
@@ -68,16 +73,25 @@ Completed items age out after ~4 weeks.
   the ruleset now *rejects* its push rather than letting it destroy `main`. Until someone
   fixes it, expect a confusing push failure on that machine — that failure is the control
   working. Needs access to the other box.
-- **Ground-truth the jdocmunch v1.126.0 confidence rescale.** The upstream analysis is
-  commit-log-only; the exact old→new scale, v1.124.0 and v1.128.0 remain unverified.
-  Blocked on two failed routes: `index_dependency` errors with `top_level: missing` for
-  this package, and the shell route is grep-guard-blocked because `.venv/` is inside the
-  repo. Report the `index_dependency` failure upstream too. **Unblocked 2026-08-16 — a third
-  route works:** fetch the file from upstream via
-  `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`,
-  then `diff` against the installed copy to prove the local install is unpatched. That is
-  strictly better than reading `.venv/` anyway, because it verifies *upstream* state rather
-  than a vendored copy that may have drifted.
+- **[DONE 2026-08-21] Ground-truth the jdocmunch v1.126.0 confidence rescale.** Verified against
+  installed 1.133.0 (`retrieval/confidence.py:1-45`, `retrieval/verdict.py:37`), and the finding
+  contradicts what we had written. The scale was **always 0–1** — nothing was renumbered. The bug
+  was `strength` reading a raw score against a hardcoded BM25 curve in every mode, so identical
+  ranking quality scored 0.62 lexical / 0.087 hybrid. **BM25 thresholds are byte-identical to
+  v1.125.0** (`BM25_CEILING = 12.0` makes `1-exp(-3t/12)` ≡ `1-exp(-t/4)`); only hybrid/semantic
+  moved, upward, having been understated. CLAUDE.md §3 said the opposite — that any old threshold
+  was wrong and the scale unverified — and is corrected. Same mechanism confirmed in jcodemunch
+  1.108.288 (`retrieval/confidence.py:51,110`); §1 corrected to match.
+  Route that worked: `index_dependency` against the **import** name (`jdatamunch_mcp`), not the
+  distribution name — the `top_level: missing` error is specific to passing `jdatamunch-mcp`.
+  jdocmunch was already indexed as a watched dep at `~/.code-index/deps/jdocmunch-mcp@1.133.0`;
+  `resolve_repo` on that path returns the handle. The `gh api` route below stays valid but is no
+  longer needed for this.
+  Still unverified from that range: **v1.124.0 (#102–#105) and v1.128.0 (#108/#110/#112/#114)**.
+- **The `gh api` route for verifying an installed package against upstream** — fetch via
+  `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`
+  then `diff` against the installed copy. Better than reading `.venv/` when the question is
+  whether the *local install* has drifted from upstream, rather than what the installed code does.
 - **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
   reason it exists — "the CLI exposes no way to pass ignore patterns" — stopped being true
   when upstream #108 added `--extra-ignore-pattern`, `--no-ai-summaries` and `--embeddings`.

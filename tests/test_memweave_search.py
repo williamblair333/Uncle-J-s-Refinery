@@ -30,6 +30,33 @@ _memweave_missing = importlib.util.find_spec("memweave") is None
 sys.path.insert(0, str(_MW))
 
 
+def _memweave_python() -> Path | None:
+    """Interpreter that can actually import memweave, or None.
+
+    NOT `sys.executable`. memweave lives in its own virtualenv — this repo has
+    two, `.venv` for the MCP stack and `.venv-memweave` for the search CLI, and
+    CLAUDE.md documents invoking mw_search.py with the latter. Running the CLI
+    under the pytest interpreter raised ModuleNotFoundError before it reached
+    any argument parsing, so both CLI tests below asserted against a traceback
+    rather than against the guards they name.
+
+    `bin` vs `Scripts` because docs/WINDOWS-PORT.md records the layout split
+    (and records `uv sync` destroying the compat symlink, so do not rely on it).
+    """
+    for sub in ("bin/python", "Scripts/python.exe"):
+        candidate = _REPO / ".venv-memweave" / sub
+        if candidate.exists():
+            return candidate
+    return None
+
+
+_MW_PYTHON = _memweave_python()
+_requires_mw_cli = pytest.mark.skipif(
+    _MW_PYTHON is None,
+    reason="no .venv-memweave interpreter — memweave CLI not installed on this host",
+)
+
+
 @pytest.mark.skipif(_model_missing or _memweave_missing,
                     reason="ONNX model or memweave package not present")
 def test_search_store_finds_indexed_doc():
@@ -63,18 +90,29 @@ def test_search_store_finds_indexed_doc():
         assert Path(results[0].path).name == "fact.md"
 
 
+@_requires_mw_cli
 def test_cli_missing_store_exits_nonzero():
-    """The CLI guards a missing index with a clear message + nonzero exit."""
+    """The CLI guards a missing index with a clear message + nonzero exit.
+
+    CLAUDE.md tells every session to read a nonzero exit here as 'fall back to
+    the transcript', so the exit code is a contract, not an implementation
+    detail. Pointing at an empty workspace must not create one — the CLI is
+    documented read-only.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         proc = subprocess.run(
-            [sys.executable, str(_MW / "mw_search.py"), "anything", "--workspace", tmp],
+            [str(_MW_PYTHON), str(_MW / "mw_search.py"), "anything", "--workspace", tmp],
             capture_output=True, text=True)
+        assert not (Path(tmp) / ".memweave").exists(), "search must not write an index"
     assert proc.returncode == 1
     assert "no memweave index" in proc.stderr
 
 
+@_requires_mw_cli
 def test_cli_empty_query_exits_2():
+    """2, not 1: usage error is distinct from a missing store, because the
+    documented fallback differs — fix the query vs. fall back to the transcript."""
     proc = subprocess.run(
-        [sys.executable, str(_MW / "mw_search.py"), "   "],
+        [str(_MW_PYTHON), str(_MW / "mw_search.py"), "   "],
         capture_output=True, text=True)
     assert proc.returncode == 2
