@@ -1,6 +1,49 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-08-21 (last) — jcodemunch sync finished, port registry created, mempalace archived
+## 2026-08-21 (last) — Part B pinned by tests; watch_status and confidence claims settled
+
+Run from this repo (the previous entry's work was done from a jaredrhod session, which was the bug
+that started that day). Everything below was verified against installed code or a live tool result.
+
+**`lib/eval-verdict.sh` is new, and the guard around it matters more than the extraction.**
+Part B's verdict handling is now two pure functions with 20 tests over all six branches. But
+`auto-maintain.sh` runs `set -uo pipefail` with **no `set -e`** — a failed `source` would not abort
+it, and Part B would then emit *nothing at all* for a package. That silence is the exact thing the
+block exists to prevent being read as success. So the source is guarded on readability **and** on
+`declare -F` for both functions, and an unconditional per-package line bounds the output. If you
+ever add `set -e` to that script, revisit the guard — `tests/test_auto_maintain_verdict.py` asserts
+its absence and will tell you.
+
+**Do not read `get_watch_status`'s `any_stale: false` as "fresh."** It is a hardcoded default
+whenever the querying process holds no reindex state — which is the normal case, because the
+watcher runs in the systemd daemon under a different PID. Observed across all 18 repos here, this
+one included, while its index was actually behind. The correct tri-state exists upstream in
+`FreshnessProbe.repo_freshness` (`retrieval/freshness.py:245`); `get_watch_status` is the caller
+still using the Boolean it was written to replace. Use `_meta.verdict.channels.index` instead.
+An upstream report is **drafted in ROADMAP and deliberately not filed** — that is Bill's call.
+
+**The confidence bullet in CLAUDE.md was wrong in both directions, and is corrected.** The scale
+was always 0–1; v1.126.0 / v1.108.265 fixed `strength` reading a raw score against a hardcoded BM25
+curve. **BM25/lexical numbers are byte-identical to before** — any threshold you calibrated there
+is still right. Hybrid/semantic were *understated* ~7x and moved up. 0.4 is a real cutoff
+(`LOW_CONFIDENCE_THRESHOLD`): below it the server declines to back an absence claim. This is the
+second boot-loaded policy claim in two days that asserted the opposite of the code — the standing
+instruction to verify before acting on anything ROADMAP or CLAUDE.md asserts is earning its keep.
+
+**Two memweave tests were red on `main`** and are fixed: they ran `mw_search.py` under `.venv`,
+which has no `memweave` module. Suite is 850 passed, 1 skipped, 7 xfailed.
+
+**`index_dependency` wants the import name**, not the distribution name — `jdatamunch_mcp`, not
+`jdatamunch-mcp`. The `top_level: missing` error that had been carried as a blocker is just that.
+
+**Still open, in priority order:** the jdocmunch v1.124.0 / v1.128.0 ranges (never verified);
+whether the edit-surface guard blocks the 03:00 agent's *write* now that it can reach the repo —
+still unproven and only observable in production, and the first run under the new code is the next
+03:00; then the rest of ROADMAP.
+
+---
+
+## 2026-08-21 — jcodemunch sync finished, port registry created, mempalace archived
 
 Closes out the backlog. Everything below was read from the installed package
 (`local/jcodemunch-mcp@1.108.288-9f9c013a`) or from a live tool result, with the source line

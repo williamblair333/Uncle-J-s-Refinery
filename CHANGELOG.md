@@ -2,7 +2,83 @@
 
 ---
 
-## 2026-08-21 (last) — jcodemunch sync finished; port registry created; mempalace archived
+## 2026-08-21 (last) — Part B pinned by tests; three ROADMAP items closed; two CLAUDE.md claims corrected
+
+Follow-on to the session below, run from the correct repo this time.
+
+### The Part B fix now has something asserting it
+
+`scripts/auto-maintain.sh`'s verdict handling shipped verified only by a scratchpad harness. A
+control with nothing asserting it is the same shape as the bug it closed, so the two halves moved
+to `lib/eval-verdict.sh` as pure functions and `tests/test_auto_maintain_verdict.py` drives all six
+classification branches, the extraction contract, and the wiring.
+
+**Extracting it opened a worse failure than the one under test, and the guard is the real change.**
+`auto-maintain.sh` runs `set -uo pipefail` with **no `set -e`**, so a failed `source` would not
+abort it: Part B would call undefined functions, the consuming `while read` would see an empty
+stream, and the package would be evaluated emitting **no `info` and no `warn` line at all** —
+silence, which is what the whole block exists to stop being read as success. The source is now
+guarded on readability *and* on `declare -F` for both functions, and skips loudly on either. An
+unconditional per-package line bounds the classification output so its absence is detectable.
+Behaviour is otherwise unchanged: all six branches emit byte-identical messages.
+
+### Two memweave CLI tests were failing on `main`
+
+They invoked `mw_search.py` with `sys.executable` — the `.venv` interpreter, which has no
+`memweave` module, since the CLI lives in `.venv-memweave`. Both died on `ModuleNotFoundError`
+before reaching the guards they name, so they asserted against a traceback. Suite is now
+**850 passed, 1 skipped, 7 xfailed**.
+
+### `get_watch_status` — the tri-state exists, attached to the wrong tool
+
+The repo-wide re-scan the previous entry asked for (110 files) settles it, and the answer is worse
+than either outcome anticipated. `any_stale` is computed from `get_reindex_status`, which reads
+**in-process, in-memory** state (`tools/get_watch_status.py:73,90`). The watcher runs in the
+systemd daemon under a different PID, so a querying MCP server has no reindex state,
+`has_any_reindex_state()` is False, and every repo takes the hardcoded `{"index_stale": False}`
+default. **`any_stale: false` is a default, not a measurement — on the normal path, not an edge
+case.** Reproduced: all 18 repos `index_stale=false` *and* `watched_by_another_process=true`
+(pid 1794), including this repo, whose index was behind its tree at the time.
+
+Upstream already has the correct tri-state one module over: `FreshnessProbe.repo_freshness`
+(`retrieval/freshness.py:245`) returns `fresh`/`stale`/`unknown`/`not_tracked`, and its docstring
+names this exact defect — *"a Boolean has nowhere to put 'I could not find out' … the verdict then
+rendered False as `fresh`."* Routing corrected in CLAUDE.md; the upstream report is drafted in
+ROADMAP and **not filed** — publishing to someone else's repo is Bill's call.
+
+### The confidence bullet was wrong in both directions
+
+CLAUDE.md §3 said v1.126.0 rescaled jdocmunch confidence, that the old→new scale was unverified,
+and that any threshold calibrated on it was wrong. Ground-truthed against installed 1.133.0
+(`retrieval/confidence.py:1-45`, `retrieval/verdict.py:37`): the scale was **always 0–1**. The
+defect was `strength` reading a raw score against a hardcoded BM25 curve regardless of scorer, so
+the same ranking quality scored 0.62 lexical and 0.087 hybrid — a ~7x penalty from units alone.
+
+So **BM25/lexical thresholds are byte-identical to v1.125.0 and were never wrong**
+(`BM25_CEILING = 12.0` makes the new curve algebraically identical to the old); only
+hybrid/semantic moved, and those had been *understated*, disqualifying searches from evidence they
+had earned. 0.4 is a real absolute — `LOW_CONFIDENCE_THRESHOLD`, below which `build_verdict`
+refuses to back an absence claim. Same mechanism confirmed in jcodemunch 1.108.288; §1 corrected
+to match.
+
+That is the second boot-loaded policy claim in two days found to assert the opposite of the code.
+
+### jdatamunch parked range verified
+
+`describe_column` (v1.30.0+, confirmed in installed 1.31.7 at `tools/describe_column.py:167-190`)
+re-reads the source file and downgrades its verdict to `degraded` / `channels.index: "stale"` when
+the file changed since indexing — the stats are still returned, so the disclosure is the signal.
+Now in CLAUDE.md §2.
+
+`index_dependency` resolves on the **import** name (`jdatamunch_mcp`), not the distribution name
+(`jdatamunch-mcp`) — that is what the parked note's `top_level: missing` error was. Recorded in
+ROADMAP, since it had been carried as a blocker.
+
+Still unverified from the jdocmunch range: v1.124.0 (#102–#105) and v1.128.0 (#108/#110/#112/#114).
+
+---
+
+## 2026-08-21 — jcodemunch sync finished; port registry created; mempalace archived
 
 Closes the backlog. Four more claims verified against installed 1.108.288, each cited to a source
 line so it can be re-checked:
