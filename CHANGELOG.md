@@ -2,6 +2,50 @@
 
 ---
 
+## 2026-08-21 (last) — jcodemunch sync finished; port registry created; mempalace archived
+
+Closes the backlog. Four more claims verified against installed 1.108.288, each cited to a source
+line so it can be re-checked:
+
+- `resolve_repo` stops at a nested independent clone (#492, `tools/resolve_repo.py:53,343`) —
+  containment is a filesystem fact, the caller wants a repository fact. Submodules still resolve
+  to the parent.
+- `CODE_INDEX_PATH` relocates the whole index root (`config.py:109,115`) — an index built under a
+  different value is `degraded`, not `absent`.
+- `find_dead_code` counts render edges as reachability (#461, always-on,
+  `tools/find_dead_code.py:256`) — the smaller result set is the fix.
+- **#500**: for four releases `embed_repo` claimed model-change detection it did not implement
+  (`tools/embed_repo.py:411`). A store written across a model change holds two vector widths and
+  `EmbeddingMatrix` drops whichever is not the first row's — symbols silently stop being
+  searchable. Producer fixed; existing bad stores persist until re-embedded. This host is clean
+  (`check_embedding_drift`: one model, `max_drift=0.0`), and that expires if the model changes.
+
+`get_watch_status`'s tri-state `fresh` is **not** recorded as refuted. The scan that found nothing
+covered one file (`absent:444f7e573d54`); a narrow zero-result is `degraded`, not `absent`, and
+saying otherwise would break this repo's own absence contract. Left open with the scope stated.
+
+### `/opt/proj/.port-registry` created
+
+The boot config instructs every session to check it before assigning a container port. It did not
+exist — verified absent — so the rule had been passing vacuously for as long as anyone followed it.
+Built from observed state (`ss -tlnp` + `docker ps`): 20 reservations with binding scope, plus an
+explicit note on what is excluded and why.
+
+### mempalace archived — and it was nearly lost
+
+Decommissioned when memweave replaced it, but `origin` returns **"Repository not found"**, so the
+local clone was the only copy. Three commits existed nowhere else (FTS5 auto-rebuild fixes
+`85d2391`, `bd4ac98`, `a82b363`); the `origin/fix/repair-fts5-auto-rebuild` ref that made it look
+safe was a stale cache of a deleted remote. Bundled to
+`/opt/proj/_archive/mempalace-2026-08-21.bundle` — `git bundle verify` reports complete history,
+and a test clone restored all 13 refs and all three commits — then the 439 MB working copy was
+moved out of `/opt/proj` rather than deleted.
+
+**A remote-tracking ref can outlive its remote.** `git rev-parse origin/<branch>` succeeded and
+matched local, which read as "nothing unpushed". Only `git ls-remote` revealed the remote was gone.
+
+---
+
 ## 2026-08-21 (later) — jcodemunch post-upgrade sync, and a routing claim that was false
 
 Landed the verified half of three jcodemunch ranges (`9d720c1→2e3883a`, `2e3883a→932209e`,

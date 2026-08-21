@@ -1,6 +1,54 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-08-21 (last) — three jcodemunch ranges landed, and half of what was pending was already done
+## 2026-08-21 (last) — jcodemunch sync finished, port registry created, mempalace archived
+
+Closes out the backlog. Everything below was read from the installed package
+(`local/jcodemunch-mcp@1.108.288-9f9c013a`) or from a live tool result, with the source line
+cited so it can be re-checked rather than re-trusted.
+
+**Four more confirmed, now in CLAUDE.md:**
+
+- `resolve_repo` **stops at a nested independent clone** (#492, `tools/resolve_repo.py:53,343`).
+  Containment is a filesystem fact; the caller wants a repository fact. A separate clone inside an
+  indexed parent no longer returns the parent as `indexed: true`. Submodules deliberately still
+  resolve to the parent — their content IS indexed there.
+- `CODE_INDEX_PATH` relocates the entire index root (`config.py:109,115`, `cli/receipt.py:161`).
+  An index built under a different value is not found; that emptiness is `degraded`, never `absent`.
+- `find_dead_code` counts **render edges** as reachability (#461, `tools/find_dead_code.py:256`),
+  always-on. A template reached only by `render(request, "page.html")` is no longer reported as
+  `zero_importers` at confidence 1.0. The result set shrinking is the fix, not a regression.
+- **#500 is the one that matters.** For four releases `embed_repo` carried a comment claiming
+  model-change detection that the code never implemented (`tools/embed_repo.py:411`). A store
+  written across a model change holds two vector widths; `EmbeddingMatrix` infers its dimension
+  from the first row and drops every row that disagrees — symbols embedded after the switch stop
+  being searchable, silently and cumulatively. **The producer is fixed; existing bad stores are
+  not**, until the next model change or a forced `embed_repo`. Watch `skipped_dim_mismatch`.
+  *This host is clean as of 2026-08-21* — `check_embedding_drift`: one model
+  (`local_onnx`/`all-MiniLM-L6-v2`, dim 384, pinned 2026-05-25), `max_drift=0.0`, no alarm. That
+  safety expires the moment `JCODEMUNCH_EMBED_MODEL` changes.
+
+**One claim NOT settled, and deliberately not called refuted.** `get_watch_status`'s tri-state
+`fresh` returned zero hits — but the scan covered **one file** (`absent:444f7e573d54`), and the
+field could live in a shared verdict/coverage helper. A narrow zero-result is `degraded`, not
+`absent`; upgrading it would be the exact error this file's own absence contract forbids. Left
+open in ROADMAP with the scope stated.
+
+**`/opt/proj/.port-registry` now exists.** The boot config has told every session to check it
+before assigning a container port; it had never existed, so that rule was passing vacuously.
+Created from observed state (`ss -tlnp` + `docker ps`) with 20 reservations, binding scope per
+row, and an explicit note on what is deliberately excluded (system/desktop/ephemeral ports).
+
+**mempalace is archived, not deleted — and it was nearly lost.** The project was decommissioned
+when memweave replaced it, but `origin` (`github.com/williamblair333/mempalace`) returns
+**"Repository not found"**, so the local clone was the only copy of the fork. Three commits
+existed nowhere else — the FTS5 auto-rebuild fixes `85d2391`, `bd4ac98`, `a82b363`; the
+`origin/fix/repair-fts5-auto-rebuild` ref that made it look safe was a stale cache of a deleted
+remote. Bundled to `/opt/proj/_archive/mempalace-2026-08-21.bundle` (20 MB, `git bundle verify`
+reports complete history, restores with all 13 refs and all three commits), then the 439 MB
+working copy was moved out of `/opt/proj` rather than deleted. **Check `git ls-remote` before
+trusting a remote-tracking ref** — it can outlive the remote.
+
+## 2026-08-21 — three jcodemunch ranges landed, and half of what was pending was already done
 
 The backlog the nightly job left behind (see the entry below) is **partially** cleared. Ranges
 `9d720c1→2e3883a`, `2e3883a→932209e` and `932209e→09e5761`, installed dist **1.108.288**.

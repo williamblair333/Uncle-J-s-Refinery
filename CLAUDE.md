@@ -49,7 +49,8 @@ tools can answer structurally.
 
 **Index & setup** — confirm the repo is indexed before searching:
 - Call `list_repos` before any search — confirms the project is indexed and surfaces its repo ID. If missing, run `index_folder` (local path) or `index_repo` (GitHub URL). Use `index_file` for surgical single-file updates after edits.
-- `resolve_repo` converts any filesystem path to a repo ID in one O(1) lookup — faster than scanning `list_repos`.
+- `resolve_repo` converts any filesystem path to a repo ID in one O(1) lookup — faster than scanning `list_repos`. **It stops at a nested independent clone** (#492, verified against 1.108.288 at `tools/resolve_repo.py:53,343`): a separate repo checked out inside an indexed parent is *contained* by it on the filesystem but belongs to neither its corpus nor its history, so the parent is no longer returned as `indexed: true` for it. Pass `repo` explicitly if you actually wanted the outer one. Submodules deliberately still resolve to the parent — their content IS indexed there.
+- **`CODE_INDEX_PATH` relocates the whole index root** (default `~/.code-index`; verified against 1.108.288 at `config.py:109,115`, `cli/receipt.py:161`). Store, lock, and config all honour it. An index built under a different value is simply not found — read that emptiness as `degraded`, never `absent`.
 - `summarize_repo` regenerates AI summaries when skipped or interrupted; `embed_repo` warms the semantic-search cache upfront; `invalidate_cache` forces a full re-index.
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
 - `get_watch_status` — check daemon coverage and staleness before relying on index freshness.
@@ -92,6 +93,18 @@ tools can answer structurally.
   `_meta.absence_evidence`; corrected 2026-08-21 after every call in a working session returned a
   populated verdict.) Treat a bare empty result as `degraded` until the verdict says otherwise.
 - Run `check_embedding_drift` (or via `/health`) to catch index staleness before it silently degrades retrieval quality.
+- **A store written across an embedding-model change holds two vector widths, and the matrix
+  silently drops one of them** (#500, verified against 1.108.288 at `tools/embed_repo.py:411` and
+  `storage/embedding_store.py:109`). For four releases the comment claimed model-change detection
+  and the code did not implement it: `EmbeddingMatrix` infers its dimension from the FIRST row and
+  discards every row that disagrees, so symbols embedded after a switch stop being searchable —
+  silently and cumulatively. The producer is fixed, but **stores already in that state stay that
+  way until the next model change or a forced `embed_repo`**. Watch `skipped_dim_mismatch` in
+  `search_symbols` output; a non-zero value means you are searching a partial corpus.
+  *This host, as of 2026-08-21:* clean — `check_embedding_drift` reports one model
+  (`local_onnx` / `all-MiniLM-L6-v2`, dim 384, pinned 2026-05-25), `max_drift=0.0`, no alarm, so
+  no switch has ever happened here. **That safety expires the moment `JCODEMUNCH_EMBED_MODEL`
+  changes** — re-embed every repo if it does.
 
 **References & call graph**:
 - `find_references` — where is an identifier imported or re-exported. `find_importers` — which files import a given file. `check_references` — quick `is_referenced` bool for dead-code detection (import + content in one call).
@@ -116,7 +129,7 @@ tools can answer structurally.
 - `get_churn_rate` — git churn for a file or symbol (commit count, authors, churn/week, stable/active/volatile).
 - `get_delivery_metrics` — durable-change delivery over a window: commits_durable (landed and stuck) vs churn-back; the honest numerator for cost-per-outcome, not raw activity. Local-indexed repos only; trailing signal (recent commits flagged provisional).
 - `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
-- `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal).
+- `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal). **Render edges now count as reachability** (#461, always-on, verified against 1.108.288 at `tools/find_dead_code.py:256`): a template reached only by `render(request, "page.html")` is no longer reported as `zero_importers` at confidence 1.0. The result set is smaller and more correct — a shrink here is the fix, not a regression. Deliberately not an extension exemption: a template nothing renders is still dead and still reported.
 - `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
 - Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks), `get_architecture_metrics` (Gini concentration over symbols/size/fan-in/fan-out, Lakos depth, DSM modularity — answers "is coupling piling up in a few files?", which a ranked list of peaks cannot), `get_decorator_census` (normalized repo-wide `@route`/`@fixture`/`[Serializable]` histogram + sites; pairs with `get_signal_chains`/`get_endpoint_impact`).
 - Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols` for consolidation candidates; `get_dead_code_v2` for multi-signal dead code; `diff_health_radar` to compare health before/after a PR.
