@@ -87,7 +87,10 @@ Completed items age out after ~4 weeks.
   jdocmunch was already indexed as a watched dep at `~/.code-index/deps/jdocmunch-mcp@1.133.0`;
   `resolve_repo` on that path returns the handle. The `gh api` route below stays valid but is no
   longer needed for this.
-  Still unverified from that range: **v1.124.0 (#102–#105) and v1.128.0 (#108/#110/#112/#114)**.
+  **The rest of the range was verified the same day** — v1.124.1/#104 (ignored args degrade the
+  absence verdict), v1.126.1 (dot-dir rule, narrower than we had written), v1.130.0
+  (`corpus_selection_changed`) and v1.132.0 (embedding worker on by default, fail-preserving). All
+  four are in CLAUDE.md §3 with source lines. The `9235e22` parked note is fully discharged.
 - **The `gh api` route for verifying an installed package against upstream** — fetch via
   `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`
   then `diff` against the installed copy. Better than reading `.venv/` when the question is

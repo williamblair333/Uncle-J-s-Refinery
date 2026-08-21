@@ -74,7 +74,32 @@ Now in CLAUDE.md §2.
 (`jdatamunch-mcp`) — that is what the parked note's `top_level: missing` error was. Recorded in
 ROADMAP, since it had been carried as a blocker.
 
-Still unverified from the jdocmunch range: v1.124.0 (#102–#105) and v1.128.0 (#108/#110/#112/#114).
+### The rest of the jdocmunch parked range, and a dot-dir claim that was too broad
+
+The `9235e22` parked note is now fully discharged against installed 1.133.0.
+
+**Our dot-directory bullet was wrong in the direction that matters.** CLAUDE.md said v1.126.1
+skips *all* dot-directories, "so content previously indexed under e.g. `.claude/` disappears on
+re-index." Verified at `tools/_constants.py:27-52`: `.github` is allowlisted, and — the important
+half — the rule tests a single path **component**, while the root you point at is not a component
+of any walk-relative path. **A corpus that itself lives under a dotted directory is unaffected**;
+upstream has a test on exactly that case because getting it wrong empties such a corpus silently.
+Only dotted directories *below* the root are pruned. Given that the memweave corpora live at
+`~/.uncle-j-memory` and `~/.claude/projects/<slug>/memory`, the old wording implied a data-loss
+risk that does not exist, while obscuring the one that does.
+
+**v1.124.1 / jdoc#104** (`server.py:2563`, `tools/_arg_contract.py:26`): an ignored argument now
+*degrades* the absence verdict rather than merely being disclosed. jdocmunch mints citable
+`absent:<sha>` refs, so previously a call whose scoping argument was silently dropped could reach
+`absent` and be cited as proof. Absence claims that used to mint may now come back `degraded` —
+that is the fix.
+
+**v1.132.0** (`embeddings/worker.py:88`, `embeddings/provider.py:495-510`): the embedding worker is
+on by default, out of process, with spawn fallback. The caller-visible part is the failure shape —
+an embed failure raises and `embed_sections` preserves the existing sidecar rather than writing
+empty vectors, because empty vectors read as "this corpus legitimately has none", the jdoc#107/#109
+data-loss shape. A failed embed therefore leaves stale-but-real vectors: read a weak semantic
+channel as `degraded`, not as an unembedded corpus.
 
 ---
 
