@@ -2,6 +2,51 @@
 
 ---
 
+## 2026-08-21 (later) — jcodemunch post-upgrade sync, and a routing claim that was false
+
+Landed the verified half of three jcodemunch ranges (`9d720c1→2e3883a`, `2e3883a→932209e`,
+`932209e→09e5761`) that the nightly job never analysed. Everything was checked against the
+**installed package at 1.108.288**, not commit subjects — the parked notes were explicit that
+their findings were log-only. Re-verifying changed two conclusions.
+
+**`CLAUDE.md` asserted something false about its own retrieval stack.** The absence-contract
+bullet claimed this install runs `meta_fields: []`, which "strips `_meta.verdict` before you see
+it", leaving only `_meta.absence_evidence`. Every `search_text` and `get_blast_radius` call in a
+working session returns a populated `_meta.verdict` with `state`, `scanned`, `channels` and a
+`note`. Corrected. This is a boot-loaded global policy file, so the false claim was steering how
+every session in every project judged an empty result.
+
+**Routing amendments, each stamped with the version verified against:**
+
+- `_meta.confidence` is **ordinal, not absolute** (v1.108.265). It was rescaled to grade ranking
+  quality rather than raw score units, because the same ranking graded four to five times
+  differently depending on channel (`retrieval/confidence.py:24`).
+- `identity_type` no longer reports `exact` for a normalised match (#458). `exact` requires
+  identity ≥ 50.0; tokenization-folded matches are `normalized` at ≥ 40.0.
+- `jcodemunch_guide` output is filtered by `disabled_tools` and the active tier/profile
+  (#495/#506) — a tool missing from the guide is not a removed tool.
+- `format="auto"` was a **no-op** before v1.108.282; the dispatcher swallowed the argument. It now
+  reaches the tool and large responses genuinely return as MUNCH.
+
+**`#504` refuted.** It had been carried as the range's one candidate breaking change with its
+direction unknown. `tools/index_folder.py:2225` settles it: a full-root walk has nothing outside
+`walk_prefix`, and assigning the merge there gated out the incremental branch, so every repeat
+index rebuilt the whole corpus — *"invisible from the outside because the rebuild is correct, just
+unboundedly more expensive, on exactly the path a scheduled freshness check takes."* A performance
+fix. No entry owed.
+
+**Two pending items were already done.** The four new-tool bullets from the oldest range were
+already in `CLAUDE.md`, repo and deployed; and the jcodemunch install-alignment ROADMAP item was
+already closed — `~/.claude.json` points at the project `.venv`, so writer == reader. Second time
+in two days a "pending" item turned out to be finished. Verify before acting on anything asserted
+as outstanding.
+
+Five claims remain unverified and moved from memory notes into ROADMAP by name. The three parked
+notes carry an appended partial-landing marker rather than being cleared, so the reasoning for the
+open items survives.
+
+---
+
 ## 2026-08-21 — the nightly eval reported success over an agent saying "nothing was written"
 
 `auto-maintain.sh` Part B has been recording `evaluation complete` for runs that did

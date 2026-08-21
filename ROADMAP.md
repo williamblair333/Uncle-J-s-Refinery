@@ -11,14 +11,23 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Land the three jcodemunch ranges Part B never analysed** — `9d720c1→2e3883a`,
-  `2e3883a→932209e`, `932209e→09e5761`, in that order. Four consecutive nightly evals
-  were blocked (see the 2026-08-21 CHANGELOG entry), so these upgrade ranges have never
-  been read for caller-visible changes. The 03:00 agent parked its analysis of the last
-  one at `~/.claude/projects/-home-bill/memory/project_jcodemunch_upgrade_09e5761_parked.md`,
-  which flags `fix(index_folder): a full-root re-walk is not a subdir merge (#504)` as the
-  one candidate — unverified, because checking the installed package was exactly what was
-  blocked.
+- **Finish the jcodemunch post-upgrade sync** — the three ranges are **partially** landed
+  (2026-08-21; see HANDOFF). Verified against installed 1.108.288 and written up:
+  `identity_type` exact/normalised (#458), the `_meta.confidence` rescale (v1.108.265),
+  `jcodemunch_guide` filtering (#495/#506), `format="auto"` reaching the tool (v1.108.282),
+  and `#504` **refuted** as caller-visible — it is a performance fix, results were always
+  correct. Five claims remain unverified and are the actual remaining work, each needing a
+  read against the package before anything is written:
+  - `get_watch_status`'s `fresh` field — does it now distinguish "stale" from "could not
+    determine"? Callers branching on `fresh == false` need the unknown case if so (v1.108.240).
+  - `resolve_repo` and nested-repo boundaries (#492) — does a path inside a nested repo still
+    resolve to the outer id?
+  - `CODE_INDEX_PATH` honoured by store and lock defaults (v1.108.280/.284) — if an index built
+    while it was ignored is no longer found, an empty result there is `degraded`, not `absent`.
+  - Embedding model selection and switch detection (#488/#489/#500).
+  - Dead-code now counting render edges as reachability (v1.108.277) — result set shrinks.
+  Per-commit reasoning is in the three `project_jcodemunch_upgrade_*_parked.md` notes, each now
+  carrying a dated partial-landing marker.
 - **Regression test for Part B's verdict handling** — the fix shipped 2026-08-21 was
   verified by a scratchpad harness driving all six branches, not by anything in `tests/`.
   This is the failure class `tests/test_surface_write_guard.py` exists for; it deserves

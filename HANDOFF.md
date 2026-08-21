@@ -1,6 +1,69 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-08-21 (last) — a nightly job cannot report success it did not earn
+## 2026-08-21 (last) — three jcodemunch ranges landed, and half of what was pending was already done
+
+The backlog the nightly job left behind (see the entry below) is **partially** cleared. Ranges
+`9d720c1→2e3883a`, `2e3883a→932209e` and `932209e→09e5761`, installed dist **1.108.288**.
+
+Everything below was read from the **installed package**, not from commit subjects — the parked
+notes were explicit that their findings were log-only and had to be re-verified, and re-verifying
+changed two of the conclusions. Package indexed as `local/jcodemunch-mcp@1.108.288-9f9c013a` if you
+want to re-check any of it.
+
+**Two things were already done and had been sitting in the queue as pending:**
+
+- The four new-tool bullets from the oldest range (`get_decorator_census`,
+  `get_architecture_metrics`, `get_parity_map`, `finalize_handoff`) are **already in CLAUDE.md**,
+  in both the repo copy and the deployed one. Landed by some earlier pass that never cleared the
+  parked note.
+- The **jcodemunch install-alignment** ROADMAP item was likewise already done — `~/.claude.json`
+  points at the project `.venv`, so writer == reader. Only its skew *probe* remains.
+
+That is twice in two days that a "pending" item was already closed. Verify before acting on
+anything in this file or in ROADMAP that asserts work is outstanding.
+
+**Genuinely caller-visible — these break callers:**
+
+- **jcodemunch-mcp breaking change**: `identity_type` no longer reports `exact` for a normalised
+  match (#458). `search_symbols` grades `exact` only at identity ≥ 50.0; a hit that matched after
+  tokenization folded case, underscores or punctuation is now `normalized` at ≥ 40.0. Any caller
+  filtering on `identity_type == "exact"` silently drops real hits. `tools/search_symbols.py:441`
+  states the intent directly: *"identity_type must not report exact for a grade it did not
+  measure."*
+- **jcodemunch-mcp breaking change**: `_meta.confidence` was rescaled (v1.108.265) to grade
+  ranking quality rather than raw score units — the same ranking was previously graded four to
+  five times differently depending on channel (`retrieval/confidence.py:24`). It also gates
+  `verdict.STATE_LOW_CONFIDENCE`, so the rescale changes whether a scan is allowed to assert an
+  answer. Any hard-coded confidence threshold now means something else.
+
+**Caveats, not breaks:**
+
+- `jcodemunch_guide` output is filtered by `disabled_tools` and the active tier/profile
+  (#495/#506) — confirmed in the tool's own live description. A tool missing from the guide is not
+  a removed tool.
+- `format="auto"` was a **no-op** until v1.108.282; the dispatcher ate the argument. It now
+  reaches the tool, so large responses really do return as MUNCH. Observed on `list_repos` this
+  session.
+
+**Explicitly NOT caller-visible — the parked note guessed wrong:**
+
+- `fix(index_folder): a full-root re-walk is not a subdir merge` (#504) was carried as the one
+  candidate breaking change across the whole range, with its direction unknown — "it could prune
+  entries a merge would have kept, or stop clobbering a narrower subdir index." **Neither.**
+  `tools/index_folder.py:2225` settles it: the merge exists only to carry over files outside
+  `walk_prefix`, a full-root walk has nothing outside it, and assigning it there gated out the
+  incremental branch so *"every repeat index rebuilt the whole corpus… invisible from the outside
+  because the rebuild is correct — just unboundedly more expensive, on exactly the path a
+  scheduled freshness check takes."* It is a performance fix. Results were always correct. No
+  entry owed, exactly as the parked note instructed if this is what `.venv` showed.
+
+**Still unverified, and now tracked in ROADMAP rather than left in a memory note:**
+`get_watch_status`'s tri-state `fresh`, `resolve_repo`'s nested-repo boundary (#492),
+`CODE_INDEX_PATH` being honoured by store/lock defaults, embedding-model switch detection
+(#488/#489/#500), and dead-code counting render edges (v1.108.277). The parked notes are marked
+**partially** landed and still hold the per-commit reasoning for these.
+
+## 2026-08-21 — a nightly job cannot report success it did not earn
 
 **Read this before trusting any `evaluation complete` line older than today.** Part B of
 `auto-maintain.sh` has been printing it over agent sessions that wrote nothing, and the
