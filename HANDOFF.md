@@ -52,6 +52,15 @@ now that it can reach the repo — still unproven, only observable in production
 under the new code is the next 03:00; the drafted upstream `get_watch_status` report, which needs
 Bill's sign-off before filing; then the rest of ROADMAP.
 
+**The weekly hook-blocks review is reading a file `grep` silently refuses.**
+`state/hook-blocks.log` has 209 NUL bytes in it, so `file` calls it `data` and GNU grep prints
+nothing and exits 1. `grep -c '2026-08-21' state/hook-blocks.log` returns no output against 89
+entries from that date — use `LC_ALL=C grep -a` until the write side is fixed. Following the
+documented review step gets you a silent empty result that reads as "no violations", in the log
+that exists to be the evidence for discipline enforcement. In ROADMAP, paired with the rotation
+item. (The 383 `session=test` rows are legacy, oldest 2026-05-25 — current tests redirect their
+logs correctly, verified.)
+
 **Not done, and blocked rather than skipped:** the parked notes under
 `~/.claude/projects/-home-bill/memory/` still lack landed-markers for jdocmunch/jdatamunch. The
 harness denies all write access under `~/.claude/`, so appending them needs a `!`-prefixed command

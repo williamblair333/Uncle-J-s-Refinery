@@ -74,6 +74,23 @@ Now in CLAUDE.md §2.
 (`jdatamunch-mcp`) — that is what the parked note's `top_level: missing` error was. Recorded in
 ROADMAP, since it had been carried as a blocker.
 
+### The weekly hook-blocks review reads a file `grep` treats as binary
+
+Found by running the review rather than by reading about it. `state/hook-blocks.log` reports as
+`data` to `file(1)` — it carries **209 NUL bytes** — so GNU grep calls it binary, prints nothing,
+and exits 1. `grep -c '2026-08-21' state/hook-blocks.log` produced **no output** against a file
+holding 89 entries from that date; `LC_ALL=C grep -ac` returns 89.
+
+The documented weekly step is "review BLOCKED entries since last session" using grep. Following it
+yields a silent empty result that reads as "no discipline violations" — the same
+silence-as-success shape as the nightly-eval bug, now in the log that is supposed to be the
+evidence *for* discipline enforcement. Logged in ROADMAP against the write side (strip control
+bytes in the guard hooks), paired with the existing rotation item.
+
+Checked and cleared while there: the 383 `session=test` rows are legacy, oldest 2026-05-25.
+`test_surface_write_guard.py:39` redirects via `SURFACE_GUARD_LOG` and `test_grep_guard.py:131`
+writes under a tmp root, so current tests do not pollute the real log.
+
 ### The rest of the jdocmunch parked range, and a dot-dir claim that was too broad
 
 The `9235e22` parked note is now fully discharged against installed 1.133.0.

@@ -35,6 +35,19 @@ Completed items age out after ~4 weeks.
   The weekly review has to scan the whole file to find one session's entries. Needs a
   rotation policy that does not break the review (the log is gitignored session history
   and is NOT reconstructible, so rotation must archive rather than truncate).
+- **`state/hook-blocks.log` is binary to `grep`, and the weekly review reads it with `grep`**
+  (found 2026-08-21 while running that review). `file` reports **`data`**, not text: the log
+  carries **209 NUL bytes**, so GNU grep classifies it as binary, prints nothing, and exits 1.
+  `grep -c '2026-08-21' state/hook-blocks.log` returns **no output** on a file holding 89 entries
+  from that date; `LC_ALL=C grep -ac` returns 89. **A reviewer following the documented step
+  concludes "no blocks this session" from a silent empty result** — the same read-silence-as-success
+  shape as the nightly-eval bug, applied to the log that is supposed to be the evidence for
+  discipline enforcement. Fix at the write side (strip control bytes before appending in the guard
+  hooks) rather than by teaching every reader `-a`; the log is a durable evidence sink and should
+  be text. Pairs with the rotation item above — do both in one pass.
+  *Not a bug:* the 383 `session=test` rows are legacy, oldest 2026-05-25 (`session=test123`).
+  `test_surface_write_guard.py:39` redirects via `SURFACE_GUARD_LOG` and `test_grep_guard.py:131`
+  writes under a tmp root, so current tests do not pollute the real log.
 - **Close `surface-write-guard.sh`'s detection gaps** (measured 2026-08-15, pinned as
   strict xfails in `tests/test_surface_write_guard.py`). Versioning the guard made these
   reachable; they are **pre-existing** and were verified to behave identically in the live
