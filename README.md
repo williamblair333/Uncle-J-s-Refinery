@@ -808,6 +808,10 @@ Uncle-J-s-Refinery/
 │       └── tg_security.py              ← input sanitizer, output scanner, path validator, rate limiter
 │
 ├── lib/
+│   ├── eval-verdict.sh                 ← auto-maintain Part B verdict parse + classify; extracted
+│   │                                     so tests can drive all six branches. Sourced fail-closed
+│   │                                     (the script has no `set -e`, so a failed source would
+│   │                                     make Part B emit nothing at all — silence reads as success)
 │   ├── feature-helpers.sh              ← shared installer utilities (prompt, write_env_var, cron)
 │   ├── notify.sh                       ← notification dispatcher (reads NOTIFY_CHANNEL)
 │   └── notify-telegram.sh              ← Telegram backend (send pitch, poll reply, send text)
@@ -871,6 +875,9 @@ Uncle-J-s-Refinery/
 │
 ├── tests/
 │   ├── __init__.py
+│   ├── test_auto_maintain_verdict.py   ← behaviour matrix for lib/eval-verdict.sh (20 tests): all six
+│   │                                     Part B branches, the VERDICT extraction contract, and the
+│   │                                     wiring — re-inlining the lib or adding `set -e` fails CI
 │   ├── test_session_end_check.py       ← pytest suite for scripts/session-end-check.sh (10 tests)
 │   ├── test_surface_write_guard.py     ← behaviour matrix for the surface-write guard; KNOWN_GAPS are strict xfails, so closing one fails CI until the list is updated
 │   ├── test_vault_session_check.py     ← pytest suite for scripts/vault-session-check.sh (18 tests); pins the always-exit-0 and no-content-in-warnings invariants
