@@ -53,7 +53,7 @@ tools can answer structurally.
 - `summarize_repo` regenerates AI summaries when skipped or interrupted; `embed_repo` warms the semantic-search cache upfront; `invalidate_cache` forces a full re-index.
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
 - `get_watch_status` — check daemon coverage and staleness before relying on index freshness.
-- `jcodemunch_guide` — returns the version-current CLAUDE.md policy snippet; prefer it over a static copy in any harness that auto-loads routing rules.
+- `jcodemunch_guide` — returns the version-current CLAUDE.md policy snippet; prefer it over a static copy in any harness that auto-loads routing rules. **Its output is filtered** by `disabled_tools` and the active tier/profile (#495/#506, verified against 1.108.288), so it is a subset of the full policy — a tool missing from the guide is not a removed tool.
 - `index_dependency` — index an INSTALLED third-party dependency (the exact version in node_modules or the repo's .venv) as its own queryable repo; ground-truth a library's API instead of guessing. Prefer over context7 when you need the installed version's actual source, not published docs.
 
 **Orientation & cold-start**:
@@ -72,14 +72,25 @@ tools can answer structurally.
 - `search_text` for full-text/regex search across file contents when symbol search misses (string literals, comments, config values) — supports `context_lines` like `grep -C N`.
 - `search_columns` for column metadata in dbt/SQLMesh repos — 77% fewer tokens than grep.
 - Use `winnow_symbols` when you have multiple constraints (kind + complexity + decorator + churn + importance). One call instead of five.
-- Results carry `_meta.confidence` — prefer high-confidence hits; re-query or fall back to serena when confidence is low.
+- Results carry `_meta.confidence` — prefer high-confidence hits; re-query or fall back to serena
+  when confidence is low. **Ordinal, not absolute** (verified against 1.108.288): v1.108.265
+  rescaled it to grade ranking quality rather than raw score units, because the same ranking was
+  graded four to five times differently depending on whether it came from BM25, cosine, or fusion
+  (`retrieval/confidence.py`). Compare hits against each other; never against a remembered cutoff.
+  The same caveat already applies to jdocmunch — see § 3.
+- **`identity_type` no longer says `exact` for a normalised match** (#458, verified against
+  1.108.288). `search_symbols` grades `exact` only at identity ≥ 50.0; a query that matched after
+  tokenization folded case, underscores or punctuation is `normalized` (≥ 40.0), then `prefix`,
+  `segment`, `none`. Filtering results on `identity_type == "exact"` silently drops real hits —
+  accept the normalised tier too. (Case folding alone still counts as exact, deliberately.)
 - **A zero-result scan is not proof of absence.** The server distinguishes `absent` (the scan
   covered the tree and found nothing) from `degraded` (stale, partial, truncated, or mid-rebuild —
   it could not have found it). Only `absent` licenses "this symbol does not exist"; on `degraded`,
-  re-index and re-query before reporting absence. This install runs the default `meta_fields: []`,
-  which strips `_meta.verdict` before you see it — what survives is `_meta.absence_evidence`
-  carrying `citable` and `blocked_by`. Treat a bare empty result as `degraded` until something
-  says otherwise.
+  re-index and re-query before reporting absence. **`_meta.verdict` does reach you** — it carries
+  `state`, `scanned`, `channels` and a `note`, and is populated on `search_text`, `get_blast_radius`
+  and friends. (This bullet previously claimed `meta_fields: []` stripped it, leaving only
+  `_meta.absence_evidence`; corrected 2026-08-21 after every call in a working session returned a
+  populated verdict.) Treat a bare empty result as `degraded` until the verdict says otherwise.
 - Run `check_embedding_drift` (or via `/health`) to catch index staleness before it silently degrades retrieval quality.
 
 **References & call graph**:
@@ -257,7 +268,12 @@ tools can answer structurally.
 ### 7. Format economy
 - Pass `format="auto"` on any jCodeMunch tool call that might return a large
   response. This triggers the MUNCH compact wire format when savings are
-  ≥15%.
+  ≥15%. **This instruction was a no-op before v1.108.282** — the dispatcher
+  swallowed the caller's `format` argument. From .282 it reaches the tool, so
+  large responses genuinely come back as MUNCH (`#MUNCH/1 tool=… enc=gen1`
+  followed by `@n=` back-references and a `t,`-prefixed table). Parse that
+  shape rather than assuming plain JSON; observed on `list_repos` against
+  1.108.288.
 - On `get_ranked_context`, pass `compress=True` to fit more symbols into the same token budget —
   keystone-protected structural compression prunes low-signal lines from oversized bodies while
   always keeping signatures, control flow, and returns. Pruned items carry `source_pruned`.
