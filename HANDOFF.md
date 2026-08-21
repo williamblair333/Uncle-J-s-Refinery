@@ -36,10 +36,26 @@ which has no `memweave` module. Suite is 850 passed, 1 skipped, 7 xfailed.
 **`index_dependency` wants the import name**, not the distribution name — `jdatamunch_mcp`, not
 `jdatamunch-mcp`. The `top_level: missing` error that had been carried as a blocker is just that.
 
-**Still open, in priority order:** the jdocmunch v1.124.0 / v1.128.0 ranges (never verified);
-whether the edit-surface guard blocks the 03:00 agent's *write* now that it can reach the repo —
-still unproven and only observable in production, and the first run under the new code is the next
-03:00; then the rest of ROADMAP.
+**The jdocmunch parked range is fully discharged**, and one of our own bullets was wrong in the
+direction that matters. CLAUDE.md said v1.126.1 skips *all* dot-directories, "so content
+previously indexed under `.claude/` disappears on re-index." It does not: `.github` is allowlisted,
+and the rule tests a path **component** — the root you point at is not one, so **a corpus that
+itself lives under a dotted directory (`~/.uncle-j-memory`, `~/.claude/projects/<slug>/memory`) is
+unaffected.** Only dotted dirs *below* the root are pruned. Also new in §3: ignored arguments now
+degrade an absence verdict (v1.124.1/#104 — absence claims that used to mint may come back
+`degraded`, which is the fix), and the embedding worker defaults on with a fail-preserving shape
+(a failed embed keeps the old sidecar rather than writing empty vectors, so a weak semantic channel
+is `degraded`, not an unembedded corpus).
+
+**Still open, in priority order:** whether the edit-surface guard blocks the 03:00 agent's *write*
+now that it can reach the repo — still unproven, only observable in production, and the first run
+under the new code is the next 03:00; the drafted upstream `get_watch_status` report, which needs
+Bill's sign-off before filing; then the rest of ROADMAP.
+
+**Not done, and blocked rather than skipped:** the parked notes under
+`~/.claude/projects/-home-bill/memory/` still lack landed-markers for jdocmunch/jdatamunch. The
+harness denies all write access under `~/.claude/`, so appending them needs a `!`-prefixed command
+from Bill. The ROADMAP and CHANGELOG entries carry the same information in the meantime.
 
 ---
 

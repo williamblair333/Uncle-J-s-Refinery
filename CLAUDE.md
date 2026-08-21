@@ -235,13 +235,35 @@ tools can answer structurally.
   `list_docs` for flat per-doc inventory; `get_doc` (v1.58+) for single-doc detail
   view (section list, role/tag distributions, byte_size, format, indexed_at) —
   pairs with `list_docs`.
-- **`index_local` needs explicit paths as of v1.130.0.** An argless refresh no longer
-  widens the corpus, and v1.126.1 skips **all** dot-directories by rule rather than by a
-  list of twelve — so content previously indexed under e.g. `.claude/` disappears on
-  re-index, and newly added directories are not picked up unless you pass `paths=` (or
-  `include_dot_dirs=` by directory NAME, not path). A refresh that silently shrinks the
-  corpus looks identical to a successful one; check `corpus_selection_changed` and the
-  `deleted` count in the result before trusting it.
+- **`index_local` needs explicit paths as of v1.130.0.** An argless refresh no longer widens the
+  corpus, so newly added directories are not picked up unless you pass `paths=`. A refresh that
+  silently shrinks the corpus looks identical to a successful one; check `corpus_selection_changed`
+  and the `deleted` count in the result before trusting it.
+- **Dot-directory skipping is narrower than "all of them"** (v1.126.1, verified against installed
+  1.133.0 at `tools/_constants.py:27-52`). Two corrections to what this file used to say:
+  - `.github` is **allowlisted** — it is dotted and legitimately full of documentation, and
+    skipping it would trade one silent omission for another.
+  - The rule tests a single path **component**, and the root you point at is not a component of
+    any walk-relative path. **A corpus that itself lives under a dotted directory — e.g.
+    `~/.claude/projects/<slug>/memory` or `~/.uncle-j-memory` — is unaffected.** Only dotted
+    directories *below* the root are pruned. There is an upstream test on exactly this, because
+    getting it wrong empties such a corpus silently.
+  Opt anything else back in with `include_dot_dirs=` by directory **NAME**, not path (unioned
+  with the allowlist).
+- **An ignored argument now degrades the absence verdict** (v1.124.1 / jdoc#104, verified at
+  `server.py:2563`, `tools/_arg_contract.py:26`). jdocmunch mints citable `absent:<sha>` refs, so
+  before this a call whose scoping argument was silently dropped could still reach `absent` and be
+  cited as proof the target is not there — disclosure alone did not stop it. Consequence: absence
+  claims you could previously mint may now come back `degraded`. That is the fix, not a
+  regression; re-issue the call with a supported argument rather than citing the old ref.
+- **The embedding worker is ON by default** as of v1.132.0 (`embeddings/worker.py:88`,
+  `embeddings/provider.py:495-510`) — sentence-transformers runs out of process, with a fallback to
+  in-process when the child cannot be spawned. What matters to callers is the failure shape: an
+  embed failure **raises**, and `embed_sections` reads that as `embed_failed` and **preserves the
+  existing sidecar**. It deliberately does not write empty vectors, because a list of empty vectors
+  reads as "this corpus legitimately has none" — the jdoc#107/#109 data-loss shape. So a failed
+  embed leaves stale-but-real vectors in place: read a weak semantic channel as `degraded`, not as
+  evidence the corpus is unembedded.
 - **v1.126.0's confidence change, ground-truthed against installed 1.133.0** (`retrieval/confidence.py:1-45`,
   `retrieval/verdict.py:37,289`). The scale was **always 0–1** — it was not renumbered. The defect
   was that `strength` read a raw score against a hardcoded BM25 curve regardless of scorer, so the
