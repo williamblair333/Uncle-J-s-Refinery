@@ -2,6 +2,64 @@
 
 ---
 
+## 2026-08-21 — the nightly eval reported success over an agent saying "nothing was written"
+
+`auto-maintain.sh` Part B has been recording `evaluation complete` for runs that did
+nothing at all. The 2026-08-21 03:00 run is the clearest specimen — the agent's own
+final message, in the log, verbatim:
+
+> **Blocked — nothing was written to the stack repo.**
+> Every route into `/opt/proj/Uncle-J-s-Refinery` was denied this session (working
+> directory is `/home/bill`)
+
+Two lines later: `[03:02:09] INFO  jcodemunch-mcp: evaluation complete.`
+
+**Two independent defects, and neither is what ROADMAP said it was.**
+
+**1. The agent was never rooted in the repo.** `PROJ_ROOT` is computed at line 13 and was
+never used to set the working directory for `claude -p`. cron starts at `$HOME`, and a
+headless Claude session can only reach its own working directory — so `Read`, `Bash`, and
+every `mcp__jcodemunch__*` call into the repo were denied. Measured directly:
+
+```
+cwd=/home/bill                      → DENIED
+cwd=/opt/proj/Uncle-J-s-Refinery    → # Handoff — Uncle J's Refinery
+```
+
+ROADMAP blamed the edit-surface guard and framed this as a choice between fixing the
+criterion and widening that guard for the nightly job. **That premise was wrong** — the
+agent never got close enough to the guard to be stopped by it, and no security control
+needed widening. `claude -p` now runs in a subshell rooted at `$PROJ_ROOT`, at the default
+permission mode.
+
+**2. Exit 0 was the entire success criterion.** `claude -p` exits 0 for a session that
+achieved nothing, so a block was indistinguishable from success. Task 6 of the prompt had
+*already* instructed the agent to announce a block explicitly, and it complied exactly —
+the script discarded the answer.
+
+A bare diff check cannot replace it: task 5 makes "nothing required a change" a legitimate
+outcome, identical by diff to a blocked one. So the prompt now ends with a required
+machine-readable verdict — `changed`, `no-change-required`, or `blocked <reason>` — and the
+script branches on it. A `changed` claim is cross-checked against an actual delta in
+`CLAUDE.md`/`HANDOFF.md`, scoped by path so an unrelated `chk:` auto-commit cannot forge
+it. **A missing verdict line is treated as failure**, which is the safe direction: the
+whole defect was a missing signal being read as success.
+
+All six branches verified before shipping — blocked, missing verdict, changed-with-edit,
+changed-without-edit, legitimate no-change, and a non-zero exit.
+
+**The cost so far:** four consecutive nightly evals blocked this way, leaving three
+jcodemunch upgrade ranges unread for caller-visible changes. Tracked in ROADMAP.
+
+**Also fixed: every log line was duplicated.** `log()` used `tee -a "$LOG"`, which writes to
+the file *and* stdout — while the crontab entry redirects stdout to that same file.
+`state/auto-maintain.log` was 233 KB of exact pairs. It now writes to `$LOG` always and
+echoes to the terminal only when stdout is a tty, so interactive runs stay readable without
+re-creating the pairing. The reason lives in `crontab -l`, not in the script, which is why
+the `tee` looked correct.
+
+---
+
 ## 2026-08-19 (last) — install.sh no longer deletes global-only CLAUDE.md sections
 
 `install.sh` §6b deployed the routing policy with a wholesale `cp "$_CLAUDE_SRC" "$_CLAUDE_DEST"`.

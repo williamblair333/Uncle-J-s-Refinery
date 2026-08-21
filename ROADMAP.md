@@ -11,12 +11,18 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Make Part B's success criterion assert a file changed.** `auto-maintain.sh:247`
-  treats `claude -p` exiting 0 as success, so three permission-blocked evals recorded
-  `evaluation complete` on 2026-08-04 having written nothing. A headless session can
-  never clear the edit-surface guard — `write-clearance-token.sh` needs an approval it
-  cannot grant — so either the criterion checks for a diff, or the guard grows a path
-  for the nightly job. Until then Part B's CLAUDE.md/HANDOFF tasks are decorative.
+- **Land the three jcodemunch ranges Part B never analysed** — `9d720c1→2e3883a`,
+  `2e3883a→932209e`, `932209e→09e5761`, in that order. Four consecutive nightly evals
+  were blocked (see the 2026-08-21 CHANGELOG entry), so these upgrade ranges have never
+  been read for caller-visible changes. The 03:00 agent parked its analysis of the last
+  one at `~/.claude/projects/-home-bill/memory/project_jcodemunch_upgrade_09e5761_parked.md`,
+  which flags `fix(index_folder): a full-root re-walk is not a subdir merge (#504)` as the
+  one candidate — unverified, because checking the installed package was exactly what was
+  blocked.
+- **Regression test for Part B's verdict handling** — the fix shipped 2026-08-21 was
+  verified by a scratchpad harness driving all six branches, not by anything in `tests/`.
+  This is the failure class `tests/test_surface_write_guard.py` exists for; it deserves
+  the same treatment.
 - **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
   defect fixed in the memweave scripts, 77 local failures on Windows. (The
   `Skill frontmatter regression` half of this item is **done** — PR #107 recategorised
@@ -328,7 +334,14 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
 
-- **jcodemunch install alignment + skew probe** (root-caused 2026-07-06, PR #91 HANDOFF) — the reindex writes with the project `.venv` (1.108.102) while the MCP server runs a separate code-index venv (1.108.24), so reindexed indexes fail to load in-session (`sqlite_future_version` → Read/grep fallback). Fix: repoint `~/.claude.json` `jcodemunch.command` at the project `.venv` so writer == reader (one binary). Then add a `healthcheck.sh` probe comparing the reindex-writer version vs the MCP server binary version so the skew is caught at session-start instead of on first failed query.
+- **jcodemunch skew probe** — the *alignment* half of this item is **done**, and was already
+  done when this entry was last read. Verified 2026-08-21: `~/.claude.json` points
+  `jcodemunch.command` at `/opt/proj/Uncle-J-s-Refinery/.venv/bin/jcodemunch-mcp`, the same
+  binary the reindex writes with (1.108.287), so writer == reader and the
+  `sqlite_future_version` fallback cannot recur from this cause. What remains is only the
+  **probe**: a `healthcheck.sh` check comparing the reindex-writer version against the MCP
+  server binary, so a future re-skew is caught at session start rather than on the first
+  failed query. (Original root-cause 2026-07-06, PR #91 HANDOFF.)
 
 ---
 

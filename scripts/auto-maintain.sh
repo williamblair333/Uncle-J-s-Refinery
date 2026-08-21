@@ -18,7 +18,22 @@ CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || echo 'claude')}"
 DRY_RUN=0
 
 mkdir -p "$PROJ_ROOT/state"
-log()  { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"; }
+
+# Write to $LOG always; echo to the terminal ONLY when stdout is a tty.
+#
+# This used to be `... | tee -a "$LOG"`, which writes to the file AND stdout —
+# and the crontab entry redirects stdout to that same file
+# (`... auto-maintain.sh >> .../state/auto-maintain.log 2>&1`). Every line
+# therefore landed twice; the log was 233 KB of exact pairs. The reason lives
+# in `crontab -l`, not in this script, which is why the tee looked correct.
+# The tty test keeps interactive runs readable without re-creating the pairing.
+log() {
+    local line
+    line="$(printf '[%s] %s' "$(date '+%Y-%m-%d %H:%M:%S')" "$*")"
+    printf '%s\n' "$line" >> "$LOG"
+    [[ -t 1 ]] && printf '%s\n' "$line"
+    return 0   # a non-tty must not make log() look like a failed command
+}
 info() { log "INFO  $*"; }
 warn() { log "WARN  $*"; }
 
@@ -295,13 +310,73 @@ Your tasks — do all that apply, nothing else:
 5. If nothing requires a change, do nothing and exit cleanly.
 6. If a write is blocked by a permission or guard, say so explicitly in your final
    message and name the file — a silent no-op is indistinguishable from success in
-   the log, and this job cannot tell the difference."
+   the log, and this job cannot tell the difference.
+7. END YOUR FINAL MESSAGE WITH EXACTLY ONE of these lines, alone on the last line,
+   no backticks and no trailing text. This job parses it; without it the run is
+   recorded as a failure:
+     VERDICT: changed              — you edited and committed CLAUDE.md and/or HANDOFF.md
+     VERDICT: no-change-required   — you read the log and nothing was caller-visible
+     VERDICT: blocked <reason>     — you could not complete the task; say why in <reason>"
 
-        if "$CLAUDE_BIN" -p "$EVAL_PROMPT" >> "$LOG" 2>&1; then
-            info "$pkg: evaluation complete."
-        else
-            warn "$pkg: claude -p evaluation failed (non-fatal)"
+        # Two defects lived in the four lines this replaced, and the 2026-08-21
+        # 03:00 run demonstrates both.
+        #
+        # 1. NO CWD. PROJ_ROOT is computed at the top of this script and was
+        #    never used to root the agent. cron starts at $HOME, and a headless
+        #    Claude session can only reach its working directory, so every path
+        #    into the repo was denied — Read, Bash and every mcp__jcodemunch__*
+        #    call. The agent never even got as far as the edit-surface guard.
+        #    Four consecutive upgrade ranges went unanalysed this way.
+        #
+        # 2. EXIT 0 WAS THE WHOLE TEST. `claude -p` exits 0 for a session that
+        #    did nothing, so `info "evaluation complete"` was printed directly
+        #    over an agent message that opened "Blocked — nothing was written to
+        #    the stack repo." Task 6 had ALREADY told the agent to announce a
+        #    block, and it complied exactly; the script threw the answer away.
+        #
+        # Note the criterion cannot be a bare diff check: task 5 makes "nothing
+        # required a change" a legitimate outcome, indistinguishable by diff
+        # from a blocked one. Hence the verdict line, cross-checked against the
+        # delta so `changed` cannot be claimed without evidence.
+        EVAL_OUT="$(mktemp "$PROJ_ROOT/state/eval-${pkg}-XXXXXX.txt")"
+        # The eval is the longest phase in the run (~2 min/package), so it is
+        # the widest window for an interruption to orphan this file.
+        trap 'rm -f "$EVAL_OUT"' EXIT
+        BASE_SHA="$(git -C "$PROJ_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
+
+        # cd in a subshell: roots the agent without moving this script's cwd.
+        ( cd "$PROJ_ROOT" && "$CLAUDE_BIN" -p "$EVAL_PROMPT" ) > "$EVAL_OUT" 2>&1
+        eval_rc=$?
+        cat "$EVAL_OUT" >> "$LOG"
+
+        verdict="$(grep -oE '^VERDICT: (changed|no-change-required|blocked\b.*)$' "$EVAL_OUT" | tail -1)"
+
+        # Scoped to the two files the prompt allows, by path. A bare HEAD
+        # comparison would let an unrelated commit — scripts/win/checkpoint.sh
+        # auto-commits 'chk: HH:MM:SS' — forge a `changed` verdict.
+        touched=""
+        if [[ "$BASE_SHA" != "unknown" ]]; then
+            touched="$(git -C "$PROJ_ROOT" diff --name-only "$BASE_SHA"..HEAD -- CLAUDE.md HANDOFF.md 2>/dev/null)"
         fi
+        touched+="$(git -C "$PROJ_ROOT" status --porcelain -- CLAUDE.md HANDOFF.md 2>/dev/null)"
+
+        if [[ "$eval_rc" -ne 0 ]]; then
+            warn "$pkg: claude -p exited $eval_rc (non-fatal) — see transcript above"
+        elif [[ -z "$verdict" ]]; then
+            # Failure, deliberately. A missing verdict means the contract was not
+            # met, and treating that as success is the bug being fixed here.
+            warn "$pkg: NO VERDICT LINE — treating as failure. Agent's closing lines:"
+            warn "$pkg: $(tail -3 "$EVAL_OUT" | tr '\n' ' ')"
+        elif [[ "$verdict" == VERDICT:\ blocked* ]]; then
+            warn "$pkg: ${verdict#VERDICT: } — NOTHING WAS WRITTEN"
+        elif [[ "$verdict" == "VERDICT: changed" && -z "$touched" ]]; then
+            warn "$pkg: claimed 'changed' but CLAUDE.md/HANDOFF.md are untouched since $BASE_SHA"
+        else
+            info "$pkg: ${verdict#VERDICT: }"
+        fi
+
+        rm -f "$EVAL_OUT"
+        trap - EXIT
     done
 else
     info "No upgrade performed and no packages queued — post-upgrade evaluation skipped."
