@@ -1,6 +1,54 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-08-19 (last) — never `cp` the repo CLAUDE.md over the installed one
+## 2026-08-21 (last) — a nightly job cannot report success it did not earn
+
+**Read this before trusting any `evaluation complete` line older than today.** Part B of
+`auto-maintain.sh` has been printing it over agent sessions that wrote nothing, and the
+2026-08-21 03:00 run has the agent saying "Blocked — nothing was written to the stack repo"
+two lines above it.
+
+**The ROADMAP entry describing this bug was wrong about its cause, and I nearly acted on
+it.** It blamed the edit-surface guard and framed the fix as a choice between asserting a
+diff and widening that guard for the nightly job. The actual cause is that `claude -p` was
+never rooted in the repo: `PROJ_ROOT` is computed at line 13 and never used as the working
+directory, cron starts at `$HOME`, and a headless session can only reach its own cwd.
+Measured both ways — `DENIED` from `/home/bill`, reads fine from the repo root. The agent
+never reached the guard. **No security control was widened, and none needed to be.**
+
+**Three things about the fix that are not guessable from the diff:**
+
+- **The criterion cannot be a bare diff check.** Task 5 of the eval prompt makes "nothing
+  required a change" a legitimate outcome, and by diff it is identical to a blocked one.
+  That is why the prompt now demands a `VERDICT:` line and the script branches on it.
+- **A missing verdict is failure, not success.** `CLAUDE_BIN` is a self-updating symlink
+  into `~/.local/share/claude/versions/`, so the day a model stops emitting the line, this
+  check degrades. Failing loudly is the safe direction — the entire bug was a missing
+  signal being read as success. The warning quotes the agent's actual closing lines so the
+  next reader sees what it said instead.
+- **The delta check is scoped to `CLAUDE.md`/`HANDOFF.md` by path, never a bare HEAD
+  comparison.** `scripts/win/checkpoint.sh` auto-commits `chk: HH:MM:SS`, and the eval
+  prompt itself warns about it at task 4. A HEAD comparison would let any unrelated commit
+  forge a `changed` verdict.
+
+**`log()` no longer uses `tee`.** It writes to `$LOG` and echoes to the terminal only when
+stdout is a tty. The crontab entry also redirects stdout into that same file, so `tee`
+wrote every line twice — 233 KB of exact pairs. **Do not "simplify" the tty test back to a
+`tee`**; the reason it exists is in `crontab -l`, not in this script.
+
+**Outstanding, and the real cost of the bug:** four consecutive nightly evals were blocked,
+so three jcodemunch upgrade ranges have never been read for caller-visible changes —
+`9d720c1→2e3883a`, `2e3883a→932209e`, `932209e→09e5761`, to be landed in that order. The
+03:00 agent parked its analysis of the last at
+`~/.claude/projects/-home-bill/memory/project_jcodemunch_upgrade_09e5761_parked.md`; it
+flags `fix(index_folder): a full-root re-walk is not a subdir merge (#504)` as the one
+candidate, unverified because verifying it was what got blocked.
+
+**Still unproven:** whether the edit-surface guard blocks the *write* once the agent can
+finally reach the repo. That question was unreachable before this fix and stays open until
+a real 03:00 run attempts one. If it does block, the answer is a scoped exception — never
+`--dangerously-skip-permissions` in an unattended job.
+
+## 2026-08-19 — never `cp` the repo CLAUDE.md over the installed one
 
 **The installed copy is not a mirror of the repo copy, and treating it as one destroys data.**
 `features/dreaming/dream.sh` appends `## Dreaming Notes (auto-generated)` to
