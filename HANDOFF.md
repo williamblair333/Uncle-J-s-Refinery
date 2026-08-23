@@ -2,6 +2,8 @@
 
 ## 2026-08-21 (last) — Part B pinned by tests; watch_status and confidence claims settled
 
+- **jcodemunch-mcp breaking change**: `get_architecture_metrics` now returns `concentration.gini.bytes_per_file` as `null` when no file has trustworthy byte offsets and computes it from merged symbol spans instead of summed `byte_length`, so callers must add a `None` check and must not compare the value against any pre-1.108.291 baseline.
+
 Run from this repo (the previous entry's work was done from a jaredrhod session, which was the bug
 that started that day). Everything below was verified against installed code or a live tool result.
 
