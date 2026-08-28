@@ -11,6 +11,30 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **The nightly agent commits to local `main` and never pushes** (found 2026-08-28). `git ls-remote`
+  showed remote `main` at `1f0f262` while local was at `47286d7` — `9b52594`, `c6f79d8` and
+  `47286d7` had been local-only since 08-23. The usual freshness check
+  `git log --oneline HEAD..origin/main` cannot see this: it only detects being *behind*, so an
+  unpushed backlog accumulates silently and rides along in whatever branch is cut next (it rode
+  into PR #136). Decide whether `auto-maintain.sh` should push its own commits, or whether the
+  session-start check should compare `git rev-parse main` against `git ls-remote`.
+- **The 03:00 agent is instructed to read installed packages and the grep-guard blocks it.**
+  `auto-maintain.sh`'s eval prompt says *"check the installed package under `$PROJ_ROOT/.venv`
+  rather than guessing from the subject"*; the grep-guard denies exactly that. Six blocks between
+  03:00:50 and 03:06:29 on 2026-08-28 alone, all on
+  `.venv/lib/python3.11/site-packages/{jcodemunch,jdocmunch}_mcp/…`. Installed third-party
+  packages are not repo source and the routing policy has no jcodemunch index for them unless
+  `index_dependency` has been run. Either narrow the guard to exclude `.venv/`, or change the
+  prompt to route through `index_dependency` — but the two must stop contradicting each other.
+- **`post-merge-hook.sh` skipped the reindex on a commit that changed two scripts.** On the PR #136
+  merge it logged *"no actionable changes (maintenance/docs only)"* despite
+  `scripts/auto-maintain.sh` and `scripts/healthcheck-notify.sh` being in the diff; the index had
+  to be refreshed by hand. Same failure class as the cron-ordering bug just fixed — a reindex that
+  does not fire on a change that needs one — in a different code path.
+- **Residual on the cron-ordering fix**: `auto-maintain.sh` now reindexes after its own commits,
+  but a direct commit to `main` between 03:10 and 07:00 with no session afterwards still trips the
+  07:00 check. `session-start-autofix.sh:38` and `post-merge-hook.sh:128` cover the session and
+  merge routes. Narrow, but it is the remaining hole.
 - **[READY TO FILE — needs Bill's sign-off, do not open unattended] Upstream: `get_watch_status`
   reports `any_stale: false` without measuring anything** (`jgravelle/jcodemunch-mcp`, verified
   against installed 1.108.288). Staleness is read from `get_reindex_status`, which is **in-process,
@@ -145,6 +169,27 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-08-28 — the 07:00 alert had been crying wolf for 26 days)
+
+- **The nightly healthcheck alert never passed.** `state/healthcheck-notify.log` records a failure
+  notification on every scheduled 07:00 run from 2026-08-03 to 2026-08-28 — twenty consecutive
+  alerts, zero passes; the only pass in the file is a manual 14:19 run on 08-08 right after a
+  hand-repair. The real four-issue mornings (08-23, 08-28) were indistinguishable from the noise.
+  Cause was cron ordering: reindexers at 01:00/01:30, the maintenance agent commits at ~03:05, so
+  every agent commit missed that night's reindex by two hours and self-healed ~22h later.
+  `auto-maintain.sh` now reindexes after its own commits; the crons stay as the safety net. PR #136.
+- **`healthcheck-notify.sh` logged the failure count but not the names**, so the twenty failures
+  could not be told apart after the fact — the only copy of that detail went to Telegram. Now
+  logged per check. Verified against a canned run containing a fake `sk-lf-` key that no secret
+  reaches the log: `$FAILURES` holds `bad()` output only, and `healthcheck.sh:704` sends its
+  matched credential lines to stderr without the `X` prefix.
+- **`uv.lock` had recorded none of the last three upgrades.** HEAD pinned `jcodemunch-mcp 1.108.235`
+  / `jdatamunch-mcp 1.29.1` / `jdocmunch-mcp 1.121.1` against a venv running `1.108.303` / `1.31.7`
+  / `1.136.1` — a clean `uv sync` from HEAD would have downgraded the whole stack, `search_ast`'s
+  empty-table window (#553) included. Committed alone, since `auto-maintain.sh` rightly forbids
+  folding it into a per-package commit; `commits_behind()` reads it from disk, so nothing was
+  disarmed while it sat dirty.
 
 ## Recently completed (2026-08-16 — the workaround outlived the bug)
 
