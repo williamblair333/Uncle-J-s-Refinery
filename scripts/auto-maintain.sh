@@ -484,6 +484,38 @@ else
     info "Embedding canary already pinned — skipping."
 fi
 
+# ── Re-index whatever this run committed ──────────────────────────────────────
+# The reindex crons fire at 01:00 and 01:30 — two hours BEFORE this job runs and
+# commits. Every commit made here therefore sat un-indexed through the 07:00
+# healthcheck and tripped stack-not-at-head, then self-healed ~22 hours later.
+# healthcheck-notify.log shows that ordering alone producing a failure
+# notification on EVERY scheduled run from 2026-08-03 to 2026-08-28 — twenty
+# consecutive alerts, which is how a real failure gets missed.
+#
+# Reindexing here is causal rather than a race; the crons stay as the daily
+# safety net for changes arriving by other routes (a pull, a direct commit).
+# Both scripts no-op in ~2s when nothing changed and take their own atomic lock
+# dirs, so overlapping with a cron run is safe. Non-fatal by design: a failed
+# reindex must not fail the maintenance run, and the cron retries in the morning.
+#
+# NOTE ON THE LOG LINES BELOW: both scripts also exit 0 when they SKIP on a held
+# lock, so exit status cannot distinguish "reindexed" from "skipped". These lines
+# therefore claim only that the step ran. The per-script logs are authoritative.
+if [[ "$DRY_RUN" -eq 1 ]]; then
+    info "DRY RUN: would re-index jcodemunch + jdocmunch"
+else
+    if bash "$PROJ_ROOT/scripts/jcodemunch-reindex.sh" >> "$LOG" 2>&1; then
+        info "jcodemunch reindex step ok — outcome in state/jcodemunch-reindex.log"
+    else
+        warn "jcodemunch reindex failed (non-fatal — 01:00 cron will retry)"
+    fi
+    if bash "$PROJ_ROOT/scripts/jdocmunch-reindex.sh" >> "$LOG" 2>&1; then
+        info "jdocmunch reindex step ok — outcome in state/jdocmunch-reindex.log"
+    else
+        warn "jdocmunch reindex failed (non-fatal — 01:30 cron will retry)"
+    fi
+fi
+
 # ── Telegram notification ─────────────────────────────────────────────────────
 if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" && "$DRY_RUN" -eq 0 ]]; then
     SUMMARY="auto-maintain: "
