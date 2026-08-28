@@ -1,6 +1,54 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-08-21 (last) — Part B pinned by tests; watch_status and confidence claims settled
+## 2026-08-28 (last) — the 07:00 alert was crying wolf nightly; cron ordering fixed
+
+**The single most important thing: `HEALTHCHECK: ok` had not been seen at 07:00 since at least
+2026-08-03.** Twenty consecutive scheduled runs sent a failure notification; the only pass in
+`state/healthcheck-notify.log` is a manual 14:19 run on 08-08, right after a hand-repair. Treat any
+"fixed the stale index in-session" note — including today's, and including the one that opened this
+session — as a repair of a condition that regenerates, not as a fix.
+
+**The mechanism is cron ordering and it is now closed.** Reindexers at 01:00/01:30, maintenance
+agent commits at ~03:05, check at 07:00. Every agent commit missed that night's reindex by two hours
+and self-healed ~22h later. `scripts/auto-maintain.sh` now re-indexes both stacks after its own
+commits; the crons stay as the safety net. **The residual: this covers auto-maintain's commits
+only.** A direct commit to main between 03:10 and 07:00 with no session afterwards still trips it —
+`session-start-autofix.sh:38` and `post-merge-hook.sh:128` cover the session and merge routes, so
+the gap is narrow but real.
+
+**Both reindex scripts `exit 0` when they SKIP on a held lock**, so exit status cannot tell
+"reindexed" from "skipped". The new auto-maintain log lines are worded to claim only that the step
+ran. `state/jcodemunch-reindex.log` and `state/jdocmunch-reindex.log` are authoritative.
+
+**`healthcheck-notify.sh` now logs which checks failed, not just how many** — previously the only
+copy of that detail was the Telegram message, which is why twenty failures could not be told apart.
+
+**`uv.lock` had recorded none of the last three upgrades** and is committed here. HEAD pinned
+`jcodemunch-mcp 1.108.235` / `jdatamunch-mcp 1.29.1` / `jdocmunch-mcp 1.121.1` against a venv running
+`1.108.303` / `1.31.7` / `1.136.1`. The per-package agent is instructed never to sweep the lock into
+its commits and that instruction is right — `commits_behind()` reads the SHAs from the on-disk file,
+so nothing was disarmed while it sat dirty, but a clean `uv sync` from HEAD would have downgraded the
+whole stack. If you see it dirty again, commit it alone, not inside a sync commit.
+
+**Bare `pytest` at the repo root reports 293 collection errors** — it walks into `review/` and hits
+third-party tests needing `acontext`/`pytest_asyncio`. Run `pytest tests/`: 850 passed, 1 skipped,
+7 xfailed.
+
+**The edit-surface guard is confirmed live on `auto-maintain.sh`** — it blocked this session's edit
+until pre-mortem cleared. That is not the open question below, which is about the 03:00 agent's own
+write, still only observable in production.
+
+**Still open, in priority order:** whether the edit-surface guard blocks the 03:00 agent's *write*;
+the drafted upstream `get_watch_status` report awaiting Bill's sign-off; then the rest of ROADMAP.
+
+---
+
+## 2026-08-21 — Part B pinned by tests; watch_status and confidence claims settled
+
+- **jcodemunch-mcp breaking change**: `get_architecture_metrics` now returns `concentration.gini.bytes_per_file` as `null` when no file has trustworthy byte offsets and computes it from merged symbol spans instead of summed `byte_length`, so callers must add a `None` check and must not compare the value against any pre-1.108.291 baseline.
+- **jcodemunch-mcp breaking change**: 1.108.303 fixes `search_ast` having encoded to an empty table for every language and preset under `format="auto"` since .282 (#553 — the schema declared `results`/`result_count`, the tool returns `matches`/`total_matches`), so any empty security sweep run in that window must be re-run before its absence is trusted; the same release bumps `PARSER_GENERATION` 1→7, which forces a full re-parse of every index and changes stored `max_nesting` (Python control flow was invisible, underreported by half) and Rust `qualified_name`/`kind`/`parent`, so callers must re-index before quoting complexity or Rust symbol identity.
+- **jdocmunch-mcp breaking change**: 1.136.1 stops counting a section that has a byte range but no stored `content_hash` as clean — it now lands in `skipped_sections` with reason `no_stored_hash` instead of `clean_count`, so any CI gate reading `drift_count == 0` alone must also require `skipped_count == 0` or it certifies sections it could not check.
+- **jdocmunch-mcp breaking change**: 1.135.0 filters `doc_list_repos` candidates on the sidecar suffix instead of parsing them (jdoc#121), so a pre-jdoc#77 index whose repo name ends in `.summary`/`.terms`/`.related`/`.boilerplate`/`.duplicates` no longer appears in the list at all — callers must read a missing repo there as `degraded` and address it by handle or re-index, not as absent.
 
 Run from this repo (the previous entry's work was done from a jaredrhod session, which was the bug
 that started that day). Everything below was verified against installed code or a live tool result.

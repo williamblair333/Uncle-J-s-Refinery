@@ -45,4 +45,14 @@ MSG="${MSG}
 Run <code>/health</code> for details."
 
 log "Sending failure notification (${FAIL_COUNT} issue(s))"
+# Log WHICH checks failed, not just how many. Until now the only copy of that
+# detail was the Telegram message, so this log recorded twenty consecutive
+# failures (2026-08-03 → 2026-08-28) that could not be told apart or triaged
+# after the fact. $FAILURES holds bad() lines only; the credentials check sends
+# its matched lines to stderr without an X prefix, so no secret reaches here.
+if [[ -n "$FAILURES" ]]; then
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && log "  X $line"
+    done <<< "$FAILURES"
+fi
 notify_send_text "$MSG" || log "ERROR: Failed to send Telegram notification"

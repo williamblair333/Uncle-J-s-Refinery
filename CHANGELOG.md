@@ -2,7 +2,48 @@
 
 ---
 
-## 2026-08-21 (last) — Part B pinned by tests; three ROADMAP items closed; two CLAUDE.md claims corrected
+## 2026-08-28 (last) — the nightly healthcheck alert had been crying wolf for 26 days
+
+### The alert was structurally guaranteed to fire, and nobody could tell which mornings mattered
+
+`state/healthcheck-notify.log` records a failure notification on **every scheduled 07:00 run from
+2026-08-03 through 2026-08-28** — twenty consecutive alerts, zero passes. The only pass in the file
+is a manual 14:19 run on 2026-08-08, immediately after someone hand-repaired it. Today followed the
+same shape: a session found `HEALTHCHECK: fail (2)`, ran both reindex scripts, and the check went
+green — the twentieth repair of a condition that regenerates itself nightly.
+
+**The cause is cron ordering, not the indexes.** The reindexers run at 01:00 and 01:30; the
+maintenance agent runs at 03:00 and commits at ~03:05. Every commit it makes is therefore two hours
+too late for that night's reindex and sits un-indexed through the 07:00 check, self-healing ~22
+hours later. `47286d7` (03:09) and `c6f79d8` (03:05) are the current instance.
+
+`scripts/auto-maintain.sh` now re-indexes both stacks after its own commits, which is causal rather
+than a race. The crons stay as the daily safety net for changes arriving by other routes. Both
+scripts no-op in ~2s and hold atomic lock dirs, so overlapping with a cron is safe, and a failed
+reindex is non-fatal. Note that both also `exit 0` when they *skip* on a held lock, so the new
+`info` lines claim only that the step ran — the per-script logs remain authoritative.
+
+### The alert could not be triaged from the log
+
+`scripts/healthcheck-notify.sh` extracted the failing check names and sent them to Telegram, then
+logged only the count. So the twenty failures were indistinguishable in the log after the fact —
+2026-08-24's two and 2026-08-28's four read identically. It now logs each `X` line. Verified that
+no secret reaches the log: `$FAILURES` holds `bad()` output only, and the credentials check
+(`healthcheck.sh:704`) sends its matched lines to stderr without the `X` prefix.
+
+### `uv.lock` recorded none of the last three upgrades
+
+The two "post-upgrade sync" commits touched `CLAUDE.md` and `HANDOFF.md` only. HEAD's lockfile still
+pinned `jcodemunch-mcp 1.108.235`, `jdatamunch-mcp 1.29.1`, `jdocmunch-mcp 1.121.1` while the venv
+ran `1.108.303` / `1.31.7` / `1.136.1` — so a clean `uv sync` from HEAD would have downgraded the
+whole stack to versions the same commits' CLAUDE.md text contradicts, `search_ast`'s empty-table
+window (#553) included. Committed here on its own, deliberately not swept into a per-package commit:
+`commits_behind()` reads the lockfile's SHAs, and it reads it from disk, so the pins were correct
+for that job throughout and nothing was disarmed.
+
+---
+
+## 2026-08-21 — Part B pinned by tests; three ROADMAP items closed; two CLAUDE.md claims corrected
 
 Follow-on to the session below, run from the correct repo this time.
 

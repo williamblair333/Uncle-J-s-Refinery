@@ -52,6 +52,37 @@ tools can answer structurally.
 - `resolve_repo` converts any filesystem path to a repo ID in one O(1) lookup — faster than scanning `list_repos`. **It stops at a nested independent clone** (#492, verified against 1.108.288 at `tools/resolve_repo.py:53,343`): a separate repo checked out inside an indexed parent is *contained* by it on the filesystem but belongs to neither its corpus nor its history, so the parent is no longer returned as `indexed: true` for it. Pass `repo` explicitly if you actually wanted the outer one. Submodules deliberately still resolve to the parent — their content IS indexed there.
 - **`CODE_INDEX_PATH` relocates the whole index root** (default `~/.code-index`; verified against 1.108.288 at `config.py:109,115`, `cli/receipt.py:161`). Store, lock, and config all honour it. An index built under a different value is simply not found — read that emptiness as `degraded`, never `absent`.
 - `summarize_repo` regenerates AI summaries when skipped or interrupted; `embed_repo` warms the semantic-search cache upfront; `invalidate_cache` forces a full re-index.
+- **`PARSER_GENERATION` went 1 → 7 in the 1.108.303 upgrade** (verified against installed
+  1.108.303 at `storage/index_store.py:152,173,194,222`). Every indexed repo re-parses in full on
+  its next index run, and three of the bumps change values already **stored per symbol** —
+  incremental never re-reads unchanged content, so an un-re-indexed repo serves the old ones forever:
+  - **gen 6 — `max_nesting` could not see Python control flow.** It counted BRACKETS, so
+    `if`/`for`/`while` contributed nothing and the field reported the deepest *expression* under
+    the same name. Measured 3 against an AST truth of 6 — an underreport by half, on the one axis
+    separating a wide flat dispatcher from tangled logic. Now `max(bracket, indentation)`, which can
+    only raise a depth; brace languages are unchanged. Read by `get_symbol_complexity`,
+    `get_hotspots`, `get_extraction_candidates`, `get_pr_risk_profile`. Feeds no score, so no grade moves.
+  - **gen 7 — Rust impl methods had no owner.** `impl Foo { fn new }` and `impl Bar { fn new }`
+    both emitted a bare `new`, kind `function`, parent `None`, separated only by a `~1`/`~2` id
+    suffix. On ripgrep, 1,331 of 3,514 symbols (37.9%) shared a bare name with a same-file sibling;
+    after, 55 (1.6%). `qualified_name`, `kind` (2,199 Rust symbols promoted `function` → `method`)
+    and `parent` all changed, and `search_symbols` / `find_references` / `check_rename_safe` read them.
+  - **gen 5 — three Rust definition classes yielded no symbol at all**: `union`, a trait method
+    with no default body (`function_signature_item`), and a `const`/`static` inside a function body.
+- **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
+  (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
+  `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
+  JS/TS framework build trees `.next`, `.nuxt`, `.output`, `.svelte-kit`, `.angular`, `.turbo`,
+  `.parcel-cache`, `.dart_tool` (transpiled copies competing against the real source in ranking).
+  Dotted spellings only — `out`/`bin`/`obj`/`coverage` name real source dirs and stay indexed.
+  Opt back in per-project with `exclude_skip_directories`; every skip is counted in `discovery_skip_counts`.
+  Separately, **`.mts` and `.cts` now index as TypeScript** (`parser/languages.py:63`) — they
+  parsed as nothing before, so their absence from any earlier result was coverage, not truth.
+- **Racket is a supported language**, with two new config keys: `racket_definition_forms` (declare
+  a project's own defining macros) and `racket_langs` (promote a `#lang` the parser does not know).
+  Changing either re-parses that repo once, tracked by `CodeIndex.racket_config_digest` rather than
+  a global generation bump; an index built before the stamp existed and holding Racket files also
+  re-parses once (`tools/_utils.racket_reparse_reason`).
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
 - `get_watch_status` — daemon coverage. **Do NOT read its `any_stale: false` as "the index is
   fresh."** Verified against 1.108.288 at `tools/get_watch_status.py:73,90`: staleness comes from
@@ -153,6 +184,7 @@ tools can answer structurally.
 - `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal). **Render edges now count as reachability** (#461, always-on, verified against 1.108.288 at `tools/find_dead_code.py:256`): a template reached only by `render(request, "page.html")` is no longer reported as `zero_importers` at confidence 1.0. The result set is smaller and more correct — a shrink here is the fix, not a regression. Deliberately not an extension exemption: a template nothing renders is still dead and still reported.
 - `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
 - Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks), `get_architecture_metrics` (Gini concentration over symbols/size/fan-in/fan-out, Lakos depth, DSM modularity — answers "is coupling piling up in a few files?", which a ranked list of peaks cannot), `get_decorator_census` (normalized repo-wide `@route`/`@fixture`/`[Serializable]` histogram + sites; pairs with `get_signal_chains`/`get_endpoint_impact`).
+  - **`get_architecture_metrics`: `concentration.gini.bytes_per_file` can now be `null`, and its basis changed** (v1.108.291, verified against installed 1.108.291 at `tools/get_architecture_metrics.py:160,176` and `tools/_utils.py:396`). It used to sum `byte_length` per file, which double-counts nesting — a class's span already covers its methods, so the number tracked how class-heavy a file was as much as how big it was (33.4% overall on the source repo, up to 2.28x on one file). It now merges each file's symbol spans and counts a byte once. Two consequences: a `bytes_per_file` Gini recorded before the upgrade is **not comparable** to one taken after, and the field is `null` — never `0.0` — when no file has trustworthy byte offsets, because `0.0` reads as "perfectly even" rather than "could not measure". Arithmetic on it without a `None` check now raises. New sibling keys `bytes_files_measured` / `bytes_unmeasurable_files` disclose the smaller file set the byte axis covers; the other three Gini axes still span every file.
 - Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols` for consolidation candidates; `get_dead_code_v2` for multi-signal dead code; `diff_health_radar` to compare health before/after a PR.
 - For security/quality gate before merge: `search_ast(category="security")` + `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
 - Periodically run `audit_agent_config` to catch stale symbol refs and dead paths in CLAUDE.md itself — keeps routing rules lean.
@@ -163,9 +195,17 @@ tools can answer structurally.
 
 **Session & tier config**:
 - `set_tool_tier` — explicit tier override (core/standard/full) when you hit a capability-gated failure mid-task. `announce_model` — self-report active model for automatic tier selection (idempotent; call plan_turn instead for routine per-task use).
-- `suggest_corrections` — mine retrieval-regret telemetry (re-query churn, low confidence, vocab gaps) for prioritized CLAUDE.md routing/glossary fixes as unified-diff previews + index-freshness hints + a dry-run weight proposal; read-only, never writes your files. Complements `audit_agent_config`/`tune_weights`. Requires perf telemetry.
-- `get_session_stats` — token savings stats for the current session; quantify retrieval-stack cost reduction before/after routing changes.
+- `suggest_corrections` — mine retrieval-regret telemetry (re-query churn, low confidence, vocab gaps) for prioritized CLAUDE.md routing/glossary fixes as unified-diff previews + index-freshness hints + a dry-run weight proposal; read-only, never writes your files. Complements `audit_agent_config`/`tune_weights`. Requires perf telemetry. **Now also returns an `inflation` block** (v1.108.290, verified against installed 1.108.291 at `tools/suggest_corrections.py:363`, `retrieval/regret.py:352`): calls per information need, where a need is `(session_uid, query_hash)` — clusters name *which* queries went wrong, inflation says what the wrongness cost. **Its basis is CALLS, not tokens** — the ledger has no token column, and the field says so. It is always present but often `measurable: false`; read `reason` (`no_events` / `too_few_needs` / `ledger_has_no_session_column` / `no_repo`) rather than reading its absence as zero inflation. `repeats_after_index_change` is disclosed and deliberately *not* subtracted from the ratio. `digest` surfaces the same ratio in its regret line, but only when measurable and > 1.0.
+- `get_session_stats` — token savings stats for the current session; quantify retrieval-stack cost reduction before/after routing changes. **Savings figures dropped to a corrected basis on 2026-08-22** (generation 2, verified against installed 1.108.291 at `storage/token_tracker.py:58,556`): the `raw_bytes` baseline stopped summing nested symbol spans and stopped charging a file once per symbol selected from it, both of which over-counted — so pre-2 counts read HIGH, and lifetime totals spanning the change are not one measurement. Nothing was rewritten; the mixed basis is disclosed instead, via `total_tokens_saved_basis.mixed_basis`. Check that flag before quoting a lifetime total. New alongside it: `lifetime_by_tool`, `lifetime_by_tool_since`, and `lifetime_unattributed` (what the meter earned before it could attribute anything — the shortfall is history, not missing data).
 - `analyze_perf` — per-tool latency telemetry; identify slow tools and cold caches.
+  **`cache.totals.hit_rate` is RAW key-presence, not validity** (v1.108.304-era fix, verified
+  against installed 1.108.303 at `tools/analyze_perf.py:257-284`): the session LRU is invalidated
+  only by index-mutating tools *in this process*, so an out-of-process reindex — the PostToolUse
+  `index-file` spawn, the watcher, a second server instance — leaves stale entries serving and
+  counting as hits. Published now only alongside `hit_rate_basis`, `hit_rate_revalidated`,
+  `hits_validated_fresh` / `hits_validated_stale`, `hits_unvalidated` and `validated_share`.
+  Quote the revalidated number; of the three result-cache consumers only `search_symbols`
+  revalidates, so `hits_unvalidated` is genuinely UNKNOWN and is never folded into either bucket.
 - `tune_weights` — learn per-repo BM25 retrieval weights from the ranking ledger; run after search-quality changes to recalibrate relevance.
 - `test_summarizer` — verify AI summarizer connectivity and output; debug missing or stale symbol summaries.
 - `finalize_handoff` — close a completed audit with one canonical Markdown handoff
@@ -235,6 +275,29 @@ tools can answer structurally.
   `list_docs` for flat per-doc inventory; `get_doc` (v1.58+) for single-doc detail
   view (section list, role/tag distributions, byte_size, format, indexed_at) —
   pairs with `list_docs`.
+- **`verify_index` no longer counts an unhashed section as clean** (v1.136.1 / jdoc#33, verified
+  against installed 1.136.1 at `tools/verify_index.py:163-183`). A section with a real byte range
+  but an empty stored `content_hash` compared equal and landed in `clean_count`; it now goes to
+  `skipped_sections` with reason `no_stored_hash`. **Gate CI on `drift_count == 0` AND
+  `skipped_count == 0`** — on drift alone, "we could not check it" reads as "we checked it and it
+  was fine", which is the one failure this tool exists to prevent. Latent rather than observed:
+  every shipped parser routes through `compute_content_hash()`, which returns the sha256 of the
+  empty string rather than `""`, so no current producer emits the empty case — but
+  `Section.content_hash` defaults to `""`, so one producer returning early reintroduces it.
+  Counters still sum to `section_count`. (Unchanged and worth restating: the default
+  `source="cache"` verifies the indexed mirror and is NOT evidence the source is current — pass
+  `source="live"` for that, and read `_meta.verify_layer` rather than inferring which bytes were
+  compared.)
+- **`doc_list_repos` decides sidecar-vs-index by SUFFIX now, and one legacy naming stops being
+  listed** (v1.135.0 / jdoc#121, verified at `storage/doc_store.py:1699,1735`). The win is cost —
+  orphaned sidecars left by a pre-1.108.0 `delete_index` were json-parsed in full only to return
+  no row at all (1,093 files / 2.0 GB opened per call). The row shape is unchanged. But a
+  **pre-jdoc#77 index whose repo name ends in `.summary` / `.terms` / `.related` /
+  `.boilerplate` / `.duplicates`** has no summary sidecar to vouch for it and is no longer
+  listed; upstream records this rather than solving it, because telling it from an orphan needs
+  the parse being removed. A repo genuinely named e.g. `api.related` is readmitted via its own
+  `.summary.json`. Read a repo missing from `doc_list_repos` as `degraded`, not absent — address
+  it by handle or re-index it.
 - **`index_local` needs explicit paths as of v1.130.0.** An argless refresh no longer widens the
   corpus, so newly added directories are not picked up unless you pass `paths=`. A refresh that
   silently shrinks the corpus looks identical to a successful one; check `corpus_selection_changed`
@@ -343,6 +406,23 @@ tools can answer structurally.
   followed by `@n=` back-references and a `t,`-prefixed table). Parse that
   shape rather than assuming plain JSON; observed on `list_repos` against
   1.108.288.
+- **⚠ Every `search_ast` call encoded to an empty table, in every language and for every preset,
+  from v1.108.282 to v1.108.302** (#553; fixed in .303, verified against installed 1.108.303 at
+  `encoding/schemas/search_ast.py`). The compact schema declared table key `results` / scalar
+  `result_count` / meta `files_searched`; the tool has always returned `matches` /
+  `total_matches` / `files_scanned`, so `response.get("results", [])` found nothing and the
+  encoder emitted a header and no rows. **The bug window opens exactly where the bullet above
+  closes** — .282 is when `format` started reaching the tool, which is when this policy's
+  `format="auto"` instruction began triggering it. Consequence for us: **an empty
+  `search_ast(category="security")` sweep run in that window is not evidence of a clean repo** —
+  the pre-merge checklist above (`search_ast` + `get_dead_code_v2` + `get_untested_symbols`)
+  should be re-run on .303+ before any absence claim resting on it is trusted. Encoding id is
+  `sa1` → `sa2`; pattern-specific keys (`marker`, `value`, `callee`, `loop_depth`,
+  `nesting_depth`) now ride in a JSON `details` column and are re-expanded on decode.
+- The encoder now **fails closed when a producer emits a table under a key no schema declares**
+  (#555, `encoding/schema_driven.py:98`) — it raises and the dispatcher falls back to plain JSON,
+  so the rows survive on the wire. A large response arriving as JSON rather than MUNCH is that
+  guard firing, not a `format` argument being ignored.
 - On `get_ranked_context`, pass `compress=True` to fit more symbols into the same token budget —
   keystone-protected structural compression prunes low-signal lines from oversized bodies while
   always keeping signatures, control flow, and returns. Pruned items carry `source_pruned`.
