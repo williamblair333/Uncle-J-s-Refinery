@@ -275,6 +275,29 @@ tools can answer structurally.
   `list_docs` for flat per-doc inventory; `get_doc` (v1.58+) for single-doc detail
   view (section list, role/tag distributions, byte_size, format, indexed_at) —
   pairs with `list_docs`.
+- **`verify_index` no longer counts an unhashed section as clean** (v1.136.1 / jdoc#33, verified
+  against installed 1.136.1 at `tools/verify_index.py:163-183`). A section with a real byte range
+  but an empty stored `content_hash` compared equal and landed in `clean_count`; it now goes to
+  `skipped_sections` with reason `no_stored_hash`. **Gate CI on `drift_count == 0` AND
+  `skipped_count == 0`** — on drift alone, "we could not check it" reads as "we checked it and it
+  was fine", which is the one failure this tool exists to prevent. Latent rather than observed:
+  every shipped parser routes through `compute_content_hash()`, which returns the sha256 of the
+  empty string rather than `""`, so no current producer emits the empty case — but
+  `Section.content_hash` defaults to `""`, so one producer returning early reintroduces it.
+  Counters still sum to `section_count`. (Unchanged and worth restating: the default
+  `source="cache"` verifies the indexed mirror and is NOT evidence the source is current — pass
+  `source="live"` for that, and read `_meta.verify_layer` rather than inferring which bytes were
+  compared.)
+- **`doc_list_repos` decides sidecar-vs-index by SUFFIX now, and one legacy naming stops being
+  listed** (v1.135.0 / jdoc#121, verified at `storage/doc_store.py:1699,1735`). The win is cost —
+  orphaned sidecars left by a pre-1.108.0 `delete_index` were json-parsed in full only to return
+  no row at all (1,093 files / 2.0 GB opened per call). The row shape is unchanged. But a
+  **pre-jdoc#77 index whose repo name ends in `.summary` / `.terms` / `.related` /
+  `.boilerplate` / `.duplicates`** has no summary sidecar to vouch for it and is no longer
+  listed; upstream records this rather than solving it, because telling it from an orphan needs
+  the parse being removed. A repo genuinely named e.g. `api.related` is readmitted via its own
+  `.summary.json`. Read a repo missing from `doc_list_repos` as `degraded`, not absent — address
+  it by handle or re-index it.
 - **`index_local` needs explicit paths as of v1.130.0.** An argless refresh no longer widens the
   corpus, so newly added directories are not picked up unless you pass `paths=`. A refresh that
   silently shrinks the corpus looks identical to a successful one; check `corpus_selection_changed`
