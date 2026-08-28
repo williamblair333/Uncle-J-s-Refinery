@@ -31,6 +31,19 @@ logged only the count. So the twenty failures were indistinguishable in the log 
 no secret reaches the log: `$FAILURES` holds `bad()` output only, and the credentials check
 (`healthcheck.sh:704`) sends its matched lines to stderr without the `X` prefix.
 
+### Session-end review turned up three more, now in ROADMAP
+
+Running the weekly hook-blocks pass for real (rather than assuming it was clean) found: the nightly
+agent commits to local `main` and never pushes, which `git log HEAD..origin/main` structurally
+cannot detect because it only sees *behind*; the grep-guard blocks reads of
+`.venv/lib/.../site-packages/` that `auto-maintain.sh`'s own eval prompt instructs the agent to
+make, six times on 08-28 alone; and `post-merge-hook.sh` skipped the reindex on the PR #136 merge as
+"maintenance/docs only" despite two `scripts/` files in the diff.
+
+Also confirmed still live: `grep` on `state/hook-blocks.log` returns nothing and exits 1, because
+the log carries NUL bytes and GNU grep calls it binary. Tracked since 08-21. It silently zeroed the
+first query of this very review — use `grep -a`.
+
 ### `uv.lock` recorded none of the last three upgrades
 
 The two "post-upgrade sync" commits touched `CLAUDE.md` and `HANDOFF.md` only. HEAD's lockfile still

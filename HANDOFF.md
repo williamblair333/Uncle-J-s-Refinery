@@ -38,6 +38,18 @@ third-party tests needing `acontext`/`pytest_asyncio`. Run `pytest tests/`: 850 
 until pre-mortem cleared. That is not the open question below, which is about the 03:00 agent's own
 write, still only observable in production.
 
+**`grep` on `state/hook-blocks.log` still silently returns nothing** — the log carries NUL bytes,
+so GNU grep classifies it as binary, prints nothing and exits 1. Tracked in ROADMAP since 08-21 and
+confirmed live today: the session-end weekly review's first query came back empty and read as "no
+violations" until re-run with `grep -a`. **Use `grep -a` on that file, always.**
+
+**Three new items in ROADMAP from the session-end review**, all found by actually running the
+weekly hook-blocks pass: the nightly agent commits without pushing (above); the grep-guard blocks
+`.venv/site-packages` reads that `auto-maintain.sh`'s own eval prompt instructs the agent to make
+(six blocks on 08-28 alone); and `post-merge-hook.sh` classified the PR #136 merge as
+"maintenance/docs only" and skipped the reindex despite two `scripts/` files in the diff — the same
+"reindex didn't fire when it should have" shape as the bug this session fixed, one path over.
+
 **Still open, in priority order:** whether the edit-surface guard blocks the 03:00 agent's *write*;
 the drafted upstream `get_watch_status` report awaiting Bill's sign-off; then the rest of ROADMAP.
 
