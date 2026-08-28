@@ -3,6 +3,7 @@
 ## 2026-08-21 (last) — Part B pinned by tests; watch_status and confidence claims settled
 
 - **jcodemunch-mcp breaking change**: `get_architecture_metrics` now returns `concentration.gini.bytes_per_file` as `null` when no file has trustworthy byte offsets and computes it from merged symbol spans instead of summed `byte_length`, so callers must add a `None` check and must not compare the value against any pre-1.108.291 baseline.
+- **jcodemunch-mcp breaking change**: 1.108.303 fixes `search_ast` having encoded to an empty table for every language and preset under `format="auto"` since .282 (#553 — the schema declared `results`/`result_count`, the tool returns `matches`/`total_matches`), so any empty security sweep run in that window must be re-run before its absence is trusted; the same release bumps `PARSER_GENERATION` 1→7, which forces a full re-parse of every index and changes stored `max_nesting` (Python control flow was invisible, underreported by half) and Rust `qualified_name`/`kind`/`parent`, so callers must re-index before quoting complexity or Rust symbol identity.
 
 Run from this repo (the previous entry's work was done from a jaredrhod session, which was the bug
 that started that day). Everything below was verified against installed code or a live tool result.
