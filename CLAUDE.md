@@ -237,6 +237,16 @@ tools can answer structurally.
 - **Schema safety:** `check_column_drop_safe` before any column drop (fuses PK/FK/runtime signals); `get_schema_impact` for transitive blast-radius of a schema change; `get_schema_drift` to compare two indexed dataset versions.
 - **Discovery:** `find_similar_columns` for cross-dataset column dedup; `suggest_joins` for FK candidates; `find_unused_columns` (requires `ingest_sql_log` runtime data); `get_session_stats` for token savings.
 - **Absence:** `search_data` carries the same verdict contract as jcodemunch — a non-`ok` state means the scan could not answer, not that the data is missing. Re-query or widen scope before concluding absence.
+- **`search_data`'s rewrite probe no longer trips on its own write** (v1.31.11, verified against
+  installed 1.31.12 at `tools/search_data.py:224`, `verdict.py:164-170`). The FIRST semantic search
+  of a dataset lazily embeds and persists into `data.sqlite`; the mtime probe used to sample after
+  that write, so a zero-result query came back `degraded` ("absence is NOT proven") and the identical
+  second query `absent`. The probe now samples before the scan — so a first-search `degraded` you
+  learned to re-run is now the `absent` it always should have been. Two shape changes: `_meta.rewrite_probe`
+  rides every response (a rebuild starting mid-scan is not visible), and a real rewrite is
+  `degraded` with `channels.index: "rebuilding"` and an `index_rewritten` note ("re-run once the write
+  settles") — do not parse the degraded note for the embedding-channel wording; the note is now keyed
+  on cause, and only the semantic-channel cause still carries the old text.
 - **Handoff:** close a multi-step data audit with `finalize_handoff` — `evidence_refs` accept only column ids (`<dataset>::<column>#column`) or dataset names this session actually retrieved.
 
 ### 3. Docs work — jDocMunch (mine), Context7 (theirs)

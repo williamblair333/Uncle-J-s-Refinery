@@ -53,6 +53,8 @@ weekly hook-blocks pass: the nightly agent commits without pushing (above); the 
 **Still open, in priority order:** whether the edit-surface guard blocks the 03:00 agent's *write*;
 the drafted upstream `get_watch_status` report awaiting Bill's sign-off; then the rest of ROADMAP.
 
+- **jdatamunch-mcp breaking change**: `search_data` (1.31.11, installed 1.31.12) samples its rewrite probe before the scan instead of after its own lazy-embed write, so a first semantic zero-result search now returns `absent` where it returned `degraded`; the degraded note is now keyed on cause (`index_rewritten` text + `channels.index: "rebuilding"` for a real rewrite, old embedding-channel text only for `semantic_channel`) and `_meta.rewrite_probe` rides every response — callers matching the degraded note text or treating first-search `degraded` as a retry signal must update.
+
 ---
 
 ## 2026-08-21 — Part B pinned by tests; watch_status and confidence claims settled
