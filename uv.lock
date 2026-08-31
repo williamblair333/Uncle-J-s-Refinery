@@ -667,8 +667,8 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.108.303"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#edc59add24777cbeafbf54f8dcd1dd119f487af0" }
+version = "1.108.312"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#c9fda11940cdec4e48d03a8ee4117047b3e0be5a" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -696,8 +696,8 @@ openai = [
 
 [[package]]
 name = "jdatamunch-mcp"
-version = "1.31.7"
-source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#d5d2d108af5a130c5f9736e0a23fba4c776dbaa5" }
+version = "1.31.12"
+source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#01f58c74046e678f6014eba9a3e690e4a45c0744" }
 dependencies = [
     { name = "charset-normalizer" },
     { name = "mcp" },

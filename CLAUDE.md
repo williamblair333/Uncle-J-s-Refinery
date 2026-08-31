@@ -82,7 +82,13 @@ tools can answer structurally.
   a project's own defining macros) and `racket_langs` (promote a `#lang` the parser does not know).
   Changing either re-parses that repo once, tracked by `CodeIndex.racket_config_digest` rather than
   a global generation bump; an index built before the stamp existed and holding Racket files also
-  re-parses once (`tools/_utils.racket_reparse_reason`).
+  re-parses once (`tools/_utils.racket_reparse_reason`). **v1.108.310 replaced the tree-sitter path
+  with a real `#lang`-aware Racket reader** (verified against installed 1.108.312 at
+  `storage/index_store.py:361`, `tools/_utils.py:375`): a second stamp,
+  `racket_reader_generation`, forces one more full re-parse of every local index holding `.rkt`,
+  reason `racket_reader_changed`. `racket_langs` now also declares a lang's at-exp command
+  character. Symbols and require edges read from a Racket repo indexed before that reader are not
+  comparable to ones taken after.
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
 - `get_watch_status` — daemon coverage. **Do NOT read its `any_stale: false` as "the index is
   fresh."** Verified against 1.108.288 at `tools/get_watch_status.py:73,90`: staleness comes from
@@ -104,6 +110,17 @@ tools can answer structurally.
 - Use `plan_turn` as your opening move on an unfamiliar repo. It respects the turn budget and selects the right tool for you.
 - **Session start on a familiar repo**: call `digest` first — change-oriented briefing (~200 tokens) covering what changed since last session, hotspots, and dead code.
 - **First call in any analysis session**: `get_repo_health` — one-call triage snapshot (symbol counts, dead code %, avg complexity, top hotspots, cycle count).
+  - **`radar.composite` and `radar.grade` are now `null` whenever any axis could not be measured**
+    (#562, v1.108.306, verified against installed 1.108.312 at `tools/health_radar.py:241-253`,
+    `tools/get_repo_health.py:289-294,339`). Two causes: `get_dead_code_v2` returning
+    `dead_symbols: []` *with* a `signal_warning` — a refusal, previously read as `dead_code_pct:
+    0.0` and a perfect axis — and a shallow clone making `churn_surface` unmeasurable. Dropping the
+    axis was measured to move the grade FURTHER from truth (84.0 B → 88.8 B against 77.3 C on a full
+    clone), so the grade is withheld instead. New keys: `unmeasurable_axes`, `grade_withheld`, and
+    `partial_composite` (the figure minus that axis — never rename it into `composite`). Body-level
+    `dead_code_measurable` / `dead_code_signal_warning` name the refusal, and
+    `coupling_entry_points_excluded` discloses the files the coupling ratio left out.
+    **Comparing or averaging `composite` without a `None` check now raises.**
 - Cold-start signature overview: `get_repo_map` (token-budgeted, PageRank-ranked signatures — "what matters here?"); `get_symbol_importance` (top symbols by import-graph centrality, `pagerank` or `degree`).
 - Start with `search_symbols`, `get_file_outline`, `get_repo_outline` for orientation. Never `Read` a source file to "see what's in it."
 - `get_file_tree` for a scoped directory listing within the index; `get_file_content` to fetch a cached file or line range (prefer over `Read` on indexed repos).
@@ -179,6 +196,17 @@ tools can answer structurally.
 **Quality & risk**:
 - `get_hotspots` — top-N highest-risk symbols (complexity × churn, CodeScene methodology); use before planning sprint work or targeting reviews.
 - `get_churn_rate` — git churn for a file or symbol (commit count, authors, churn/week, stable/active/volatile).
+- **A shallow clone answers every churn question with a small number and exit 0, and the tools now
+  say so** (v1.108.305, verified against installed 1.108.312 at `tools/_git_history.py:100,201`,
+  `tools/get_hotspots.py:177-193`). `history_coverage` asks whether the history reaches past the
+  `--since` window — coverage, not shallowness, so a deep-enough shallow clone is not flagged and a
+  three-week-old repo is young rather than truncated. `get_hotspots` gains body-level
+  `churn_measurable` (False ⇒ `_meta.confidence_level: "low"`, and `get_repo_health` withholds the
+  grade); `get_churn_rate` and `get_hotspots` stamp `_meta.git_history` **only when coverage is not
+  complete** — silence there means the window was covered. Tri-state: `complete: null` is "could not
+  establish", never "fine". *On this host `meta_fields` is `null` (`~/.code-index/config.jsonc:38`),
+  so `_meta` reaches us; on a default install (`meta_fields: []`) `_meta.git_history` is stripped and
+  `churn_measurable` is the only surviving disclosure.*
 - `get_delivery_metrics` — durable-change delivery over a window: commits_durable (landed and stuck) vs churn-back; the honest numerator for cost-per-outcome, not raw activity. Local-indexed repos only; trailing signal (recent commits flagged provisional).
 - `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
 - `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal). **Render edges now count as reachability** (#461, always-on, verified against 1.108.288 at `tools/find_dead_code.py:256`): a template reached only by `render(request, "page.html")` is no longer reported as `zero_importers` at confidence 1.0. The result set is smaller and more correct — a shrink here is the fix, not a regression. Deliberately not an extension exemption: a template nothing renders is still dead and still reported.
@@ -187,6 +215,21 @@ tools can answer structurally.
   - **`get_architecture_metrics`: `concentration.gini.bytes_per_file` can now be `null`, and its basis changed** (v1.108.291, verified against installed 1.108.291 at `tools/get_architecture_metrics.py:160,176` and `tools/_utils.py:396`). It used to sum `byte_length` per file, which double-counts nesting — a class's span already covers its methods, so the number tracked how class-heavy a file was as much as how big it was (33.4% overall on the source repo, up to 2.28x on one file). It now merges each file's symbol spans and counts a byte once. Two consequences: a `bytes_per_file` Gini recorded before the upgrade is **not comparable** to one taken after, and the field is `null` — never `0.0` — when no file has trustworthy byte offsets, because `0.0` reads as "perfectly even" rather than "could not measure". Arithmetic on it without a `None` check now raises. New sibling keys `bytes_files_measured` / `bytes_unmeasurable_files` disclose the smaller file set the byte axis covers; the other three Gini axes still span every file.
 - Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols` for consolidation candidates; `get_dead_code_v2` for multi-signal dead code; `diff_health_radar` to compare health before/after a PR.
 - For security/quality gate before merge: `search_ast(category="security")` + `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
+  - **`get_untested_symbols.untested_count` counted the PAGE, not the repository, until v1.108.306**
+    (#559, verified against installed 1.108.312 at `tools/get_untested_symbols.py:195-211`). It was
+    `len(symbols)` taken AFTER the `max_results` slice, and `reached_pct` divided by it — so
+    `get_repo_health`, which calls with `max_results=1` because it "only needs the count", scored a
+    perfect test axis on every repo with untested code (measured: 4,893 untested of 6,352, 23.0%
+    reached, published as 100). `untested_count` and `reached_pct` are now repo-wide; the page length
+    moved to the new `returned_count`. **Any coverage figure quoted from this tool before the upgrade
+    is wrong in the flattering direction — re-run it.**
+  - **Framework-declared entry points now count as roots** (#561/#562, `tools/_entry_points.py`,
+    read by `find_dead_code`, `get_dead_code_v2`, `get_coupling_metrics`, `get_repo_health`). The
+    index already stored each profile's `entry_point_patterns` — Next.js `route.ts` / `page.tsx` /
+    `layout.tsx` / `middleware.ts`, Gin's `cmd/` — and nothing read them, so every consumer fell back
+    to a Python-only filename list. A smaller dead-code result on a JS/TS framework repo is the fix.
+    ⚠ `matches() == False` is not "ordinary module": no detected profile means no declaration was
+    available — read `profile_name: null` as unknown.
 - Periodically run `audit_agent_config` to catch stale symbol refs and dead paths in CLAUDE.md itself — keeps routing rules lean.
 
 **Cross-repo & monorepos**:
@@ -195,6 +238,22 @@ tools can answer structurally.
 
 **Session & tier config**:
 - `set_tool_tier` — explicit tier override (core/standard/full) when you hit a capability-gated failure mid-task. `announce_model` — self-report active model for automatic tier selection (idempotent; call plan_turn instead for routine per-task use).
+  - **A mid-session NARROWING that cannot repay its own cache invalidation is now refused**
+    (v1.108.311, verified against installed 1.108.312 at `server.py:6842-6866,903-925`,
+    `tier_switch_cost.py:82-104`). The tool block is serialised ahead of system and messages, so
+    shrinking it invalidates the schema block *and every accumulated turn*, then cache-writes the new
+    one at full rate. Measured on this catalog: `full` → `standard` drops 6.7% of the payload and
+    needs **174 requests** to break even, before any history. So `set_tool_tier("core")` mid-task can
+    come back `{"ok": true, "changed": false, "refused": "switch_does_not_pay"}` with `reason` and
+    `switch_cost` in the BODY — **`ok: true` no longer means the tier moved; read `changed`.**
+    `announce_model` refuses the same way and leaves the tier where it was. **Widening is never
+    refused**, so escalating after a capability-gated failure still works — which is the only reason
+    this file tells you to call it. To actually run narrow, set `tool_profile` at startup, where
+    there is no switch to pay for.
+  - **Schema-token counts carry `schema_tokens_basis`** (v1.108.312, `tier_switch_cost.py:43`,
+    `server.py:585`): `one_time_at_full_rate_then_cache_read`. `schema_tokens_avoided` is payload
+    size, NOT a per-request saving — this host measured 86% of baseline input cached, so reading it
+    per-request overstates the impact by roughly an order of magnitude.
 - `suggest_corrections` — mine retrieval-regret telemetry (re-query churn, low confidence, vocab gaps) for prioritized CLAUDE.md routing/glossary fixes as unified-diff previews + index-freshness hints + a dry-run weight proposal; read-only, never writes your files. Complements `audit_agent_config`/`tune_weights`. Requires perf telemetry. **Now also returns an `inflation` block** (v1.108.290, verified against installed 1.108.291 at `tools/suggest_corrections.py:363`, `retrieval/regret.py:352`): calls per information need, where a need is `(session_uid, query_hash)` — clusters name *which* queries went wrong, inflation says what the wrongness cost. **Its basis is CALLS, not tokens** — the ledger has no token column, and the field says so. It is always present but often `measurable: false`; read `reason` (`no_events` / `too_few_needs` / `ledger_has_no_session_column` / `no_repo`) rather than reading its absence as zero inflation. `repeats_after_index_change` is disclosed and deliberately *not* subtracted from the ratio. `digest` surfaces the same ratio in its regret line, but only when measurable and > 1.0.
 - `get_session_stats` — token savings stats for the current session; quantify retrieval-stack cost reduction before/after routing changes. **Savings figures dropped to a corrected basis on 2026-08-22** (generation 2, verified against installed 1.108.291 at `storage/token_tracker.py:58,556`): the `raw_bytes` baseline stopped summing nested symbol spans and stopped charging a file once per symbol selected from it, both of which over-counted — so pre-2 counts read HIGH, and lifetime totals spanning the change are not one measurement. Nothing was rewritten; the mixed basis is disclosed instead, via `total_tokens_saved_basis.mixed_basis`. Check that flag before quoting a lifetime total. New alongside it: `lifetime_by_tool`, `lifetime_by_tool_since`, and `lifetime_unattributed` (what the meter earned before it could attribute anything — the shortfall is history, not missing data).
 - `analyze_perf` — per-tool latency telemetry; identify slow tools and cold caches.
@@ -206,6 +265,14 @@ tools can answer structurally.
   `hits_validated_fresh` / `hits_validated_stale`, `hits_unvalidated` and `validated_share`.
   Quote the revalidated number; of the three result-cache consumers only `search_symbols`
   revalidates, so `hits_unvalidated` is genuinely UNKNOWN and is never folded into either bucket.
+  **Two additions in v1.108.309** (verified against installed 1.108.312 at
+  `tools/analyze_perf.py:53-107,356-358`): a second ranking, `heaviest_by_total_ms` — wall-clock
+  actually consumed, which disagrees with `slowest_by_p95` whenever a fast tool is called often —
+  and `compare_release` deltas that come back `null` with a `not_comparable` reason instead of
+  differencing against an absent baseline field. The shipped baseline carries `tokens_saved` alone,
+  so a tool at p95 900 ms used to publish `p95_delta_ms: 900.0`, read by anyone as a 900 ms
+  regression against a release that never timed it. Calls and tokens still difference (their zero is
+  real); latency does not.
 - `tune_weights` — learn per-repo BM25 retrieval weights from the ranking ledger; run after search-quality changes to recalibrate relevance.
 - `test_summarizer` — verify AI summarizer connectivity and output; debug missing or stale symbol summaries.
 - `finalize_handoff` — close a completed audit with one canonical Markdown handoff
@@ -237,6 +304,16 @@ tools can answer structurally.
 - **Schema safety:** `check_column_drop_safe` before any column drop (fuses PK/FK/runtime signals); `get_schema_impact` for transitive blast-radius of a schema change; `get_schema_drift` to compare two indexed dataset versions.
 - **Discovery:** `find_similar_columns` for cross-dataset column dedup; `suggest_joins` for FK candidates; `find_unused_columns` (requires `ingest_sql_log` runtime data); `get_session_stats` for token savings.
 - **Absence:** `search_data` carries the same verdict contract as jcodemunch — a non-`ok` state means the scan could not answer, not that the data is missing. Re-query or widen scope before concluding absence.
+- **`search_data`'s rewrite probe no longer trips on its own write** (v1.31.11, verified against
+  installed 1.31.12 at `tools/search_data.py:224`, `verdict.py:164-170`). The FIRST semantic search
+  of a dataset lazily embeds and persists into `data.sqlite`; the mtime probe used to sample after
+  that write, so a zero-result query came back `degraded` ("absence is NOT proven") and the identical
+  second query `absent`. The probe now samples before the scan — so a first-search `degraded` you
+  learned to re-run is now the `absent` it always should have been. Two shape changes: `_meta.rewrite_probe`
+  rides every response (a rebuild starting mid-scan is not visible), and a real rewrite is
+  `degraded` with `channels.index: "rebuilding"` and an `index_rewritten` note ("re-run once the write
+  settles") — do not parse the degraded note for the embedding-channel wording; the note is now keyed
+  on cause, and only the semantic-channel cause still carries the old text.
 - **Handoff:** close a multi-step data audit with `finalize_handoff` — `evidence_refs` accept only column ids (`<dataset>::<column>#column`) or dataset names this session actually retrieved.
 
 ### 3. Docs work — jDocMunch (mine), Context7 (theirs)

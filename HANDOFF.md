@@ -2,6 +2,8 @@
 
 ## 2026-08-28 (last) — the 07:00 alert was crying wolf nightly; cron ordering fixed
 
+- **jcodemunch-mcp breaking change**: in 1.108.304→312 `get_repo_health`'s `radar.composite`/`radar.grade` are now `null` whenever an axis is unmeasurable (new `partial_composite` / `unmeasurable_axes`), `get_untested_symbols.untested_count` and `reached_pct` became repo-wide with the page length moved to `returned_count`, and `set_tool_tier`/`announce_model` refuse a non-repaying mid-session narrowing with `ok: true, changed: false` — callers must null-check the grade, re-run any coverage figure quoted from before the upgrade, and read `changed` rather than `ok` after a tier switch.
+
 **The single most important thing: `HEALTHCHECK: ok` had not been seen at 07:00 since at least
 2026-08-03.** Twenty consecutive scheduled runs sent a failure notification; the only pass in
 `state/healthcheck-notify.log` is a manual 14:19 run on 08-08, right after a hand-repair. Treat any
@@ -52,6 +54,8 @@ weekly hook-blocks pass: the nightly agent commits without pushing (above); the 
 
 **Still open, in priority order:** whether the edit-surface guard blocks the 03:00 agent's *write*;
 the drafted upstream `get_watch_status` report awaiting Bill's sign-off; then the rest of ROADMAP.
+
+- **jdatamunch-mcp breaking change**: `search_data` (1.31.11, installed 1.31.12) samples its rewrite probe before the scan instead of after its own lazy-embed write, so a first semantic zero-result search now returns `absent` where it returned `degraded`; the degraded note is now keyed on cause (`index_rewritten` text + `channels.index: "rebuilding"` for a real rewrite, old embedding-channel text only for `semantic_channel`) and `_meta.rewrite_probe` rides every response — callers matching the degraded note text or treating first-search `degraded` as a retry signal must update.
 
 ---
 
