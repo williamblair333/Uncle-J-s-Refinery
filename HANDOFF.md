@@ -2,6 +2,8 @@
 
 ## 2026-08-28 (last) — the 07:00 alert was crying wolf nightly; cron ordering fixed
 
+- **jcodemunch-mcp breaking change**: in 1.108.304→312 `get_repo_health`'s `radar.composite`/`radar.grade` are now `null` whenever an axis is unmeasurable (new `partial_composite` / `unmeasurable_axes`), `get_untested_symbols.untested_count` and `reached_pct` became repo-wide with the page length moved to `returned_count`, and `set_tool_tier`/`announce_model` refuse a non-repaying mid-session narrowing with `ok: true, changed: false` — callers must null-check the grade, re-run any coverage figure quoted from before the upgrade, and read `changed` rather than `ok` after a tier switch.
+
 **The single most important thing: `HEALTHCHECK: ok` had not been seen at 07:00 since at least
 2026-08-03.** Twenty consecutive scheduled runs sent a failure notification; the only pass in
 `state/healthcheck-notify.log` is a manual 14:19 run on 08-08, right after a hand-repair. Treat any
