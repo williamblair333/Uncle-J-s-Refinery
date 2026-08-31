@@ -94,6 +94,33 @@ Likewise, a satisfying structural coincidence is not proof. "7 options and 7 bla
 used once" only holds *after* the scrollbar check and the chain check. Reaching for it first is
 how a wrong answer feels right.
 
+## Never Declare Illegible From a Downscale
+
+A phone photograph of a book page is routinely 3000×4000 or larger. Viewing it whole means
+downscaling it to something like 1100px — and at that size body text *is* unreadable. That is a
+limitation you introduced, not one in the source.
+
+**Rotate and crop at native resolution before concluding anything is illegible.**
+
+```python
+im = Image.open(path)                      # e.g. 3072x4080
+up = im.rotate(90, expand=True)            # get it upright first
+prev = up.copy(); prev.thumbnail((900, 900))   # preview ONLY to locate the region
+s = up.width / 900.0                       # scale factor back to native
+crop = up.crop((int(x0*s), int(y0*s), int(x1*s), int(y1*s)))
+crop = crop.resize((crop.width * 2, crop.height * 2), Image.LANCZOS)
+```
+
+Use the downscale to *find* the region and the native-resolution crop to *read* it. Two upscaled
+crops of half a page each will resolve text that the full-page view loses entirely.
+
+Observed: a reference document declared two pages of questions unrecoverable and asked the owner
+to re-photograph them. Both read cleanly on the first native-resolution crop. The request wasted
+the owner's time and would have looked like a defect in their photography.
+
+**Also check you are on the right page.** A section that "should" close page 21 may open page 22.
+Before asking for a re-shoot, look on the facing page and the next spread.
+
 ## Building a Verbatim Reference
 
 Photographed pages are rotated, shadowed, and unevenly lit. Fidelity is not uniform across a page,
@@ -123,6 +150,8 @@ into one list of what needs re-shooting.
 | Option lists | Pixel-check for a scrollbar | Count what's visible |
 | Boundaries | State that crops can't prove first/last | Let a tidy result imply completeness |
 | Quotations | Mark fidelity per passage | Claim uniform verbatim |
+| Legibility | Crop at native resolution, then judge | Call it illegible from a downscaled view |
+| Missing section | Check the facing page and next spread | Ask for a re-shoot of the page you guessed |
 
 ## Common Mistakes
 
@@ -138,3 +167,7 @@ complete. If you don't, one sentence fixes it.
 **Re-extracting instead of re-checking.** When told content is missing, the instinct is to re-run
 extraction. The file has not changed — check its modification time, then verify order and
 completeness instead.
+
+**Asking for a re-shoot you don't need.** The most expensive mistake here, because it spends
+someone else's time on a problem you created by downscaling. Exhaust native-resolution crops and
+the facing pages first; a re-shoot request should name what you already tried.
