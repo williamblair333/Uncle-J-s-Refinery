@@ -1,6 +1,50 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-08-28 (last) — the 07:00 alert was crying wolf nightly; cron ordering fixed
+## 2026-09-01 (last) — `review/` triaged; hygiene half of watermarks-remover extracted as `jscrub`
+
+**`review/watermarks-remover` needs no conversion — it is already a finished plugin.** Third-party
+clone (guillaumemeyer/watermarks-remover, MIT, v0.6.0, HEAD `be38ccc`), gitignored, carrying two
+Claude skills, a plugin marketplace manifest, a `PostToolUse` hook, a pre-commit hook, a Docker
+service and ~60 tests. If the question "should this become a skill?" comes back, the answer is that
+it already is one; the open question is only whether to *adopt* it wholesale.
+
+**Only Layer A was taken.** Upstream splits into invisible-Unicode/metadata hygiene and
+C2PA/SynthID provenance defeat (plus a `stealer/` module that reconstructs a target model's
+watermark scorer). `scripts/jscrub/` vendors the first and none of the second. Keep that line if the
+tool is extended — it is scoped to characters that break tooling, not to making AI-generated content
+unidentifiable as AI-generated.
+
+**The vendored engine is `scripts/jscrub/text_unicode.py`, upstream commit `c2c7959`, unmodified
+under a 12-line provenance header.** Do not edit it. `tail -n +13` reproduces upstream byte for
+byte; `./scripts/jscrub/jscrub check-vendor review/watermarks-remover` asserts it and currently
+passes. **The header length is load-bearing** — `check-vendor` slices at 12 and
+`TestFinding10VendorProvenance` guards it, so growing the header breaks the drift check unless the
+slice moves with it.
+
+**`check-vendor` depends on a gitignored checkout.** `review/` is in `.gitignore:120`, so the
+comparison target is not in the repo and the check cannot run in CI as written. It is a dev-time
+check only; anyone re-vendoring needs a local clone of upstream.
+
+**Exit codes are three-way and `2` outranks `1`:** 0 = scanned and clean, 1 = scanned with hits,
+2 = something could not be scanned. Treat `2` as a CI failure. argparse also exits 2 on usage
+errors — distinguishable by the `usage:` banner on stderr, which is the one rough edge in the
+interface.
+
+**`inspect` is intentionally louder than `clean`.** Upstream calls the engine with `strip_bidi=True`
+for inspection and defaults it to `False` for cleaning, because bidi marks are legitimate in RTL
+prose. So `inspect` reports directional controls that `clean` leaves alone. This looks like a bug in
+a bug report and is not one; `--strip-bidi` opts in.
+
+**Not wired into anything.** No hook, no cron, no CI job, no `install.sh` entry — nothing imports
+it. That was deliberate for a first landing; wiring it into the pre-commit path or `healthcheck.sh`
+is a separate decision with its own pre-mortem, and `--follow-symlinks`/`--in-place` are the flags
+to think hardest about before automating it.
+
+**`ruff` is not installed on this host.** `scripts/jscrub/` was verified with `py_compile` plus its
+own 30-test stdlib suite (`python3 scripts/jscrub/test_cli.py`), not linted. Test classes are named
+after the pre-mortem findings they lock in, so a regression reads as a named failure.
+
+## 2026-08-28 — the 07:00 alert was crying wolf nightly; cron ordering fixed
 
 - **jcodemunch-mcp breaking change**: in 1.108.304→312 `get_repo_health`'s `radar.composite`/`radar.grade` are now `null` whenever an axis is unmeasurable (new `partial_composite` / `unmeasurable_axes`), `get_untested_symbols.untested_count` and `reached_pct` became repo-wide with the page length moved to `returned_count`, and `set_tool_tier`/`announce_model` refuse a non-repaying mid-session narrowing with `ok: true, changed: false` — callers must null-check the grade, re-run any coverage figure quoted from before the upgrade, and read `changed` rather than `ok` after a tier switch.
 
