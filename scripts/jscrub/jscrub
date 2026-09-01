@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# jscrub — thin launcher so the tool works from any cwd without a venv.
+# The CLI and its vendored engine are stdlib-only; any python3 >= 3.10 runs it.
+set -euo pipefail
+exec python3 "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/cli.py" "$@"

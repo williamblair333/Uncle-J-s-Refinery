@@ -2,7 +2,69 @@
 
 ---
 
-## 2026-08-28 (last) — the nightly healthcheck alert had been crying wolf for 26 days
+## 2026-09-01 — `review/` held a finished plugin, not raw material; extracted the hygiene half as `jscrub`
+
+### The review item was already a skill, a parser and a processor
+
+`review/watermarks-remover` is a third-party clone (guillaumemeyer/watermarks-remover, MIT, v0.6.0,
+HEAD `be38ccc`) — not something to convert. It already ships two Claude skills, a
+`.claude-plugin/marketplace.json`, a `PostToolUse` hook, a `.pre-commit-hooks.yaml`, a Dockerized
+HTTP service and ~60 tests. The gap was not "no CLI" but **three** CLIs: `clean_file.py`,
+`inspect_file.py` and `audit_dir.py`, each with its own flag vocabulary, and `clean_file.py:30-263`
+is a single 234-line `main()`.
+
+### What was taken, and what deliberately was not
+
+The repo does two separable things. Layer A — `service/scripts/text_unicode.py` — is careful
+invisible-Unicode hygiene that preserves load-bearing invisibles (emoji ZWJ glue, Arabic/Mongolian/
+Khmer/Hangul script joiners, complete flag tag sequences, valid bidi embeddings) while stripping
+carriers. Layer B is C2PA/SynthID provenance defeat plus a `stealer/` module that reconstructs a
+target model's watermark scorer.
+
+**Only Layer A was vendored.** `scripts/jscrub/` is text hygiene — the characters that break diffs,
+`grep` and paste — not a way to make AI-generated content unidentifiable as AI-generated. For the
+provenance and binary-format side, use upstream directly.
+
+### The vendored engine is verifiable, not just attributed
+
+`scripts/jscrub/text_unicode.py` is upstream commit `c2c7959` taken unmodified, with a 12-line
+provenance header above the module docstring. `tail -n +13` on it reproduces the upstream file byte
+for byte, and `jscrub check-vendor <checkout>` asserts exactly that — so drift is one command, not a
+manual read. That check is also what proved the copy correct: the repo's guard blocks `cp` into
+tracked paths, so the file was transcribed through the Write tool and then verified byte-identical.
+
+### DRY, in the one place it matters
+
+Every flag is declared once in `ENGINE_OPTS` / `IO_OPTS` / `WRITE_OPTS` together with the engine
+keyword it maps to. The argparse wiring, the `--help` text and the kwargs handed to the engine all
+derive from that table. `TestOptionTableIsSingleSource` asserts each declared dest exists on the
+parsed namespace and that the derived kwargs match the engine signatures, so a renamed flag fails a
+test instead of silently becoming a no-op.
+
+### Exit codes distinguish "clean" from "never looked"
+
+`0` scanned and clean, `1` scanned and found hits, `2` at least one target could not be scanned —
+and when a run produces both, `2` wins, because an unchecked file is an unknown and an unknown
+outranks a known finding. This is the same absence-vs-degraded distinction the retrieval policy in
+`CLAUDE.md` is built around; a hygiene tool that reports a green tree it never read would be worse
+than no tool.
+
+### Safety properties, each pinned by a test named after its pre-mortem finding
+
+Reading in text mode would have translated CRLF→LF on the way in and written LF back out, silently
+rewriting every line of a Windows-authored file that carried one stray zero-width character — with
+`scripts/win/` in this repo that is not hypothetical. So: byte-level I/O throughout, leading BOM
+preserved, no invented trailing newline, invalid UTF-8 refused rather than transcoded through a
+latin-1 fallback, atomic write (temp + `fsync` + `os.replace`) with file mode preserved, backups
+that never clobber (`.bak`, `.bak.1`, …), symlinks not followed when walking, and a non-destructive
+default — `clean` writes to stdout and `-i` is the explicit opt-in.
+
+30 tests, stdlib `unittest`, no dependencies. `ruff` is not installed on this host, so the tool was
+checked with `py_compile` and the suite rather than linted.
+
+---
+
+## 2026-08-28 — the nightly healthcheck alert had been crying wolf for 26 days
 
 ### The alert was structurally guaranteed to fire, and nobody could tell which mornings mattered
 
