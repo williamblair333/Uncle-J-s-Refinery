@@ -13,18 +13,19 @@ anything that exists to make AI-generated content unidentifiable as such.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
 import sys
 import tempfile
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Iterator, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from text_unicode import clean_text, inspect_text  # noqa: E402
+from text_unicode import clean_text, inspect_text
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Exit codes.  The three-way split is the point: a CI job must be able to tell
@@ -37,6 +38,21 @@ EXIT_INCOMPLETE = 2  # at least one target could not be scanned
 
 MAX_BYTES_DEFAULT = 10 * 1024 * 1024
 UTF8_BOM = b"\xef\xbb\xbf"
+
+# Lines of local provenance comment above the vendored module docstring.
+# `tail -n +(VENDOR_HEADER_LINES + 1)` on text_unicode.py yields upstream's file.
+# TestFinding10VendorProvenance pins this; changing it without moving the pin
+# below turns every check-vendor run into a false "local modification".
+VENDOR_HEADER_LINES = 12
+
+# sha256 of the vendored engine body (the file minus that header). Recorded
+# while a byte comparison against the real upstream checkout passed, so it is
+# anchored to upstream bytes rather than merely to our own copy.
+#
+# This is a drift/accident check, NOT a tamper seal: it sits in the same repo
+# and the same commit as the file it certifies, so anyone who can edit one can
+# edit the other. Git history is what covers the adversarial case.
+UPSTREAM_BODY_SHA256 = "ed86ed9715f40e306371731f97bf6f2a63f6a7719674630afac89eb3741bc6fd"
 
 SKIP_DIRS = frozenset(
     {
@@ -451,21 +467,58 @@ def cmd_clean(args: argparse.Namespace) -> int:
     return run_scan(args, "clean", mutate=True)
 
 
+def vendored_body() -> bytes:
+    """The vendored engine minus its local provenance header — i.e. upstream's bytes."""
+    vendored = Path(__file__).resolve().parent / "text_unicode.py"
+    return b"\n".join(vendored.read_bytes().split(b"\n")[VENDOR_HEADER_LINES:])
+
+
 def cmd_check_vendor(args: argparse.Namespace) -> int:
-    """Compare the vendored engine against an upstream checkout (pre-mortem #4)."""
+    """Two distinct claims, with distinct evidence requirements.
+
+    1. "unmodified since vendoring" — the pin answers this with no checkout,
+       so it works in CI and survives review/ being emptied.
+    2. "still matches upstream today" — only a checkout can answer this. The
+       pin cannot: it was recorded from the same bytes it certifies.
+
+    Collapsing the two would let a passing run be cited as upstream fidelity
+    when it only shows nobody edited the file locally.
+    """
     here = Path(__file__).resolve().parent
-    vendored = here / "text_unicode.py"
+    body = vendored_body()
+    digest = hashlib.sha256(body).hexdigest()
+
+    if digest == UPSTREAM_BODY_SHA256:
+        print(f"unmodified since vendoring  (sha256 {digest[:16]}…)")
+        status = EXIT_OK
+    else:
+        print("LOCAL MODIFICATION: vendored engine no longer matches its pin", file=sys.stderr)
+        print(f"  expected  {UPSTREAM_BODY_SHA256}", file=sys.stderr)
+        print(f"  computed  {digest}", file=sys.stderr)
+        print(
+            "  If this was a deliberate re-vendor, update UPSTREAM_BODY_SHA256 in "
+            "cli.py to the computed value and bump the header provenance.",
+            file=sys.stderr,
+        )
+        status = EXIT_FINDINGS
+
+    if args.upstream is None:
+        print(
+            "  (upstream not compared — pass a watermarks-remover checkout to "
+            "check whether upstream has moved on)",
+            file=sys.stderr,
+        )
+        return status
+
     upstream = Path(args.upstream) / "service" / "scripts" / "text_unicode.py"
     if not upstream.is_file():
         print(f"upstream file not found: {upstream}", file=sys.stderr)
         return EXIT_INCOMPLETE
-    # Drop the 12-line provenance header; the rest is verbatim upstream.
-    body = b"\n".join(vendored.read_bytes().split(b"\n")[12:])
     if body == upstream.read_bytes():
-        print("vendored engine is byte-identical to upstream")
-        return EXIT_OK
-    print("VENDOR DRIFT: vendored engine differs from upstream", file=sys.stderr)
-    print(f"  diff <(tail -n +13 {here / 'text_unicode.py'}) {upstream}", file=sys.stderr)
+        print("matches upstream checkout byte for byte")
+        return status
+    print("UPSTREAM DRIFT: upstream has changed since this was vendored", file=sys.stderr)
+    print(f"  diff <(tail -n +{VENDOR_HEADER_LINES + 1} {here / 'text_unicode.py'}) {upstream}", file=sys.stderr)
     return EXIT_FINDINGS
 
 
@@ -501,7 +554,10 @@ examples:
   # Fold fullwidth/Cyrillic lookalikes as well (more aggressive)
   jscrub clean -i src/ --aggressive-homoglyphs --nfkc
 
-  # Has the vendored engine drifted from upstream?
+  # Has the vendored engine been modified locally? (no checkout needed, CI-safe)
+  jscrub check-vendor
+
+  # Also: has upstream moved on since we vendored it?
   jscrub check-vendor ../review/watermarks-remover
 
 notes:
@@ -549,10 +605,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     vendor = subparsers.add_parser(
         "check-vendor",
-        help="Verify the vendored engine still matches upstream",
-        description="Compare scripts/jscrub/text_unicode.py against an upstream checkout.",
+        help="Verify the vendored engine has not been modified",
+        description=(
+            "Check the vendored engine against its recorded hash (no checkout needed). "
+            "Pass a watermarks-remover checkout to additionally check whether upstream "
+            "has moved on since it was vendored — a separate question the hash cannot answer."
+        ),
     )
-    vendor.add_argument("upstream", help="path to a watermarks-remover checkout")
+    vendor.add_argument(
+        "upstream",
+        nargs="?",
+        default=None,
+        help="optional path to a watermarks-remover checkout, to also compare against upstream",
+    )
     vendor.set_defaults(handler=cmd_check_vendor)
 
     return parser

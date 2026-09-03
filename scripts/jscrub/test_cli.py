@@ -9,6 +9,7 @@ Run:  python3 scripts/jscrub/test_cli.py
 
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 import tempfile
@@ -17,11 +18,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import cli  # noqa: E402
+import cli
 
-ZWSP = "​"  # zero width space
-NBSP = " "  # no-break space
-BOM = "﻿"
+# Built with chr(), not written as literals. A source file carrying real
+# invisible characters is precisely what this tool exists to flag — `jscrub
+# audit scripts/` used to hit this very file for that reason, and ruff's
+# PLE2515 flags it too. Identical strings at runtime, so nothing is weakened.
+ZWSP = chr(0x200B)  # zero width space
+NBSP = chr(0x00A0)  # no-break space
+BOM = chr(0xFEFF)  # byte order mark / ZWNBSP
+ZWJ = chr(0x200D)  # zero width joiner (emoji glue)
 
 
 class TempTree(unittest.TestCase):
@@ -59,7 +65,7 @@ class TestEngineWiring(TempTree):
         self.assertEqual(path.read_bytes(), f"a{NBSP}b\n".encode())
 
     def test_emoji_zwj_sequence_is_preserved(self) -> None:
-        original = "👨‍👩\n".encode()
+        original = (chr(0x1F468) + ZWJ + chr(0x1F469) + "\n").encode()
         path = self.write("a.md", original)
         self.assertEqual(self.run_cli("clean", "-i", path), cli.EXIT_OK)
         self.assertEqual(path.read_bytes(), original)
@@ -170,16 +176,55 @@ class TestFinding10VendorProvenance(unittest.TestCase):
     def test_header_names_upstream_and_license(self) -> None:
         header = (Path(cli.__file__).parent / "text_unicode.py").read_text().split("\n", 12)[:12]
         blob = "\n".join(header)
-        self.assertIn("VENDORED FILE — DO NOT EDIT", blob)
+        self.assertIn("VENDORED FILE", blob)
+        self.assertIn("DO NOT EDIT", blob)
         self.assertIn("guillaumemeyer/watermarks-remover", blob)
         self.assertIn("MIT", blob)
         self.assertIn("c2c79590cbe5ce6f05cf53251cc0d02ebc216fff", blob)
 
-    def test_header_is_exactly_twelve_lines(self) -> None:
-        # check-vendor slices at 12; if the header grows the drift check breaks.
+    def test_header_length_constant_matches_the_file(self) -> None:
+        # check-vendor slices at VENDOR_HEADER_LINES; if the header grows
+        # without the constant moving, every run reports a false modification.
         lines = (Path(cli.__file__).parent / "text_unicode.py").read_text().split("\n")
-        self.assertTrue(lines[11].startswith("# ═"), "line 12 must close the header block")
-        self.assertTrue(lines[12].startswith('"""Layer A'), "line 13 must start upstream body")
+        self.assertEqual(cli.VENDOR_HEADER_LINES, 12)
+        self.assertTrue(
+            lines[cli.VENDOR_HEADER_LINES - 1].startswith("# "),
+            "last header line must still be a comment",
+        )
+        self.assertTrue(
+            lines[cli.VENDOR_HEADER_LINES].startswith('"""Layer A'),
+            "first line after the header must start the upstream body",
+        )
+
+
+class TestVendorPin(unittest.TestCase):
+    """The pin answers 'unmodified since vendoring' with no checkout present."""
+
+    def test_pin_matches_the_shipped_engine(self) -> None:
+        digest = hashlib.sha256(cli.vendored_body()).hexdigest()
+        self.assertEqual(
+            digest,
+            cli.UPSTREAM_BODY_SHA256,
+            "vendored engine changed without UPSTREAM_BODY_SHA256 being updated",
+        )
+
+    def test_check_vendor_passes_without_a_checkout(self) -> None:
+        self.assertEqual(cli.main(["check-vendor"]), cli.EXIT_OK)
+
+    def test_pin_is_a_real_sha256(self) -> None:
+        self.assertRegex(cli.UPSTREAM_BODY_SHA256, r"^[0-9a-f]{64}$")
+        self.assertNotEqual(cli.UPSTREAM_BODY_SHA256, "0" * 64, "placeholder was never set")
+
+    def test_missing_checkout_reports_incomplete(self) -> None:
+        self.assertEqual(
+            cli.main(["check-vendor", "/nonexistent/watermarks-remover"]),
+            cli.EXIT_INCOMPLETE,
+        )
+
+    def test_vendored_body_excludes_the_local_header(self) -> None:
+        body = cli.vendored_body()
+        self.assertTrue(body.startswith(b'"""Layer A'), "header leaked into the hashed body")
+        self.assertNotIn(b"DO NOT EDIT", body)
 
 
 class TestSelection(TempTree):

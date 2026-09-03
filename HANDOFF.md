@@ -1,6 +1,47 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-09-01 (last) — `review/` triaged; hygiene half of watermarks-remover extracted as `jscrub`
+## 2026-09-03 (last) — `jscrub check-vendor` no longer needs the review queue; first lint run
+
+**`jscrub check-vendor` now works with no arguments and no checkout.** It compares the vendored
+engine against `UPSTREAM_BODY_SHA256` pinned in `cli.py`. This closes a defect from 09-01: the
+check depended on `review/watermarks-remover`, which is gitignored *and* sits in a queue whose items
+move to `reviewed/` — so the check was going to break with `upstream file not found` and could never
+run in CI.
+
+**Two claims, deliberately not merged.** `check-vendor` (no args) proves "unmodified since
+vendoring". `check-vendor PATH` additionally proves "still matches upstream today". **A passing
+no-args run is not evidence upstream hasn't moved** — a hash taken from our own bytes cannot detect
+that. Both the output strings and the README keep these worded as separate claims; do not
+"simplify" them back into one message.
+
+**The pin `ed86ed97…` is anchored to upstream, not to ourselves.** It was recorded in the same run
+where the byte comparison against the real checkout printed `matches upstream checkout byte for
+byte`. If you re-vendor, re-establish it the same way — with a checkout present — or the anchoring
+property is lost and the pin only certifies whatever you happened to paste in.
+
+**It is a drift check, not a tamper seal.** The pin is in the same repo and commit as the file it
+certifies. Anyone who can edit `text_unicode.py` can edit the constant. Do not cite it as integrity
+evidence against a hostile edit.
+
+**`VENDOR_HEADER_LINES = 12` is load-bearing in two places** — `vendored_body()` slices there and
+`check-vendor` prints `tail -n +13`. `TestFinding10VendorProvenance.test_header_length_constant_
+matches_the_file` asserts the constant, the last header line and the first body line together, so
+growing the header fails a test instead of silently invalidating the pin.
+
+**First lint this code has had.** `ruff` is not installed on this host and the repo has no
+`ruff.toml`, so it ran via `uvx ruff check scripts/jscrub/` against default rules — now clean. Use
+that command; it is recorded in the README. Lint is **not** wired into CI.
+
+**The tool had been flagging its own test file.** `test_cli.py` used literal zero-width/NBSP/BOM
+characters as fixtures; they are now `chr(0x200B)` etc. Runtime strings are identical, so no test
+weakened. `jscrub audit scripts/ --include '*.py' --include '*.sh'` is now clean across 55 files —
+useful as a smoke test, but note it means the tree no longer contains a live positive, so a broken
+detector would not show up there. The unit tests are the real guard.
+
+**Still not wired into anything** — no hook, no cron, no CI job, nothing imports it. Unchanged from
+09-01 and still a deliberate open decision.
+
+## 2026-09-01 — `review/` triaged; hygiene half of watermarks-remover extracted as `jscrub`
 
 **`review/watermarks-remover` needs no conversion — it is already a finished plugin.** Third-party
 clone (guillaumemeyer/watermarks-remover, MIT, v0.6.0, HEAD `be38ccc`), gitignored, carrying two
