@@ -2,6 +2,59 @@
 
 ---
 
+## 2026-09-03 — `jscrub check-vendor` was resting on a directory that is designed to empty itself
+
+### The drift check depended on the review queue it came from
+
+`check-vendor` compared the vendored engine against `review/watermarks-remover`. That path is
+gitignored (`.gitignore:120`) **and** `review/` is a queue — items move to `reviewed/` once
+triaged. So the one check that guarantees the vendored Unicode tables have not been tampered with
+or half-edited was going to start failing with `upstream file not found`, which reads like operator
+error rather than a broken tool. It also could not run in CI at all.
+
+### Split into two claims, because they need different evidence
+
+`check-vendor` now answers two questions and says which one it answered:
+
+| Question | Command | Needs a checkout? |
+|---|---|---|
+| Has our copy been modified locally? | `jscrub check-vendor` | no |
+| Has upstream moved on since we vendored? | `jscrub check-vendor PATH` | yes |
+
+The first compares against `UPSTREAM_BODY_SHA256` pinned in `cli.py`, so it runs anywhere. The
+second still needs a checkout, because a hash recorded from the vendored bytes cannot possibly
+detect that *upstream* changed. Collapsing the two would let a passing run be cited as upstream
+fidelity when it shows only that nobody edited the file locally — so the two outcomes are worded as
+different claims in both the output and the README.
+
+**The pin is anchored, not self-referential.** It was recorded in the same run in which the byte
+comparison against the real upstream checkout passed (`matches upstream checkout byte for byte`),
+so `ed86ed97…` is upstream's digest, not merely a hash of whatever we happened to ship.
+
+**It is a drift check, not a tamper seal** — the pin sits in the same repo and the same commit as
+the file it certifies. Git history covers the adversarial case; this covers accidents and
+half-finished re-vendors. The README says so rather than leaving it to be assumed.
+
+`VENDOR_HEADER_LINES` replaces the magic `12`, and the mismatch path now prints both digests plus
+the instruction to update the pin, so a deliberate re-vendor is copy-paste rather than a debugging
+session.
+
+### The hygiene tool was carrying contraband in its own tests
+
+`uvx ruff check` — the first lint this code has had, since `ruff` is absent from this host and the
+repo has no `ruff.toml` — found five issues. The interesting one was `PLE2515`: `test_cli.py` held
+**literal** zero-width and no-break characters as fixtures, which is exactly what the tool exists to
+flag. `jscrub audit scripts/` had been reporting its own test file as the only hit in the tree.
+
+Fixtures are now built with `chr(0x200B)` and friends. Identical strings at runtime, so no test is
+weakened, and `jscrub audit scripts/` is now clean across all 55 files. The remaining four were
+`collections.abc` imports, two unused `noqa: E402` directives, and a shebang on a non-executable
+file.
+
+35 tests (up from 30; `TestVendorPin` is new), ruff clean, self-audit clean.
+
+---
+
 ## 2026-09-01 — `review/` held a finished plugin, not raw material; extracted the hygiene half as `jscrub`
 
 ### The review item was already a skill, a parser and a processor

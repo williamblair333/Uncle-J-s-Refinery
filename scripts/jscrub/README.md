@@ -106,14 +106,38 @@ comment block above the module docstring, so:
 tail -n +13 scripts/jscrub/text_unicode.py   # == the upstream file, byte for byte
 ```
 
-To check for drift against a checkout:
+### Checking it — two different questions
+
+`check-vendor` answers two questions that need different evidence. Keep them
+apart: a passing run of the first is **not** evidence for the second.
+
+| Question | Command | Needs a checkout? |
+|---|---|---|
+| Has our copy been modified locally? | `jscrub check-vendor` | no |
+| Has upstream moved on since we vendored? | `jscrub check-vendor PATH` | yes |
 
 ```bash
-jscrub check-vendor /path/to/watermarks-remover
+jscrub check-vendor
+#   unmodified since vendoring  (sha256 ed86ed9715f40e30…)
 ```
 
+The first check compares against `UPSTREAM_BODY_SHA256` in `cli.py`, so it runs
+anywhere — in CI, and after `review/` is emptied. That matters: `review/` is a
+queue, and this item will eventually move to `reviewed/`, at which point the
+checkout form stops working by default.
+
+The pinned digest was recorded while a byte comparison against the real
+upstream checkout passed, so it is anchored to upstream's bytes rather than
+merely to our own copy.
+
+**It is a drift check, not a tamper seal.** The pin lives in the same repo and
+the same commit as the file it certifies, so anyone who can edit one can edit
+the other. Git history covers the adversarial case; this covers accidents.
+
 To re-vendor: copy the upstream file in, re-apply the 12-line header, bump the
-commit and date above, and re-run the tests.
+commit and date above, run `jscrub check-vendor` and paste the computed digest
+into `UPSTREAM_BODY_SHA256`, then re-run the tests. The failure message prints
+the digest for exactly this reason.
 
 ### What is deliberately not vendored
 
@@ -141,8 +165,20 @@ parsed namespace and that the derived kwargs match the engine signatures.
 python3 scripts/jscrub/test_cli.py
 ```
 
-30 tests, stdlib `unittest`, no dependencies. Test classes are named after the
+35 tests, stdlib `unittest`, no dependencies. Test classes are named after the
 pre-mortem findings they lock in (`TestFinding2BackupNeverClobbered`,
 `TestFinding3ByteFaithfulIO`, `TestFinding6SkipsAreLoud`,
-`TestFinding7AtomicWrite`, `TestFinding10VendorProvenance`) so a regression
-surfaces as a named failure rather than a quietly lost mitigation.
+`TestFinding7AtomicWrite`, `TestFinding10VendorProvenance`, `TestVendorPin`)
+so a regression surfaces as a named failure rather than a quietly lost
+mitigation.
+
+Linting is not part of CI here — this repo has no `ruff.toml` and `ruff` is not
+installed on this host. It was run through `uvx` against default rules:
+
+```bash
+uvx ruff check scripts/jscrub/     # All checks passed!
+```
+
+Invisible characters in the test fixtures are built with `chr(0x200B)` rather
+than written as literals, so the tool does not flag its own source and ruff's
+`PLE2515` stays quiet. `jscrub audit scripts/` is clean across all 55 files.
