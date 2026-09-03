@@ -116,6 +116,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Context7 | Third-party library docs, version-pinned |
 | **Retrieval — memory** | memweave | Offline cross-project memory: markdown corpus + local semantic search via `mw_search.py` (CLI, not an MCP server) |
 | **Efficiency — output** | jOutputMunch | System-prompt rules that cut output tokens 25–40% |
+| **Hygiene — text** | jscrub | Finds and removes invisible Unicode (zero-width, bidi, tag chars, space homoglyphs) that breaks diffs, grep and paste. Local CLI, not an MCP server — `scripts/jscrub/` |
 | **Reliability** | Superpowers | 20+ skills: brainstorming, TDD, systematic debugging, verification |
 | | Ralph Wiggum | Autonomous loop harness with verification gates |
 | | prior-art-check | Custom skill — runs `mw_search.py` (memweave) before non-trivial work |
@@ -791,6 +792,8 @@ Uncle-J-s-Refinery/
 │   ├── github-webhook-server.py        ← HTTP server for GitHub push/PR events
 │   ├── healthcheck-notify.sh           ← daily Telegram notification on healthcheck failure
 │   ├── jcodemunch-reindex.sh           ← triggers jcodemunch re-index after significant changes
+│   ├── jscrub/                         ← invisible-Unicode hygiene CLI: inspect / clean / audit text files (stdlib-only, no MCP server)
+│   │                                     engine vendored from watermarks-remover (MIT); `jscrub check-vendor` proves it unmodified
 │   ├── memweave/                       ← offline cross-project memory: sync_memory.sh (build) + mw_search.py (read-only search)
 │   ├── post-merge-hook.sh              ← git post-merge hook; alerts on new features
 │   ├── ralph-cron-run.sh               ← runs ralph-harness.sh for a given PRD (cron target)

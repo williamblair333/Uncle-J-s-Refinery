@@ -11,6 +11,17 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **`jscrub` is not wired into anything** (opened 2026-09-03). No hook, no cron, no CI job; nothing
+  imports it. Two open decisions, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
+  gate — `--in-place` and `--follow-symlinks` are the flags to think hardest about before automating
+  a tool that rewrites files; (b) `check-vendor` in CI, which now works with no checkout so it can
+  actually run there. Also unresolved: with the test fixtures escaped, the repo contains no live
+  positive, so a broken detector would not surface via `jscrub audit` — the unit tests are the only
+  guard.
+- **`review/watermarks-remover` is reviewed but not moved** (opened 2026-09-03). The assessment is
+  done (see CHANGELOG 09-01) and `jscrub check-vendor` no longer depends on the path, so the
+  `review-queue-triage` move to `reviewed/` is unblocked — left for Bill rather than reorganising a
+  working directory unprompted.
 - **The nightly agent commits to local `main` and never pushes** (found 2026-08-28). `git ls-remote`
   showed remote `main` at `1f0f262` while local was at `47286d7` — `9b52594`, `c6f79d8` and
   `47286d7` had been local-only since 08-23. The usual freshness check
@@ -169,6 +180,31 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-09-01/03 — `review/` triaged; `jscrub` extracted and hardened)
+
+- **`review/watermarks-remover` needed no conversion — it was already a finished plugin** (MIT,
+  v0.6.0, HEAD `be38ccc`): two Claude skills, a marketplace manifest, a `PostToolUse` hook, a
+  pre-commit hook, a Docker service, ~60 tests. The real gap was **three** CLIs with three flag
+  vocabularies, `clean_file.py:30-263` being one 234-line `main()`.
+- **`scripts/jscrub/` ships the hygiene half as one DRY CLI** — `inspect` / `clean` / `audit`, every
+  flag declared once in an option table that argparse, `--help` and the engine kwargs all derive
+  from. Three-way exit code (0 clean / 1 findings / 2 unscannable, worst wins) so a CI gate can tell
+  "scanned it" from "never looked". PR #140.
+- **Layer B was deliberately left behind.** Upstream also defeats C2PA/SynthID provenance and ships
+  a `stealer/` module that reconstructs a target model's watermark scorer. `jscrub` is text hygiene —
+  characters that break tooling — not a way to make AI output unidentifiable as AI output. Keep that
+  line if the tool is extended.
+- **The drift check no longer depends on the queue it came from.** `check-vendor` compared against
+  `review/watermarks-remover`, which is gitignored *and* sits in a queue whose items move to
+  `reviewed/` — so it was going to break with `upstream file not found` and could never run in CI.
+  Now split into two claims with different evidence: `check-vendor` (pinned sha256, no checkout)
+  proves "unmodified since vendoring"; `check-vendor PATH` additionally proves "still matches
+  upstream". A passing no-args run is **not** evidence upstream hasn't moved. PR #141.
+- **First lint this code has had** (`ruff` absent from the host, no `ruff.toml`; run via `uvx`).
+  `PLE2515` caught the hygiene tool carrying literal zero-width characters in its own test fixtures —
+  the reason `jscrub audit scripts/` had been reporting its own test file as the tree's only hit.
+  Now `chr(0x200B)`; 35 tests, ruff clean, self-audit clean at 55/55.
 
 ## Recently completed (2026-08-28 — the 07:00 alert had been crying wolf for 26 days)
 
