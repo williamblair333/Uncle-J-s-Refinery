@@ -44,6 +44,8 @@ briefs, (3) close this repo's full-stack verification gap.
 
 ## 2026-09-03 (last) — `jscrub check-vendor` no longer needs the review queue; first lint run
 
+- **jcodemunch-mcp breaking change**: `get_watch_status` dropped the per-repo `index_stale` field in v1.108.317 (#565) — callers must read the four-state `index_freshness` (`fresh`/`stale`/`unknown`/`not_tracked`) plus `any_freshness_unknown`, since the old Boolean survives only as `watcher_flagged_stale` and a lookup of the removed key reads falsy, i.e. silently "fresh"; `find_dead_code` now caps confidence at 0.6 when the corpus cannot back a proof (#566/#569), so a default `min_confidence=0.8` call returns an empty list that must be gated on the new `signal_warning` / `corpus_adequacy` fields rather than read as "no dead code".
+
 **`jscrub check-vendor` now works with no arguments and no checkout.** It compares the vendored
 engine against `UPSTREAM_BODY_SHA256` pinned in `cli.py`. This closes a defect from 09-01: the
 check depended on `review/watermarks-remover`, which is gitignored *and* sits in a queue whose items

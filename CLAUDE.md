@@ -90,19 +90,27 @@ tools can answer structurally.
   character. Symbols and require edges read from a Racket repo indexed before that reader are not
   comparable to ones taken after.
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
-- `get_watch_status` — daemon coverage. **Do NOT read its `any_stale: false` as "the index is
-  fresh."** Verified against 1.108.288 at `tools/get_watch_status.py:73,90`: staleness comes from
-  `get_reindex_status`, which reads **in-process, in-memory** state. When the querying process
-  never tracked a reindex — the normal case, because the watcher runs in the systemd daemon, a
-  *different* PID — `has_any_reindex_state()` is False and every repo gets the hardcoded default
-  `{"index_stale": False}`. `any_stale` then reports False having measured nothing. Observed here
-  2026-08-21: all 18 repos `index_stale=false` **and** `watched_by_another_process=true`, including
-  a repo whose index was demonstrably behind its working tree. Treat `any_stale: false` as
-  `unknown`; use `_meta.verdict.channels.index` or `check_embedding_drift` for real freshness.
-  (Upstream has the correct tri-state already — `FreshnessProbe.repo_freshness` in
-  `retrieval/freshness.py:245` returns `fresh`/`stale`/`unknown`/`not_tracked`, and its docstring
-  names this exact Boolean-has-nowhere-to-put-"I-could-not-find-out" defect. `get_watch_status` is
-  the caller that still uses the Boolean it was written to replace.)
+- `get_watch_status` — daemon coverage. **The per-repo `index_stale` field is GONE as of
+  v1.108.317** (#565, verified against installed 1.108.317 at `tools/get_watch_status.py:78-182`).
+  What this file used to warn about is now fixed at the source rather than worked around here:
+  staleness came from `get_reindex_status`, in-process in-memory state that only the watcher
+  writes, so a querying process that never watched anything got the hardcoded
+  `{"index_stale": False}` for every repo and `any_stale` reported False having measured nothing.
+  Upstream measured 33 repos reporting `any_stale: False` whose truth was 1 stale, 2 unknown and
+  10 not_tracked.
+  - **Read `index_freshness` instead** — a real INDEX-vs-TREE comparison, and four-state:
+    `fresh` / `stale` / `unknown` / `not_tracked`. Anything other than `fresh` is not "fine";
+    `unknown` means freshness was never established, and the probe answers `unknown` on ANY
+    failure rather than inventing `fresh`.
+  - **The old Boolean is KEPT under `watcher_flagged_stale`**, which is what it always meant:
+    "has the watcher queued this for reindex in THIS process". Do not read it as freshness.
+    **Anything keyed on `index_stale` now reads a missing key** — which is falsy, i.e. the same
+    silent "fresh" this fix exists to remove. Rename it.
+  - `any_stale` is now trustworthy, joined by `any_freshness_unknown` and `freshness_checked`.
+    Gate on `any_stale is False` **and** `any_freshness_unknown is False`. `check_freshness` is a
+    Python-level kwarg only — the MCP tool takes no arguments and always measures (~39 ms/repo
+    cold, 4 ms warm, under the ~2.4 s the tool already spends on discovery).
+  - `_meta.verdict.channels.index` and `check_embedding_drift` remain the cross-checks.
 - `jcodemunch_guide` — returns the version-current CLAUDE.md policy snippet; prefer it over a static copy in any harness that auto-loads routing rules. **Its output is filtered** by `disabled_tools` and the active tier/profile (#495/#506, verified against 1.108.288), so it is a subset of the full policy — a tool missing from the guide is not a removed tool.
 - `index_dependency` — index an INSTALLED third-party dependency (the exact version in node_modules or the repo's .venv) as its own queryable repo; ground-truth a library's API instead of guessing. Prefer over context7 when you need the installed version's actual source, not published docs.
 
@@ -153,6 +161,15 @@ tools can answer structurally.
   tokenization folded case, underscores or punctuation is `normalized` (≥ 40.0), then `prefix`,
   `segment`, `none`. Filtering results on `identity_type == "exact"` silently drops real hits —
   accept the normalised tier too. (Case folding alone still counts as exact, deliberately.)
+- **`search_symbols(kind="field")` works now** (#571, v1.108.317) — it was refused by both gates,
+  so an empty result for a struct/class field search before this version was the gate, not the
+  corpus. The full enum: `function`, `class`, `method`, `constant`, `type`, `template`, `import`,
+  `field`.
+- **Tied results now rank by symbol id, not index-walk order** (harness F-13, v1.108.317, verified
+  at `tools/search_symbols.py:861-867`). The tiebreak was the encounter counter — `os.walk` order,
+  i.e. directory order on NTFS and hash order on ext4 — so the same corpus returned *different*
+  tied symbols on Windows and on Linux (gin "context bind" has five candidates at exactly 10.202).
+  Ranking is now cross-platform reproducible; a top-K that shifted under this version is the fix.
 - **A zero-result scan is not proof of absence.** The server distinguishes `absent` (the scan
   covered the tree and found nothing) from `degraded` (stale, partial, truncated, or mid-rebuild —
   it could not have found it). Only `absent` licenses "this symbol does not exist"; on `degraded`,
@@ -210,6 +227,30 @@ tools can answer structurally.
 - `get_delivery_metrics` — durable-change delivery over a window: commits_durable (landed and stuck) vs churn-back; the honest numerator for cost-per-outcome, not raw activity. Local-indexed repos only; trailing signal (recent commits flagged provisional).
 - `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
 - `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal). **Render edges now count as reachability** (#461, always-on, verified against 1.108.288 at `tools/find_dead_code.py:256`): a template reached only by `render(request, "page.html")` is no longer reported as `zero_importers` at confidence 1.0. The result set is smaller and more correct — a shrink here is the fix, not a regression. Deliberately not an extension exemption: a template nothing renders is still dead and still reported.
+  - **⚠⚠ An EMPTY `find_dead_code` result is now often a refusal, not a clean bill of health**
+    (#566/#569, v1.108.317, verified against installed 1.108.317 at `tools/_corpus_adequacy.py:52,80-92,174-190`
+    and `tools/find_dead_code.py:383-433,508-538`). `confidence: 1.0` is documented as PROVABLY
+    UNREACHABLE — a claim about the TREE that was being computed from the INDEX with nothing in
+    between, so a stale index or a withheld file published live code as proven dead. `assess_corpus`
+    now reads the disclosures the index already carries and **clamps confidence to
+    `UNPROVEN_CEILING = 0.6`** when the corpus cannot back a proof. **0.6 is below the tool's own
+    `min_confidence` default of 0.8, so the default call returns an EMPTY list** — deliberately, so
+    the answer is nothing rather than an unprovable 1.0.
+    **Gate on `signal_warning`** (same spelling `get_dead_code_v2` uses, so one field covers both)
+    and read the new `corpus_adequacy` block: `adequate`, `index_freshness`, `confidence_ceiling`,
+    plus `coverage_complete` / `withheld` / `blockers` when they apply. Blockers are `stale_index`,
+    `index_freshness_unknown`, `withheld_files`, `corpus_incomplete`, `runtime_discovery_unresolved`.
+    Clamped entries carry BOTH numbers — `uncapped_confidence` and `confidence_capped_by` — so the
+    graph's claim and the corpus's refusal stay separable. Fix by re-indexing (and raising
+    `max_file_size` if files were withheld), not by lowering `min_confidence`.
+    ⚠ `no_source_root` and `not_tracked` do NOT cap: an index built by `index_repo` from a pinned
+    remote snapshot has no local tree by construction and is not thereby suspect.
+  - **Runtime package enumeration counts as reachability** (#569): a package that walks its own
+    `__path__` with `pkgutil.iter_modules` then `importlib.import_module` builds an edge no static
+    graph can see — twelve live encoders were published at confidence 1.0, and which ones escaped
+    depended only on whether a test happened to import them directly. New response keys
+    `runtime_discovered_count`, `runtime_discovered_packages`, `runtime_discovery_unresolved`; the
+    unresolved half is not silent, it becomes a `corpus_adequacy` blocker.
 - `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
 - Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks), `get_architecture_metrics` (Gini concentration over symbols/size/fan-in/fan-out, Lakos depth, DSM modularity — answers "is coupling piling up in a few files?", which a ranked list of peaks cannot), `get_decorator_census` (normalized repo-wide `@route`/`@fixture`/`[Serializable]` histogram + sites; pairs with `get_signal_chains`/`get_endpoint_impact`).
   - **`get_architecture_metrics`: `concentration.gini.bytes_per_file` can now be `null`, and its basis changed** (v1.108.291, verified against installed 1.108.291 at `tools/get_architecture_metrics.py:160,176` and `tools/_utils.py:396`). It used to sum `byte_length` per file, which double-counts nesting — a class's span already covers its methods, so the number tracked how class-heavy a file was as much as how big it was (33.4% overall on the source repo, up to 2.28x on one file). It now merges each file's symbol spans and counts a byte once. Two consequences: a `bytes_per_file` Gini recorded before the upgrade is **not comparable** to one taken after, and the field is `null` — never `0.0` — when no file has trustworthy byte offsets, because `0.0` reads as "perfectly even" rather than "could not measure". Arithmetic on it without a `None` check now raises. New sibling keys `bytes_files_measured` / `bytes_unmeasurable_files` disclose the smaller file set the byte axis covers; the other three Gini axes still span every file.
