@@ -191,9 +191,29 @@ tools can answer structurally.
   (`local_onnx` / `all-MiniLM-L6-v2`, dim 384, pinned 2026-05-25), `max_drift=0.0`, no alarm, so
   no switch has ever happened here. **That safety expires the moment `JCODEMUNCH_EMBED_MODEL`
   changes** — re-embed every repo if it does.
+- **A failed embedding batch now names its cause, in the BODY of both tools that swallowed it**
+  (CF-66, v1.108.318, verified against installed 1.108.318 at `embeddings/failures.py:71-77`,
+  `tools/embed_repo.py:514-516`, `tools/search_symbols.py:1511-1523`). A rejected key, a network
+  outage and a model the endpoint does not serve all used to reach the caller as
+  `symbols_skipped_error: N` at best and as nothing at worst.
+  - `embed_repo` gains `error_causes` (distinct `{type, message, batches}`, redacted and cut to
+    300 chars, at most 10 kept), `causes_omitted` when more were seen, and **`all_batches_failed`
+    — true means the call embedded nothing and still exited clean.**
+  - `search_symbols`' lazy semantic top-up gains `semantic_topup` with `symbols_unscored`,
+    `batches_failed` and the same `error_causes`. **Read its presence as "this hybrid answer is
+    lexical-only for part of the corpus"** — the ranking looks complete and is not. Deliberately
+    in the body, not `_meta`, because the shipped `meta_fields: []` default deletes `_meta`.
 
 **References & call graph**:
-- `find_references` — where is an identifier imported or re-exported. `find_importers` — which files import a given file. `check_references` — quick `is_referenced` bool for dead-code detection (import + content in one call).
+- **"Where is this name used" routes to `check_references`, not `find_references`** (CF-51/CF-63,
+  #658, verified against installed 1.108.318 at `cli/policy.py:51-52`, `cli/hooks/steering.py:125`
+  and the tool description at `server.py:2315`). The two answer different questions and this file
+  used to blur them, sending the usage question to the narrower tool: `find_references` is **who
+  imports or re-exports** this identifier; `check_references` is **every use** — import sites plus
+  every file whose content mentions it, in one call (`find_references` + `search_text`), capped at
+  `max_content_results` (default 20), and a match inside a comment or string still counts. Its
+  `is_referenced` bool is a by-product, not the reason to call it; several names at once via
+  `identifiers`. `find_importers` — which files import a given file.
 - `get_dependency_graph` — file-level import graph up to 3 hops (imports / importers / both). `get_dependency_cycles` — detect circular import chains before a refactor.
 - `get_call_hierarchy` — incoming callers and outgoing callees N levels deep. `get_impact_preview` — full transitive call-graph walk showing what breaks before deleting or renaming a symbol.
 - `get_endpoint_impact` — "what breaks if I change this HTTP endpoint?" — handler + importers + callers + rendered templates; resolves string-dispatch (Django/Express/Flask/Rails) and decorator (Flask/FastAPI/Spring) routes. Endpoint-scoped counterpart to `get_blast_radius`; pass `include_infra` to attach env/compose/K8s exposure.

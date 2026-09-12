@@ -44,6 +44,7 @@ briefs, (3) close this repo's full-stack verification gap.
 
 ## 2026-09-03 (last) — `jscrub check-vendor` no longer needs the review queue; first lint run
 
+- **jcodemunch-mcp breaking change**: a failed embedding batch now discloses its cause in the response body (CF-66, #640) — `embed_repo` adds `error_causes` / `causes_omitted` / `all_batches_failed`, and `search_symbols` adds `semantic_topup` (`symbols_unscored`, `batches_failed`, `error_causes`), so callers must stop reading a clean `embed_repo` exit as "embedded" and must treat a `semantic_topup` block as "this hybrid ranking was lexical-only for part of the corpus"; separately the guidance for "where is this name used" moved from `find_references` to `check_references` (CF-63, #658).
 - **jcodemunch-mcp breaking change**: `get_watch_status` dropped the per-repo `index_stale` field in v1.108.317 (#565) — callers must read the four-state `index_freshness` (`fresh`/`stale`/`unknown`/`not_tracked`) plus `any_freshness_unknown`, since the old Boolean survives only as `watcher_flagged_stale` and a lookup of the removed key reads falsy, i.e. silently "fresh"; `find_dead_code` now caps confidence at 0.6 when the corpus cannot back a proof (#566/#569), so a default `min_confidence=0.8` call returns an empty list that must be gated on the new `signal_warning` / `corpus_adequacy` fields rather than read as "no dead code".
 
 **`jscrub check-vendor` now works with no arguments and no checkout.** It compares the vendored
