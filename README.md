@@ -553,6 +553,38 @@ bash features/ralph-cron/install.sh --list       # show installed ralph crons
 bash features/ralph-cron/install.sh --uninstall MARKER
 ```
 
+### 20. Product quality — briefs, first-run gate, UI audit (optional)
+
+Stops the "works on my machine" class of mess. Each project states its core job,
+users, first-run path and success measures in a `PRODUCT.md`; the first-run gate
+then proves those claims on a clean machine, in a throwaway container, using only
+the documented steps. Exit codes alone never pass — a tool that catches an error,
+prints something friendly and exits 0 fails, which is the point.
+
+```bash
+bash features/product-quality/install.sh
+# uninstall: bash features/product-quality/install.sh --uninstall
+```
+
+Prerequisites for the gate itself, installed in the container it creates:
+
+```sh
+apt-get update && apt-get install -y python3 python3-yaml
+```
+
+Then:
+
+```bash
+python3 features/product-quality/first_run_gate.py .            # prove it on a clean machine
+python3 features/product-quality/first_run_gate.py --check .    # validate the brief, no container
+python3 features/product-quality/first_run_gate.py --check features/product-quality/fixtures/good-project
+bash features/product-quality/retrofit.sh --root /opt/proj      # rank existing projects, read-only
+```
+
+Skills installed: `product-brief` (write the brief), `first-run-gate` (read a
+result), `product-focus-review` (judge features against the core job), and
+`ux-heuristics` (vendored, MIT — see `global-skills/ux-heuristics/ATTRIBUTION.md`).
+
 ---
 
 ## Daily usage

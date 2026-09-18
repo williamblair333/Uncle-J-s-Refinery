@@ -1,5 +1,47 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-09-18 (last) — product-quality system installed; 15 repos have no brief yet
+
+**Installed and live on this host.** `bash features/product-quality/install.sh` linked four skills
+(`product-brief`, `first-run-gate`, `ux-heuristics`, `product-focus-review`) and registered two
+hooks in `~/.claude/settings.json`. Verified idempotent — a second run leaves exactly two
+product-quality hook entries, and nothing else in settings changed. Uninstall:
+`bash features/product-quality/install.sh --uninstall`.
+
+**The gate is proven on both fixtures, not just asserted.** `fixtures/good-project` passes in 9.2s;
+`fixtures/broken-project` fails on `stdout_contains` and `file` **while exiting 0** — the false-green
+case. Re-run both after touching `first_run_gate.py`:
+
+```sh
+python3 features/product-quality/first_run_gate.py features/product-quality/fixtures/good-project    # expect PASS
+python3 features/product-quality/first_run_gate.py features/product-quality/fixtures/broken-project  # expect FAIL
+```
+
+**`--check` is not a pass, and the broken fixture proves why** — it passes `--check` (its brief is
+well-formed) and fails a real run. Anything citing `--check` as evidence the project works is wrong.
+
+**This repo's gate passes but covers the subsystem only.** It does not exercise `install.sh`, which
+needs a Claude Code install that does not exist in a container. Closing that gap needs a stub Claude
+config plus cached wheels; until then `healthcheck.sh` on the host is the only evidence for the full
+stack. Do not cite the green gate as full-stack proof.
+
+**Retrofit found the real backlog — nothing has been fixed.** Read-only sweep of `/opt/proj`:
+4 repos blocking first use (`jaredrhod`, `moneymaker/data`, `paved`, `write_well` — no PRODUCT.md
+*and* no README), 15 with an unstated product, 1 checked (this repo). Third-party clones are
+skipped by origin (`--owner`, default `williamblair333`), which cut the noise from 32 to 15.
+Regenerate: `bash features/product-quality/retrofit.sh --root /opt/proj`.
+
+**The PR guard matches invocations, not mentions.** Its matcher is anchored (start of command, or
+after `;`/`&&`/`||`/`|`). Re-run the six matcher cases after editing it — a substring match blocks
+`echo`s and comments, which trains people to use the override:
+
+```sh
+bash features/product-quality/hooks/pr-gate-guard.sh   # driven by the probes in the guard test
+```
+
+**Next, in order:** (1) briefs for the 4 blocking repos, (2) `retrofit.sh --run` once they have
+briefs, (3) close this repo's full-stack verification gap.
+
 ## 2026-09-03 (last) — `jscrub check-vendor` no longer needs the review queue; first lint run
 
 **`jscrub check-vendor` now works with no arguments and no checkout.** It compares the vendored

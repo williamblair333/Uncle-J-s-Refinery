@@ -2,6 +2,62 @@
 
 ---
 
+## 2026-09-18 — Product quality: a project now has to prove it works on a machine that is not this one
+
+### The gap was enforcement, not knowledge
+
+Baseline testing with three subagents on a deliberately bad v1 plan found they already knew the
+principles — unprompted, they cut a premature plugin API, added a missing restore command, and
+demoted an architecture-first README. What none of them did was refuse a feature for being merely
+cheap, name the product's core job before deciding, or check whether anyone had ever run the thing
+from scratch. Written rules were not the missing piece; a mechanical check was.
+
+### `features/product-quality/` — four parts
+
+| Part | What it does |
+|---|---|
+| `product-brief` skill | Writes `PRODUCT.md`: core job, users, success + time-to-first-result target, first-run path, non-goals, UI principles, and a machine-readable `verify:` block |
+| `first_run_gate.py` | Installs the project in a throwaway container from its documented steps alone, runs the core task, asserts observable effects |
+| `ux-heuristics` (vendored, MIT) | Nielsen audit for changed interfaces; a CLI's terminal output counts as one |
+| `retrofit.sh` | Read-only sweep ranking existing repos worst-first |
+
+### Exit codes are necessary and never sufficient
+
+The gate refuses a brief whose `expect:` block is exit-code only. The fixture that proves it
+(`fixtures/broken-project`) depends on a package its README never mentions, catches the
+`ImportError`, prints `note: running in reduced mode`, and exits **0** — so any check that trusts
+exit status reports success on a tool that did nothing. The gate fails it on the two observable
+proofs: the expected stdout never appeared and the output file was never written.
+
+### Blocking is scoped so it stays credible
+
+The PR guard fails **open**. No `PRODUCT.md` warns rather than blocks — otherwise retrofit would
+freeze 15 existing repos on day one. Docs-only and test-only diffs skip it. A missed time target
+warns; only a failed install, failed core task or missing expectation blocks. `PRODUCT_GATE_OVERRIDE=1`
+is honoured and named in the message, never silent. No Docker reports `blocked`, which is treated
+as a block and **not** as a pass.
+
+### The guard matches invocations, not mentions
+
+First live test caught its own author: a substring match on the PR command blocked any command
+that merely *contained* the phrase — an `echo`, a comment, a test harness. Blocking harmless
+commands is how an override stops being exceptional. The matcher is now anchored to a real
+invocation (start of command, or after `;`, `&&`, `||`, `|`), and six matcher cases are checked:
+mention-only, bare invocation, chained, leading whitespace, override, unrelated command.
+
+### Licensing decided up front
+
+Commercial projects are in scope, so the CC BY-NC-SA product-management skill packs surveyed
+(deanpeters, Digidai) were excluded outright — not vendored, not paraphrased. Only MIT
+`ux-heuristics` is vendored, with `LICENSE` and `ATTRIBUTION.md` beside it.
+
+### This repo's own brief admits what it does not prove
+
+`PRODUCT.md` here verifies the product-quality subsystem, not the full `install.sh` path — that
+registers MCP servers into a Claude Code install which does not exist inside a container. The brief
+says so in a section above the `verify:` block rather than letting a green result imply more than
+it measured.
+
 ## 2026-09-03 — `jscrub check-vendor` was resting on a directory that is designed to empty itself
 
 ### The drift check depended on the review queue it came from
