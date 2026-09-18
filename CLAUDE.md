@@ -69,6 +69,25 @@ tools can answer structurally.
     and `parent` all changed, and `search_symbols` / `find_references` / `check_rename_safe` read them.
   - **gen 5 — three Rust definition classes yielded no symbol at all**: `union`, a trait method
     with no default body (`function_signature_item`), and a `const`/`static` inside a function body.
+- **`PARSER_GENERATION` went 7 → 8 in the 1.108.319 upgrade** (verified against installed
+  1.108.319 at `storage/index_store.py:224-244`, `parser/languages.py:56,555,604,625`). One more
+  full re-parse of every indexed repo, and because the counter is ONE integer for the whole tree it
+  carries **every parser fix in this release**. All of them add symbols on UNCHANGED CONTENT, which
+  incremental never re-reads — so **a symbol-count JUMP after re-indexing is the fix, not a
+  regression**, and an un-re-indexed repo keeps the missing symbols forever:
+  - **Kotlin properties were not symbols at all** (#732). `property_declaration` sat in
+    `constant_patterns` and not in `symbol_node_types`, so `val`/`var` — a data class's whole
+    surface — yielded nothing. New kind **`property`** (see the `kind` enum below).
+  - **TypeScript/TSX `abstract class` was missing entirely** (#698), its methods orphaned. That fix
+    **shipped in 1.108.319 without a generation bump**, so it reached only files that had changed
+    since; gen 8 is what carries it to an existing index.
+  - **Java records, annotation types and compact constructors were absent** (#713) — and they are
+    `container_node_types` now, so members inside them have an owner instead of `parent: None`.
+  - **Java: every field is a symbol, not only `static final`** (#735), via a new `field_patterns`
+    spec channel. `int a, b, c` yields three. `java_field_is_constant` is the single predicate both
+    channels ask, so a constant is not emitted twice.
+  - **C# operators, conversions and indexers are indexed** (#714) — the destructive half of that
+    defect is under `check_delete_safe` in **Refactoring & safety** below.
 - **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
   (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
   `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
@@ -116,6 +135,17 @@ tools can answer structurally.
 
 **Orientation & cold-start**:
 - Use `plan_turn` as your opening move on an unfamiliar repo. It respects the turn budget and selects the right tool for you.
+  - **A session absence is scoped to the repository it was measured in** (#711, v1.108.319, verified
+    at `tools/session_journal.py:113,131`, `tools/plan_turn.py:160`, `tools/get_session_snapshot.py:10,81`).
+    `plan_turn`'s prior-negative-evidence check rebuilt an absence claim from `record_search` — a
+    query string and an integer, with no repo, no filters, no index generation — so **a miss in repo
+    A told the model a symbol did not exist while it was working in repo B, in the same response
+    that returned the implementation.** `SessionJournal.citable_absence(repo, query)` is now the one
+    authority: the entry must name THIS repo, carry a real producer verdict, and the current plan
+    must also have found nothing. `get_session_snapshot`'s "dead ends" heading had the same defect
+    at wider blast radius (it is what you read at every compact and resume) and now names the repo
+    on each line and drops `low_confidence_matches` — weak matches FOUND — which it used to publish
+    as dead ends. Expect FEWER prior-absence stop signals; the ones left are the citable ones.
 - **Session start on a familiar repo**: call `digest` first — change-oriented briefing (~200 tokens) covering what changed since last session, hotspots, and dead code.
 - **First call in any analysis session**: `get_repo_health` — one-call triage snapshot (symbol counts, dead code %, avg complexity, top hotspots, cycle count).
   - **`radar.composite` and `radar.grade` are now `null` whenever any axis could not be measured**
@@ -163,8 +193,19 @@ tools can answer structurally.
   accept the normalised tier too. (Case folding alone still counts as exact, deliberately.)
 - **`search_symbols(kind="field")` works now** (#571, v1.108.317) — it was refused by both gates,
   so an empty result for a struct/class field search before this version was the gate, not the
-  corpus. The full enum: `function`, `class`, `method`, `constant`, `type`, `template`, `import`,
-  `field`.
+  corpus. The full enum as of 1.108.319: `function`, `class`, `method`, `constant`, `type`,
+  `template`, `import`, `field`, **`property`** — the last is new, and is where Kotlin `val`/`var`
+  now lands (#732). A Kotlin repo indexed before gen 8 has none of them; re-index first.
+- **An exact-name definition is no longer evicted from the page by same-named locals** (#699,
+  v1.108.319, verified at `tools/search_symbols.py:533,1518,1931`). The cut was a bounded heap on
+  BM25 alone, so a dozen same-named locals could fill the window and leave the real definition at
+  NO rank — zod's `partial` against its module-level `const partial` rows is the reported case. A
+  declaration rank now leads the sort key at **all three** cut sites (lexical heap, `semantic=True`,
+  and `fusion=True`), so the three exits agree. It promotes within the existing order rather than
+  re-ranking. Two response consequences: `_meta.exact_match` is a new block, and when the query
+  named something the page does not contain, `verdict.state` is downgraded `ok` → **`low_confidence`**
+  with a note that stops vouching for ranked guesses (`search_symbols.py:1277`). Deliberately not
+  `absent` — results were returned, so it cannot be cited as evidence the symbol is missing.
 - **Tied results now rank by symbol id, not index-walk order** (harness F-13, v1.108.317, verified
   at `tools/search_symbols.py:861-867`). The tiebreak was the encounter counter — `os.walk` order,
   i.e. directory order on NTFS and hash order on ext4 — so the same corpus returned *different*
@@ -224,6 +265,17 @@ tools can answer structurally.
 **Refactoring & safety**:
 - Before committing to a change, call `get_blast_radius` (transitive call-graph blast radius — what else breaks) AND `check_edit_safe` (regression risk + signature impact + complexity + test coverage + runtime traffic) — these are complementary, not alternatives. For PRs, `get_pr_risk_profile` produces a single composite score.
 - Before renaming a symbol: `check_rename_safe`. Before deleting: `check_delete_safe`. Before editing (regression risk + signature impact + complexity + test coverage + runtime traffic): `check_edit_safe`. For multi-file rename/move/extract: `plan_refactoring` generates edit-ready blocks.
+  - **`check_delete_safe` gained the verdict `name_not_searchable`** (#714, v1.108.319, verified at
+    `tools/check_delete_safe.py:23,407`, `tools/_name_reachability.py:1`, `tools/_stop_rule.py:68`).
+    A C# operator is invoked as `a + b`, an indexer as `a[0]`, a conversion as `(string)a` — the
+    declaration's name (`operator +`, `this[]`) appears at NO call site by construction, so "no
+    references found" was never evidence about it. Measured on a corpus where every one was used:
+    the ordinary method in the same file returned `internal_uses_blocking` and `operator +` returned
+    **`safe_to_delete` at confidence 1.0, "No callers or refs found."** Like `corpus_inadequate`
+    (#566), it replaces an ABSENCE verdict only, never a blocking one — a found importer is positive
+    evidence and cannot be unfound. It is bounded, not terminal: reading the call sites or ingesting
+    runtime evidence can still move it. **Anything switching on `safe_to_delete` must handle both
+    new values, or it reads a refusal as a green light.**
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
@@ -244,6 +296,16 @@ tools can answer structurally.
   establish", never "fine". *On this host `meta_fields` is `null` (`~/.code-index/config.jsonc:38`),
   so `_meta` reaches us; on a default install (`meta_fields: []`) `_meta.git_history` is stripped and
   `churn_measurable` is the only surviving disclosure.*
+- **Churn read ZERO for every index rooted below the git top level, and zero reads as a cold file**
+  (#685, v1.108.319, verified at `tools/get_hotspots.py:54`, `tools/winnow_symbols.py:74`,
+  `tools/get_changed_symbols.py:47,174`, `tools/get_delivery_metrics.py:152,156`). `git log
+  --name-only` prints paths from the git TOP LEVEL; the index holds them from `source_root`, so on
+  an `identity_mode="local"` index of a subdirectory **not one path ever matched** — and the failure
+  mode is a plausible number, not an error. Now `--relative` throughout. Two consequences: a
+  hotspot/churn ranking taken on a subdirectory-rooted index before this version is wrong and should
+  be re-run, and `get_delivery_metrics` additionally passes `-- .` because `--relative` alone still
+  LISTS an out-of-scope commit with an empty file set — an empty set can never be reworked, so those
+  commits counted as **durable**, inflating the delivery numerator.
 - `get_delivery_metrics` — durable-change delivery over a window: commits_durable (landed and stuck) vs churn-back; the honest numerator for cost-per-outcome, not raw activity. Local-indexed repos only; trailing signal (recent commits flagged provisional).
 - `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
 - `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal). **Render edges now count as reachability** (#461, always-on, verified against 1.108.288 at `tools/find_dead_code.py:256`): a template reached only by `render(request, "page.html")` is no longer reported as `zero_importers` at confidence 1.0. The result set is smaller and more correct — a shrink here is the fix, not a regression. Deliberately not an extension exemption: a template nothing renders is still dead and still reported.
@@ -273,6 +335,17 @@ tools can answer structurally.
     unresolved half is not silent, it becomes a `corpus_adequacy` blocker.
 - `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
 - Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks), `get_architecture_metrics` (Gini concentration over symbols/size/fan-in/fan-out, Lakos depth, DSM modularity — answers "is coupling piling up in a few files?", which a ranked list of peaks cannot), `get_decorator_census` (normalized repo-wide `@route`/`@fixture`/`[Serializable]` histogram + sites; pairs with `get_signal_chains`/`get_endpoint_impact`).
+  - **`get_tectonic_map` partitions by Louvain now, and its third signal actually runs** (#667/#668,
+    v1.108.319, verified at `tools/get_tectonic_map.py:5,45,488-492,533`). Two changes, both
+    caller-visible. **Plate membership and `plate_count` are not comparable to a map taken before
+    this version** — label propagation gave way to Louvain modularity clustering, and
+    `_meta.methodology` reads `tectonic_louvain`. Separately the temporal signal (git co-churn,
+    weight 0.30 of three) is gated on `churn_is_measurable` BEFORE it is trusted: each signal is
+    normalised against its own maximum, so a truncated history would not weaken co-churn, it would
+    **rescale** it — one co-change in three commits scoring 1.0 exactly like four hundred in full
+    history. When the window is not covered the signal is withheld and NAMED, in a new body-level
+    **`signals_withheld`** key (present only when non-empty) beside the existing `signals_used`.
+    Deliberately in the body, not `_meta`, which a default install strips.
   - **`get_architecture_metrics`: `concentration.gini.bytes_per_file` can now be `null`, and its basis changed** (v1.108.291, verified against installed 1.108.291 at `tools/get_architecture_metrics.py:160,176` and `tools/_utils.py:396`). It used to sum `byte_length` per file, which double-counts nesting — a class's span already covers its methods, so the number tracked how class-heavy a file was as much as how big it was (33.4% overall on the source repo, up to 2.28x on one file). It now merges each file's symbol spans and counts a byte once. Two consequences: a `bytes_per_file` Gini recorded before the upgrade is **not comparable** to one taken after, and the field is `null` — never `0.0` — when no file has trustworthy byte offsets, because `0.0` reads as "perfectly even" rather than "could not measure". Arithmetic on it without a `None` check now raises. New sibling keys `bytes_files_measured` / `bytes_unmeasurable_files` disclose the smaller file set the byte axis covers; the other three Gini axes still span every file.
 - Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols` for consolidation candidates; `get_dead_code_v2` for multi-signal dead code; `diff_health_radar` to compare health before/after a PR.
 - For security/quality gate before merge: `search_ast(category="security")` + `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
@@ -528,6 +601,20 @@ tools can answer structurally.
   - `get_runtime_coverage` — coverage histogram: symbols with vs without runtime evidence
   - `get_redaction_log` — verify PII redaction chokepoint is firing
 - Skip these when no traces have been ingested — tools return empty results and say so.
+- **`import_runtime_signal` gained a fourth source, `diagnostics`** (#666, v1.108.319, verified at
+  `tools/import_runtime_signal.py:41-56,79-84,142`, `tools/_diagnostics_consume.py`). It reads a
+  type checker's or linter's OWN output file — `mypy` / `pyright` / `tsc` / `ruff` / `generic`
+  JSONL — and maps each finding to the symbol it names. New companion argument **`format`**
+  (`source="diagnostics"` only); default auto-detects from file CONTENT, so pass it explicitly for
+  an EMPTY file, where a clean run is a valid snapshot only if the tool is named. An unrecognised
+  shape is refused rather than guessed at. Unlike the trace tables this one is a **SNAPSHOT**,
+  replaced per tool, not appended.
+  - Four tools grew a `diagnostics` block off it: `check_edit_safe`, `get_changed_symbols`,
+    `get_pr_risk_profile`, `get_symbol_provenance`. **Read an ABSENT block as "no checker ran",
+    never as clean** — that is the contract (`_diagnostics_consume.py:9`): no data means the key is
+    omitted entirely, and `errors: 0` appears only when the checker ran and cleared that symbol.
+    `diagnostics_current` is tri-state, comparing the snapshot's stamped HEAD against the live one.
+    It feeds no score — `get_pr_risk_profile`'s six weights are unchanged, so no published grade moves.
 
 ### 6. Verification step
 - Before finalizing code changes, run a verification pass using
