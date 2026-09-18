@@ -62,6 +62,25 @@ New skill in `global-skills/product-brief/`. Produces or updates a project's
 | First-run path | Install → first result, as numbered commands a stranger can follow |
 | Non-goals | Explicitly excluded, so they stop coming back |
 | UI principles | Only when the project has an interface |
+| `verify:` block | Machine-readable: the core-task command plus the observable proof it worked |
+
+The `verify:` block is what makes the gate runnable rather than aspirational.
+Minimal shape:
+
+```yaml
+verify:
+  image: debian:bookworm-slim      # optional; default below
+  network: required                # required | none — declared, not assumed
+  install:                         # verbatim from README; drift is a failure
+    - apt-get update && apt-get install -y python3
+    - pip install .
+  run: snapkeep backup ./sample --bucket test
+  expect:
+    - file: /tmp/snapkeep/manifest.json
+    - stdout_contains: "backup complete"
+    - exit_code: 0                 # necessary, never sufficient
+  time_target_seconds: 600
+```
 
 `product-focus-review` (already written) reviews the brief and any feature
 request against it.
@@ -93,7 +112,14 @@ Failure modes handled explicitly:
   pass; the enforcement hook treats it as a block, overridable only by the user.
 - Project needs credentials → brief must declare a documented offline/stub mode;
   absence of one is a finding, not an excuse.
-- Network-dependent installs → timings separated, failure attributed.
+- Network-dependent installs → `network:` is declared in the brief, timings
+  separated, failure attributed. An undeclared network dependency that only
+  works because the host has connectivity is a finding.
+- Secrets → never mounted. A project that cannot demonstrate its core job
+  without real credentials must ship a documented stub/offline mode; the gate
+  runs that. This is a product requirement, not a testing workaround.
+- Host without Docker (e.g. the Windows box) → `skipped: no-runtime`, treated
+  as a block, with the same user override as any other block.
 
 ### 3. UI audit
 
@@ -119,6 +145,15 @@ Hooks:
 |---|---|---|
 | SessionStart | Session opens in a project dir | Warn if `PRODUCT.md` missing |
 | PreToolUse (`gh pr create`) | PR creation | Block unless a first-run-gate pass exists newer than HEAD, and a UI audit if UI files changed |
+
+Hook scope, so the gate stays credible rather than merely loud:
+
+- Docs-only and test-only diffs skip the gate (no runtime surface changed).
+- A missed `time_target_seconds` **warns**; it does not block. Only a failed
+  install, a failed core task, or a missing expectation blocks.
+- A project with no `PRODUCT.md` yet warns on PR rather than blocking, until
+  its brief is written; once the file exists, the gate is mandatory. This is
+  what makes retrofit possible without freezing every existing repo on day one.
 
 Blocking follows the `pre-mortem` clearance-token pattern already in the repo,
 including its rule that only the gate may write its own token.
@@ -164,9 +199,16 @@ PRODUCT.md ──► product-focus-review ──► plan ──► build
 4. `features/product-quality/install.sh` + hooks
 5. `retrofit.sh` + first audit run
 
-## Open questions
+## Decisions (were open questions)
 
-- Which project list does retrofit cover by default? Proposal: every git repo
-  under `/opt/proj`, with an opt-out file.
-- Base image for the gate: proposal `debian:bookworm-slim` unless a project
-  declares otherwise in `PRODUCT.md`.
+**Retrofit scope:** discovery over every git repo under `/opt/proj`, but
+**dry-run by default** and opt-out per repo via a `.no-product-gate` marker
+file. Discovery finds candidates; the run reports; nothing is enforced on a
+repo until its `PRODUCT.md` exists. Rejected "explicit allowlist only" —
+a list nobody updates is how projects quietly escape the system.
+
+**Base image:** `debian:bookworm-slim` by default, overridable per project via
+`verify.image`. Rationale: minimal, no language toolchain preinstalled, so a
+project that silently depends on a host-installed interpreter fails the way it
+should. Language-specific images (`python:3.12-slim`, `node:22-slim`) are
+allowed when the brief declares the runtime as a documented prerequisite.
