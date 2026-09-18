@@ -6,6 +6,9 @@
 .venv/
 .venv-test/
 .venv-memweave/
+
+# first-run gate reports: evidence about one machine at one commit, not source
+.first-run-gate/
 __pycache__/
 *.pyc
 *.pyo
