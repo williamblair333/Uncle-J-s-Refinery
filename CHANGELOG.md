@@ -37,6 +37,14 @@ warns; only a failed install, failed core task or missing expectation blocks. `P
 is honoured and named in the message, never silent. No Docker reports `blocked`, which is treated
 as a block and **not** as a pass.
 
+### The guard matches invocations, not mentions
+
+First live test caught its own author: a substring match on the PR command blocked any command
+that merely *contained* the phrase — an `echo`, a comment, a test harness. Blocking harmless
+commands is how an override stops being exceptional. The matcher is now anchored to a real
+invocation (start of command, or after `;`, `&&`, `||`, `|`), and six matcher cases are checked:
+mention-only, bare invocation, chained, leading whitespace, override, unrelated command.
+
 ### Licensing decided up front
 
 Commercial projects are in scope, so the CC BY-NC-SA product-management skill packs surveyed

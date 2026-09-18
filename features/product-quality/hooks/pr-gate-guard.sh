@@ -22,10 +22,9 @@ except Exception:
     print(""); raise SystemExit
 print((data.get("tool_input") or {}).get("command", ""))' 2>/dev/null)"
 
-case "$command_text" in
-  *"gh pr create"*) ;;
-  *) exit 0 ;;
-esac
+# Match an actual invocation, not a mention. `echo "gh pr create"` or a comment
+# about it is not a PR; blocking those trains people to reach for the override.
+printf '%s' "$command_text" | grep -Eq '(^|[;&|]|&&|\|\|)[[:space:]]*(sudo[[:space:]]+)?gh[[:space:]]+pr[[:space:]]+create\b' || exit 0
 
 allow_with_note() { printf '%s\n' "product-quality: $*" >&2; exit 0; }
 block() {

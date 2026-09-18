@@ -31,6 +31,14 @@ stack. Do not cite the green gate as full-stack proof.
 skipped by origin (`--owner`, default `williamblair333`), which cut the noise from 32 to 15.
 Regenerate: `bash features/product-quality/retrofit.sh --root /opt/proj`.
 
+**The PR guard matches invocations, not mentions.** Its matcher is anchored (start of command, or
+after `;`/`&&`/`||`/`|`). Re-run the six matcher cases after editing it — a substring match blocks
+`echo`s and comments, which trains people to use the override:
+
+```sh
+bash features/product-quality/hooks/pr-gate-guard.sh   # driven by the probes in the guard test
+```
+
 **Next, in order:** (1) briefs for the 4 blocking repos, (2) `retrofit.sh --run` once they have
 briefs, (3) close this repo's full-stack verification gap.
 
