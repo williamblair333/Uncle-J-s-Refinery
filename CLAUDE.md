@@ -69,6 +69,25 @@ tools can answer structurally.
     and `parent` all changed, and `search_symbols` / `find_references` / `check_rename_safe` read them.
   - **gen 5 — three Rust definition classes yielded no symbol at all**: `union`, a trait method
     with no default body (`function_signature_item`), and a `const`/`static` inside a function body.
+- **`PARSER_GENERATION` went 7 → 8 in the 1.108.319 upgrade** (verified against installed
+  1.108.319 at `storage/index_store.py:224-244`, `parser/languages.py:56,555,604,625`). One more
+  full re-parse of every indexed repo, and because the counter is ONE integer for the whole tree it
+  carries **every parser fix in this release**. All of them add symbols on UNCHANGED CONTENT, which
+  incremental never re-reads — so **a symbol-count JUMP after re-indexing is the fix, not a
+  regression**, and an un-re-indexed repo keeps the missing symbols forever:
+  - **Kotlin properties were not symbols at all** (#732). `property_declaration` sat in
+    `constant_patterns` and not in `symbol_node_types`, so `val`/`var` — a data class's whole
+    surface — yielded nothing. New kind **`property`** (see the `kind` enum below).
+  - **TypeScript/TSX `abstract class` was missing entirely** (#698), its methods orphaned. That fix
+    **shipped in 1.108.319 without a generation bump**, so it reached only files that had changed
+    since; gen 8 is what carries it to an existing index.
+  - **Java records, annotation types and compact constructors were absent** (#713) — and they are
+    `container_node_types` now, so members inside them have an owner instead of `parent: None`.
+  - **Java: every field is a symbol, not only `static final`** (#735), via a new `field_patterns`
+    spec channel. `int a, b, c` yields three. `java_field_is_constant` is the single predicate both
+    channels ask, so a constant is not emitted twice.
+  - **C# operators, conversions and indexers are indexed** (#714) — the destructive half of that
+    defect is under `check_delete_safe` in **Refactoring & safety** below.
 - **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
   (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
   `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
@@ -90,24 +109,43 @@ tools can answer structurally.
   character. Symbols and require edges read from a Racket repo indexed before that reader are not
   comparable to ones taken after.
 - `suggest_queries` surfaces top entry-point files and ready-to-run example queries on an unfamiliar repo.
-- `get_watch_status` — daemon coverage. **Do NOT read its `any_stale: false` as "the index is
-  fresh."** Verified against 1.108.288 at `tools/get_watch_status.py:73,90`: staleness comes from
-  `get_reindex_status`, which reads **in-process, in-memory** state. When the querying process
-  never tracked a reindex — the normal case, because the watcher runs in the systemd daemon, a
-  *different* PID — `has_any_reindex_state()` is False and every repo gets the hardcoded default
-  `{"index_stale": False}`. `any_stale` then reports False having measured nothing. Observed here
-  2026-08-21: all 18 repos `index_stale=false` **and** `watched_by_another_process=true`, including
-  a repo whose index was demonstrably behind its working tree. Treat `any_stale: false` as
-  `unknown`; use `_meta.verdict.channels.index` or `check_embedding_drift` for real freshness.
-  (Upstream has the correct tri-state already — `FreshnessProbe.repo_freshness` in
-  `retrieval/freshness.py:245` returns `fresh`/`stale`/`unknown`/`not_tracked`, and its docstring
-  names this exact Boolean-has-nowhere-to-put-"I-could-not-find-out" defect. `get_watch_status` is
-  the caller that still uses the Boolean it was written to replace.)
+- `get_watch_status` — daemon coverage. **The per-repo `index_stale` field is GONE as of
+  v1.108.317** (#565, verified against installed 1.108.317 at `tools/get_watch_status.py:78-182`).
+  What this file used to warn about is now fixed at the source rather than worked around here:
+  staleness came from `get_reindex_status`, in-process in-memory state that only the watcher
+  writes, so a querying process that never watched anything got the hardcoded
+  `{"index_stale": False}` for every repo and `any_stale` reported False having measured nothing.
+  Upstream measured 33 repos reporting `any_stale: False` whose truth was 1 stale, 2 unknown and
+  10 not_tracked.
+  - **Read `index_freshness` instead** — a real INDEX-vs-TREE comparison, and four-state:
+    `fresh` / `stale` / `unknown` / `not_tracked`. Anything other than `fresh` is not "fine";
+    `unknown` means freshness was never established, and the probe answers `unknown` on ANY
+    failure rather than inventing `fresh`.
+  - **The old Boolean is KEPT under `watcher_flagged_stale`**, which is what it always meant:
+    "has the watcher queued this for reindex in THIS process". Do not read it as freshness.
+    **Anything keyed on `index_stale` now reads a missing key** — which is falsy, i.e. the same
+    silent "fresh" this fix exists to remove. Rename it.
+  - `any_stale` is now trustworthy, joined by `any_freshness_unknown` and `freshness_checked`.
+    Gate on `any_stale is False` **and** `any_freshness_unknown is False`. `check_freshness` is a
+    Python-level kwarg only — the MCP tool takes no arguments and always measures (~39 ms/repo
+    cold, 4 ms warm, under the ~2.4 s the tool already spends on discovery).
+  - `_meta.verdict.channels.index` and `check_embedding_drift` remain the cross-checks.
 - `jcodemunch_guide` — returns the version-current CLAUDE.md policy snippet; prefer it over a static copy in any harness that auto-loads routing rules. **Its output is filtered** by `disabled_tools` and the active tier/profile (#495/#506, verified against 1.108.288), so it is a subset of the full policy — a tool missing from the guide is not a removed tool.
 - `index_dependency` — index an INSTALLED third-party dependency (the exact version in node_modules or the repo's .venv) as its own queryable repo; ground-truth a library's API instead of guessing. Prefer over context7 when you need the installed version's actual source, not published docs.
 
 **Orientation & cold-start**:
 - Use `plan_turn` as your opening move on an unfamiliar repo. It respects the turn budget and selects the right tool for you.
+  - **A session absence is scoped to the repository it was measured in** (#711, v1.108.319, verified
+    at `tools/session_journal.py:113,131`, `tools/plan_turn.py:160`, `tools/get_session_snapshot.py:10,81`).
+    `plan_turn`'s prior-negative-evidence check rebuilt an absence claim from `record_search` — a
+    query string and an integer, with no repo, no filters, no index generation — so **a miss in repo
+    A told the model a symbol did not exist while it was working in repo B, in the same response
+    that returned the implementation.** `SessionJournal.citable_absence(repo, query)` is now the one
+    authority: the entry must name THIS repo, carry a real producer verdict, and the current plan
+    must also have found nothing. `get_session_snapshot`'s "dead ends" heading had the same defect
+    at wider blast radius (it is what you read at every compact and resume) and now names the repo
+    on each line and drops `low_confidence_matches` — weak matches FOUND — which it used to publish
+    as dead ends. Expect FEWER prior-absence stop signals; the ones left are the citable ones.
 - **Session start on a familiar repo**: call `digest` first — change-oriented briefing (~200 tokens) covering what changed since last session, hotspots, and dead code.
 - **First call in any analysis session**: `get_repo_health` — one-call triage snapshot (symbol counts, dead code %, avg complexity, top hotspots, cycle count).
   - **`radar.composite` and `radar.grade` are now `null` whenever any axis could not be measured**
@@ -153,6 +191,26 @@ tools can answer structurally.
   tokenization folded case, underscores or punctuation is `normalized` (≥ 40.0), then `prefix`,
   `segment`, `none`. Filtering results on `identity_type == "exact"` silently drops real hits —
   accept the normalised tier too. (Case folding alone still counts as exact, deliberately.)
+- **`search_symbols(kind="field")` works now** (#571, v1.108.317) — it was refused by both gates,
+  so an empty result for a struct/class field search before this version was the gate, not the
+  corpus. The full enum as of 1.108.319: `function`, `class`, `method`, `constant`, `type`,
+  `template`, `import`, `field`, **`property`** — the last is new, and is where Kotlin `val`/`var`
+  now lands (#732). A Kotlin repo indexed before gen 8 has none of them; re-index first.
+- **An exact-name definition is no longer evicted from the page by same-named locals** (#699,
+  v1.108.319, verified at `tools/search_symbols.py:533,1518,1931`). The cut was a bounded heap on
+  BM25 alone, so a dozen same-named locals could fill the window and leave the real definition at
+  NO rank — zod's `partial` against its module-level `const partial` rows is the reported case. A
+  declaration rank now leads the sort key at **all three** cut sites (lexical heap, `semantic=True`,
+  and `fusion=True`), so the three exits agree. It promotes within the existing order rather than
+  re-ranking. Two response consequences: `_meta.exact_match` is a new block, and when the query
+  named something the page does not contain, `verdict.state` is downgraded `ok` → **`low_confidence`**
+  with a note that stops vouching for ranked guesses (`search_symbols.py:1277`). Deliberately not
+  `absent` — results were returned, so it cannot be cited as evidence the symbol is missing.
+- **Tied results now rank by symbol id, not index-walk order** (harness F-13, v1.108.317, verified
+  at `tools/search_symbols.py:861-867`). The tiebreak was the encounter counter — `os.walk` order,
+  i.e. directory order on NTFS and hash order on ext4 — so the same corpus returned *different*
+  tied symbols on Windows and on Linux (gin "context bind" has five candidates at exactly 10.202).
+  Ranking is now cross-platform reproducible; a top-K that shifted under this version is the fix.
 - **A zero-result scan is not proof of absence.** The server distinguishes `absent` (the scan
   covered the tree and found nothing) from `degraded` (stale, partial, truncated, or mid-rebuild —
   it could not have found it). Only `absent` licenses "this symbol does not exist"; on `degraded`,
@@ -174,9 +232,29 @@ tools can answer structurally.
   (`local_onnx` / `all-MiniLM-L6-v2`, dim 384, pinned 2026-05-25), `max_drift=0.0`, no alarm, so
   no switch has ever happened here. **That safety expires the moment `JCODEMUNCH_EMBED_MODEL`
   changes** — re-embed every repo if it does.
+- **A failed embedding batch now names its cause, in the BODY of both tools that swallowed it**
+  (CF-66, v1.108.318, verified against installed 1.108.318 at `embeddings/failures.py:71-77`,
+  `tools/embed_repo.py:514-516`, `tools/search_symbols.py:1511-1523`). A rejected key, a network
+  outage and a model the endpoint does not serve all used to reach the caller as
+  `symbols_skipped_error: N` at best and as nothing at worst.
+  - `embed_repo` gains `error_causes` (distinct `{type, message, batches}`, redacted and cut to
+    300 chars, at most 10 kept), `causes_omitted` when more were seen, and **`all_batches_failed`
+    — true means the call embedded nothing and still exited clean.**
+  - `search_symbols`' lazy semantic top-up gains `semantic_topup` with `symbols_unscored`,
+    `batches_failed` and the same `error_causes`. **Read its presence as "this hybrid answer is
+    lexical-only for part of the corpus"** — the ranking looks complete and is not. Deliberately
+    in the body, not `_meta`, because the shipped `meta_fields: []` default deletes `_meta`.
 
 **References & call graph**:
-- `find_references` — where is an identifier imported or re-exported. `find_importers` — which files import a given file. `check_references` — quick `is_referenced` bool for dead-code detection (import + content in one call).
+- **"Where is this name used" routes to `check_references`, not `find_references`** (CF-51/CF-63,
+  #658, verified against installed 1.108.318 at `cli/policy.py:51-52`, `cli/hooks/steering.py:125`
+  and the tool description at `server.py:2315`). The two answer different questions and this file
+  used to blur them, sending the usage question to the narrower tool: `find_references` is **who
+  imports or re-exports** this identifier; `check_references` is **every use** — import sites plus
+  every file whose content mentions it, in one call (`find_references` + `search_text`), capped at
+  `max_content_results` (default 20), and a match inside a comment or string still counts. Its
+  `is_referenced` bool is a by-product, not the reason to call it; several names at once via
+  `identifiers`. `find_importers` — which files import a given file.
 - `get_dependency_graph` — file-level import graph up to 3 hops (imports / importers / both). `get_dependency_cycles` — detect circular import chains before a refactor.
 - `get_call_hierarchy` — incoming callers and outgoing callees N levels deep. `get_impact_preview` — full transitive call-graph walk showing what breaks before deleting or renaming a symbol.
 - `get_endpoint_impact` — "what breaks if I change this HTTP endpoint?" — handler + importers + callers + rendered templates; resolves string-dispatch (Django/Express/Flask/Rails) and decorator (Flask/FastAPI/Spring) routes. Endpoint-scoped counterpart to `get_blast_radius`; pass `include_infra` to attach env/compose/K8s exposure.
@@ -187,6 +265,17 @@ tools can answer structurally.
 **Refactoring & safety**:
 - Before committing to a change, call `get_blast_radius` (transitive call-graph blast radius — what else breaks) AND `check_edit_safe` (regression risk + signature impact + complexity + test coverage + runtime traffic) — these are complementary, not alternatives. For PRs, `get_pr_risk_profile` produces a single composite score.
 - Before renaming a symbol: `check_rename_safe`. Before deleting: `check_delete_safe`. Before editing (regression risk + signature impact + complexity + test coverage + runtime traffic): `check_edit_safe`. For multi-file rename/move/extract: `plan_refactoring` generates edit-ready blocks.
+  - **`check_delete_safe` gained the verdict `name_not_searchable`** (#714, v1.108.319, verified at
+    `tools/check_delete_safe.py:23,407`, `tools/_name_reachability.py:1`, `tools/_stop_rule.py:68`).
+    A C# operator is invoked as `a + b`, an indexer as `a[0]`, a conversion as `(string)a` — the
+    declaration's name (`operator +`, `this[]`) appears at NO call site by construction, so "no
+    references found" was never evidence about it. Measured on a corpus where every one was used:
+    the ordinary method in the same file returned `internal_uses_blocking` and `operator +` returned
+    **`safe_to_delete` at confidence 1.0, "No callers or refs found."** Like `corpus_inadequate`
+    (#566), it replaces an ABSENCE verdict only, never a blocking one — a found importer is positive
+    evidence and cannot be unfound. It is bounded, not terminal: reading the call sites or ingesting
+    runtime evidence can still move it. **Anything switching on `safe_to_delete` must handle both
+    new values, or it reads a refusal as a green light.**
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
@@ -207,11 +296,56 @@ tools can answer structurally.
   establish", never "fine". *On this host `meta_fields` is `null` (`~/.code-index/config.jsonc:38`),
   so `_meta` reaches us; on a default install (`meta_fields: []`) `_meta.git_history` is stripped and
   `churn_measurable` is the only surviving disclosure.*
+- **Churn read ZERO for every index rooted below the git top level, and zero reads as a cold file**
+  (#685, v1.108.319, verified at `tools/get_hotspots.py:54`, `tools/winnow_symbols.py:74`,
+  `tools/get_changed_symbols.py:47,174`, `tools/get_delivery_metrics.py:152,156`). `git log
+  --name-only` prints paths from the git TOP LEVEL; the index holds them from `source_root`, so on
+  an `identity_mode="local"` index of a subdirectory **not one path ever matched** — and the failure
+  mode is a plausible number, not an error. Now `--relative` throughout. Two consequences: a
+  hotspot/churn ranking taken on a subdirectory-rooted index before this version is wrong and should
+  be re-run, and `get_delivery_metrics` additionally passes `-- .` because `--relative` alone still
+  LISTS an out-of-scope commit with an empty file set — an empty set can never be reworked, so those
+  commits counted as **durable**, inflating the delivery numerator.
 - `get_delivery_metrics` — durable-change delivery over a window: commits_durable (landed and stuck) vs churn-back; the honest numerator for cost-per-outcome, not raw activity. Local-indexed repos only; trailing signal (recent commits flagged provisional).
 - `get_symbol_complexity` — cyclomatic complexity, nesting depth, param count for a single symbol.
 - `find_dead_code` — files/symbols with zero importers and no entry-point role (confidence-scored; prefer `get_dead_code_v2` for multi-signal). **Render edges now count as reachability** (#461, always-on, verified against 1.108.288 at `tools/find_dead_code.py:256`): a template reached only by `render(request, "page.html")` is no longer reported as `zero_importers` at confidence 1.0. The result set is smaller and more correct — a shrink here is the fix, not a regression. Deliberately not an extension exemption: a template nothing renders is still dead and still reported.
+  - **⚠⚠ An EMPTY `find_dead_code` result is now often a refusal, not a clean bill of health**
+    (#566/#569, v1.108.317, verified against installed 1.108.317 at `tools/_corpus_adequacy.py:52,80-92,174-190`
+    and `tools/find_dead_code.py:383-433,508-538`). `confidence: 1.0` is documented as PROVABLY
+    UNREACHABLE — a claim about the TREE that was being computed from the INDEX with nothing in
+    between, so a stale index or a withheld file published live code as proven dead. `assess_corpus`
+    now reads the disclosures the index already carries and **clamps confidence to
+    `UNPROVEN_CEILING = 0.6`** when the corpus cannot back a proof. **0.6 is below the tool's own
+    `min_confidence` default of 0.8, so the default call returns an EMPTY list** — deliberately, so
+    the answer is nothing rather than an unprovable 1.0.
+    **Gate on `signal_warning`** (same spelling `get_dead_code_v2` uses, so one field covers both)
+    and read the new `corpus_adequacy` block: `adequate`, `index_freshness`, `confidence_ceiling`,
+    plus `coverage_complete` / `withheld` / `blockers` when they apply. Blockers are `stale_index`,
+    `index_freshness_unknown`, `withheld_files`, `corpus_incomplete`, `runtime_discovery_unresolved`.
+    Clamped entries carry BOTH numbers — `uncapped_confidence` and `confidence_capped_by` — so the
+    graph's claim and the corpus's refusal stay separable. Fix by re-indexing (and raising
+    `max_file_size` if files were withheld), not by lowering `min_confidence`.
+    ⚠ `no_source_root` and `not_tracked` do NOT cap: an index built by `index_repo` from a pinned
+    remote snapshot has no local tree by construction and is not thereby suspect.
+  - **Runtime package enumeration counts as reachability** (#569): a package that walks its own
+    `__path__` with `pkgutil.iter_modules` then `importlib.import_module` builds an edge no static
+    graph can see — twelve live encoders were published at confidence 1.0, and which ones escaped
+    depended only on whether a test happened to import them directly. New response keys
+    `runtime_discovered_count`, `runtime_discovered_packages`, `runtime_discovery_unresolved`; the
+    unresolved half is not silent, it becomes a `corpus_adequacy` blocker.
 - `get_file_risk` — per-symbol composite risk (0–100) for one file: complexity, exposure, churn, test-gap axes.
 - Architecture deep-dives: `get_tectonic_map` (module topology + misplaced files), `get_signal_chains` (HTTP/CLI/event → call graph), `render_diagram` (any graph tool output → Mermaid), `get_project_intel` (Dockerfiles, CI, manifests cross-linked to code), `get_layer_violations` (layer boundary checks), `get_architecture_metrics` (Gini concentration over symbols/size/fan-in/fan-out, Lakos depth, DSM modularity — answers "is coupling piling up in a few files?", which a ranked list of peaks cannot), `get_decorator_census` (normalized repo-wide `@route`/`@fixture`/`[Serializable]` histogram + sites; pairs with `get_signal_chains`/`get_endpoint_impact`).
+  - **`get_tectonic_map` partitions by Louvain now, and its third signal actually runs** (#667/#668,
+    v1.108.319, verified at `tools/get_tectonic_map.py:5,45,488-492,533`). Two changes, both
+    caller-visible. **Plate membership and `plate_count` are not comparable to a map taken before
+    this version** — label propagation gave way to Louvain modularity clustering, and
+    `_meta.methodology` reads `tectonic_louvain`. Separately the temporal signal (git co-churn,
+    weight 0.30 of three) is gated on `churn_is_measurable` BEFORE it is trusted: each signal is
+    normalised against its own maximum, so a truncated history would not weaken co-churn, it would
+    **rescale** it — one co-change in three commits scoring 1.0 exactly like four hundred in full
+    history. When the window is not covered the signal is withheld and NAMED, in a new body-level
+    **`signals_withheld`** key (present only when non-empty) beside the existing `signals_used`.
+    Deliberately in the body, not `_meta`, which a default install strips.
   - **`get_architecture_metrics`: `concentration.gini.bytes_per_file` can now be `null`, and its basis changed** (v1.108.291, verified against installed 1.108.291 at `tools/get_architecture_metrics.py:160,176` and `tools/_utils.py:396`). It used to sum `byte_length` per file, which double-counts nesting — a class's span already covers its methods, so the number tracked how class-heavy a file was as much as how big it was (33.4% overall on the source repo, up to 2.28x on one file). It now merges each file's symbol spans and counts a byte once. Two consequences: a `bytes_per_file` Gini recorded before the upgrade is **not comparable** to one taken after, and the field is `null` — never `0.0` — when no file has trustworthy byte offsets, because `0.0` reads as "perfectly even" rather than "could not measure". Arithmetic on it without a `None` check now raises. New sibling keys `bytes_files_measured` / `bytes_unmeasurable_files` disclose the smaller file set the byte axis covers; the other three Gini axes still span every file.
 - Quality scans: `search_ast` for anti-pattern/security sweeps; `find_similar_symbols` for consolidation candidates; `get_dead_code_v2` for multi-signal dead code; `diff_health_radar` to compare health before/after a PR.
 - For security/quality gate before merge: `search_ast(category="security")` + `get_dead_code_v2` + `get_untested_symbols` together form the pre-merge checklist.
@@ -379,6 +513,34 @@ tools can answer structurally.
   corpus, so newly added directories are not picked up unless you pass `paths=`. A refresh that
   silently shrinks the corpus looks identical to a successful one; check `corpus_selection_changed`
   and the `deleted` count in the result before trusting it.
+- **⚠⚠ `truncated: false` is NOT "everything was indexed" — read `coverage_complete`** (jdoc#130,
+  v1.138.0, verified against installed 1.143.0 at `tools/index_local.py:1211-1294,2600-2607`).
+  `truncated` answers only the `max_files` cap, so a run that dropped a 1.25 MB document over the
+  per-file size cap answered `truncated: false` — true, and the opposite of what the caller needed
+  to know. The counts were already computed and already PERSISTED into `coverage.skip_counts`; the
+  response carried none of them, which upstream names as the same defect as not computing them.
+  Now **every** `index_local` payload — the nothing-changed one included, deliberately, because
+  that is the run whose caller is least likely to look anywhere else — carries `coverage_complete`,
+  plus `skip_counts`, `skipped_paths`, `skipped_paths_truncated`, and an `oversize_note` naming the
+  resolved cap and `JDOCMUNCH_MAX_FILE_SIZE`. ⚠ `coverage_complete` is keyed on the ACTIONABLE
+  reasons ONLY — `oversize`, `stat_error`, `read_error`, `office_extra_not_installed`. `gitignored`
+  and `unsupported_extension` fire on every ordinary repo (900 and 16 on the corpus this was found
+  against) and keying on them would pin it False forever, which is how a signal that always fires
+  hides the case it exists for. Paths are sampled at 20 per reason: the COUNT is exact, the list is
+  not, and `skipped_paths_truncated` names which reasons were cut.
+- **`index_local` returns a `changes` list on every response** (v1.142.0, verified at
+  `tools/index_local.py:1733-1746`): up to `CHANGES_CAP` (50) entries of
+  `{doc_path, status: "new"|"changed"|"deleted", mtime}` with `changes_total` and
+  `changes_truncated` beside it. Sorted mtime-descending, deleted entries (mtime `None`) last,
+  `doc_path` ascending breaking ties. **The cap is a head cut, so deleted entries drop FIRST — the
+  `deleted` count is the authority, never the list.** A full index lists every parsed file as
+  `new`; an incremental pass that found nothing returns `[]`. This is the direct read for the
+  silently-shrinking-corpus case the bullet above warns about.
+- **`use_embeddings` accepts `"auto"`** (verified at `embeddings/provider.py:1188-1206`):
+  `should_embed` resolves `"auto"` to True only when a provider is configured, and recognises
+  `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off`, `y`/`n`, `t`/`f` case-insensitively after
+  trimming. An unknown string still falls through to `bool()`, so a previously-truthy string keeps
+  its old behaviour.
 - **Dot-directory skipping is narrower than "all of them"** (v1.126.1, verified against installed
   1.133.0 at `tools/_constants.py:27-52`). Two corrections to what this file used to say:
   - `.github` is **allowlisted** — it is dotted and legitimately full of documentation, and
@@ -404,6 +566,25 @@ tools can answer structurally.
   reads as "this corpus legitimately has none" — the jdoc#107/#109 data-loss shape. So a failed
   embed leaves stale-but-real vectors in place: read a weak semantic channel as `degraded`, not as
   evidence the corpus is unembedded.
+- **FastEmbed is a provider now, and merely INSTALLING it changes the default** (#127, v1.138.0,
+  verified against installed 1.143.0 at `embeddings/provider.py:410,440,694,784-808`).
+  `JDOCMUNCH_EMBEDDING_PROVIDER` accepts `fastembed` / `fast-embed` / `onnx`, and with nothing
+  configured an importable `fastembed` is auto-selected — so `pip install "jdocmunch-mcp[fastembed]"`
+  silently moves an unconfigured host onto it. **The sidecar identity is keyed per MODEL, not per
+  provider** (`_provider_identity`), and exactly one model is declared equivalent across the two
+  runtimes: `sentence-transformers/all-MiniLM-L6-v2`, in `_FASTEMBED_ST_EQUIVALENT_MODELS`
+  (`provider.py:203`). A corpus embedded by sentence-transformers under that model is reused by
+  fastembed with no re-embed. **Any other `JDOCMUNCH_FASTEMBED_MODEL` is written under the
+  `fastembed` provider name and forces a full re-embed** — deliberately the fail-closed side,
+  because the cache treats an unknown dim as a WILDCARD, so a wrongly-shared sidecar would MATCH
+  and merge two derivations into one ranking silently (jdoc#111's shape: cheap and invisible,
+  versus a re-embed that is expensive and observable). A model earns equivalence by being MEASURED
+  with `check_embedding_drift`, not by looking alike.
+- **`doc_list_repos` rows carry `has_embeddings`** (v1.143.0, verified at `tools/list_repos.py:36-44`),
+  with `_meta.embeddings_tip` present only when at least one index lacks them. Read
+  `has_embeddings: false` as "this repo's searches match words only" — it is the one field that
+  tells an unembedded corpus apart from the stale-but-real vectors the bullet above describes,
+  which you otherwise cannot distinguish from a weak semantic channel.
 - **v1.126.0's confidence change, ground-truthed against installed 1.133.0** (`retrieval/confidence.py:1-45`,
   `retrieval/verdict.py:37,289`). The scale was **always 0–1** — it was not renumbered. The defect
   was that `strength` read a raw score against a hardcoded BM25 curve regardless of scorer, so the
@@ -414,6 +595,21 @@ tools can answer structurally.
   `build_verdict` refuses to back an absence claim. Still prefer comparing hits against each other;
   0.4 is the one absolute worth remembering. (This bullet previously said the old→new scale was
   unverified and that any old threshold was wrong. Both halves were too strong; corrected 2026-08-21.)
+- **Stage-A candidate admission is rarest-term-first, and deterministic across processes**
+  (v1.140.0, verified against installed 1.143.0 at `retrieval/prune.py:107-148`). The candidate set
+  is capped at `MAX_CANDIDATES`; query terms are now admitted in ascending posting-list size, and
+  the first term that overflows the budget stops the loop — every later term is at least as common,
+  so nothing after it could fit either. The remaining room is filled with `heapq.nsmallest` rather
+  than set-iteration order: **before this, the same query could return different sections in two
+  processes**, because set order follows the per-process string hash seed. A top-K that moved under
+  this version is the fix, not a regression; ranking taken before it is not reproducible.
+- **Schema-token counts carry a time basis** — `SCHEMA_TOKENS_BASIS = "one_time_at_full_rate_then_cache_read"`
+  (v1.139.0, verified at `schema_basis.py:31-40`), the same contract and wording as jcodemunch. The
+  count is PAYLOAD SIZE, not a per-request saving; read per-request it overstates cost impact by
+  roughly an order of magnitude (86% of baseline input measured cached). ⚠ Do NOT port jcm's
+  mid-session tier-switch refusal here: `JDOCMUNCH_TOOL_PROFILE` is read at startup and there is no
+  runtime switch, so there is no cache invalidation to price, and upstream ratchets that absence
+  deliberately (`schema_basis.py:21-27`).
 - For third-party library docs (FastAPI, React, Django, etc.), **context7**
   is authoritative and version-pinned. Call it whenever the question
   references a named library.
@@ -467,6 +663,20 @@ tools can answer structurally.
   - `get_runtime_coverage` — coverage histogram: symbols with vs without runtime evidence
   - `get_redaction_log` — verify PII redaction chokepoint is firing
 - Skip these when no traces have been ingested — tools return empty results and say so.
+- **`import_runtime_signal` gained a fourth source, `diagnostics`** (#666, v1.108.319, verified at
+  `tools/import_runtime_signal.py:41-56,79-84,142`, `tools/_diagnostics_consume.py`). It reads a
+  type checker's or linter's OWN output file — `mypy` / `pyright` / `tsc` / `ruff` / `generic`
+  JSONL — and maps each finding to the symbol it names. New companion argument **`format`**
+  (`source="diagnostics"` only); default auto-detects from file CONTENT, so pass it explicitly for
+  an EMPTY file, where a clean run is a valid snapshot only if the tool is named. An unrecognised
+  shape is refused rather than guessed at. Unlike the trace tables this one is a **SNAPSHOT**,
+  replaced per tool, not appended.
+  - Four tools grew a `diagnostics` block off it: `check_edit_safe`, `get_changed_symbols`,
+    `get_pr_risk_profile`, `get_symbol_provenance`. **Read an ABSENT block as "no checker ran",
+    never as clean** — that is the contract (`_diagnostics_consume.py:9`): no data means the key is
+    omitted entirely, and `errors: 0` appears only when the checker ran and cleared that symbol.
+    `diagnostics_current` is tri-state, comparing the snapshot's stamped HEAD against the live one.
+    It feeds no score — `get_pr_risk_profile`'s six weights are unchanged, so no published grade moves.
 
 ### 6. Verification step
 - Before finalizing code changes, run a verification pass using

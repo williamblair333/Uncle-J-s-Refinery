@@ -29,6 +29,38 @@ description, re-run the trigger test (16 requests, 3 reps) in the design record.
 when a shop could verify the result — a policy choice, not a measurement. Bill can loosen the first
 route row if he disagrees.
 
+## 2026-09-20 — 7 draft briefs written, 4 gates pass, 3 real defects found
+
+**Nothing was committed outside this repo.** All 7 `PRODUCT.md` files and 12 `.no-product-gate`
+markers are untracked in their own repos, for Bill to review and commit (or delete). Every brief
+carries a `Status: draft` line: core jobs were inferred from code and READMEs, not from him.
+
+**Gate results, run for real:**
+
+| Project | Result |
+|---|---|
+| `qr-forge` | pass 13.6s |
+| `wine` | pass 7.1s (proves the dry-run promise: plan printed, nothing installed) |
+| `magicians-almanac` | pass 7.7s |
+| `magicians-almanac-web` | pass 31.7s |
+| `paved` | **fail** — `pip install .` broken on a clean machine (see CHANGELOG) |
+| `campaign-forge`, `CampaignGenerator` | no `verify:` block, deliberately — both need real credentials and have no stub mode. The gate says `no verify: block`, which is the honest answer |
+
+**Re-run any of them:** `python3 features/product-quality/first_run_gate.py /opt/proj/<name>`
+
+**A false green was found in the gate author's own brief** — `run: ... > file; echo hours
+computed` with `expect: stdout_contains: "hours computed"` passed while the script printed usage
+text. The gate now refuses a `run:` that echoes a string the expectations assert on. **When
+writing a verify block, assert on what the program prints, and prefer `| tee FILE` over
+`> FILE; echo ok`** — the latter also swallows the program's exit status.
+
+**Three defects to fix in their own repos** (not fixed here): `paved` pyproject license form,
+`magicians-almanac` exiting 0 after a failed runtime pip install, `qr-forge` silently ignoring
+unknown query parameters. Each is written up in the relevant `PRODUCT.md`.
+
+**Next:** review the 7 drafts, confirm or correct the core jobs, commit them in their repos;
+then fix `paved` and re-run its gate.
+
 ## 2026-09-18 — product-quality system installed; 15 repos have no brief yet
 
 **Installed and live on this host.** `bash features/product-quality/install.sh` linked four skills
@@ -71,7 +103,13 @@ bash features/product-quality/hooks/pr-gate-guard.sh   # driven by the probes in
 **Next, in order:** (1) briefs for the 4 blocking repos, (2) `retrofit.sh --run` once they have
 briefs, (3) close this repo's full-stack verification gap.
 
+- **jdocmunch-mcp breaking change**: `index_local`'s `truncated` field answers only the `max_files` cap and read `false` while an oversize document was dropped (jdoc#130, v1.138.0), so callers must now gate corpus completeness on the new `coverage_complete` / `skip_counts` / `skipped_paths` / `oversize_note` block instead, and can read the new `changes` / `changes_total` / `changes_truncated` list (v1.142.0) to see exactly which files moved — plus `doc_list_repos` rows now carry `has_embeddings` (v1.143.0) and an importable `fastembed` is auto-selected as the embedding provider, re-embedding the whole corpus unless the model is `sentence-transformers/all-MiniLM-L6-v2` (#127).
+
 ## 2026-09-03 (last) — `jscrub check-vendor` no longer needs the review queue; first lint run
+
+- **jcodemunch-mcp breaking change**: a failed embedding batch now discloses its cause in the response body (CF-66, #640) — `embed_repo` adds `error_causes` / `causes_omitted` / `all_batches_failed`, and `search_symbols` adds `semantic_topup` (`symbols_unscored`, `batches_failed`, `error_causes`), so callers must stop reading a clean `embed_repo` exit as "embedded" and must treat a `semantic_topup` block as "this hybrid ranking was lexical-only for part of the corpus"; separately the guidance for "where is this name used" moved from `find_references` to `check_references` (CF-63, #658).
+- **jcodemunch-mcp breaking change**: `PARSER_GENERATION` went 7→8 in 1.108.319, forcing a full re-parse that adds symbols on unchanged content (Kotlin properties under the new `kind="property"`, TS/TSX abstract classes, Java records/annotation types/every field, C# operators/indexers) — callers must re-index before trusting any symbol count, absence claim or `kind` filter, and must additionally handle `check_delete_safe`'s new `name_not_searchable` verdict (#714), `search_symbols`' new `_meta.exact_match` block and `ok`→`low_confidence` verdict downgrade (#699), `get_tectonic_map`'s Louvain plates and new `signals_withheld` key (#667/#668), and corrected churn on subdirectory-rooted indexes (#685) that previously read a silent zero.
+- **jcodemunch-mcp breaking change**: `get_watch_status` dropped the per-repo `index_stale` field in v1.108.317 (#565) — callers must read the four-state `index_freshness` (`fresh`/`stale`/`unknown`/`not_tracked`) plus `any_freshness_unknown`, since the old Boolean survives only as `watcher_flagged_stale` and a lookup of the removed key reads falsy, i.e. silently "fresh"; `find_dead_code` now caps confidence at 0.6 when the corpus cannot back a proof (#566/#569), so a default `min_confidence=0.8` call returns an empty list that must be gated on the new `signal_warning` / `corpus_adequacy` fields rather than read as "no dead code".
 
 **`jscrub check-vendor` now works with no arguments and no checkout.** It compares the vendored
 engine against `UPSTREAM_BODY_SHA256` pinned in `cli.py`. This closes a defect from 09-01: the
