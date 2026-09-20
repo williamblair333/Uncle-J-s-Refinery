@@ -11,6 +11,23 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **The Refinery's own gate covers a subsystem, not `install.sh`** (opened 2026-09-20).
+  `PRODUCT.md`'s `verify:` block exercises the product-quality tooling, because the real install
+  path registers MCP servers into a Claude Code installation that does not exist inside a
+  container. Closing it needs a stub Claude config plus a cached wheel set. Until then
+  `healthcheck.sh` on the host is the only evidence for the full stack, and it is not
+  clean-machine evidence.
+- **`CampaignGenerator` has no reachable remote** (opened 2026-09-20). `git ls-remote` returns
+  "Repository not found", so its draft brief could not be landed as a PR and sits untracked in
+  the working tree. It also needs its Anthropic API key variable documented and an offline mode
+  before it can be gated at all — both recorded in the brief.
+- **`campaign-forge` is dormant, not classified** (opened 2026-09-20). Kept as a product rather
+  than marked not-software, because the stack is real and a marker would hide it from every
+  future audit. If the code is genuinely finished with, replace the brief with `.no-product-gate`.
+- **11 non-product repos carry only a local opt-out marker** (opened 2026-09-20). The
+  `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
+  in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
+  deliberately stay uncommitted to avoid diverging from upstream.
 - **`jscrub` is not wired into anything** (opened 2026-09-03). No hook, no cron, no CI job; nothing
   imports it. Two open decisions, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
   gate — `--in-place` and `--follow-symlinks` are the flags to think hardest about before automating

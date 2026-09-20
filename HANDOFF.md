@@ -1,6 +1,47 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-09-20 (last) — `gttp` skill added and linked; vault half committed
+## 2026-09-20 (last) — product-quality system shipped; 6 briefs merged; 4 defects fixed
+
+**The system is installed and enforcing.** `bash features/product-quality/install.sh` links four
+skills (`product-brief`, `first-run-gate`, `ux-heuristics`, `product-focus-review`) and registers
+two hooks. Verified idempotent; no pre-existing hooks were lost.
+
+**Six briefs merged into their own repos**, each keeping `Status: draft` — core jobs were inferred
+from code and READMEs, **not confirmed by Bill**. Reviewing them is the first thing worth doing.
+
+| Repo | Gate | Note |
+|---|---|---|
+| `paved` | pass | was failing: `pip install .` broken on any clean machine |
+| `qr-forge` | pass | unknown query params now rejected |
+| `magicians-almanac` | pass | degraded output now exits 3, not 0 |
+| `magicians-almanac-web` | pass | build check; README no longer boilerplate |
+| `wine` | pass | proves the dry-run promise: plan printed, nothing installed |
+| `campaign-forge` | no `verify:` | deliberate — needs real credentials, no stub mode |
+
+Re-run any: `python3 features/product-quality/first_run_gate.py /opt/proj/<name>`
+
+**The most important thing to know:** a gate result is only as honest as its `verify:` block. A
+first attempt here **passed while the program printed usage text**, because the block ended
+`> file; echo hours computed` and asserted on that echo. The gate now refuses a `run:` that echoes
+a string the expectations assert on — but when writing one, **assert on what the program prints,
+and prefer `| tee FILE` over `> FILE; echo ok`**, which also swallows the exit status.
+
+**Untracked, waiting on Bill:** 11 `.no-product-gate` markers in non-product repos (commit where
+the repo is his; the 4 `jaredrhod` forks deliberately stay uncommitted), and
+`/opt/proj/CampaignGenerator/PRODUCT.md`, which has nowhere to go — `git ls-remote` reports
+"Repository not found".
+
+**Two repo-state oddities, neither caused this session.** `magicians-almanac-web`'s local clone had
+an orphan history (its scaffold commits were squashed upstream); content was verified identical
+before resetting to `origin/main`. And `.claude/settings.json` picked up hook reordering from an
+unrelated post-merge run in which a `Stop` hook lost its `[ -d /opt/proj/... ] || exit 0` guard —
+discarded, not committed. **If that reordering reappears, the installer that writes it is dropping
+the guard**, which is the committed-absolute-path trap.
+
+**Open items are in ROADMAP.md**, including this repo's own verification gap: its gate covers the
+product-quality subsystem, not `install.sh`. Do not cite the green gate as full-stack proof.
+
+## 2026-09-20 (earlier) — `gttp` skill added and linked; vault half committed
 
 **What landed.** `global-skills/gttp/` (SKILL.md + `references/mechanism-library.md`), plus the
 design record and eval scenarios under `docs/superpowers/specs/2026-09-20-gttp-skill-*`. It

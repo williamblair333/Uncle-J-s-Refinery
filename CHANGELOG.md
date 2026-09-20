@@ -56,6 +56,47 @@ Full record: `docs/superpowers/specs/2026-09-20-gttp-skill-design.md`. Scenarios
 
 ---
 
+## 2026-09-20 (later) — Six briefs merged, and every defect the gate found is fixed
+
+### Four defects fixed in their own repos, each verified by a re-run
+
+| Repo | Fix | Gate |
+|---|---|---|
+| `paved` | `license = "AGPL-3.0-only"` (PEP 639 string form) and `setuptools>=77` — the open `>=68` bound let a fresh environment resolve a setuptools that refuses the table form | FAIL → **PASS** |
+| `magicians-almanac` | Degraded output exits 3 instead of 0, and names the pip command; ordinary runs still exit 0 | **PASS** |
+| `magicians-almanac` | Stray `PY` heredoc terminator removed from the last line — `import sidereal_hours` raised `NameError` | verified by import |
+| `qr-forge` | Unknown query parameters return 400 naming the valid ones; `?format=svg` used to return a PNG with 200 OK | **PASS** |
+
+### Two documentation gaps closed, removing their drift exceptions
+
+`qr-forge` gained a "run without Docker" section — the image only runs `uvicorn`, so the host path
+is the same two commands. `magicians-almanac-web` lost its unedited `create-next-app` README for
+one that states the API dependency **before** the run commands. Both briefs dropped their
+`install_note:` as a result: the gate now runs documented steps in both.
+
+### The exit-0 defect, in full
+
+`sidereal_hours.py` wrapped both the absent-helper path and the failed-install path in one
+`except: pass`. A failed `pip install` therefore fell through to a *rough fallback* for
+sunrise/sunset, printed `NOTE:`, and returned 0 — so a cron job, a wrapper, or the web client
+could not distinguish wrong timings from right ones. Timing computed from a fallback is the wrong
+timing; it now exits 3.
+
+### Six PRs merged
+
+`paved#5`, `qr-forge#1`, `magicians-almanac#11`, `magicians-almanac-web#2`, `wine#6`,
+`campaign-forge#47`. Every merged brief keeps its `Status: draft` line — the core jobs were
+inferred from code and READMEs, and still want Bill's confirmation.
+
+### Two repo-state problems found while syncing, neither caused here
+
+`magicians-almanac-web`'s local clone had an **orphan history**: its two scaffold commits were
+landed upstream as a squash (`#1`), so local `main` shared no ancestor with the remote. Content was
+byte-identical to the remote's pre-brief commit, verified before resetting to `origin/main`.
+Separately, `.claude/settings.json` had uncommitted hook reordering from an unrelated post-merge
+run, in which a `Stop` hook lost its `[ -d /opt/proj/... ] || exit 0` guard — the committed
+cross-platform trap. Discarded rather than committed.
+
 ## 2026-09-20 — The gate caught a false green in its own author's work, and three real defects
 
 ### Briefs written for 7 projects; 12 repos excluded as not-software
