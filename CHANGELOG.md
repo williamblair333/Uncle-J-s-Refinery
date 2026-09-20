@@ -2,6 +2,50 @@
 
 ---
 
+## 2026-09-20 — The gate caught a false green in its own author's work, and three real defects
+
+### Briefs written for 7 projects; 12 repos excluded as not-software
+
+Nineteen repos were inspected before anything was written, because a brief invented for a
+manuscript folder is worse than no brief. Seven are products and got a draft `PRODUCT.md`
+(`paved`, `campaign-forge`, `CampaignGenerator`, `magicians-almanac`, `magicians-almanac-web`,
+`qr-forge`, `wine`). Twelve got `.no-product-gate` with the reason in the file: the Obsidian
+vault, four forks of someone else's repos, a ledger data volume, manuscripts, research corpora,
+a rulebook, and a frozen snapshot. Every brief is marked **draft** — the core jobs were inferred
+from code and READMEs, not from the owner.
+
+### `run:` may no longer echo its own proof
+
+The first `magicians-almanac` gate run **passed while the program printed usage text**. The
+verify block ended `> file; echo hours computed` and asserted on that echo, so the test proved
+its own `echo` had run. This is precisely the false-green the gate exists to catch, one level up,
+and it was in the gate author's own brief.
+
+`validate()` now refuses a `run:` that echoes a string the `expect:` block asserts on. The rule
+scans `echo`/`printf` arguments only — a first cut matched anywhere in the command and rejected
+`stdout_contains: "7zip"` for a recipe named `7zip`, which is an argument, not a claim.
+
+### Three defects found in real projects, none of them planted
+
+| Project | Finding |
+|---|---|
+| `paved` | `pip install .` fails on any clean machine: `pyproject.toml:11` uses `license = { text = ... }`, which current setuptools (PEP 639) rejects. `requires = ["setuptools>=68"]` is unbounded, so the Docker image passes only because its layer predates the change |
+| `magicians-almanac` | `sidereal_hours.py` pip-installs at runtime and **exits 0 when that fails** — observed printing `externally-managed-environment` and returning success |
+| `qr-forge` | An unknown query parameter is silently ignored: `?fmt=bogus` correctly 400s, but `?format=svg` returns a PNG with 200 OK |
+
+### `install_note:` — declared, recorded exceptions to docs-drift
+
+A `docker compose` project can never use its documented steps inside the gate, because Docker
+cannot nest. Rather than let drift fail forever (and teach everyone to ignore it), a brief may
+declare `install_note:` explaining why it runs an equivalent path. Drift then becomes a warning
+carrying that reason in every report. Silence is still a failure.
+
+### A README is a README in any casing
+
+`paved` ships `Readme.md`. Both the gate and the sweep matched only `README.md`/`readme.md`, so a
+documented project was filed under "a stranger has nothing to start from". Both now match any
+casing.
+
 ## 2026-09-18 — Product quality: a project now has to prove it works on a machine that is not this one
 
 ### The gap was enforcement, not knowledge

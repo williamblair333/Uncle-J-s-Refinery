@@ -57,7 +57,12 @@ while IFS= read -r gitdir; do
     continue
   fi
 
-  has_readme=0; [[ -f "$repo/README.md" || -f "$repo/readme.md" ]] && has_readme=1
+  # Any casing counts — matching only README.md filed a documented project
+  # (paved/Readme.md) under "a stranger has nothing to start from".
+  has_readme=0
+  while IFS= read -r candidate; do
+    [[ -n "$candidate" ]] && { has_readme=1; break; }
+  done < <(find "$repo" -maxdepth 1 -type f -iname 'readme*' 2>/dev/null)
 
   if [[ ! -f "$repo/PRODUCT.md" ]]; then
     if [[ "$has_readme" = "0" ]]; then

@@ -77,12 +77,33 @@ def validate(verify: dict) -> tuple[list[str], str, list[dict], int | None]:
             "verify.expect needs at least one observable proof (file / stdout_contains). "
             "exit_code alone cannot distinguish success from a handled error that exits 0"
         )
+
+    # The proof must come from the program, not from the test. `run: cmd; echo done`
+    # with `expect: stdout_contains: done` passes while the program fails — the exact
+    # false green this gate exists to catch, one level up.
+    echoed = " ".join(re.findall(r"\b(?:echo|printf)\b([^;|&]*)", core))
+    for item in normalized:
+        if item["kind"] in {"stdout_contains", "stderr_contains"} and str(item["value"]) in echoed:
+            raise GateError(
+                f"verify.run echoes the expected string {item['value']!r} itself — "
+                "that expectation would prove the echo ran, not the project. "
+                "Assert on output the program produces."
+            )
     return install, core, normalized, verify.get("time_target_seconds")
+
+
+def find_readme(project: Path) -> Path | None:
+    """Any casing counts. `Readme.md` is a README to a human, so it is one here —
+    matching only the shouty spelling filed a real project as undocumented."""
+    for entry in sorted(project.iterdir()) if project.is_dir() else []:
+        if entry.is_file() and entry.name.lower() in {"readme.md", "readme", "readme.rst", "readme.txt"}:
+            return entry
+    return None
 
 
 def docs_drift(project: Path, install: list[str]) -> list[str]:
     """Install steps must appear in the README a stranger would actually read."""
-    readme = next((project / n for n in ("README.md", "readme.md") if (project / n).exists()), None)
+    readme = find_readme(project)
     if readme is None:
         return []
     text = readme.read_text(encoding="utf-8", errors="replace")
@@ -174,11 +195,24 @@ def gate(project: Path, keep: bool = False) -> dict:
         "state": STATE_FAIL,
     }
 
+    # Drift is a failure unless the brief declares WHY it runs a different path —
+    # e.g. the documented path is `docker compose`, which cannot nest inside the
+    # gate's own container. The reason is required and is printed in the report,
+    # so an exception is disclosed rather than silent.
+    install_note = verify.get("install_note")
     drift = docs_drift(project, install)
     for step in drift:
-        report["failures"].append(
-            {"kind": "docs_drift", "detail": f"install step is not in the README: {step}"}
-        )
+        if install_note:
+            report["warnings"].append(
+                {
+                    "kind": "docs_drift_declared",
+                    "detail": f"not the documented step ({step}) — declared reason: {install_note}",
+                }
+            )
+        else:
+            report["failures"].append(
+                {"kind": "docs_drift", "detail": f"install step is not in the README: {step}"}
+            )
 
     args = ["docker", "run", "-d", "--rm"]
     if network == "none":

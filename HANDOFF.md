@@ -1,5 +1,37 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-09-20 (last) — 7 draft briefs written, 4 gates pass, 3 real defects found
+
+**Nothing was committed outside this repo.** All 7 `PRODUCT.md` files and 12 `.no-product-gate`
+markers are untracked in their own repos, for Bill to review and commit (or delete). Every brief
+carries a `Status: draft` line: core jobs were inferred from code and READMEs, not from him.
+
+**Gate results, run for real:**
+
+| Project | Result |
+|---|---|
+| `qr-forge` | pass 13.6s |
+| `wine` | pass 7.1s (proves the dry-run promise: plan printed, nothing installed) |
+| `magicians-almanac` | pass 7.7s |
+| `magicians-almanac-web` | pass 31.7s |
+| `paved` | **fail** — `pip install .` broken on a clean machine (see CHANGELOG) |
+| `campaign-forge`, `CampaignGenerator` | no `verify:` block, deliberately — both need real credentials and have no stub mode. The gate says `no verify: block`, which is the honest answer |
+
+**Re-run any of them:** `python3 features/product-quality/first_run_gate.py /opt/proj/<name>`
+
+**A false green was found in the gate author's own brief** — `run: ... > file; echo hours
+computed` with `expect: stdout_contains: "hours computed"` passed while the script printed usage
+text. The gate now refuses a `run:` that echoes a string the expectations assert on. **When
+writing a verify block, assert on what the program prints, and prefer `| tee FILE` over
+`> FILE; echo ok`** — the latter also swallows the program's exit status.
+
+**Three defects to fix in their own repos** (not fixed here): `paved` pyproject license form,
+`magicians-almanac` exiting 0 after a failed runtime pip install, `qr-forge` silently ignoring
+unknown query parameters. Each is written up in the relevant `PRODUCT.md`.
+
+**Next:** review the 7 drafts, confirm or correct the core jobs, commit them in their repos;
+then fix `paved` and re-run its gate.
+
 ## 2026-09-18 (last) — product-quality system installed; 15 repos have no brief yet
 
 **Installed and live on this host.** `bash features/product-quality/install.sh` linked four skills

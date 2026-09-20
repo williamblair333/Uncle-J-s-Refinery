@@ -56,9 +56,28 @@ tool that catches an error, prints something reassuring and exits 0 passes an
 exit-code check while doing nothing, which is the failure the gate exists to
 catch. The gate refuses a brief whose expectations are exit-code only.
 
+**The proof must come from the program, not from your test.** Writing
+`run: mytool process x; echo done` with `expect: stdout_contains: "done"` passes
+while the tool fails — the gate refuses a `run:` that echoes its own expected
+string. Assert on text the program prints and files it writes. Prefer `| tee
+FILE` over `> FILE; echo ok`, so the real output reaches both stdout and the file
+and the exit status stays the program's.
+
 **Credentials:** if the core job cannot run without real secrets, the project
 needs a documented stub or offline mode, and `run:` uses it. The gate never
 receives credentials. Treat a missing stub mode as a product gap.
+
+**`install_note:`** — when the documented install path cannot run inside the
+gate (a `docker compose` project, since Docker cannot nest), state why in
+`install_note:` and use the equivalent path. Drift then warns instead of
+failing, and the reason is printed in every report. Without the note, using
+undocumented steps is a failure, as it should be.
+
+**No `verify:` at all is a legitimate outcome.** A project that needs real
+credentials, or a whole stack, and has no stub mode cannot be proven from a
+clean machine. Say so in the brief and leave the block out. The gate then reports
+`no verify: block`, which is the truth. Do not paper over it with a `--help`
+call.
 
 ## Quick reference
 
