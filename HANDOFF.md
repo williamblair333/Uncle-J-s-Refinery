@@ -1,23 +1,31 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-09-20 (last) — `gttp` skill added; vault notes uncommitted
+## 2026-09-20 (last) — `gttp` skill added and linked; vault half committed
 
 **What landed.** `global-skills/gttp/` (SKILL.md + `references/mechanism-library.md`), plus the
 design record and eval scenarios under `docs/superpowers/specs/2026-09-20-gttp-skill-*`. It
 replaces the two uploaded skills in `~/Downloads` (`gttp.skill`, `constraint-bricolage.skill`);
 those are superseded, not installed.
 
-**Not yet linked into `~/.claude/skills/`.** After merge, run
-`bash features/skill-manager/install.sh` (or symlink `global-skills/gttp` by hand) and confirm with
-`ls -l ~/.claude/skills/gttp`.
+**Linked and live.** The post-merge hook symlinked it:
+`~/.claude/skills/gttp -> /opt/proj/Uncle-J-s-Refinery/global-skills/gttp/`. On a fresh machine,
+`bash features/skill-manager/install.sh` does it (the loop at `features/skill-manager/install.sh:31`
+takes every directory in `global-skills/`, so there is no list to update).
 
-**The vault half is written but uncommitted, and it isn't this repo.** In
-`/opt/proj/jaredrhod/vaults/brain/13 - Resources/`: new `Improvisation Log.md` (format + the two
-entries migrated out of the uploaded skill), new `Inventory.md` (template, no stock recorded yet),
-and two added lines in `Resources.md`. The vault is its own git repo and per its own rule commits
-happen from a jaredrhod-rooted session — do that, or the next Obsidian sync decides for you.
-Without those notes the skill's Step 6 skips silently, which is the designed behavior, so nothing
-breaks meanwhile.
+**The vault half is committed** — `vaults/brain` commit `21c0e54`, four files: new
+`13 - Resources/Improvisation Log.md` (format + the two entries migrated out of the uploaded
+skill), new `13 - Resources/Inventory.md` (**an empty template — no stock recorded yet, so the
+improvise path currently has nothing to build candidates around**), two index lines in
+`Resources.md`, and the `2026-09-20` daily note. The vault has no remote and must never get one.
+
+It was committed from a session rooted at `/opt/proj/jaredrhod` (`claude -p` with that cwd), which
+is what makes the difference: `scripts/vault-session-check.sh` runs as that project's Stop hook and
+asserts a daily note for the session's date, a `## Session N` heading written during the session,
+and a clean vault tree — it logged `PASS` at 13:30, the first since 2026-08-22. The vault memweave
+sync runs on the same hook, so both notes were searchable within the minute instead of after the
+02:30 cron. An earlier version of this entry said the vault's own rule requires committing from such a
+session; `/opt/proj/jaredrhod/CLAUDE.md:54` locks only the other direction (Refinery work is not
+done from there). The hooks are the reason, not a written rule.
 
 **Evidence, so nobody re-litigates it from memory.** Every figure in the CHANGELOG table came from
 a blind grading pass — replies anonymized, scored against written assertions, unblinded after. The
