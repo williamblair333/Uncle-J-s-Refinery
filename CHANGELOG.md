@@ -2,6 +2,60 @@
 
 ---
 
+## 2026-09-20 — `gttp`: the user's idea competes, it doesn't frame the answer
+
+### One skill, not two
+
+Two uploaded skills — `gttp` and `constraint-bricolage` — became one. They triggered on the same
+phrases, handed off to each other with no termination rule, and the bricolage half read
+`references/` out of the other skill's folder, so installing it alone left it pointing at nothing.
+Improvising is now a box inside Step 3.
+
+### The baseline was already good, and the uploaded skill made it worse
+
+Twelve scenarios, graded blind against written assertions by a separate agent, unblinded after
+scoring:
+
+| Condition | Assertions | Mean quality (1–5) |
+|---|---|---|
+| No skill (round 1) | 20/29 | 3.86 |
+| Uploaded skill | 25/29 | 3.57 |
+| Revised skill | 28/29 | 4.57 |
+| No skill (round 2) | 14/16 | 4.00 |
+| Revised skill (round 2) | 33/34 | 4.75 |
+
+More assertions passed, worse advice: that is the uploaded skill's row. Its report template ran on
+a $5 toilet flapper (777 words, against 400 with no skill at all), and its improvise path — plus
+"unknowns are costs to price, not vetoes" — produced a machined pressure-canner regulator weight
+with target masses, described as "a legitimate copy of the factory design". A weight a few grams
+light gives jars that seal, look perfect, and carry live botulinum spores.
+
+### Routes, and one of them refuses
+
+Step 1 picks a shape before any analysis. Hard limit comes first and covers substituting,
+fabricating, modifying, bypassing, disabling or defeating anything that holds a calibrated limit or
+fails safe. It hands over no dimensions, masses, formulas that yield them, build steps or bypass
+steps, and it names "I'll calibrate it" as the rationalization it is. Then: rebuttal, proposed
+means (full analysis — the user's idea and the purpose-made fix as peers), short answer, the part
+that exists under a name they didn't search for, improvise, everything else.
+
+### Scope, and where the notes live
+
+The old description said "ANY request to solve, design, build, choose, fix, buy, or improve
+something — hardware, code". It fired on "which Python library should I use" in 3 of 3 trigger
+runs. The new one is physical, home and purchase only; 48/48 across three runs on sixteen requests
+including five software-choice negatives.
+
+The improvisation log and inventory left the skill folder. Four of seven runs of the uploaded skill
+appended to `references/improvisation-log.md` — through the install symlink that writes into this
+repo's working tree. They now live in the vault (`$GTTP_NOTES_DIR` overrides), the skill searches
+the log before appending, and a rebuttal turn no longer files a second entry for the same idea.
+
+Full record: `docs/superpowers/specs/2026-09-20-gttp-skill-design.md`. Scenarios:
+`docs/superpowers/specs/2026-09-20-gttp-skill-evals.json`.
+
+---
+
 ## 2026-09-20 — The gate caught a false green in its own author's work, and three real defects
 
 ### Briefs written for 7 projects; 12 repos excluded as not-software
