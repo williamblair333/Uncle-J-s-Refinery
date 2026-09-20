@@ -42,6 +42,8 @@ bash features/product-quality/hooks/pr-gate-guard.sh   # driven by the probes in
 **Next, in order:** (1) briefs for the 4 blocking repos, (2) `retrofit.sh --run` once they have
 briefs, (3) close this repo's full-stack verification gap.
 
+- **jdocmunch-mcp breaking change**: `index_local`'s `truncated` field answers only the `max_files` cap and read `false` while an oversize document was dropped (jdoc#130, v1.138.0), so callers must now gate corpus completeness on the new `coverage_complete` / `skip_counts` / `skipped_paths` / `oversize_note` block instead, and can read the new `changes` / `changes_total` / `changes_truncated` list (v1.142.0) to see exactly which files moved — plus `doc_list_repos` rows now carry `has_embeddings` (v1.143.0) and an importable `fastembed` is auto-selected as the embedding provider, re-embedding the whole corpus unless the model is `sentence-transformers/all-MiniLM-L6-v2` (#127).
+
 ## 2026-09-03 (last) — `jscrub check-vendor` no longer needs the review queue; first lint run
 
 - **jcodemunch-mcp breaking change**: a failed embedding batch now discloses its cause in the response body (CF-66, #640) — `embed_repo` adds `error_causes` / `causes_omitted` / `all_batches_failed`, and `search_symbols` adds `semantic_topup` (`symbols_unscored`, `batches_failed`, `error_causes`), so callers must stop reading a clean `embed_repo` exit as "embedded" and must treat a `semantic_topup` block as "this hybrid ranking was lexical-only for part of the corpus"; separately the guidance for "where is this name used" moved from `find_references` to `check_references` (CF-63, #658).

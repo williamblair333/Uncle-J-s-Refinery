@@ -513,6 +513,34 @@ tools can answer structurally.
   corpus, so newly added directories are not picked up unless you pass `paths=`. A refresh that
   silently shrinks the corpus looks identical to a successful one; check `corpus_selection_changed`
   and the `deleted` count in the result before trusting it.
+- **⚠⚠ `truncated: false` is NOT "everything was indexed" — read `coverage_complete`** (jdoc#130,
+  v1.138.0, verified against installed 1.143.0 at `tools/index_local.py:1211-1294,2600-2607`).
+  `truncated` answers only the `max_files` cap, so a run that dropped a 1.25 MB document over the
+  per-file size cap answered `truncated: false` — true, and the opposite of what the caller needed
+  to know. The counts were already computed and already PERSISTED into `coverage.skip_counts`; the
+  response carried none of them, which upstream names as the same defect as not computing them.
+  Now **every** `index_local` payload — the nothing-changed one included, deliberately, because
+  that is the run whose caller is least likely to look anywhere else — carries `coverage_complete`,
+  plus `skip_counts`, `skipped_paths`, `skipped_paths_truncated`, and an `oversize_note` naming the
+  resolved cap and `JDOCMUNCH_MAX_FILE_SIZE`. ⚠ `coverage_complete` is keyed on the ACTIONABLE
+  reasons ONLY — `oversize`, `stat_error`, `read_error`, `office_extra_not_installed`. `gitignored`
+  and `unsupported_extension` fire on every ordinary repo (900 and 16 on the corpus this was found
+  against) and keying on them would pin it False forever, which is how a signal that always fires
+  hides the case it exists for. Paths are sampled at 20 per reason: the COUNT is exact, the list is
+  not, and `skipped_paths_truncated` names which reasons were cut.
+- **`index_local` returns a `changes` list on every response** (v1.142.0, verified at
+  `tools/index_local.py:1733-1746`): up to `CHANGES_CAP` (50) entries of
+  `{doc_path, status: "new"|"changed"|"deleted", mtime}` with `changes_total` and
+  `changes_truncated` beside it. Sorted mtime-descending, deleted entries (mtime `None`) last,
+  `doc_path` ascending breaking ties. **The cap is a head cut, so deleted entries drop FIRST — the
+  `deleted` count is the authority, never the list.** A full index lists every parsed file as
+  `new`; an incremental pass that found nothing returns `[]`. This is the direct read for the
+  silently-shrinking-corpus case the bullet above warns about.
+- **`use_embeddings` accepts `"auto"`** (verified at `embeddings/provider.py:1188-1206`):
+  `should_embed` resolves `"auto"` to True only when a provider is configured, and recognises
+  `true`/`false`, `1`/`0`, `yes`/`no`, `on`/`off`, `y`/`n`, `t`/`f` case-insensitively after
+  trimming. An unknown string still falls through to `bool()`, so a previously-truthy string keeps
+  its old behaviour.
 - **Dot-directory skipping is narrower than "all of them"** (v1.126.1, verified against installed
   1.133.0 at `tools/_constants.py:27-52`). Two corrections to what this file used to say:
   - `.github` is **allowlisted** — it is dotted and legitimately full of documentation, and
@@ -538,6 +566,25 @@ tools can answer structurally.
   reads as "this corpus legitimately has none" — the jdoc#107/#109 data-loss shape. So a failed
   embed leaves stale-but-real vectors in place: read a weak semantic channel as `degraded`, not as
   evidence the corpus is unembedded.
+- **FastEmbed is a provider now, and merely INSTALLING it changes the default** (#127, v1.138.0,
+  verified against installed 1.143.0 at `embeddings/provider.py:410,440,694,784-808`).
+  `JDOCMUNCH_EMBEDDING_PROVIDER` accepts `fastembed` / `fast-embed` / `onnx`, and with nothing
+  configured an importable `fastembed` is auto-selected — so `pip install "jdocmunch-mcp[fastembed]"`
+  silently moves an unconfigured host onto it. **The sidecar identity is keyed per MODEL, not per
+  provider** (`_provider_identity`), and exactly one model is declared equivalent across the two
+  runtimes: `sentence-transformers/all-MiniLM-L6-v2`, in `_FASTEMBED_ST_EQUIVALENT_MODELS`
+  (`provider.py:203`). A corpus embedded by sentence-transformers under that model is reused by
+  fastembed with no re-embed. **Any other `JDOCMUNCH_FASTEMBED_MODEL` is written under the
+  `fastembed` provider name and forces a full re-embed** — deliberately the fail-closed side,
+  because the cache treats an unknown dim as a WILDCARD, so a wrongly-shared sidecar would MATCH
+  and merge two derivations into one ranking silently (jdoc#111's shape: cheap and invisible,
+  versus a re-embed that is expensive and observable). A model earns equivalence by being MEASURED
+  with `check_embedding_drift`, not by looking alike.
+- **`doc_list_repos` rows carry `has_embeddings`** (v1.143.0, verified at `tools/list_repos.py:36-44`),
+  with `_meta.embeddings_tip` present only when at least one index lacks them. Read
+  `has_embeddings: false` as "this repo's searches match words only" — it is the one field that
+  tells an unembedded corpus apart from the stale-but-real vectors the bullet above describes,
+  which you otherwise cannot distinguish from a weak semantic channel.
 - **v1.126.0's confidence change, ground-truthed against installed 1.133.0** (`retrieval/confidence.py:1-45`,
   `retrieval/verdict.py:37,289`). The scale was **always 0–1** — it was not renumbered. The defect
   was that `strength` read a raw score against a hardcoded BM25 curve regardless of scorer, so the
@@ -548,6 +595,21 @@ tools can answer structurally.
   `build_verdict` refuses to back an absence claim. Still prefer comparing hits against each other;
   0.4 is the one absolute worth remembering. (This bullet previously said the old→new scale was
   unverified and that any old threshold was wrong. Both halves were too strong; corrected 2026-08-21.)
+- **Stage-A candidate admission is rarest-term-first, and deterministic across processes**
+  (v1.140.0, verified against installed 1.143.0 at `retrieval/prune.py:107-148`). The candidate set
+  is capped at `MAX_CANDIDATES`; query terms are now admitted in ascending posting-list size, and
+  the first term that overflows the budget stops the loop — every later term is at least as common,
+  so nothing after it could fit either. The remaining room is filled with `heapq.nsmallest` rather
+  than set-iteration order: **before this, the same query could return different sections in two
+  processes**, because set order follows the per-process string hash seed. A top-K that moved under
+  this version is the fix, not a regression; ranking taken before it is not reproducible.
+- **Schema-token counts carry a time basis** — `SCHEMA_TOKENS_BASIS = "one_time_at_full_rate_then_cache_read"`
+  (v1.139.0, verified at `schema_basis.py:31-40`), the same contract and wording as jcodemunch. The
+  count is PAYLOAD SIZE, not a per-request saving; read per-request it overstates cost impact by
+  roughly an order of magnitude (86% of baseline input measured cached). ⚠ Do NOT port jcm's
+  mid-session tier-switch refusal here: `JDOCMUNCH_TOOL_PROFILE` is read at startup and there is no
+  runtime switch, so there is no cache invalidation to price, and upstream ratchets that absence
+  deliberately (`schema_basis.py:21-27`).
 - For third-party library docs (FastAPI, React, Django, etc.), **context7**
   is authoritative and version-pinned. Call it whenever the question
   references a named library.
