@@ -1,6 +1,35 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-09-18 (last) — product-quality system installed; 15 repos have no brief yet
+## 2026-09-20 (last) — `gttp` skill added; vault notes uncommitted
+
+**What landed.** `global-skills/gttp/` (SKILL.md + `references/mechanism-library.md`), plus the
+design record and eval scenarios under `docs/superpowers/specs/2026-09-20-gttp-skill-*`. It
+replaces the two uploaded skills in `~/Downloads` (`gttp.skill`, `constraint-bricolage.skill`);
+those are superseded, not installed.
+
+**Not yet linked into `~/.claude/skills/`.** After merge, run
+`bash features/skill-manager/install.sh` (or symlink `global-skills/gttp` by hand) and confirm with
+`ls -l ~/.claude/skills/gttp`.
+
+**The vault half is written but uncommitted, and it isn't this repo.** In
+`/opt/proj/jaredrhod/vaults/brain/13 - Resources/`: new `Improvisation Log.md` (format + the two
+entries migrated out of the uploaded skill), new `Inventory.md` (template, no stock recorded yet),
+and two added lines in `Resources.md`. The vault is its own git repo and per its own rule commits
+happen from a jaredrhod-rooted session — do that, or the next Obsidian sync decides for you.
+Without those notes the skill's Step 6 skips silently, which is the designed behavior, so nothing
+breaks meanwhile.
+
+**Evidence, so nobody re-litigates it from memory.** Every figure in the CHANGELOG table came from
+a blind grading pass — replies anonymized, scored against written assertions, unblinded after. The
+uploaded skill scored *worse advice* than no skill at all (3.57 vs 3.86 mean quality) while passing
+more assertions. If you change the Hard-limit row, re-run evals 6, 11 and 12; if you change the
+description, re-run the trigger test (16 requests, 3 reps) in the design record.
+
+**Open judgment call.** The Hard-limit route refuses to help fabricate a safety-critical part even
+when a shop could verify the result — a policy choice, not a measurement. Bill can loosen the first
+route row if he disagrees.
+
+## 2026-09-18 — product-quality system installed; 15 repos have no brief yet
 
 **Installed and live on this host.** `bash features/product-quality/install.sh` linked four skills
 (`product-brief`, `first-run-gate`, `ux-heuristics`, `product-focus-review`) and registered two
