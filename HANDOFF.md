@@ -1,6 +1,17 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-09-20 (last) — product-quality system shipped; 6 briefs merged; 4 defects fixed
+## 2026-09-22 — first-run gate: git-visible copy (branch `fix/gate-copy-git-files`)
+
+The gate used to BLOCK on any repo with an unreadable ignored path, such as a root-owned Docker
+volume. It now copies only what git sees (tracked files plus untracked-but-not-ignored ones), and
+falls back to the directory walk for non-git projects. The report shows which mode ran
+(`copy_mode`). **If `retrofit.sh` flips a repo from pass to fail after this, check for a
+gitignored file its `verify:` depended on.** That dependency was a latent fresh-clone bug, not a
+regression. The gate still has **no unit tests**. Verification was foc (BLOCKED → PASS) and the
+two fixtures. `proj-fog-of-chess` gained a draft `PRODUCT.md` (gate PASS, 80 s), which goes in
+through a Gitea PR.
+
+## 2026-09-20 — product-quality system shipped; 6 briefs merged; 4 defects fixed
 
 **The system is installed and enforcing.** `bash features/product-quality/install.sh` links four
 skills (`product-brief`, `first-run-gate`, `ux-heuristics`, `product-focus-review`) and registers

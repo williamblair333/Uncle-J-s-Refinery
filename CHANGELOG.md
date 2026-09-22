@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-09-22 — first-run gate copies what a fresh clone has, not the whole directory
+
+The gate tar-walked the working tree. On `proj-fog-of-chess`, the ignored, root-owned
+`docker-data/postgres` gave `Permission denied`, so the gate went BLOCKED before running anything,
+and the blocked path then crashed in `write_report` (`KeyError: 'image'`) without writing a report.
+
+- `copy_project` now copies `git ls-files --cached --others --exclude-standard`: the tracked files
+  plus untracked-but-not-ignored ones, so a brief can still be gated before it's committed.
+  Non-git projects fall back to the directory walk. `EXCLUDES` still apply.
+- The list goes to tar through a temp file, not stdin, because tar's stdout feeds `docker cp`.
+- Reports record `copy_mode`. A blocked report is written with its reason.
+- **Behaviour change:** a brief that relied on a gitignored working-tree file now fails, the same
+  way it would on a real fresh clone.
+
+Verified: foc BLOCKED → PASS (80.3 s); fixtures good → PASS, broken → FAIL on its real assertions.
+
+---
+
 ## 2026-09-20 — `gttp`: the user's idea competes, it doesn't frame the answer
 
 ### One skill, not two
