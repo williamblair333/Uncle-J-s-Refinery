@@ -1,7 +1,7 @@
 ---
 name: occams-razor
 description: Use when diagnosing a bug/failure or choosing between competing explanations, hypotheses, or root causes — especially when an exotic, elaborate, or "interesting" cause is tempting. Triggers on "why is this happening", "what's the root cause", intermittent/nondeterministic failures, and any moment you're about to commit to a multi-assumption theory.
-version: 1.0.0
+version: 1.1.0
 platforms: [linux, macos]
 category: analysis
 tags: [debugging, root-cause, diagnosis, reasoning, hypothesis, parsimony]
@@ -31,7 +31,7 @@ Among explanations that fit **all** the evidence equally well, prefer the one th
 ## The Recipe (produce these parts, in this order)
 
 1. **Evidence & constraints.** List what must be true. Include the discriminating facts (e.g. "*sometimes* fails" rules out any theory that would fail *every* run).
-2. **Candidate causes, cheapest-assumption first.** Order by how many new/unverified assumptions each needs. High-prior mundane causes go first: config/permissions, disk/quota, a concurrency or lock race, a partial/interrupted write, a missing guard, stale state, an obvious recent change.
+2. **Candidate causes, cheapest-assumption first — drawn from the subject's domain, not yours.** Order by how many new/unverified assumptions each needs. High-prior mundane causes go first: config/permissions, disk/quota, a concurrency or lock race, a partial/interrupted write, a missing guard, stale state, an obvious recent change. Before free-associating, name the domain the thing belongs to and enumerate *its* usual suspects — a chess program's canon, a payroll system's, a kernel's. The candidate list is the part the razor cannot fix: it ranks what you give it.
 3. **The pick: simplest hypothesis consistent with ALL the evidence.** If a mundane cause fits every fact, that's the answer.
 4. **Justify any added complexity explicitly.** If you skip past the simple candidates to an elaborate one, state *which specific piece of evidence forces it* — the fact the simple theory cannot explain. No such fact ⇒ you haven't earned the complex theory.
 
@@ -45,6 +45,7 @@ State the cheapest-consistent explanation as the lead. Rank complex theories bel
 | Two theories both fit the facts | Pick the one with fewer unverified assumptions; note what would distinguish them |
 | Recent change + new failure | The change is the prime suspect until evidence exonerates it — don't theorize past it |
 | Tempted by an exotic cause | Name the single fact the mundane causes can't explain. Can't name one? Not earned. |
+| Explaining an unfamiliar name, artifact or choice | List the subject's own domain first. The answer is usually a convention of that field, not a pun on your tooling. |
 
 ## The Core Test
 
@@ -61,7 +62,10 @@ Before committing to any explanation beyond the simplest, answer one question:
 - **Skipping the enumeration.** Committing to hypothesis #1 that came to mind without listing the cheaper candidates you passed. The value is in what you ruled out.
 - **Assumption-counting theater.** Listing mundane causes then dismissing them with no reason so you can reach the fun one. Dismissal needs evidence.
 - **Applying it to scope.** Using "Occam's Razor" to justify cutting a feature or a requirement. Wrong domain — this razor is about explanations, not effort.
+- **Generating candidates from your own context instead of the subject's.** The razor ranks a list; it cannot rescue an answer that never made the list. Whatever is loudest in *your* working memory — the repo you just read, the tooling you were configured with, the bug you fixed an hour ago — supplies candidates that feel available rather than likely. Ask what field the subject belongs to and enumerate that field's conventions **before** the first guess. An answer that needs a coincidence to connect it to the subject's actual domain is already losing on assumption count.
 
 ## Real-World Impact
 
 The recurring failure this counters: an agent explains an intermittent empty-index / flaky-job / phantom-bug with a native-library ABI break or a nondeterministic segfault, while never checking the two crons racing on one lock, the full disk, or the missing fail-on-empty guard that already exists in the tree. The "sometimes" tell points at *cheap* nondeterministic causes first, not exotic ones.
+
+The same failure outside debugging, 2026-09-22: asked why a **chess** bot was named `BOTvunnix`, an agent proposed `vuln` + `nix` — a security pun — because security tooling and Unix were what its own context happened to hold. The answer was Botvinnik, a world chess champion, with the mandatory `BOT` account prefix doing the first syllable. One assumption versus three, and the word "chess" was sitting in the question the whole time. Availability is not prior probability.
