@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -144,12 +145,57 @@ EXCLUDES = (
 )
 
 
-def copy_project(project: Path, cid: str) -> str | None:
-    """Stream a filtered tar into the container. Returns an error string, or None."""
+def git_file_list(project: Path) -> bytes | None:
+    """NUL-separated paths a fresh clone would have, plus untracked-but-not-ignored files.
+
+    Untracked files stay in so a brief can be gated before it is committed. Ignored
+    files drop out: a fresh clone does not have them, and walking them can fail
+    outright — a root-owned Docker volume under an ignored `docker-data/` BLOCKED the
+    whole gate on a permission error. Tracked paths deleted from the working tree are
+    skipped, or tar would fail on them. None when `project` is not a git work tree;
+    the caller then walks the directory as before.
+    """
+    try:
+        listed = subprocess.run(
+            ["git", "-C", str(project), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            capture_output=True,
+            timeout=120,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if listed.returncode != 0:
+        return None
+    paths = sorted({p for p in listed.stdout.split(b"\0") if p})
+    kept = [p for p in paths if os.path.lexists(project / os.fsdecode(p))]
+    return b"\0".join(kept) + b"\0" if kept else None
+
+
+def copy_project(project: Path, cid: str) -> tuple[str | None, str]:
+    """Stream a filtered tar into the container. Returns (error string or None, copy mode)."""
+    files = git_file_list(project)
+    mode = "git-files" if files is not None else "directory-walk"
     tar_cmd = ["tar", "-cf", "-"]
     for pattern in EXCLUDES:
         tar_cmd += ["--exclude", pattern]
-    tar_cmd += ["-C", str(project), "."]
+    tar_cmd += ["-C", str(project)]
+    list_file = None
+    if files is not None:
+        # A file, not tar's stdin: tar's stdout feeds `docker cp`, so writing a large
+        # list to its stdin from this thread could deadlock on a full pipe.
+        list_file = tempfile.NamedTemporaryFile(prefix="first-run-gate-", suffix=".lst", delete=False)
+        list_file.write(files)
+        list_file.close()
+        tar_cmd += ["--null", "-T", list_file.name]
+    else:
+        tar_cmd += ["."]
+    try:
+        return _stream_tar(tar_cmd, cid), mode
+    finally:
+        if list_file is not None:
+            os.unlink(list_file.name)
+
+
+def _stream_tar(tar_cmd: list[str], cid: str) -> str | None:
     try:
         with subprocess.Popen(tar_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as tar:
             loaded = subprocess.run(
@@ -232,7 +278,7 @@ def gate(project: Path, keep: bool = False) -> dict:
         # a real user's fresh clone would not have. Secrets and build junk are excluded
         # — a project that needs real credentials to show its core job must ship a
         # documented stub mode instead.
-        copy_failure = copy_project(project, cid)
+        copy_failure, report["copy_mode"] = copy_project(project, cid)
         if copy_failure:
             raise GateError(copy_failure)
 
@@ -331,11 +377,14 @@ def write_report(project: Path, report: dict) -> Path:
         f"# First-run gate — {report['state'].upper()}",
         "",
         f"- project: `{report['project']}`",
-        f"- image: `{report['image']}` (network: {report['network']})",
+        f"- image: `{report.get('image', '?')}` (network: {report.get('network', '?')})",
         f"- time to first result: {report.get('time_to_first_result_seconds', '?')}s"
         f" (image pull {report.get('image_pull_seconds', 0)}s, excluded)",
+        f"- copy mode: {report.get('copy_mode', '?')}",
         "",
     ]
+    if report.get("reason"):
+        lines += ["## Blocked", "", report["reason"], ""]
     if report["failures"]:
         lines += ["## Failures", ""]
         lines += [f"- **{f['kind']}** — {f['detail']}" for f in report["failures"]] + [""]
