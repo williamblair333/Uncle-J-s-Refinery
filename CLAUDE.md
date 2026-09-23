@@ -88,6 +88,18 @@ tools can answer structurally.
     channels ask, so a constant is not emitted twice.
   - **C# operators, conversions and indexers are indexed** (#714) — the destructive half of that
     defect is under `check_delete_safe` in **Refactoring & safety** below.
+- **⚠⚠ The 6420d7c → 6b8173a git upgrade added symbols in ~20 languages WITHOUT a generation bump**
+  (verified against both checkouts at `storage/index_store.py:256` — `PARSER_GENERATION = 8` in
+  each). Upstream folded these fixes into gen 8 because gen 8 was still unreleased when they merged.
+  This host tracks git, so its indexes were **already built at gen 8** by the older parser, and
+  **nothing forces a re-parse**. The new symbols are class/struct state in Python, JS/TS/TSX, PHP,
+  Go, Rust, C, C++/Arduino, Dart, GDScript, Ruby, Apex, D, Groovy, Objective-C and Swift
+  (protocol requirements, subscripts). Also new: Go package `var` and grouped `type (…)`, Scala 3
+  `given`, Julia macros, Haskell declarations, and destructured JS and Vue/Svelte script bindings.
+  Go methods are now owned by their receiver, and a class constant has its class as `parent`.
+  All of this reaches only files changed since the upgrade. **Force a full re-index**
+  (`invalidate_cache` then `index_folder`) before trusting a count, a member list, `parent`, or an
+  absence of these kinds.
 - **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
   (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
   `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
@@ -196,6 +208,12 @@ tools can answer structurally.
   corpus. The full enum as of 1.108.319: `function`, `class`, `method`, `constant`, `type`,
   `template`, `import`, `field`, **`property`** — the last is new, and is where Kotlin `val`/`var`
   now lands (#732). A Kotlin repo indexed before gen 8 has none of them; re-index first.
+  **Git 6b8173a appends a tenth kind, `variable`** (#731/#741/#742, `parser/symbols.py`
+  `KIND_ORDER`). It holds module-scope mutable bindings (JS/TS `let`/`var`, Go `var`) and mutable
+  locals. **A JS `let` used to come back as `constant` and now doesn't**, and a reassignable class
+  member is no longer `constant` either (#769/#770/#787). So a `kind="constant"` filter returns
+  fewer hits. Query `variable`/`property`/`field` for mutable state. File summaries now count all
+  four state kinds by name (`STATE_KINDS`, #760), not only `field`.
 - **An exact-name definition is no longer evicted from the page by same-named locals** (#699,
   v1.108.319, verified at `tools/search_symbols.py:533,1518,1931`). The cut was a bounded heap on
   BM25 alone, so a dozen same-named locals could fill the window and leave the real definition at
@@ -276,6 +294,12 @@ tools can answer structurally.
     evidence and cannot be unfound. It is bounded, not terminal: reading the call sites or ingesting
     runtime evidence can still move it. **Anything switching on `safe_to_delete` must handle both
     new values, or it reads a refusal as a green light.**
+  - **Runtime evidence never reached `check_delete_safe` or `get_group_contracts` before git
+    6b8173a** (#717, verified at `runtime/confidence.py` `symbol_hit_count`). Both queried
+    `runtime_calls.hit_count`, a column the table never had, and swallowed the error at DEBUG. So
+    ingested traces read as zero, and a delete preflight could certify a symbol that had live
+    traffic. Both now read `count`. **Re-run any `safe_to_delete` taken after
+    `import_runtime_signal` on an older build.** A schema mismatch now logs at WARNING.
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).

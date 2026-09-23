@@ -11,6 +11,8 @@ regression. The gate still has **no unit tests**. Verification was foc (BLOCKED 
 two fixtures. `proj-fog-of-chess` gained a draft `PRODUCT.md` (gate PASS, 80 s), which goes in
 through a Gitea PR.
 
+- **jcodemunch-mcp breaking change**: git 6b8173a adds a `variable` symbol kind (JS `let` and reassignable members are no longer `constant`), makes `check_delete_safe`/`get_group_contracts` actually read ingested runtime hits, and indexes class state in ~20 languages without bumping `PARSER_GENERATION` past 8 — so run `invalidate_cache` + `index_folder` on every repo, and update any `kind="constant"` filter to include `variable`.
+
 ## 2026-09-20 — product-quality system shipped; 6 briefs merged; 4 defects fixed
 
 **The system is installed and enforcing.** `bash features/product-quality/install.sh` links four
