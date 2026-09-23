@@ -11,6 +11,14 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Should `occams-razor`'s `description` widen to cover non-debugging explanation?**
+  (opened 2026-09-23). The 2026-09-23 amendment fixed the skill's *content*, but the miss that
+  prompted it happened because the skill was never invoked — a question about why something was
+  named what it was did not read as "competing explanations, hypotheses, or root causes". Widening
+  the description would catch that class; it would also fire the skill on ordinary questions in
+  every project, since the description drives selection globally. Needs a call on which error is
+  cheaper. Body was amended without touching it.
+
 - **The Refinery's own gate covers a subsystem, not `install.sh`** (opened 2026-09-20).
   `PRODUCT.md`'s `verify:` block exercises the product-quality tooling, because the real install
   path registers MCP servers into a Claude Code installation that does not exist inside a

@@ -1,5 +1,30 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-09-23 — occams-razor amended (branch `skill-occams-domain-first`, UNPUSHED)
+
+`global-skills/occams-razor/SKILL.md` gained the step it was missing: where candidate hypotheses
+come from. It ranked a list and never said to build the right one, so an agent drawing candidates
+from its own context passed the skill cleanly while missing the answer. See CHANGELOG for the
+worked example (a chess bot named after Botvinnik, explained as a Unix pun).
+
+Body only — `name`, `description` and triggers untouched, deliberately. **The open question is
+whether the `description` should widen.** The miss happened because the skill was never *invoked*:
+a naming question did not read as "competing explanations". Widening would catch that class and
+cost over-invocation in every project, so it is a judgment about global agent behaviour and is left
+to Bill. Logged in ROADMAP.
+
+**Two things need attention on this branch before it is pushed:**
+
+1. It is **not pushed**. `Uncle-J-s-Refinery` is public on GitHub and the commit body quotes
+   session reasoning; that needed a decision, and the session ended without one.
+2. It carries a commit that is **not part of this work** — `ecc888d chore: post-upgrade sync —
+   jcodemunch-mcp 6420d7c→6b8173a`, touching `CLAUDE.md` and `HANDOFF.md`. It landed here because
+   this branch happened to be checked out when that process ran. It is a legitimate commit on the
+   wrong branch; decide whether to cherry-pick it to `main` separately before opening any PR from
+   here.
+
+`uv.lock` is also modified in the working tree, unstaged and unrelated — left alone.
+
 ## 2026-09-22 — first-run gate: git-visible copy (branch `fix/gate-copy-git-files`)
 
 The gate used to BLOCK on any repo with an unreadable ignored path, such as a root-owned Docker
