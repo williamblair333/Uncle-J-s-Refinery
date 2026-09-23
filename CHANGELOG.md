@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-09-23 — occams-razor: rank the list you have, but build the right list
+
+The skill selected between hypotheses and said nothing about where hypotheses come from. An agent
+generating them from its own working memory — the repo it had just read, the tooling it was
+configured with — passed every check the skill made while never considering the right answer. The
+razor ranks a list; it cannot rescue a candidate that never entered it.
+
+Found the hard way. Asked why a **chess** bot was named `BOTvunnix`, the agent proposed `vuln` +
+`nix`, a security pun, because security tooling and Unix were what its context happened to hold.
+The answer was **Botvinnik** — a world chess champion, with lichess's mandatory `BOT` account
+prefix doing the first syllable. One assumption against three, and the word "chess" was sitting in
+the question the whole time.
+
+- Recipe step 2 now says to name the subject's domain and enumerate *its* conventions before
+  free-associating.
+- New Quick Reference row for explaining an unfamiliar name, artifact or choice.
+- New Common Mistakes bullet: generating candidates from your own context instead of the
+  subject's. Availability is not prior probability.
+- The worked example added to Real-World Impact.
+
+Body only. `name`, `description` and triggers are untouched: the description drives selection in
+every project, and widening it trades a missed invocation for over-invocation everywhere. Version
+1.0.0 → 1.1.0. Deployed already — `~/.claude/skills/occams-razor` symlinks into `global-skills/`.
+
 ## 2026-09-22 — first-run gate copies what a fresh clone has, not the whole directory
 
 The gate tar-walked the working tree. On `proj-fog-of-chess`, the ignored, root-owned
