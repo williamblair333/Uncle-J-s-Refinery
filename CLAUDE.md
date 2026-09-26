@@ -100,6 +100,18 @@ tools can answer structurally.
   All of this reaches only files changed since the upgrade. **Force a full re-index**
   (`invalidate_cache` then `index_folder`) before trusting a count, a member list, `parent`, or an
   absence of these kinds.
+- **⚠⚠ The 6b8173a → 94d554d git upgrade did it again — and this time symbol IDS MOVE, still at
+  gen 8** (verified against the installed checkout at `storage/index_store.py:326-380,424`).
+  Nothing forces a re-parse, so an existing index serves the OLD ids for unchanged files — a
+  stored id or `parent` taken before the upgrade may not resolve after it. Moves: a Kotlin
+  **file-scope** `val`/`var` goes `#property` → `#constant`/`#variable` (#807; class members keep
+  `property`); a JS/TS `const C = class {}` goes `C#constant` → `C#class`, its methods to
+  `C.m#method` (#803); a C++ type/field/method declared inside a function is owned by it
+  (`S` → `f.S`, #833/#798). New symbols: TS constructor parameter properties (#802), Swift `deinit`
+  (#754), PHP enum cases (#759), Dart extension types, C typedef lists and prototypes,
+  Nim/Pascal/F#/Zig/PowerShell/MATLAB members, and per-name spans in grouped Go `var`/`const` and
+  multi-declarator JS/TS bindings. **Force a full re-index** (`invalidate_cache` then
+  `index_folder`) before trusting any of them.
 - **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
   (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
   `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
@@ -707,6 +719,14 @@ tools can answer structurally.
   `get_changed_symbols` (git diff → symbols touched),
   `get_untested_symbols`, and `get_pr_risk_profile`. Report the risk score
   to the user.
+- **An empty `get_changed_symbols` blast radius is no longer a bare `[]`** (#718, verified against
+  installed 94d554d at `tools/get_changed_symbols.py:116-122,213-277,376`). It used to read as "no
+  downstream impact" even when the graph could not reach the file. With `include_blast_radius`,
+  an empty entry now carries `blast_verdict` (`state` / `absence_refused` / `reason`), the full
+  per-file verdict rides in `blast_verdicts`, shared coverage in `blast_coverage`, and
+  `blast_radius_unavailable` says why none was computed. **Read an empty blast as "no impact"
+  only when `absence_refused` is false.** Separately, a Swift `deinit` is never certified
+  deletable: `check_delete_safe` answers `name_not_searchable` for it (#754).
 
 ### 7. Format economy
 - Pass `format="auto"` on any jCodeMunch tool call that might return a large
