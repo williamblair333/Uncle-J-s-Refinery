@@ -26,6 +26,7 @@ to Bill. Logged in ROADMAP.
 `uv.lock` is also modified in the working tree, unstaged and unrelated — left alone.
 
 - **jcodemunch-mcp breaking change**: 6b8173a→94d554d moves symbol ids (Kotlin file-scope `val`/`var` `#property`→`#constant`/`#variable`, JS/TS class expressions `#constant`→`#class`, C++ function-local types re-parented) without a `PARSER_GENERATION` bump, and `get_changed_symbols` now attaches `blast_verdict`/`blast_verdicts` to empty blast radii — callers must force a full re-index before trusting stored ids and must gate "no impact" on `absence_refused`.
+- **jcodemunch-mcp breaking change**: 94d554d→8e7c558 moves symbol ids again at gen 8 (C++ out-of-class members, Vue/Svelte/Astro/Razor class members, F#), `get_churn_rate` now returns an `error` for a missing target instead of `commits: 0`/`stable`, and not-found errors gain `near_miss_ids` — callers must re-index in full, check `error` before reading churn, and retry with an id from `near_miss_ids`.
 
 ## 2026-09-22 — first-run gate: git-visible copy (branch `fix/gate-copy-git-files`)
 

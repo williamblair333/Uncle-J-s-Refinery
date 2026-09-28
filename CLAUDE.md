@@ -112,6 +112,15 @@ tools can answer structurally.
   Nim/Pascal/F#/Zig/PowerShell/MATLAB members, and per-name spans in grouped Go `var`/`const` and
   multi-declarator JS/TS bindings. **Force a full re-index** (`invalidate_cache` then
   `index_folder`) before trusting any of them.
+- **⚠⚠ 94d554d → 8e7c558 moves ids a third time, still at gen 8** (verified against installed
+  8e7c558: `PARSER_GENERATION == 8`). A C++ out-of-class definition `void Foo::bar() {}` is now a
+  member of `Foo` (L-07). A class declared behind an export macro is a `class` (L-45). A class in a
+  Vue/Svelte/Astro/Razor script owns its members (#861, L-37). A Vue/Svelte function-valued
+  binding is a `function` (L-42), and `lang="tsx"` reads as TSX (L-39). F# is parsed by a new
+  grammar (#848), and C prototype lists and F# `let … and …` chains bind every name. A Vue file
+  with both `<script>` and `<script setup>` indexes both (L-44). **Re-index in full**
+  (`invalidate_cache` then `index_folder`) before trusting a stored id, `parent` or member list
+  in C++, F#, Kotlin, Vue, Svelte, Astro or Razor.
 - **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
   (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
   `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
@@ -321,6 +330,15 @@ tools can answer structurally.
 **Quality & risk**:
 - `get_hotspots` — top-N highest-risk symbols (complexity × churn, CodeScene methodology); use before planning sprint work or targeting reviews.
 - `get_churn_rate` — git churn for a file or symbol (commit count, authors, churn/week, stable/active/volatile).
+  **A missing target is now an `error`, not `commits: 0` / `stable`** (L-41, verified against
+  installed 8e7c558 at `tools/get_churn_rate.py:106-113,161-176`). Before, a `::` id the index
+  lacked, or a path that exists nowhere, was answered as a cold file at confidence `high`. A
+  deleted file keeps its history and is still answered. Check for `error` before reading `commits`.
+- **Every symbol not-found error can carry `near_miss_ids`** (#869, `retrieval/verdict.py`
+  `symbol_not_found`). Sixteen tools now share one error. When indexed ids differ only by owner
+  qualifier or `~N` suffix, the error adds `near_miss_ids`, `near_miss_total` and
+  `near_miss_truncated`. It never picks one for you. This is the usual cause after the id moves
+  above: re-issue with an id from `near_miss_ids`.
 - **A shallow clone answers every churn question with a small number and exit 0, and the tools now
   say so** (v1.108.305, verified against installed 1.108.312 at `tools/_git_history.py:100,201`,
   `tools/get_hotspots.py:177-193`). `history_coverage` asks whether the history reaches past the
@@ -435,6 +453,9 @@ tools can answer structurally.
   `hits_validated_fresh` / `hits_validated_stale`, `hits_unvalidated` and `validated_share`.
   Quote the revalidated number; of the three result-cache consumers only `search_symbols`
   revalidates, so `hits_unvalidated` is genuinely UNKNOWN and is never folded into either bucket.
+  **Since 8e7c558, `search_symbols`' private cache hits are counted too** (#864,
+  `storage/token_tracker.py:391`). They were missed before, so hit rates were understated. A
+  jump in `hit_rate` across this upgrade is the fix. Don't compare it with earlier figures.
   **Two additions in v1.108.309** (verified against installed 1.108.312 at
   `tools/analyze_perf.py:53-107,356-358`): a second ranking, `heaviest_by_total_ms` — wall-clock
   actually consumed, which disagrees with `slowest_by_p95` whenever a fast tool is called often —
