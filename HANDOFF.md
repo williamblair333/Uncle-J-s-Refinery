@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-09-30 — gttp Improvise route covers any domain (branch `feat/gttp-domain-general-improvise`)
+
+gttp now fires on software *improvisation* (missing API, library or feature) but still not on
+software *choice* or code edits. The levers live in `global-skills/gttp/references/bricolage.md`,
+which includes an access-control guardrail. Trigger evals scored 54/54
+(`docs/superpowers/specs/2026-09-30-gttp-trigger-evals.json`). The old description fired on only
+3/12 software-improvise runs. See the addendum in the 2026-09-20 design doc.
+
+- **Not graded:** answer quality on a software improvisation. Only triggering was tested.
+- **Live before merge:** `~/.claude/skills/gttp` symlinks into the working tree. Checking out
+  `main` before this merges silently reverts the skill.
+- **Vault:** `13 - Resources/Inventory.md` gained a non-physical section. It's uncommitted in the
+  vault's own git.
+- The 67 headless eval runs (1 trial + 54 + a 12-run baseline) ran from
+  `scratchpad/trig` and may appear as Langfuse traces. Only the first trial persisted a
+  transcript (`~/.claude/projects/-tmp-…-scratchpad-trig`).
+
 ## 2026-09-23 — occams-razor amended (branch `skill-occams-domain-first`, UNPUSHED)
 
 `global-skills/occams-razor/SKILL.md` gained the step it was missing: where candidate hypotheses

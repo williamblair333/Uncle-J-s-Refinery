@@ -70,3 +70,31 @@ log-dedup fixes; each was re-tested after the edit.
   that prove out in the user's log are promoted by a reviewed change.
 - Both graders and the review agent were Claude; the citation-labeling assertion is the most
   subjective one they applied.
+
+## Addendum 2026-09-30 — the Improvise route covers any domain
+
+The merge made the Improvise path physical-only, so it didn't cover the software half of the
+bricolage idea: reaching a goal another way when the obvious route is blocked (no bulk-export
+API, no parser for a format, no webhook). The software exclusion also stopped the description
+from firing on those requests at all.
+
+Rule: **software *improvisation* fires; software *choice* and code edits do not.** The Improvise
+row and the description name missing APIs, libraries and features. The exclusion is narrowed to
+"choosing among available software options". The levers moved to `references/bricolage.md`,
+with domain-general examples and a guardrail: work around missing capability, never around
+access controls. The Improvise box makes reading it mandatory. The vault inventory note gained a
+non-physical resources section.
+
+The two rules pull against each other on software, and only the eval set keeps them from
+cancelling. `2026-09-30-gttp-trigger-evals.json` has 18 requests: 7 must-fire controls, 4
+software-improvise must-fire, 7 must-not-fire. The 2026-09-20 run's 16 trigger requests were
+never saved, so this set replaces them. Method: headless `claude -p`, `--max-turns 2`,
+`--no-session-persistence`, 3 reps each, and a run counts as firing when it calls `Skill` with
+`gttp`.
+
+| Description | Result |
+|---|---|
+| New, all 18 requests | 54/54 |
+| Old, the 4 software-improvise requests | 3/12: it fired only on the scanner-driver request |
+
+This round checked triggering only. Answer quality on a software improvisation wasn't graded.

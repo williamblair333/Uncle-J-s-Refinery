@@ -1,0 +1,24 @@
+{
+  "skill_name": "gttp",
+  "note": "Trigger evals: does gttp's description fire, or not fire, on each request? Run headless with `claude -p <prompt> --output-format stream-json --verbose --max-turns 2` from a directory outside any project, 3 reps each. A run fires when it emits a Skill tool_use with skill == 'gttp'. The four 'fable' items are the contract for the 2026-09-30 change: software improvisation must fire while software choice and bug fixes must not. The 2026-09-20 run's 16 requests were not saved; this set replaces them.",
+  "evals": [
+    {"id": "t1", "source": "fable", "expect": "fire", "prompt": "The vendor API has no bulk export, how do I get all 40k records out"},
+    {"id": "t2", "source": "fable", "expect": "fire", "prompt": "There's no library that parses this format"},
+    {"id": "t3", "source": "fable", "expect": "no_fire", "prompt": "Which Python library should I use for X"},
+    {"id": "t4", "source": "fable", "expect": "no_fire", "prompt": "Fix this bug"},
+    {"id": "t5", "expect": "fire", "prompt": "Our CRM doesn't have webhooks. How do I get notified when a deal changes stage?"},
+    {"id": "t6", "expect": "fire", "prompt": "My old flatbed scanner has no driver for Windows 11 and the maker won't release one. How do I keep using it?"},
+    {"id": "t7", "expect": "fire", "prompt": "The handle on my outdoor spigot snapped off and no store has one that fits the square stem. How do I get it turning?"},
+    {"id": "t8", "expect": "fire", "prompt": "What if I cut pool noodles lengthwise and stuff them in my gutters as gutter guards?"},
+    {"id": "t9", "expect": "fire", "prompt": "Can I use cinder blocks under my car instead of jack stands for a quick brake job?"},
+    {"id": "t10", "expect": "fire", "prompt": "Should I switch from my gas water heater to a heat pump water heater?"},
+    {"id": "t11", "expect": "fire", "prompt": "Cheapest way to keep my basement from getting damp every summer?"},
+    {"id": "t12", "expect": "no_fire", "prompt": "Should we use Postgres or MongoDB for our new orders service?"},
+    {"id": "t13", "expect": "no_fire", "prompt": "Which React state management library is best for a mid-size app?"},
+    {"id": "t14", "expect": "no_fire", "prompt": "Add a --verbose flag to my Python CLI that prints each file as it's processed."},
+    {"id": "t15", "expect": "no_fire", "prompt": "How should I split this monolith's modules into packages?"},
+    {"id": "t16", "expect": "no_fire", "prompt": "Refactor this function to be more readable:\n\ndef f(a):\n    r=[]\n    for i in a:\n        if i%2==0: r.append(i*i)\n    return r"},
+    {"id": "t17", "expect": "no_fire", "prompt": "What temperature does water boil at 5,000 feet?"},
+    {"id": "t18", "expect": "no_fire", "prompt": "This function returns None instead of the sum. Fix it:\n\ndef total(xs):\n    s = 0\n    for x in xs:\n        s += x"}
+  ]
+}
