@@ -121,6 +121,14 @@ tools can answer structurally.
   with both `<script>` and `<script setup>` indexes both (L-44). **Re-index in full**
   (`invalidate_cache` then `index_folder`) before trusting a stored id, `parent` or member list
   in C++, F#, Kotlin, Vue, Svelte, Astro or Razor.
+- **`PARSER_GENERATION` went 8 → 9 in the 8e7c558 → c7dfcbf upgrade** (verified against the
+  c7dfcbf checkout at `storage/index_store.py:583`). This time the bump forces a full re-parse
+  of every indexed repo on its next index run. It carries the C/C++ id moves in this release: an
+  enum behind an export macro is an `enum` (L-47), a class defined as `ns::Foo` is owned by `ns`
+  (L-46), a header of namespaced declarations reads as C++ (L-52), and a template
+  specialisation keeps its arguments in its id (L-54). It also records **dynamic imports** as
+  import edges or named boundaries (#876/#928), and the safety verdicts below read those.
+  Stored C/C++ ids from before the re-parse may not resolve after it. Use `near_miss_ids`.
 - **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
   (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
   `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
@@ -321,6 +329,29 @@ tools can answer structurally.
     ingested traces read as zero, and a delete preflight could certify a symbol that had live
     traffic. Both now read `count`. **Re-run any `safe_to_delete` taken after
     `import_runtime_signal` on an older build.** A schema mismatch now logs at WARNING.
+  - **⚠⚠ c7dfcbf adds `dynamic_import_boundary` to `check_edit_safe` and `check_delete_safe`,
+    and makes `check_rename_safe.safe` tri-state** (#879/#922, L-75/#936, L-80/#938, verified by
+    diffing the 8e7c558 and c7dfcbf checkouts: `tools/check_edit_safe.py`,
+    `tools/check_delete_safe.py`, `tools/check_rename_safe.py`, `tools/_stop_rule.py`).
+    - `check_edit_safe` returns **`dynamic_import_boundary`** in place of `safe_to_edit` when an
+      `importlib`-style load by a computed name can reach the file. Confidence is capped at 0.6,
+      and the loaders are named in a blocker and in `dynamic_loader_count`.
+    - `check_delete_safe` returns the same verdict in place of `safe_to_delete`,
+      `internal_only` or `test_coverage_only`. It outranks `corpus_inadequate`.
+    - The stop rule treats `dynamic_import_boundary`, `corpus_inadequate` and
+      `name_not_searchable` as **never terminal**. They always carry a `would_change_verdict`
+      gap to act on.
+    - **`check_rename_safe.safe` can now be `None`.** No collision was found, but the importer
+      graph never reached the files that use the symbol. `unresolvable` says why.
+      **`if not r["safe"]` now reads `None` as unsafe. `if r["safe"] is not False` reads it as
+      safe.** Handle `None` explicitly.
+    - Anything switching on `safe_to_edit` or `safe_to_delete` must handle the new value.
+      Otherwise it reads a refusal as a green light.
+  - **`find_importers` and `get_blast_radius` disclose dynamic imports** (#876, L-73). An entry
+    can carry `dynamic_import_boundary` (`files`, `files_total`, `note`), and an empty answer
+    can carry `dynamic_imports_unfollowed`. An empty importer list with either key is not
+    evidence that nothing loads the file. The dead-code tools add `dynamic_import_boundary` to
+    `confidence_capped_by` and list `dynamic_import_sites` (L-70).
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
@@ -748,6 +779,16 @@ tools can answer structurally.
   `blast_radius_unavailable` says why none was computed. **Read an empty blast as "no impact"
   only when `absence_refused` is false.** Separately, a Swift `deinit` is never certified
   deletable: `check_delete_safe` answers `name_not_searchable` for it (#754).
+- **`get_changed_symbols` names the changed files it did not symbol-diff** (#874/#925,
+  verified by diffing the 8e7c558 and c7dfcbf checkouts at `tools/get_changed_symbols.py`). New
+  keys: `symbol_diff_complete`, `parsed_changed_files_count` and `unparsed_changed_files`
+  (`{file, reason}`, where reason is `no_language`, `unreadable` or `parse_failed`). **Read an
+  empty changed-symbol list as "nothing changed" only when `symbol_diff_complete` is true.**
+  The blast radius now lists only importers that exist at `until_sha` (#878). Dropped ones are
+  counted in `blast_dropped_absent_at_until`, and unchecked ones in `blast_existence_unchecked`.
+  A blast whose importers are only in another repo is `degraded`, not `absent` (#877). Runtime
+  freshness now carries `body`/`body_basis`, which says whether a trace saw the current body
+  (#875).
 
 ### 7. Format economy
 - Pass `format="auto"` on any jCodeMunch tool call that might return a large
