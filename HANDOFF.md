@@ -1,6 +1,6 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-09-30 — gttp Improvise route covers any domain (branch `feat/gttp-domain-general-improvise`)
+## 2026-09-30 — gttp Improvise route covers any domain (MERGED, PR #149, `089017d`)
 
 gttp now fires on software *improvisation* (missing API, library or feature) but still not on
 software *choice* or code edits. The levers live in `global-skills/gttp/references/bricolage.md`,
@@ -9,8 +9,15 @@ which includes an access-control guardrail. Trigger evals scored 54/54
 3/12 software-improvise runs. See the addendum in the 2026-09-20 design doc.
 
 - **Not graded:** answer quality on a software improvisation. Only triggering was tested.
-- **Live before merge:** `~/.claude/skills/gttp` symlinks into the working tree. Checking out
-  `main` before this merges silently reverts the skill.
+- **Next:** grade answer quality on 2–3 software-improvise prompts (t1, t2, t5) blind, the way
+  the 2026-09-20 run graded the physical ones.
+- **gh quirk:** `gh pr merge --merge --delete-branch` failed with "head branch out of date" yet
+  still deleted the remote branch, which closed the PR. Recovered by re-pushing and
+  `gh pr reopen`. Merge without `--delete-branch`, then delete the branch separately.
+- **Auto-maintain commits rode along:** the PR carried the three unpushed `chore: post-upgrade
+  sync` commits (`92467f9`, `8d500ed`, `3e239bf`) from local main. They are on origin now.
+- **Hook friction:** the surface guards treat a `.py` in the session scratchpad as a surface
+  file, so a throwaway eval runner needed a full pre-mortem. A candidate for narrowing.
 - **Vault:** `13 - Resources/Inventory.md` gained a non-physical section. It's uncommitted in the
   vault's own git.
 - The 67 headless eval runs (1 trial + 54 + a 12-run baseline) ran from
