@@ -100,6 +100,35 @@ tools can answer structurally.
   All of this reaches only files changed since the upgrade. **Force a full re-index**
   (`invalidate_cache` then `index_folder`) before trusting a count, a member list, `parent`, or an
   absence of these kinds.
+- **⚠⚠ The 6b8173a → 94d554d git upgrade did it again — and this time symbol IDS MOVE, still at
+  gen 8** (verified against the installed checkout at `storage/index_store.py:326-380,424`).
+  Nothing forces a re-parse, so an existing index serves the OLD ids for unchanged files — a
+  stored id or `parent` taken before the upgrade may not resolve after it. Moves: a Kotlin
+  **file-scope** `val`/`var` goes `#property` → `#constant`/`#variable` (#807; class members keep
+  `property`); a JS/TS `const C = class {}` goes `C#constant` → `C#class`, its methods to
+  `C.m#method` (#803); a C++ type/field/method declared inside a function is owned by it
+  (`S` → `f.S`, #833/#798). New symbols: TS constructor parameter properties (#802), Swift `deinit`
+  (#754), PHP enum cases (#759), Dart extension types, C typedef lists and prototypes,
+  Nim/Pascal/F#/Zig/PowerShell/MATLAB members, and per-name spans in grouped Go `var`/`const` and
+  multi-declarator JS/TS bindings. **Force a full re-index** (`invalidate_cache` then
+  `index_folder`) before trusting any of them.
+- **⚠⚠ 94d554d → 8e7c558 moves ids a third time, still at gen 8** (verified against installed
+  8e7c558: `PARSER_GENERATION == 8`). A C++ out-of-class definition `void Foo::bar() {}` is now a
+  member of `Foo` (L-07). A class declared behind an export macro is a `class` (L-45). A class in a
+  Vue/Svelte/Astro/Razor script owns its members (#861, L-37). A Vue/Svelte function-valued
+  binding is a `function` (L-42), and `lang="tsx"` reads as TSX (L-39). F# is parsed by a new
+  grammar (#848), and C prototype lists and F# `let … and …` chains bind every name. A Vue file
+  with both `<script>` and `<script setup>` indexes both (L-44). **Re-index in full**
+  (`invalidate_cache` then `index_folder`) before trusting a stored id, `parent` or member list
+  in C++, F#, Kotlin, Vue, Svelte, Astro or Razor.
+- **`PARSER_GENERATION` went 8 → 9 in the 8e7c558 → c7dfcbf upgrade** (verified against the
+  c7dfcbf checkout at `storage/index_store.py:583`). This time the bump forces a full re-parse
+  of every indexed repo on its next index run. It carries the C/C++ id moves in this release: an
+  enum behind an export macro is an `enum` (L-47), a class defined as `ns::Foo` is owned by `ns`
+  (L-46), a header of namespaced declarations reads as C++ (L-52), and a template
+  specialisation keeps its arguments in its id (L-54). It also records **dynamic imports** as
+  import edges or named boundaries (#876/#928), and the safety verdicts below read those.
+  Stored C/C++ ids from before the re-parse may not resolve after it. Use `near_miss_ids`.
 - **Discovery skips widened; a file/symbol-count drop after re-index is the fix, not a loss**
   (verified at `security.py:306,326-333`). Newly skipped: `_build` (Elixir/Mix, Sphinx, Dune —
   `mix` copies dependency *sources* there, so those symbols were indexed twice) and the dotted
@@ -300,6 +329,29 @@ tools can answer structurally.
     ingested traces read as zero, and a delete preflight could certify a symbol that had live
     traffic. Both now read `count`. **Re-run any `safe_to_delete` taken after
     `import_runtime_signal` on an older build.** A schema mismatch now logs at WARNING.
+  - **⚠⚠ c7dfcbf adds `dynamic_import_boundary` to `check_edit_safe` and `check_delete_safe`,
+    and makes `check_rename_safe.safe` tri-state** (#879/#922, L-75/#936, L-80/#938, verified by
+    diffing the 8e7c558 and c7dfcbf checkouts: `tools/check_edit_safe.py`,
+    `tools/check_delete_safe.py`, `tools/check_rename_safe.py`, `tools/_stop_rule.py`).
+    - `check_edit_safe` returns **`dynamic_import_boundary`** in place of `safe_to_edit` when an
+      `importlib`-style load by a computed name can reach the file. Confidence is capped at 0.6,
+      and the loaders are named in a blocker and in `dynamic_loader_count`.
+    - `check_delete_safe` returns the same verdict in place of `safe_to_delete`,
+      `internal_only` or `test_coverage_only`. It outranks `corpus_inadequate`.
+    - The stop rule treats `dynamic_import_boundary`, `corpus_inadequate` and
+      `name_not_searchable` as **never terminal**. They always carry a `would_change_verdict`
+      gap to act on.
+    - **`check_rename_safe.safe` can now be `None`.** No collision was found, but the importer
+      graph never reached the files that use the symbol. `unresolvable` says why.
+      **`if not r["safe"]` now reads `None` as unsafe. `if r["safe"] is not False` reads it as
+      safe.** Handle `None` explicitly.
+    - Anything switching on `safe_to_edit` or `safe_to_delete` must handle the new value.
+      Otherwise it reads a refusal as a green light.
+  - **`find_importers` and `get_blast_radius` disclose dynamic imports** (#876, L-73). An entry
+    can carry `dynamic_import_boundary` (`files`, `files_total`, `note`), and an empty answer
+    can carry `dynamic_imports_unfollowed`. An empty importer list with either key is not
+    evidence that nothing loads the file. The dead-code tools add `dynamic_import_boundary` to
+    `confidence_capped_by` and list `dynamic_import_sites` (L-70).
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
@@ -309,6 +361,15 @@ tools can answer structurally.
 **Quality & risk**:
 - `get_hotspots` — top-N highest-risk symbols (complexity × churn, CodeScene methodology); use before planning sprint work or targeting reviews.
 - `get_churn_rate` — git churn for a file or symbol (commit count, authors, churn/week, stable/active/volatile).
+  **A missing target is now an `error`, not `commits: 0` / `stable`** (L-41, verified against
+  installed 8e7c558 at `tools/get_churn_rate.py:106-113,161-176`). Before, a `::` id the index
+  lacked, or a path that exists nowhere, was answered as a cold file at confidence `high`. A
+  deleted file keeps its history and is still answered. Check for `error` before reading `commits`.
+- **Every symbol not-found error can carry `near_miss_ids`** (#869, `retrieval/verdict.py`
+  `symbol_not_found`). Sixteen tools now share one error. When indexed ids differ only by owner
+  qualifier or `~N` suffix, the error adds `near_miss_ids`, `near_miss_total` and
+  `near_miss_truncated`. It never picks one for you. This is the usual cause after the id moves
+  above: re-issue with an id from `near_miss_ids`.
 - **A shallow clone answers every churn question with a small number and exit 0, and the tools now
   say so** (v1.108.305, verified against installed 1.108.312 at `tools/_git_history.py:100,201`,
   `tools/get_hotspots.py:177-193`). `history_coverage` asks whether the history reaches past the
@@ -423,6 +484,9 @@ tools can answer structurally.
   `hits_validated_fresh` / `hits_validated_stale`, `hits_unvalidated` and `validated_share`.
   Quote the revalidated number; of the three result-cache consumers only `search_symbols`
   revalidates, so `hits_unvalidated` is genuinely UNKNOWN and is never folded into either bucket.
+  **Since 8e7c558, `search_symbols`' private cache hits are counted too** (#864,
+  `storage/token_tracker.py:391`). They were missed before, so hit rates were understated. A
+  jump in `hit_rate` across this upgrade is the fix. Don't compare it with earlier figures.
   **Two additions in v1.108.309** (verified against installed 1.108.312 at
   `tools/analyze_perf.py:53-107,356-358`): a second ranking, `heaviest_by_total_ms` — wall-clock
   actually consumed, which disagrees with `slowest_by_p95` whenever a fast tool is called often —
@@ -707,6 +771,24 @@ tools can answer structurally.
   `get_changed_symbols` (git diff → symbols touched),
   `get_untested_symbols`, and `get_pr_risk_profile`. Report the risk score
   to the user.
+- **An empty `get_changed_symbols` blast radius is no longer a bare `[]`** (#718, verified against
+  installed 94d554d at `tools/get_changed_symbols.py:116-122,213-277,376`). It used to read as "no
+  downstream impact" even when the graph could not reach the file. With `include_blast_radius`,
+  an empty entry now carries `blast_verdict` (`state` / `absence_refused` / `reason`), the full
+  per-file verdict rides in `blast_verdicts`, shared coverage in `blast_coverage`, and
+  `blast_radius_unavailable` says why none was computed. **Read an empty blast as "no impact"
+  only when `absence_refused` is false.** Separately, a Swift `deinit` is never certified
+  deletable: `check_delete_safe` answers `name_not_searchable` for it (#754).
+- **`get_changed_symbols` names the changed files it did not symbol-diff** (#874/#925,
+  verified by diffing the 8e7c558 and c7dfcbf checkouts at `tools/get_changed_symbols.py`). New
+  keys: `symbol_diff_complete`, `parsed_changed_files_count` and `unparsed_changed_files`
+  (`{file, reason}`, where reason is `no_language`, `unreadable` or `parse_failed`). **Read an
+  empty changed-symbol list as "nothing changed" only when `symbol_diff_complete` is true.**
+  The blast radius now lists only importers that exist at `until_sha` (#878). Dropped ones are
+  counted in `blast_dropped_absent_at_until`, and unchecked ones in `blast_existence_unchecked`.
+  A blast whose importers are only in another repo is `degraded`, not `absent` (#877). Runtime
+  freshness now carries `body`/`body_basis`, which says whether a trace saw the current body
+  (#875).
 
 ### 7. Format economy
 - Pass `format="auto"` on any jCodeMunch tool call that might return a large

@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-09-30 — gttp Improvise route covers any domain (branch `feat/gttp-domain-general-improvise`)
+
+gttp now fires on software *improvisation* (missing API, library or feature) but still not on
+software *choice* or code edits. The levers live in `global-skills/gttp/references/bricolage.md`,
+which includes an access-control guardrail. Trigger evals scored 54/54
+(`docs/superpowers/specs/2026-09-30-gttp-trigger-evals.json`). The old description fired on only
+3/12 software-improvise runs. See the addendum in the 2026-09-20 design doc.
+
+- **Not graded:** answer quality on a software improvisation. Only triggering was tested.
+- **Live before merge:** `~/.claude/skills/gttp` symlinks into the working tree. Checking out
+  `main` before this merges silently reverts the skill.
+- **Vault:** `13 - Resources/Inventory.md` gained a non-physical section. It's uncommitted in the
+  vault's own git.
+- The 67 headless eval runs (1 trial + 54 + a 12-run baseline) ran from
+  `scratchpad/trig` and may appear as Langfuse traces. Only the first trial persisted a
+  transcript (`~/.claude/projects/-tmp-…-scratchpad-trig`).
+
 ## 2026-09-23 — occams-razor amended (branch `skill-occams-domain-first`, UNPUSHED)
 
 `global-skills/occams-razor/SKILL.md` gained the step it was missing: where candidate hypotheses
@@ -24,6 +41,10 @@ to Bill. Logged in ROADMAP.
    here.
 
 `uv.lock` is also modified in the working tree, unstaged and unrelated — left alone.
+
+- **jcodemunch-mcp breaking change**: 6b8173a→94d554d moves symbol ids (Kotlin file-scope `val`/`var` `#property`→`#constant`/`#variable`, JS/TS class expressions `#constant`→`#class`, C++ function-local types re-parented) without a `PARSER_GENERATION` bump, and `get_changed_symbols` now attaches `blast_verdict`/`blast_verdicts` to empty blast radii — callers must force a full re-index before trusting stored ids and must gate "no impact" on `absence_refused`.
+- **jcodemunch-mcp breaking change**: 94d554d→8e7c558 moves symbol ids again at gen 8 (C++ out-of-class members, Vue/Svelte/Astro/Razor class members, F#), `get_churn_rate` now returns an `error` for a missing target instead of `commits: 0`/`stable`, and not-found errors gain `near_miss_ids` — callers must re-index in full, check `error` before reading churn, and retry with an id from `near_miss_ids`.
+- **jcodemunch-mcp breaking change**: 8e7c558→c7dfcbf adds the verdict `dynamic_import_boundary` to `check_edit_safe`/`check_delete_safe` (in place of `safe_to_edit`/`safe_to_delete`), makes `check_rename_safe.safe` tri-state (`None` plus `unresolvable`), adds `symbol_diff_complete`/`unparsed_changed_files` to `get_changed_symbols`, and bumps `PARSER_GENERATION` 8→9 — callers must handle the new verdict and a `None` `safe` explicitly, gate "nothing changed" on `symbol_diff_complete`, and expect one full re-parse.
 
 ## 2026-09-22 — first-run gate: git-visible copy (branch `fix/gate-copy-git-files`)
 

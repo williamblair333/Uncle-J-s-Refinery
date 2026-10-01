@@ -1,6 +1,6 @@
 ---
 name: gttp
-description: Use when the user proposes a specific material, product, hack, or design for a physical, home, or purchase problem and asks whether it works ("what if I…", "analyze this", "is X a good idea", "can I use X instead"); when choosing or buying for a physical, home, or purchase goal ("cheapest/best way to", "should I switch"); when the purpose-made part or method is unavailable, discontinued, or ruled out ("nothing fits", "they don't make one", "how do I rig this"); when the user wants to bypass or substitute a safety device; when the user pushes back on a verdict about such an idea; or on /gttp. Not for software design, architecture, library or feature choices, code edits or bug fixes, factual lookups, or requests with no decision in them.
+description: Use when the user proposes a specific material, product, hack, or design for a physical, home, or purchase problem and asks whether it works ("what if I…", "analyze this", "is X a good idea", "can I use X instead"); when choosing or buying for a physical, home, or purchase goal ("cheapest/best way to", "should I switch"); when the obvious or purpose-made part, tool, method, API, or library is unavailable, discontinued, or ruled out and the goal has to be reached another way, in any domain including software ("nothing fits", "they don't make one", "the API has no export for this", "there's no library for this format", "how do I rig/hack this"); when the user wants to bypass or substitute a safety device; when the user pushes back on a verdict about such an idea; or on /gttp. Not for choosing among available software options (libraries, frameworks, architecture, features), code edits or bug fixes, factual lookups, or requests with no decision in them.
 ---
 
 # gttp — Get To The Point
@@ -29,7 +29,7 @@ and no extension cord). Give no dimensions, masses, formulas or worked calculati
 | The user proposes a means, or reports their own results against the standard advice | **Full analysis**, Steps 2–5. The proposed means and the purpose-made fix compete as peers. |
 | The user asks how to fix or get something, proposes no means of their own, and a purpose-made fix exists that costs less than their time to improvise one | **Short answer, ≤150 words, no tables.** The fix, the one check that confirms the diagnosis, the failure mode to watch. "Cleverest" in the prompt is not a reason to add candidates. |
 | The user says the part is unavailable, but a purpose-made equivalent exists under a name they didn't search for (e.g. "sillcock key", not "spigot handle") | **Short answer, ≤200 words, no tables.** The equivalent by its real name, up to two on-hand stopgaps for today, the failure mode to watch. |
-| The purpose-made option is truly blocked, and the job must be done with what's on hand | **Improvise** (Step 3 box), then Steps 4–5. Satisfice: stop at the first candidate that clears the real bar, and keep it under ~450 words. |
+| The purpose-made option is truly blocked, and the job must be done with what's on hand, in any domain (a missing part, API, library, or feature) | **Improvise** (Step 3 box), then Steps 4–5. Satisfice: stop at the first candidate that clears the real bar, and keep it under ~450 words. |
 | Any other decision among physical, home, or purchase options | **Full analysis**, Steps 2–5. Anything else: answer normally, without this skill. |
 
 Full analysis stays under ~600 words: five or six candidates, one line each, not
@@ -60,14 +60,15 @@ inferred.
 7. At least one unconventional candidate you generate (levers:
    `references/mechanism-library.md`)
 
-> **Improvise path.** Define the real bar first (holds X, survives Y,
+> **Improvise path.** Read `references/bricolage.md` first; it holds the
+> levers and the guardrails, including "work around missing capability, never
+> around access controls". Define the real bar (holds X, survives Y,
 > reversible if Z). Restate the need as a *function* ("apply torque to a
-> 1/4 in square stem"), not as the missing part. Describe what's on hand by
-> *properties* (shape, size, rigidity, chemistry, thermal limit), not labels;
-> read the user's inventory note if one exists (Step 6). Borrow from another
-> domain: where else is this function solved? Produce 3+ candidates, prefer
-> reversible ones while uncertain, and commit to permanent bonds only once
-> confident.
+> 1/4 in square stem", "get every record out once, complete"), not as the
+> missing thing. Describe what's on hand by *properties*, not labels; read the
+> user's inventory note if one exists (Step 6). Produce 3+ candidates, prefer
+> reversible ones while uncertain, and commit to permanent changes only once
+> confident. Candidates still face Step 4, including the do-nothing baseline.
 
 ## Step 4 — Kill-test, in order; the first failure kills
 

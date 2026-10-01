@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-09-30 — gttp: the Improvise route covers any domain
+
+The bricolage half of gttp was physical-only. A request like "the vendor API has no bulk export"
+or "there's no library for this format" didn't fire the skill: the old description's software
+exclusion suppressed it, 0 of 9 runs on three such requests.
+
+- The description and the Improvise route now cover missing APIs, libraries and features. The
+  exclusion is narrowed to choosing among available software options, plus code edits and bug
+  fixes.
+- New `global-skills/gttp/references/bricolage.md` holds the levers only, with domain-general
+  examples and an access-control guardrail. The Improvise box makes it required reading.
+  Candidates still go through the kill-test and the do-nothing baseline.
+- New trigger eval set, `docs/superpowers/specs/2026-09-30-gttp-trigger-evals.json`, with 18
+  requests and must-not-fire negatives. The new description scores 54/54 over 3 reps.
+- The vault note `13 - Resources/Inventory.md` gained a non-physical resources section. That
+  change is outside this repo.
+
+Deployed already — `~/.claude/skills/gttp` symlinks into `global-skills/`.
+
 ## 2026-09-23 — occams-razor: rank the list you have, but build the right list
 
 The skill selected between hypotheses and said nothing about where hypotheses come from. An agent
