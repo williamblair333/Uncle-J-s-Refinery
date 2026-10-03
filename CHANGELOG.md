@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-10-03 — CI: wire the six unwired test files; fix CONTRIBUTING clone URL
+
+Four new CI jobs run the test files that passed locally but never ran on a PR:
+`test_grep_guard`, `test_auto_maintain_verdict`, `test_tg_security`, and the three
+`test_memweave_*` files. The ONNX and `mw_search` cases self-skip on the runner (no model, no
+`.venv-memweave`) and so pin collection only. The surface-write-guard job was renumbered 11→13.
+`CONTRIBUTING.md` cloned `wblair8689/…`; it now points at `williamblair333/…`.
+
 ## 2026-09-30 — gttp: the Improvise route covers any domain
 
 The bricolage half of gttp was physical-only. A request like "the vendor API has no bulk export"

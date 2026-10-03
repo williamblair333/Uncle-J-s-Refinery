@@ -248,7 +248,7 @@ jobs:
       - name: pytest tests/test_claude_md_deploy.py
         run: python -m pytest tests/test_claude_md_deploy.py -v
 
-  # ── 11. surface-write-guard behaviour matrix ─────────────────────────────
+  # ── 13. surface-write-guard behaviour matrix ─────────────────────────────
   # A security control, same posture as push-guard: the BLOCK cases matter more
   # than the ALLOW ones, since a fix for a logging bug that narrows detection is
   # strictly worse than the bug. The KNOWN_GAPS cases are strict xfails — closing
@@ -270,3 +270,86 @@ jobs:
 
       - name: pytest tests/test_surface_write_guard.py
         run: python -m pytest tests/test_surface_write_guard.py -v
+
+  # ── 14. grep-guard behaviour matrix ──────────────────────────────────────
+  # A PreToolUse hook that redirects brute-force grep/find/cat onto the
+  # retrieval stack. Same posture as the other guards: BLOCK cases first.
+  # Needs pytest + jq (the guard parses its payload with jq).
+  test-grep-guard:
+    name: grep-guard behaviour matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_grep_guard.py
+        run: python -m pytest tests/test_grep_guard.py -v
+
+  # ── 15. auto-maintain verdict tests ──────────────────────────────────────
+  # lib/eval-verdict.sh + scripts/auto-maintain.sh: the nightly agent's
+  # pass/fail parsing and its push guard. Stdlib + pytest + bash only.
+  test-auto-maintain-verdict:
+    name: auto-maintain verdict tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_auto_maintain_verdict.py
+        run: python -m pytest tests/test_auto_maintain_verdict.py -v
+
+  # ── 16. telegram-gateway security tests ──────────────────────────────────
+  # scripts/lib/tg_security.py: chat allowlist, rate limiting, replay window.
+  # Stdlib + pytest only; no bot token, no network.
+  test-tg-security:
+    name: telegram-gateway security tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_tg_security.py
+        run: python -m pytest tests/test_tg_security.py -v
+
+  # ── 17. memweave tests ───────────────────────────────────────────────────
+  # export_transcripts runs on stdlib. The ONNX provider and mw_search cases
+  # self-skip when the all-MiniLM-L6-v2 model or .venv-memweave is absent, as
+  # on this runner, so they pin import-time correctness only until the model
+  # is cached here. The job still fails on a collection error in those files.
+  test-memweave:
+    name: memweave tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: pytest tests/test_memweave_*.py
+        run: python -m pytest tests/test_memweave_export.py tests/test_memweave_onnx_provider.py tests/test_memweave_search.py -v -rs

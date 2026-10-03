@@ -3,7 +3,7 @@
 ## Quick start
 
 ```bash
-git clone https://github.com/wblair8689/Uncle-J-s-Refinery.git
+git clone https://github.com/williamblair333/Uncle-J-s-Refinery.git
 cd Uncle-J-s-Refinery
 ./install.sh
 ```
