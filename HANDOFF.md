@@ -23,6 +23,7 @@ which includes an access-control guardrail. Trigger evals scored 54/54
 - The 67 headless eval runs (1 trial + 54 + a 12-run baseline) ran from
   `scratchpad/trig` and may appear as Langfuse traces. Only the first trial persisted a
   transcript (`~/.claude/projects/-tmp-…-scratchpad-trig`).
+- **jcodemunch-mcp breaking change**: c7dfcbf→6d5ae86 (v1.108.327) makes `check_delete_safe` scan every file, widens `check_references` matching, and unifies the test-file rule (root `tests/` now counts), so callers must re-run any `safe_to_delete`/`test_coverage_only` verdict from an older build and handle `search_symbols(fusion=true)`'s new `semantic_channel_error` body key and `unavailable` semantic channel.
 
 ## 2026-09-23 — occams-razor amended (branch `skill-occams-domain-first`, UNPUSHED)
 
