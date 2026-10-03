@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-03 — CI covers all 17 test files (branch `claude/magical-davinci-95d0bo`)
+
+Four jobs added to `.github/workflows/ci.yml` (grep-guard, auto-maintain verdict, tg-security,
+memweave). Nothing else changed. The memweave job's ONNX cases skip on GitHub runners; caching
+`all-MiniLM-L6-v2` there would turn them live. `CONTRIBUTING.md` clone URL corrected.
+
 ## 2026-09-30 — gttp Improvise route covers any domain (MERGED, PR #149, `089017d`)
 
 gttp now fires on software *improvisation* (missing API, library or feature) but still not on
