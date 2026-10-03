@@ -291,6 +291,14 @@ tools can answer structurally.
     `batches_failed` and the same `error_causes`. **Read its presence as "this hybrid answer is
     lexical-only for part of the corpus"** — the ranking looks complete and is not. Deliberately
     in the body, not `_meta`, because the shipped `meta_fields: []` default deletes `_meta`.
+- **`search_symbols(fusion=true)` names a failed similarity channel** (L-108, v1.108.327, verified
+  by diffing c7dfcbf→6d5ae86 at `tools/search_symbols.py`). A body key `semantic_channel_error`
+  (`type`, `message`) appears, and the verdict's semantic channel reads **`unavailable`**, not
+  `off`. Before, that failure looked like a repo with no embeddings. That answer isn't cached.
+  Handle the third channel value. Relatedly, `embed_repo` now **raises** when the
+  sentence-transformers provider gets a local model path on a release older than 5.6.0
+  (GHSA-jhr6-gm9c-rqjv). The fix is to upgrade with `pip install -U 'jcodemunch-mcp[semantic]'` or
+  use a Hub model name.
 
 **References & call graph**:
 - **"Where is this name used" routes to `check_references`, not `find_references`** (CF-51/CF-63,
@@ -352,6 +360,23 @@ tools can answer structurally.
     can carry `dynamic_imports_unfollowed`. An empty importer list with either key is not
     evidence that nothing loads the file. The dead-code tools add `dynamic_import_boundary` to
     `confidence_capped_by` and list `dynamic_import_sites` (L-70).
+  - **⚠ 6d5ae86 (v1.108.320–.327) widens what counts as a use and what counts as a test**
+    (verified by diffing the c7dfcbf and 6d5ae86 checkouts: `tools/check_references.py`,
+    `tools/check_delete_safe.py`, `tools/_test_paths.py`, `tools/_stop_rule.py`).
+    - `check_delete_safe` now scans **every** file for references, not the 20-file
+      `check_references` page (L-89). Before, twenty test files that only mentioned a name
+      pushed the real caller off the page, and a used function graded `test_coverage_only`.
+      **Re-run any `safe_to_delete` / `test_coverage_only` taken on an older build.**
+    - `check_references` compares NFKC-folded text with Unicode escapes decoded (L-84/L-86).
+      It excludes a definition only on an exact-case name match (L-88). Expect more hits,
+      never fewer.
+    - One `is_test_file` rule now serves every tool (L-101). A root-level `tests/`, `__tests__/`,
+      `*.spec.ts`, `*.test.js` and `a_test.py` are tests everywhere. `src/testimonials.tsx` is
+      no longer a test to `get_pr_risk_profile`. Files under a root `tests/` stop showing up as
+      dead code, and a use there can downgrade a delete/edit verdict to its test-only form.
+    - `name_not_searchable` keeps its name but now carries the dynamic-import and re-index
+      blockers and gaps that used to be dropped (L-81). An unsettled verdict's gap list always
+      names the missing `*_gap` cause (L-82).
 - Before refactoring unfamiliar code: `get_symbol_provenance` — full authorship lineage explains the "why" behind code before you change it.
 - After editing files: call `register_edit` to invalidate BM25/search caches.
 - `get_symbol_diff` — diff symbol sets between two indexed snapshots (index branch A as repo-main, branch B as repo-feature, then diff).
