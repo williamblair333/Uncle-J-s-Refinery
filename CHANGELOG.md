@@ -2,6 +2,38 @@
 
 ---
 
+## 2026-10-04 — ask_local: hand bounded subtasks to a local model
+
+This is the alternative to the Hermes convergence proposal
+(`docs/proposals/2026-10-03-hermes-convergence.md`). The proposal moves the Refinery to Hermes for
+model choice and offline work. This brings a local model into Claude Code as an MCP server instead,
+so Claude stays the orchestrator and the Max subscription is unchanged.
+
+- New `scripts/ask_local/server.py` has four tools: `local_status`, `ask_local`,
+  `summarize_local` and `extract_local`. It has no shell and writes no files.
+  - `summarize` and `extract` read a file server-side, so a large input never enters Claude's
+    context. The file limit is 256 KB.
+  - `extract` constrains output to a JSON Schema and checks required keys.
+  - Every failure returns `{"error": ...}` and nothing raises. The error codes are
+    `ollama_unreachable`, `model_not_found`, `timeout`, `input_too_large`, `binary_file`,
+    `path_refused`, `invalid_json` and `schema_mismatch`.
+- It refuses credential-like paths after resolving symlinks: `.ssh`, `.gnupg`, `.aws`, `.env*`,
+  `*.pem`/`*.key`, `~/.claude.json`, `.netrc` and others. The server reads files outside Claude
+  Code's permission rules, so it has to refuse these itself.
+- Each call appends counts and latency, never content, to `state/ask_local.jsonl`, so you can
+  measure whether it pays for itself.
+- Backend: Ollama 0.35.1 in Docker at `/opt/docker/ollama`, loopback only, with the models in
+  `/opt/models/ollama`. That compose file lives outside this repo. Models are `qwen3.5:9b` (the
+  default) and `granite4.2:8b`.
+- Measured on the 566-line Hermes proposal, RTX 3060, fully on the GPU: table extraction took
+  4.7 s warm with 5 of 5 rows correct, a 120-word summary took 8.8 s, generation ran at 51 tok/s,
+  and the first call loads the model in about 30 s. With the lc0 chess engines holding 5.4 GB of
+  VRAM, about 55% of the model ran on CPU and each call took about 60 s.
+- Wired into `install.sh` (`mcp_add ask_local`, which `--skip-optional` skips) and
+  `mcp-clients/claude-code-mcp.json.tmpl`, with one routing row plus a paragraph in CLAUDE.md:
+  "never for the final answer".
+- 33 tests in `tests/test_ask_local.py`, plus CI job 18.
+
 ## 2026-10-03 — CI: wire the six unwired test files; fix CONTRIBUTING clone URL
 
 Four new CI jobs run the test files that passed locally but never ran on a PR:

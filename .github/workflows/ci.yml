@@ -353,3 +353,25 @@ jobs:
 
       - name: pytest tests/test_memweave_*.py
         run: python -m pytest tests/test_memweave_export.py tests/test_memweave_onnx_provider.py tests/test_memweave_search.py -v -rs
+
+  # ── 18. ask_local MCP server tests ───────────────────────────────────────
+  # scripts/ask_local/server.py against an httpx.MockTransport: error shapes,
+  # the credential-path denylist, schema checks, and the content-free
+  # measurement log. The live Ollama case self-skips here (no Ollama). The mcp
+  # package is imported only by build_server(), so httpx is the one dependency.
+  test-ask-local:
+    name: ask_local tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest + httpx
+        run: pip install pytest httpx==0.28.1
+
+      - name: pytest tests/test_ask_local.py
+        run: python -m pytest tests/test_ask_local.py -v -rs
