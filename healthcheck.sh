@@ -995,6 +995,53 @@ check_memweave_fresh() {
     fi
 }
 
+# ----- 9n-2. ask_local backend: Ollama answering, default model present ------
+# Only meaningful when ask_local is registered. A STOPPED container is a choice
+# (Bill stops it to free VRAM for other GPU work) and is reported, not failed —
+# failing it would alert on every deliberate stop. A missing container, or a
+# running one whose API does not answer, is a real fault.
+check_ask_local_backend() {
+    step "ask_local — Ollama backend"
+    if ! grep -q '"ask_local"' "$HOME/.claude.json" 2>/dev/null; then
+        na "ask_local not registered on this host"
+        return
+    fi
+    local url="${ASK_LOCAL_URL:-http://127.0.0.1:11434}"
+    local model="${ASK_LOCAL_MODEL:-qwen3.5:9b}"
+    local compose="/opt/docker/ollama/compose.yaml"
+    local running
+    running="$(docker inspect -f '{{.State.Running}}' ollama 2>/dev/null || echo missing)"
+    if [[ "$running" == "false" ]]; then
+        na "ollama container stopped — ask_local calls return ollama_unreachable until started"
+        return
+    fi
+    # A just-started container answers only after GPU discovery (~5 s measured), so a
+    # running-but-silent API gets a few retries before it counts as down.
+    local version="" i
+    for i in 1 2 3 4; do
+        version="$(curl -sf --max-time 2 "$url/api/version" 2>/dev/null)" && break
+        [[ "$running" == "true" && $i -lt 4 ]] || break
+        sleep 2
+    done
+    if [[ -z "$version" ]]; then
+        if [[ "$running" == "missing" ]]; then
+            bad "ask_local registered but no ollama container exists"
+        else
+            bad "ollama container running but $url/api/version does not answer"
+        fi
+        hint "run: docker compose -f $compose up -d"
+        record_fail "ask-local-ollama-down"
+        return
+    fi
+    if curl -sf --max-time 2 "$url/api/tags" 2>/dev/null | grep -qF "\"name\":\"$model\""; then
+        ok "ollama $(printf '%s' "$version" | grep -o '[0-9][0-9.]*' | head -1) up; default model $model present"
+    else
+        bad "ollama up but default model $model is not pulled"
+        hint "run: docker exec ollama ollama pull $model"
+        record_fail "ask-local-model-missing"
+    fi
+}
+
 # ----- 9o. dreaming last-run freshness (>36h = cron failing) ---------------
 check_dreaming_runtime() {
     step "dreaming — runtime health (last-run freshness)"
@@ -1080,6 +1127,7 @@ check_jcodemunch_watch
 check_jdocmunch_watch_posture
 check_vault_hook_registered
 check_memweave_fresh
+check_ask_local_backend
 check_dreaming_runtime
 check_auto_maintain_runtime
 if [ "$MODE" = "full" ]; then

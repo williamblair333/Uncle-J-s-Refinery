@@ -41,6 +41,19 @@ Other changes for this:
   evidence. The decision-relevant ones were added back.
 - §4 Memory now routes to `memory_search`, with the CLI as a fallback.
 
+**healthcheck: `check_ask_local_backend` (9n-2).** It only runs when ask_local is registered.
+
+| Situation | Result |
+|---|---|
+| Container missing, or running but the API doesn't answer within 4 tries (about 6 s) | fail |
+| Default model not pulled | fail |
+| Container stopped | `--`, never a failure |
+
+The retry covers Ollama's startup: it answers only about 5 s after start, once GPU discovery
+finishes. A stopped container doesn't fail because Bill stops it on purpose to free VRAM, and
+alerting on that would repeat the 2026-08-28 crying-wolf alert. All four states were tested
+against the live container.
+
 ## 2026-10-04 — ask_local: hand bounded subtasks to a local model
 
 This is the alternative to the Hermes convergence proposal

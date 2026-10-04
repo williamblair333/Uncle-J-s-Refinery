@@ -13,6 +13,10 @@
 - After merge: run `scripts/refinery-doctor.sh --fix` to deploy it globally. It keeps the
   Dreaming Notes and writes a `.bak`.
 - #2 (the Codex MCP) is in ROADMAP → Planned.
+- Housekeeping is in this PR too: `healthcheck.sh` checks the Ollama backend. A stopped
+  container is deliberately not a failure.
+- **Still yours:** empty `/opt/.Trash-1000/files/`. Both a hook and Claude Code's safety check
+  block Claude from `rm -rf` there.
 
 ## 2026-10-04 — ask_local MCP built; Hermes migration on hold (branch `feat/ask-local-mcp`)
 
