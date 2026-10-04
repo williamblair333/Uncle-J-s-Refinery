@@ -237,8 +237,10 @@ step "Provisioning .venv-memweave (offline memory store, Python 3.12)"
 # memweave (the library) pulls litellm etc.; the runtime injects OnnxMiniLMProvider
 # so no network is hit at query time. onnxruntime/tokenizers/numpy back that provider
 # (listed explicitly so they survive even if memweave drops one as a transitive dep).
+# mcp backs scripts/memweave/mw_mcp.py (the memory_search/memory_read server); pinned to
+# the stack venv's version.
 uv pip install --python "$STACK_ROOT/.venv-memweave/bin/python" \
-    memweave onnxruntime tokenizers numpy
+    memweave onnxruntime tokenizers numpy mcp==1.27.0
 if "$STACK_ROOT/.venv-memweave/bin/python" -c "from memweave import MemWeave, MemoryConfig" 2>/dev/null; then
     ok ".venv-memweave ready (memweave + ONNX provider importable)"
 else
@@ -417,6 +419,7 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add duckdb -- uvx mcp-server-motherduck --db-path :memory: --read-write --allow-switch-databases
     # Needs a local Ollama on 127.0.0.1:11434; without one every call returns ollama_unreachable.
     [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add ask_local -- "$VENV_BIN/python" "$STACK_ROOT/scripts/ask_local/server.py"
+    mcp_add memweave -- "$STACK_ROOT/.venv-memweave/bin/python" "$STACK_ROOT/scripts/memweave/mw_mcp.py"
     ok "Registered. Verify with: claude mcp list"
 fi
 

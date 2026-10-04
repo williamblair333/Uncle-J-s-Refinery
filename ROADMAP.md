@@ -11,6 +11,13 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Codex MCP — GPT through the ChatGPT subscription** (opened 2026-10-04). Second of the three
+  Hermes-replacement pieces (`ask_local` and the memweave MCP shipped). Codex CLI has an
+  MCP-server mode (`codex mcp-server`; confirm the flag at install). Register it so Claude Code
+  can get a second opinion or a parallel attempt through OpenAI's own sanctioned client. Needs a
+  ChatGPT Plus/Pro login (`codex login`). Gemini can't take this route: Google closed consumer
+  OAuth on 2026-06-18, so only an API key works.
+
 - **Should `occams-razor`'s `description` widen to cover non-debugging explanation?**
   (opened 2026-09-23). The 2026-09-23 amendment fixed the skill's *content*, but the miss that
   prompted it happened because the skill was never invoked — a question about why something was

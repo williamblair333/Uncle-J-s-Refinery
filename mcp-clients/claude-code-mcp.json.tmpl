@@ -47,6 +47,11 @@
       "type": "stdio",
       "command": "{{STACK_VENV_BIN}}/python",
       "args": ["{{STACK_VENV_BIN}}/../../scripts/ask_local/server.py"]
+    },
+    "memweave": {
+      "type": "stdio",
+      "command": "{{STACK_VENV_BIN}}/../../.venv-memweave/bin/python",
+      "args": ["{{STACK_VENV_BIN}}/../../scripts/memweave/mw_mcp.py"]
     }
   }
 }
