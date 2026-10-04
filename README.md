@@ -114,7 +114,8 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | DuckDB MCP | SQL over Parquet/JSON/CSV/S3/GCS/R2 |
 | **Retrieval — docs** | jDocMunch | Your project docs, section-precise |
 | | Context7 | Third-party library docs, version-pinned |
-| **Retrieval — memory** | memweave | Offline cross-project memory: markdown corpus + local semantic search via `mw_search.py` (CLI, not an MCP server) |
+| **Retrieval — memory** | memweave | Offline cross-project memory: markdown corpus + local semantic search. MCP server (`memory_search`, `memory_read` — `scripts/memweave/mw_mcp.py`) plus the `mw_search.py` CLI |
+| **Local model** | ask_local | MCP server handing bounded grunt work (summarize, extract JSON, drafts) to a local Ollama model on your GPU — `scripts/ask_local/server.py`; needs Ollama (see `docs/STACK.md`) |
 | **Efficiency — output** | jOutputMunch | System-prompt rules that cut output tokens 25–40% |
 | **Hygiene — text** | jscrub | Finds and removes invisible Unicode (zero-width, bidi, tag chars, space homoglyphs) that breaks diffs, grep and paste. Local CLI, not an MCP server — `scripts/jscrub/` |
 | **Reliability** | Superpowers | 20+ skills: brainstorming, TDD, systematic debugging, verification |
@@ -137,7 +138,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
 
-All 6 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically.
+All 8 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically. (`ask_local` is optional — skipped by `--skip-optional`, and useful only with a local Ollama.)
 
 ---
 
@@ -267,7 +268,7 @@ Expect **all PASS**. See [Troubleshooting](#troubleshooting) if anything fails �
 claude mcp list
 ```
 
-All six should show `✓ Connected`. The three Google remotes (Drive/Gmail/Calendar) show `! Needs authentication` until you OAuth them via `/mcp` inside Claude Code — that's expected.
+All eight should show `✓ Connected` (seven if you skipped the optional `ask_local`). The three Google remotes (Drive/Gmail/Calendar) show `! Needs authentication` until you OAuth them via `/mcp` inside Claude Code — that's expected.
 
 ### 5. Global routing policy
 

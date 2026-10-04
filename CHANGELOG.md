@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-10-04 — session end: docs catch up with the two new MCP servers
+
+- **README:** the "What's in the box" table gains `ask_local`, and memweave is no longer
+  described as "not an MCP server". The server count goes from 6 to 8 (7 without the optional
+  `ask_local`), both in the table and in install step 4.
+- **docs/STACK.md:** the memweave section covers `mw_mcp.py`. A new `ask_local` section covers
+  the Ollama backend, speed against free VRAM, measurement and environment variables.
+- **ROADMAP:** a new Jarvis track (email triage → images → voice → phone calls → video) and an
+  item to review `state/ask_local.jsonl` in about 2 weeks.
+- **HANDOFF:** current state and next steps.
+
 ## 2026-10-04 — memweave MCP server; CLAUDE.md slimmed from ~21.5k to ~4.4k tokens
 
 **memweave MCP.** New `scripts/memweave/mw_mcp.py` runs under `.venv-memweave` and has two

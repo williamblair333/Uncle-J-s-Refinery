@@ -1,5 +1,33 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-04 (session end) — current state
+
+**Everything from today is merged and live.** `main` was `e76d191` on local, Gitea and GitHub
+before this docs commit. The "register", "deploy" and "empty the trash" steps in the two
+entries below are **done**: Bill ran them.
+- `ask_local` and `memweave` are both registered at user scope and ✔ Connected.
+- The slim CLAUDE.md (277 lines including Dreaming Notes) is deployed to `~/.claude/CLAUDE.md`,
+  with a `.bak` beside it.
+- The 52 GB of old models are deleted. `/opt/.Trash-1000/files/` still holds Bill's own
+  `fabric`, `sillytavern-koboldcpp` and `tss`.
+
+**The decision that frames what comes next:** the Hermes migration is on hold. Uncle J is the
+runtime, and missing capabilities arrive as MCP servers. Bill's stated goal is a
+general-purpose Jarvis; ROADMAP → Planned has the "Jarvis track" in order, starting with daily
+email triage.
+
+**Next session, pick one:** daily email triage (recommended first) or #2, the Codex MCP. In
+about 2 weeks, review `state/ask_local.jsonl` against the standing test.
+
+**Environment quirks worth knowing:**
+- The RTX 3060's VRAM is shared with the chesslab lc0 engines (5.4 GB). While they run,
+  ask_local is about 10× slower. Bill stops what he doesn't need.
+- `surface-write-guard` false positive: it blocks a Bash heredoc whose *body text* mentions a
+  surface file, such as a PR description that names `install.sh`. Workaround: write the body
+  with the Write tool and pass it with `--data @file`. It may be worth narrowing the guard to
+  heredoc targets.
+- Use `docker exec ollama ollama …`. The old `~/.local/bin/ollama` wrapper was retired.
+
 ## 2026-10-04 (later) — #3 shipped: memweave MCP + slim CLAUDE.md (branch `feat/memweave-mcp-slim-policy`)
 
 - The `memweave` MCP server is `scripts/memweave/mw_mcp.py`. `.venv-memweave` now has

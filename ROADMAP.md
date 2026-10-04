@@ -11,6 +11,23 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Jarvis track** (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
+  that handles whatever he asks. Pieces in suggested order:
+  1. **Daily email triage.** The Gmail and Calendar connectors already exist. Draft replies and
+     flag what matters, but only draft: Bill sends. This is the first job that acts for him on
+     a schedule rather than when asked.
+  2. **Image generation.** Reinstall a local SDXL front end (Fooocus was removed 2026-10-04)
+     and wrap it in a small MCP. The 3060 can handle it.
+  3. **Better voice** for `/opt/proj/voice-line`: the ElevenLabs API or a local voice-cloning
+     model.
+  4. **Outbound phone calls.** A phone number (Twilio or ElevenLabs agents) plus a voice
+     pipeline. This is the largest piece.
+  5. **Video generation.** Paid API only; local models need far more than 12 GB of VRAM.
+
+- **Review `state/ask_local.jsonl`** after about 2 weeks of use (opened 2026-10-04). Does
+  offloading save Claude tokens without wrong results acted on? If not, the standing test
+  says remove it.
+
 - **Codex MCP — GPT through the ChatGPT subscription** (opened 2026-10-04). Second of the three
   Hermes-replacement pieces (`ask_local` and the memweave MCP shipped). Codex CLI has an
   MCP-server mode (`codex mcp-server`; confirm the flag at install). Register it so Claude Code
