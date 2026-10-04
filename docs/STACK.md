@@ -139,8 +139,10 @@ same folder.
 
 **What it does.** Offline, cross-project memory. Exports your Claude Code
 session corpus and project content into a markdown corpus and indexes it
-for local semantic search. **Not an MCP server** — a Bash CLI plus a small
-Python search tool. No external service, no API calls, fully offline.
+for local semantic search. Exposed two ways: an **MCP server**
+(`scripts/memweave/mw_mcp.py`, run by `.venv-memweave`), which gives Claude `memory_search`
+and `memory_read`, and the `mw_search.py` CLI as a fallback. `memory_read` only reads inside
+the store. No external service, no API calls, fully offline.
 
 **Store location.** `~/.uncle-j-memory` — the markdown corpus and its
 local index. The store is fully rebuildable from the corpus, so a wiped
@@ -160,7 +162,45 @@ plus a session-end Stop-hook keep the store current — you don't need to run
 `sync_memory.sh` by hand.
 
 **Source here.** `scripts/memweave/` — `sync_memory.sh` (build),
-`mw_search.py` (search), plus the export/index helpers.
+`mw_search.py` (search CLI), `mw_mcp.py` (MCP server), plus the export/index helpers.
+
+---
+
+## ask_local (local model for bounded grunt work)
+
+**What it does.** An MCP server that hands bounded subtasks to a local model, so Claude stays
+in charge. Tools:
+
+| Tool | What it does |
+|---|---|
+| `summarize_local` | Summarizes a file or block of text. It reads the file itself, so the content never enters Claude's context |
+| `extract_local` | Extracts JSON that matches a schema |
+| `ask_local` | Drafts and classification |
+| `local_status` | Reports whether the backend is up |
+
+It has no shell, writes no files, and refuses credential-like paths. Never use it for a final
+answer.
+
+**Backend.** Ollama in Docker, from `/opt/docker/ollama/compose.yaml` (not in this repo). It's
+bound to `127.0.0.1:11434` only, unloads idle models after 10 minutes, and loads one model at
+a time. The models live in `/opt/models/ollama`. The default is `qwen3.5:9b`, with
+`granite4.2:8b` also pulled.
+```bash
+docker compose -f /opt/docker/ollama/compose.yaml up -d   # start
+docker exec ollama ollama list                             # models
+docker exec ollama ollama pull <model>                     # add one
+```
+
+**Speed depends on free VRAM.** With the model fully on an RTX 3060, a warm extraction takes
+about 5 s, a summary about 9 s, and generation runs at about 51 tok/s. When other GPU work
+holds VRAM, part of the model runs on the CPU and calls take about 60 s. A stopped container
+is fine: calls return `ollama_unreachable`, and `healthcheck.sh` reports it without failing.
+
+**Measuring it.** `state/ask_local.jsonl` gets one line per call, with counts and latency but
+never content. Use it to decide whether ask_local earns its place.
+
+**Config.** Optional environment variables: `ASK_LOCAL_URL`, `ASK_LOCAL_MODEL`,
+`ASK_LOCAL_TIMEOUT` (default 300 s), `ASK_LOCAL_LOG` (set it to empty to disable the log).
 
 ---
 
