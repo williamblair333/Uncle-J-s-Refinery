@@ -1,5 +1,19 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-04 (later) — #3 shipped: memweave MCP + slim CLAUDE.md (branch `feat/memweave-mcp-slim-policy`)
+
+- The `memweave` MCP server is `scripts/memweave/mw_mcp.py`. `.venv-memweave` now has
+  `mcp==1.27.0`, installed by hand on this host and added to install.sh §2c.
+- **Register it** (the guard blocks Claude from doing this):
+  `! claude mcp add -s user memweave -- /opt/proj/Uncle-J-s-Refinery/.venv-memweave/bin/python /opt/proj/Uncle-J-s-Refinery/scripts/memweave/mw_mcp.py`
+- CLAUDE.md is about 4.4k tokens, down from 21.5k. The full text is in
+  `docs/ROUTING-REFERENCE.md`. **When an upgrade brings new caveats, add them to the reference
+  doc.** CLAUDE.md gets one line only when a caveat changes what a caller should do, so the file
+  doesn't grow back.
+- After merge: run `scripts/refinery-doctor.sh --fix` to deploy it globally. It keeps the
+  Dreaming Notes and writes a `.bak`.
+- #2 (the Codex MCP) is in ROADMAP → Planned.
+
 ## 2026-10-04 — ask_local MCP built; Hermes migration on hold (branch `feat/ask-local-mcp`)
 
 **Decision taken in session.** Bill isn't adopting the Hermes convergence proposal for now. The

@@ -2,6 +2,45 @@
 
 ---
 
+## 2026-10-04 — memweave MCP server; CLAUDE.md slimmed from ~21.5k to ~4.4k tokens
+
+**memweave MCP.** New `scripts/memweave/mw_mcp.py` runs under `.venv-memweave` and has two
+read-only tools:
+- `memory_search`: the same query path and scores as `mw_search.py`, but the ONNX model loads
+  once per server instead of once per search.
+- `memory_read`: the context around a hit. It refuses anything outside `~/.uncle-j-memory`
+  (`..`, absolute paths, symlinks) and the `.memweave/` index itself.
+
+Every failure is structured: `empty_query`, `no_index`, `search_failed`, `path_outside_corpus`,
+`file_not_found`, `bad_arguments`.
+
+On the live store it returned the same top 3 as the CLI with identical scores, at about 1 s per
+query. Speed is about the same. What changes is that it's a native tool call instead of a Bash
+round trip, and it returns JSON.
+
+Other changes for this:
+- `mw_search.search_store` gains an optional `provider=` argument. The CLI behaves as before.
+- `install.sh` §2c adds `mcp==1.27.0` to `.venv-memweave`; the install was purely additive,
+  checked with a dry run. §5 registers `memweave`.
+- The MCP template is updated.
+- 20 tests in `tests/test_memweave_mcp.py`. The stdio round trip runs only where
+  `.venv-memweave` exists, and the file is added to CI job 17.
+
+**CLAUDE.md slimmed.** It's loaded in every session of every project. It went from 917 lines
+(about 21.5k tokens) to 265 lines (about 4.4k tokens).
+- The full previous text moved to `docs/ROUTING-REFERENCE.md`, unchanged apart from a header
+  saying when to read it and that new caveats go there.
+- The slim policy keeps:
+  - the modality table
+  - a new consolidated absence contract
+  - every verdict and key that changes what a caller should do: refusal verdicts,
+    tri-state `safe`, nullable composites, `index_freshness`, `coverage_complete`,
+    `symbol_diff_complete` and others
+- A mechanical diff of backticked identifiers found 336 that aren't in the slim file. Each was
+  reviewed. Most are tool-catalog entries the MCP tool list already exposes, plus internal
+  evidence. The decision-relevant ones were added back.
+- §4 Memory now routes to `memory_search`, with the CLI as a fallback.
+
 ## 2026-10-04 — ask_local: hand bounded subtasks to a local model
 
 This is the alternative to the Hermes convergence proposal

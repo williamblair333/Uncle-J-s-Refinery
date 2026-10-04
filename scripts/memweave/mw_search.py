@@ -40,10 +40,11 @@ from memweave.config import EmbeddingConfig  # noqa: E402
 DEFAULT_WORKSPACE = os.path.expanduser("~/.uncle-j-memory")
 
 
-async def search_store(workspace, query, *, k=5, min_score=None):
+async def search_store(workspace, query, *, k=5, min_score=None, provider=None):
     """Open the existing memweave index read-only and return SearchResult list.
-    Does NOT index() — pure query path."""
-    provider = OnnxMiniLMProvider()
+    Does NOT index() — pure query path. Pass `provider` to reuse a loaded model
+    (the MCP server does; the CLI loads one per run)."""
+    provider = provider or OnnxMiniLMProvider()
     config = MemoryConfig(
         workspace_dir=workspace,
         embedding=EmbeddingConfig(model=provider.model),

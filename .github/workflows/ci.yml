@@ -352,7 +352,7 @@ jobs:
         run: pip install pytest
 
       - name: pytest tests/test_memweave_*.py
-        run: python -m pytest tests/test_memweave_export.py tests/test_memweave_onnx_provider.py tests/test_memweave_search.py -v -rs
+        run: python -m pytest tests/test_memweave_export.py tests/test_memweave_onnx_provider.py tests/test_memweave_search.py tests/test_memweave_mcp.py -v -rs
 
   # ── 18. ask_local MCP server tests ───────────────────────────────────────
   # scripts/ask_local/server.py against an httpx.MockTransport: error shapes,
