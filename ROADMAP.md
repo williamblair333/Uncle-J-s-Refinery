@@ -12,7 +12,11 @@ Completed items age out after ~4 weeks.
 ## Planned
 
 - **Jarvis track** (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
-  that handles whatever he asks. Pieces in suggested order:
+  that handles whatever he asks. **Two homes, one Jarvis:** this repo is the engine (MCP
+  servers, crons, every commit), and `/opt/proj/jaredrhod` is where Bill talks to it (the
+  Jarvis persona in its `CLAUDE.md`, plus the `vaults/brain` vault as long-term memory).
+  Build pieces here; don't fork a second persona here or engine code there. Pieces in
+  suggested order:
   1. **Daily email triage.** The Gmail and Calendar connectors already exist. Draft replies and
      flag what matters, but only draft: Bill sends. This is the first job that acts for him on
      a schedule rather than when asked.

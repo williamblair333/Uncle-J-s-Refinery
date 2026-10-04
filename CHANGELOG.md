@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-10-04 — memweave sync reclaims a dead lock; Jarvis has two homes
+
+- **`scripts/memweave/sync_memory.sh`:** a sync killed around 08:40 left
+  `/tmp/memweave-sync.lock.d` behind, because the EXIT trap doesn't run on SIGKILL. Every sync
+  after it skipped, 26 times before anyone noticed, and the 02:30 cron would have skipped too.
+  The holder now writes its PID into the lock. A later run reclaims the lock when that PID is
+  gone, when there's no PID file and the lock is over a minute old, or when the lock is over
+  2 hours old whatever its PID (PIDs get reused; the longest of 544 logged runs took 199 s).
+  Reclaim renames the lock aside, which is atomic, and checks it moved the lock it judged, so
+  racing runs can't both get in. The EXIT trap only releases a lock the run still owns. Tested
+  in a sandbox against 8 cases, including five runs racing for one dead lock: exactly one ran.
+- **ROADMAP:** the Jarvis track says where each part lives. This repo is the engine;
+  `/opt/proj/jaredrhod` holds the persona and the vault.
+
 ## 2026-10-04 — session end: docs catch up with the two new MCP servers
 
 - **README:** the "What's in the box" table gains `ask_local`, and memweave is no longer
