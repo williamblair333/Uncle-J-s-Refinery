@@ -11,9 +11,10 @@
 # re-embeds only changed files (SHA-256 hash compare), so re-running is cheap and
 # resumes a partial load.
 #
-# flock -n guards the single-writer sqlite index against concurrent runs (cron +
+# A mkdir lock guards the single-writer sqlite index against concurrent runs (cron +
 # Stop-hook firing together) — without it, two index() passes would race and could
-# corrupt the store.
+# corrupt the store. The lock records its holder's PID so a killed run's lock is
+# reclaimed instead of blocking every later sync (see the lock block below).
 #
 # Logging: writes progress to stdout and errors to stderr. Each caller owns its log
 # destination — the nightly cron and the Stop-hook both redirect to
@@ -58,11 +59,54 @@ fi
 # Serialize: a concurrent sync (cron vs Stop-hook) must not race the sqlite index.
 # mkdir is atomic on every filesystem and needs no flock, which MSYS/Git Bash
 # does not ship.
+#
+# The EXIT trap never runs when the holder is SIGKILLed, and a lock left that way
+# used to skip every later sync silently — 26 skips on 2026-10-04 before anyone
+# looked. So the holder writes its PID, and a later run reclaims the lock when:
+#   - the recorded PID is gone, or
+#   - there is no PID file and the lock is over a minute old (a live holder only
+#     sits between mkdir and the write for microseconds), or
+#   - the lock is over two hours old whatever its PID, because PIDs get reused.
+#     The longest real sync in 544 logged runs took 199 s.
+# Reclaim renames the lock aside rather than deleting it: rename is atomic, so of
+# two runs racing to reclaim the same dead lock only one wins. The winner then
+# checks it moved the lock it judged (same PID); if a racer had already replaced
+# it with a live one, it puts that back and skips.
+LOCK_MAX_AGE_MIN=120
+lock_pid() { cat "$1/pid" 2>/dev/null || true; }
+lock_is_stale() {
+  local pid
+  pid="$(lock_pid "$LOCK.d")"
+  if [ -n "$(find "$LOCK.d" -maxdepth 0 -mmin +"$LOCK_MAX_AGE_MIN" 2>/dev/null)" ]; then
+    return 0
+  elif [ -n "$pid" ]; then
+    ! kill -0 "$pid" 2>/dev/null
+  else
+    [ -n "$(find "$LOCK.d" -maxdepth 0 -mmin +1 2>/dev/null)" ]
+  fi
+}
 if ! mkdir "$LOCK.d" 2>/dev/null; then
-  echo "[$(date -Iseconds)] sync skipped — another sync holds $LOCK.d"
-  exit 0
+  if [ -d "$LOCK.d" ] && lock_is_stale; then
+    judged_pid="$(lock_pid "$LOCK.d")"
+    aside="$LOCK.d.stale.$$"
+    if mv "$LOCK.d" "$aside" 2>/dev/null; then
+      if [ "$(lock_pid "$aside")" = "$judged_pid" ]; then
+        echo "[$(date -Iseconds)] reclaimed stale lock $LOCK.d (holder pid '${judged_pid}' gone or lock over ${LOCK_MAX_AGE_MIN} min old)"
+        rm -rf "$aside"
+      else
+        mv "$aside" "$LOCK.d" 2>/dev/null || true
+      fi
+    fi
+  fi
+  if ! mkdir "$LOCK.d" 2>/dev/null; then
+    echo "[$(date -Iseconds)] sync skipped — another sync holds $LOCK.d (pid '$(lock_pid "$LOCK.d")')"
+    exit 0
+  fi
 fi
-trap 'rmdir "$LOCK.d" 2>/dev/null || true' EXIT
+echo "$$" > "$LOCK.d/pid"
+# Release only a lock this run still owns: past the age cap another run may have
+# reclaimed it, and deleting theirs would let a third run in alongside them.
+trap '[ "$(lock_pid "$LOCK.d")" = "$$" ] && { rm -f "$LOCK.d/pid"; rmdir "$LOCK.d" 2>/dev/null; }; true' EXIT
 
 if [ "$MODE" = "--all" ]; then
   export_args=(--all-projects)

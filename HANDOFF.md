@@ -19,6 +19,11 @@ email triage.
 **Next session, pick one:** daily email triage (recommended first) or #2, the Codex MCP. In
 about 2 weeks, review `state/ask_local.jsonl` against the standing test.
 
+**Later the same day:** memweave sync now reclaims a lock left by a killed run (see CHANGELOG).
+If the log shows `sync skipped` lines naming a PID, that sync really is running. A `reclaimed
+stale lock` line means one died. The Jarvis track now says where each part lives: engine here,
+persona and vault in `/opt/proj/jaredrhod`.
+
 **Environment quirks worth knowing:**
 - The RTX 3060's VRAM is shared with the chesslab lc0 engines (5.4 GB). While they run,
   ask_local is about 10× slower. Bill stops what he doesn't need.
