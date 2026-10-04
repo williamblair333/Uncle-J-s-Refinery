@@ -38,8 +38,17 @@ WebSearch/WebFetch for third-party library docs and say that you fell back.
 | Third-party library documentation               | **context7**                      | WebSearch/WebFetch                |
 | "What did we decide / discuss / build before?"  | **memweave** (`mw_search.py`)     | session transcript                |
 | General web / news / current events             | WebSearch, WebFetch               | —                                 |
+| Bulk, low-stakes grunt work (see below)         | **ask_local** (local Ollama)      | do it yourself                    |
 
-If the first choice is unavailable, try the fallback and note it. Do **not**
+If the first choice is unavailable, try the fallback and note it.
+
+**ask_local** (`scripts/ask_local/server.py`, Ollama in `/opt/docker/ollama`) hands work to a
+~9B local model: `summarize_local` / `extract_local` on a file you'd otherwise read just to
+skim (pass `path=`, so the content never enters your context), `ask_local` for first drafts
+and classification. **Never for the final answer, code review, or anything where a wrong result
+gets acted on — verify what it returns.** It refuses credential-like paths and only ever
+returns `{"error": ...}` on failure, never raises. Each call is logged to
+`state/ask_local.jsonl` (counts and latency only) so its value can be measured. Do **not**
 reach for `Read`, `Grep`, `Glob`, or `Bash` on files that any of the above
 tools can answer structurally.
 

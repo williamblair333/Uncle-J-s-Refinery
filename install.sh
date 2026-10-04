@@ -415,6 +415,8 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     mcp_add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant
     [ "$SKIP_CONTEXT7" -eq 0 ] && mcp_add context7 -- npx -y "@upstash/context7-mcp"
     [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add duckdb -- uvx mcp-server-motherduck --db-path :memory: --read-write --allow-switch-databases
+    # Needs a local Ollama on 127.0.0.1:11434; without one every call returns ollama_unreachable.
+    [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add ask_local -- "$VENV_BIN/python" "$STACK_ROOT/scripts/ask_local/server.py"
     ok "Registered. Verify with: claude mcp list"
 fi
 

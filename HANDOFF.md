@@ -1,5 +1,34 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-04 — ask_local MCP built; Hermes migration on hold (branch `feat/ask-local-mcp`)
+
+**Decision taken in session.** Bill isn't adopting the Hermes convergence proposal for now. The
+things Hermes offered that the Refinery lacked are being brought in as MCP servers instead. #1, a
+local model, is in this branch. Still to do:
+
+- **#2 Codex MCP.** Codex CLI has an MCP-server mode, which would give GPT through the ChatGPT
+  subscription. That's the sanctioned route. A Gemini subscription can't be used: Google shut the
+  OAuth route on 2026-06-18, so it's API key only.
+- **#3 memweave MCP**, plus slimming CLAUDE.md.
+
+**Needs Bill:**
+- Register the server. The surface-write guard blocks `claude mcp add` from Claude's shell, so
+  run: `! claude mcp add -s user ask_local -- /opt/proj/Uncle-J-s-Refinery/.venv/bin/python /opt/proj/Uncle-J-s-Refinery/scripts/ask_local/server.py`
+- Empty `/opt/.Trash-1000/files/` to get the space back: about 52 GB of old models and the
+  open-webui leftover. The guardrail blocks `rm -rf`, so they were moved there instead.
+
+**State outside the repo:**
+- `/opt/docker/ollama/compose.yaml` holds Ollama 0.35.1, bound to 127.0.0.1:11434, with keep-alive
+  10m and one model loaded at a time.
+- The stale `open-webui-ollama-1` container was removed. It had bound 0.0.0.0:11434. The broken
+  `~/.local/bin/ollama` compose wrapper is in `~/.local/share/Trash`. Use `docker exec ollama ollama …`.
+- Speed depends on VRAM. The lc0 chess bots (chesslab) hold 5.4 GB; while they run, the model
+  spills about 55% onto CPU and calls take about 60 s instead of about 5–9 s. Bill stops what he
+  doesn't need.
+
+**Follow-ups:** add an Ollama reachability check to `healthcheck.sh`. Once there's usage, review
+`state/ask_local.jsonl` against the standing test.
+
 ## 2026-10-03 — CI covers all 17 test files (branch `claude/magical-davinci-95d0bo`)
 
 Four jobs added to `.github/workflows/ci.yml` (grep-guard, auto-maintain verdict, tg-security,
