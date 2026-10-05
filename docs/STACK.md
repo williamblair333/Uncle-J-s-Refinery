@@ -181,19 +181,24 @@ in charge. Tools:
 It has no shell, writes no files, and refuses credential-like paths. Never use it for a final
 answer.
 
-**Backend.** Ollama in Docker, from `/opt/docker/ollama/compose.yaml` (not in this repo). It's
-bound to `127.0.0.1:11434` only, unloads idle models after 10 minutes, and loads one model at
-a time. The models live in `/opt/models/ollama`. The default is `qwen3.5:9b`, with
-`granite4.2:8b` also pulled.
+**Backend.** Ollama in Docker, from `docker/ollama/compose.yaml` in this repo. A host that
+keeps its own `/opt/docker/ollama/compose.yaml` uses that one instead. It's bound to
+`127.0.0.1:11434` only, unloads idle models after 10 minutes, and loads one model at a time.
+The models live in `/opt/models/ollama` (falls back to `~/.local/share/ollama-models` when
+`/opt` isn't writable). The default is `qwen3.5:9b`. `install.sh` runs `scripts/ollama-up.sh`,
+which starts the container, adds the GPU overlay (`compose.gpu.yaml`) only when Docker has the
+`nvidia` runtime, and pulls the default model. Skipped with `--skip-optional`.
 ```bash
-docker compose -f /opt/docker/ollama/compose.yaml up -d   # start
+bash scripts/ollama-up.sh                                  # start + pull default model
 docker exec ollama ollama list                             # models
 docker exec ollama ollama pull <model>                     # add one
 ```
 
 **Speed depends on free VRAM.** With the model fully on an RTX 3060, a warm extraction takes
 about 5 s, a summary about 9 s, and generation runs at about 51 tok/s. When other GPU work
-holds VRAM, part of the model runs on the CPU and calls take about 60 s. A stopped container
+holds VRAM, part of the model runs on the CPU and calls take about 60 s. A host with no GPU
+runs it entirely on CPU: expect a minute or more per call and about 6 GB of RAM while the model
+is loaded. A stopped container
 is fine: calls return `ollama_unreachable`, and `healthcheck.sh` reports it without failing.
 
 **Measuring it.** `state/ask_local.jsonl` gets one line per call, with counts and latency but

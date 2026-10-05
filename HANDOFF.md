@@ -1,5 +1,23 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-05 — second host (tc-vmh-03) brought up from a clean install
+
+**Status: committed locally, NOT pushed, no PR.** This host can't push (GitHub rejects
+`~/.ssh/github`; no `gh`, no token, no Gitea remote). Next session, first thing: authorize this
+host (add `~/.ssh/github.pub` to GitHub, or `gh auth login`), then push the branch, open the PR,
+and merge. Or `git bundle` it to the original host. Tested here: full non-interactive
+`install.sh` exit 0, `HEALTHCHECK: ok`, 964 tests pass, ask_local answers on CPU (16 s cold).
+
+Branch `fix/fresh-host-install-gaps`. Installing on a Debian 11 box with no GPU and no compiler
+surfaced 7 gaps; all fixed in `install.sh`, `healthcheck.sh`, `check-stack-freshness.sh`, plus
+a new shipped Ollama backend (`docker/ollama/`, `scripts/ollama-up.sh`). Details in CHANGELOG.
+- This host runs ask_local **on CPU**: a minute or more per call, ~6 GB RAM while loaded.
+- jcodemunch-watch is active with linger; the jdocmunch-reindex cron is registered.
+- The vendored pysqlite3 wheel needs glibc ≥ 2.33. Harmless while the uv CPython's own SQLite
+  is ≥ 3.51.3; if a future Python ships an older one, rebuild the wheel on an older glibc.
+- The memweave store here only has this host's transcripts (no vault at
+  `/opt/proj/jaredrhod/vaults/brain`).
+
 ## 2026-10-04 (session end) — current state
 
 **Everything from today is merged and live.** `main` was `e76d191` on local, Gitea and GitHub

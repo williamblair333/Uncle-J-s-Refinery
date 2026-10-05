@@ -185,11 +185,27 @@ SITE_PKGS="$STACK_ROOT/.venv/lib/python3.11/site-packages"
 step "Wiring pysqlite3 SQLite 3.51.3 patch into venv"
 # Check the bundled SQLite version — the PyPI wheel has 3.51.1 (still affected).
 # We need >= 3.51.3, so always build from source if the version check fails.
+_ver_ok() {  # true when the dotted version in $1 is >= 3.51.3
+  "$STACK_ROOT/.venv/bin/python3" -c "
+import sys; sys.exit(0 if tuple(int(x) for x in '$1'.split('.')) >= (3,51,3) else 1)" 2>/dev/null
+}
+# -S skips site-packages (and any .pth patch), so this reads the interpreter's own SQLite.
+# Newer uv-managed CPython builds already ship >= 3.51.3; then pysqlite3 is unnecessary.
+_stdlib_ver=$("$STACK_ROOT/.venv/bin/python3" -S -c "import sqlite3; print(sqlite3.sqlite_version)" 2>/dev/null || echo "0.0.0")
 _psql_ver=$("$STACK_ROOT/.venv/bin/python3" -c "import pysqlite3; print(pysqlite3.sqlite_version)" 2>/dev/null || echo "0.0.0")
-_need_build=$("$STACK_ROOT/.venv/bin/python3" -c "
-v=tuple(int(x) for x in '$_psql_ver'.split('.'))
-print('yes' if v < (3,51,3) else 'no')
-" 2>/dev/null || echo "yes")
+_need_build=yes
+if _ver_ok "$_stdlib_ver" || _ver_ok "$_psql_ver"; then _need_build=no; fi
+if _ver_ok "$_stdlib_ver" && ! _ver_ok "$_psql_ver"; then
+  # A pysqlite3 that won't import (e.g. vendored wheel built against a newer glibc) is
+  # left in place: uv sync would just reinstall it, and the .pth patch below catches
+  # its ImportError and keeps the stdlib module.
+  ok "stdlib SQLite $_stdlib_ver already >= 3.51.3 — pysqlite3 not needed"
+fi
+if [ "$_need_build" = "yes" ] && ! has cc; then
+  warn "pysqlite3 must be built from source but no C compiler (cc) is installed."
+  warn "Debian/Ubuntu: sudo apt install -y build-essential   then re-run ./install.sh"
+  exit 1
+fi
 if [ "$_need_build" = "yes" ]; then
   # pysqlite3 missing or bundles SQLite < 3.51.3 — build from source against 3.51.3
   warn "pysqlite3 SQLite version '$_psql_ver' < 3.51.3 — building from source"
@@ -219,7 +235,8 @@ except ImportError:
 PYEOF
 printf 'import _pysqlite3_patch\n' > "$SITE_PKGS/_pysqlite3_patch.pth"
 ACTUAL=$("$STACK_ROOT/.venv/bin/python3" -c "import sqlite3; print(sqlite3.sqlite_version)")
-ok "sqlite3 in venv now: $ACTUAL (via pysqlite3)"
+_SRC=$("$STACK_ROOT/.venv/bin/python3" -c "import sqlite3; print('pysqlite3' if sqlite3.__name__ == 'pysqlite3' else 'stdlib')")
+ok "sqlite3 in venv now: $ACTUAL (via $_SRC)"
 
 # --- 2c. Provision the dedicated memweave venv (offline ONNX memory store) ---
 # memweave runs on its own Python 3.12 venv, isolated from the 3.11 stack venv,
@@ -423,6 +440,18 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     ok "Registered. Verify with: claude mcp list"
 fi
 
+# --- 5a-2. ask_local backend: Ollama container + default model ---------------
+if [ "$SKIP_OPTIONAL" -eq 0 ] && has docker; then
+    step "Starting Ollama backend for ask_local (first run pulls several GB)"
+    if bash "$STACK_ROOT/scripts/ollama-up.sh"; then
+        ok "Ollama up — ask_local backend ready"
+    else
+        warn "Ollama backend not ready (non-fatal) — re-run: bash $STACK_ROOT/scripts/ollama-up.sh"
+    fi
+elif [ "$SKIP_OPTIONAL" -eq 0 ]; then
+    warn "docker not found — ask_local is registered but has no backend until Ollama runs on 127.0.0.1:11434"
+fi
+
 # --- 5b. MCP server startup timeout ----------------------------------------
 # Claude Code honors MCP_TIMEOUT from its settings.json env block. Set it
 # here so first-run cold starts (uvx fetches, npx resolves) don't race the
@@ -467,6 +496,7 @@ step "Setting up maintenance cron jobs"
 for entry in \
     "uncle-j-jcodemunch-reindex|0 1 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin bash $STACK_ROOT/scripts/jcodemunch-reindex.sh >> $STACK_ROOT/state/jcodemunch-reindex.log 2>&1" \
     "uncle-j-auto-maintain|0 3 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin CLAUDE_BIN=/home/bill/.local/bin/claude bash $STACK_ROOT/scripts/auto-maintain.sh >> $STACK_ROOT/state/auto-maintain.log 2>&1" \
+    "uncle-j-jdocmunch-reindex|30 1 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin bash $STACK_ROOT/scripts/jdocmunch-reindex.sh >> $STACK_ROOT/state/jdocmunch-reindex.log 2>&1" \
     "uncle-j-healthcheck-notify|0 7 * * * bash $STACK_ROOT/scripts/healthcheck-notify.sh >> $STACK_ROOT/state/healthcheck-notify.log 2>&1" \
     "uncle-j-memweave-sync|30 2 * * * nice -n 19 bash $STACK_ROOT/scripts/memweave/sync_memory.sh --all >> $STACK_ROOT/state/memweave-sync.log 2>&1"
 do
@@ -475,6 +505,26 @@ do
     install_cron "$tag" "$line"
     ok "cron registered: $tag"
 done
+
+# Real-time reindex between the nightly crons. jcodemunch writes and enables its own
+# systemd user unit (~/.config/systemd/user/jcodemunch-watch.service); linger keeps it
+# running while logged out. Both non-fatal: WSL/containers often lack a user bus.
+step "Installing jcodemunch-watch (inotify reindex daemon)"
+if systemctl --user show-environment >/dev/null 2>&1; then
+    if "$VENV_BIN/jcodemunch-mcp" watch-install >/dev/null 2>&1 \
+        && [ "$(systemctl --user is-active jcodemunch-watch 2>/dev/null)" = "active" ]; then
+        ok "jcodemunch-watch.service active"
+    else
+        warn "jcodemunch-watch install failed — run: $VENV_BIN/jcodemunch-mcp watch-install"
+    fi
+    if loginctl enable-linger "$USER" >/dev/null 2>&1; then
+        ok "linger enabled — watch daemon survives logout"
+    else
+        warn "could not enable linger — daemon stops at logout; run: sudo loginctl enable-linger $USER"
+    fi
+else
+    warn "no systemd user session — skipping jcodemunch-watch (nightly cron still reindexes)"
+fi
     ;;
 esac
 

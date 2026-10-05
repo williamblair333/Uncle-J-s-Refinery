@@ -187,8 +187,9 @@ Everything outside the `/ee` folder is MIT — free for commercial use with no u
 - **Python 3.11+** — auto-installed via `uv` if missing
 - **Node.js 18+** — for Context7
 - **Git 2.30+**
-- **Docker + Docker Compose plugin** — for Langfuse (optional, but recommended)
-- **~15 GB free disk** — Langfuse images are ~5 GB; Postgres/ClickHouse/MinIO grow as they run
+- **Docker + Docker Compose plugin** — for the ask_local Ollama backend and Langfuse (both optional, but recommended)
+- **~22 GB free disk** — Langfuse images are ~5 GB; Postgres/ClickHouse/MinIO grow as they run; the ask_local model (`qwen3.5:9b`) is ~7 GB
+- **ask_local without a GPU** works, slowly: a minute or more per call and ~6 GB of RAM while the model is loaded
 - **Internet connection** — first run pulls ~2 GB of Python/Node/Docker packages
 
 The installers detect missing prerequisites and either auto-install them (where safe — e.g., `uv`) or tell you what to `apt` and exit cleanly.

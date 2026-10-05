@@ -11,6 +11,14 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Rebuild the vendored pysqlite3 wheel on an older glibc** (opened 2026-10-05). The wheel in
+  `vendor/wheels/` needs glibc ≥ 2.33 and won't import on Debian 11 (2.31). Harmless today:
+  the uv CPython's own SQLite is 3.53.1, and `install.sh` skips the build. If a future Python
+  ships an SQLite older than 3.51.3, glibc 2.31 hosts would silently lose the WAL fix. Build it
+  in a manylinux container (`scripts/build-vendored-pysqlite3.sh`).
+- **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
+  there's no `gh`, and no Gitea remote, so this host can commit but not push.
+
 - **Jarvis track** (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
   that handles whatever he asks. **Two homes, one Jarvis:** this repo is the engine (MCP
   servers, crons, every commit), and `/opt/proj/jaredrhod` is where Bill talks to it (the

@@ -406,11 +406,11 @@ resolution-markers = [
     "python_full_version >= '3.14'",
 ]
 dependencies = [
-    { name = "google-auth", marker = "python_full_version >= '3.14'" },
-    { name = "googleapis-common-protos", marker = "python_full_version >= '3.14'" },
-    { name = "proto-plus", marker = "python_full_version >= '3.14'" },
-    { name = "protobuf", marker = "python_full_version >= '3.14'" },
-    { name = "requests", marker = "python_full_version >= '3.14'" },
+    { name = "google-auth" },
+    { name = "googleapis-common-protos" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+    { name = "requests" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/09/cd/63f1557235c2440fe0577acdbc32577c5c002684c58c7f4d770a92366a24/google_api_core-2.25.2.tar.gz", hash = "sha256:1c63aa6af0d0d5e37966f157a77f9396d820fba59f9e43e9415bc3dc5baff300", size = 166266, upload-time = "2025-10-03T00:07:34.778Z" }
 wheels = [
@@ -419,8 +419,8 @@ wheels = [
 
 [package.optional-dependencies]
 grpc = [
-    { name = "grpcio", marker = "python_full_version >= '3.14'" },
-    { name = "grpcio-status", marker = "python_full_version >= '3.14'" },
+    { name = "grpcio" },
+    { name = "grpcio-status" },
 ]
 
 [[package]]
@@ -433,11 +433,11 @@ resolution-markers = [
     "(python_full_version < '3.13' and platform_machine != 'x86_64') or (python_full_version == '3.12.*' and platform_machine == 'x86_64' and sys_platform == 'linux') or (python_full_version < '3.13' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "google-auth", marker = "python_full_version < '3.14'" },
-    { name = "googleapis-common-protos", marker = "python_full_version < '3.14'" },
-    { name = "proto-plus", marker = "python_full_version < '3.14'" },
-    { name = "protobuf", marker = "python_full_version < '3.14'" },
-    { name = "requests", marker = "python_full_version < '3.14'" },
+    { name = "google-auth" },
+    { name = "googleapis-common-protos" },
+    { name = "proto-plus" },
+    { name = "protobuf" },
+    { name = "requests" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/16/ce/502a57fb0ec752026d24df1280b162294b22a0afb98a326084f9a979138b/google_api_core-2.30.3.tar.gz", hash = "sha256:e601a37f148585319b26db36e219df68c5d07b6382cff2d580e83404e44d641b", size = 177001, upload-time = "2026-04-10T00:41:28.035Z" }
 wheels = [
@@ -446,8 +446,8 @@ wheels = [
 
 [package.optional-dependencies]
 grpc = [
-    { name = "grpcio", marker = "python_full_version < '3.14'" },
-    { name = "grpcio-status", marker = "python_full_version < '3.14'" },
+    { name = "grpcio" },
+    { name = "grpcio-status" },
 ]
 
 [[package]]
@@ -667,8 +667,8 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.108.327"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#6d5ae86c130f96624e2ca2d797fa3b853c210b9d" }
+version = "1.108.328"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#e3ee7f9d2f39249364b124f82e1dd31b4c076c95" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -698,8 +698,8 @@ openai = [
 
 [[package]]
 name = "jdatamunch-mcp"
-version = "1.31.12"
-source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#01f58c74046e678f6014eba9a3e690e4a45c0744" }
+version = "1.31.13"
+source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#7a6ab14cfd4ac5344076f4d200aad379db2b3c21" }
 dependencies = [
     { name = "charset-normalizer" },
     { name = "mcp" },
@@ -707,8 +707,8 @@ dependencies = [
 
 [[package]]
 name = "jdocmunch-mcp"
-version = "1.143.0"
-source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#4a9dd7d8d2ce1be13d0df12ece0dfba6b9600a4e" }
+version = "1.145.0"
+source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#ce96b17ee390b5d146cdc11c581e317f035a268b" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
