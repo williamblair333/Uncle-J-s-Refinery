@@ -1,5 +1,15 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-05 (main host) — #155/#156 forwarded to Gitea; Langfuse hint fixed
+
+- GitHub #155 and #156 reached Gitea as fast-forward PRs #102 and #103. Local, Gitea and
+  GitHub `main` all matched afterwards.
+- On the main host: stack venv synced to the new lock with `uv sync --inexact`. A bare
+  `uv sync` uninstalls `langfuse` (needed by the Stop hook) and `turbovecdb`. Full jcodemunch
+  re-index, `HEALTHCHECK: ok`, 964 tests pass.
+- Fixed: #155 had pointed the Langfuse-unhealthy hint at `ollama-up.sh`.
+- SSH to GitHub is refused from this host (`publickey`); fetch over HTTPS or use `gh`.
+
 ## 2026-10-05 — second host (tc-vmh-03) brought up from a clean install
 
 **Status: merged and live.** PR #155 merged to `main` as `88dc13e` after `gh auth login` on this

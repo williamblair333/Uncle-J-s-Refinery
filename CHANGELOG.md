@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-05 — healthcheck: Langfuse hint restored
+
+- **`healthcheck.sh` `check_langfuse_compose`:** #155 pointed the "Langfuse unhealthy" hint at
+  `scripts/ollama-up.sh`, which starts Ollama, not Langfuse. Back to
+  `docker compose -f <langfuse compose> up -d`.
+
 ## 2026-10-05 — fresh-host install: Debian 11 / no GPU / no compiler
 
 First install on a second host (`tc-vmh-03`, Debian 11, glibc 2.31, no GPU, no C compiler)

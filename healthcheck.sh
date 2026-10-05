@@ -310,7 +310,7 @@ check_langfuse_compose() {
         ok "$running running, $healthy healthy"
     else
         bad "compose state: total=$total running=$running healthy=$healthy (want >=6 running, >=4 healthy)"
-        hint "run: bash $REPO_ROOT/scripts/ollama-up.sh"
+        hint "run: docker compose -f $compose up -d"
         record_fail "langfuse-unhealthy"
     fi
 }
