@@ -9,6 +9,9 @@
   re-index, `HEALTHCHECK: ok`, 964 tests pass.
 - Fixed: #155 had pointed the Langfuse-unhealthy hint at `ollama-up.sh`.
 - SSH to GitHub is refused from this host (`publickey`); fetch over HTTPS or use `gh`.
+- **Next session:** the Jarvis track is unchanged. Daily email triage is the recommended first
+  pick, the Codex MCP is the alternative. Three small follow-ups are in ROADMAP → Planned: test
+  noise in `hook-blocks.log`, a doc gate firing on read-only calls, and stale Gitea branches.
 
 ## 2026-10-05 — second host (tc-vmh-03) brought up from a clean install
 

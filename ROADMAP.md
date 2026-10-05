@@ -11,6 +11,15 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Tests write to the live `state/hook-blocks.log`** (opened 2026-10-05). 668 of its lines
+  are `session=test` entries from guard tests, so the weekly hook-blocks review has to filter
+  them out by hand. Point the tests at a temp log (env override) and prune the existing lines.
+- **Pre-commit doc gate fired on a read-only Bash call** (opened 2026-10-05). A `git rev-parse` /
+  `ls-remote` / `gh api` command got "Commit blocked — update CHANGELOG.md HANDOFF.md
+  docs/RELIABILITY.md" after it ran. Find which PreToolUse hook matches it and narrow it to
+  real `git commit` invocations.
+- **Prune stale Gitea branches** (opened 2026-10-05). About 20 merged-era branches from May to
+  July 2026 are still on Gitea and get mirrored to GitHub.
 - **Rebuild the vendored pysqlite3 wheel on an older glibc** (opened 2026-10-05). The wheel in
   `vendor/wheels/` needs glibc ≥ 2.33 and won't import on Debian 11 (2.31). Harmless today:
   the uv CPython's own SQLite is 3.53.1, and `install.sh` skips the build. If a future Python
