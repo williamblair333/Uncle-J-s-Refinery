@@ -1,0 +1,11 @@
+# GPU overlay for compose.yaml. Applied by scripts/ollama-up.sh only when Docker
+# reports the nvidia runtime; without the NVIDIA container toolkit this would fail.
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

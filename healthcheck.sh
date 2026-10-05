@@ -310,7 +310,7 @@ check_langfuse_compose() {
         ok "$running running, $healthy healthy"
     else
         bad "compose state: total=$total running=$running healthy=$healthy (want >=6 running, >=4 healthy)"
-        hint "run: docker compose -f $compose up -d"
+        hint "run: bash $REPO_ROOT/scripts/ollama-up.sh"
         record_fail "langfuse-unhealthy"
     fi
 }
@@ -599,7 +599,9 @@ check_docmunch_indexed() {
 import json, os, pathlib, subprocess, sys
 
 idx = pathlib.Path(sys.argv[1])
-SIDECARS = (".related.json", ".terms.json", ".boilerplate.json", ".duplicates.json")
+# Keep in sync with SIDECARS in scripts/jdocmunch-reindex.sh.
+SIDECARS = (".related.json", ".terms.json", ".boilerplate.json", ".duplicates.json",
+            ".summary.json")
 
 for manifest in sorted(idx.glob("*.json")):
     if any(manifest.name.endswith(s) for s in SIDECARS):
@@ -885,7 +887,8 @@ check_jcodemunch_watch() {
             ;;
         inactive|failed)
             bad "jcodemunch-watch.service is $state — out-of-band edits won't auto-reindex"
-            hint "run: systemctl --user enable --now jcodemunch-watch"
+            # watch-install (re)writes the unit; a bare `enable --now` fails when it was never installed.
+            hint "run: $REPO_ROOT/.venv/bin/jcodemunch-mcp watch-install"
             record_fail "jcodemunch-watch-$state"
             ;;
         *)
@@ -1008,9 +1011,10 @@ check_ask_local_backend() {
     fi
     local url="${ASK_LOCAL_URL:-http://127.0.0.1:11434}"
     local model="${ASK_LOCAL_MODEL:-qwen3.5:9b}"
-    local compose="/opt/docker/ollama/compose.yaml"
     local running
-    running="$(docker inspect -f '{{.State.Running}}' ollama 2>/dev/null || echo missing)"
+    # Not `$(… || echo missing)`: on a missing container docker inspect still prints a
+    # blank line to stdout, yielding "\nmissing", which never equals "missing".
+    running="$(docker inspect -f '{{.State.Running}}' ollama 2>/dev/null)" || running=missing
     if [[ "$running" == "false" ]]; then
         na "ollama container stopped — ask_local calls return ollama_unreachable until started"
         return
@@ -1037,7 +1041,7 @@ check_ask_local_backend() {
         ok "ollama $(printf '%s' "$version" | grep -o '[0-9][0-9.]*' | head -1) up; default model $model present"
     else
         bad "ollama up but default model $model is not pulled"
-        hint "run: docker exec ollama ollama pull $model"
+        hint "run: bash $REPO_ROOT/scripts/ollama-up.sh"
         record_fail "ask-local-model-missing"
     fi
 }

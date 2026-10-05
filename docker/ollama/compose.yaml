@@ -1,0 +1,17 @@
+# Ollama backend for ask_local (scripts/ask_local/server.py).
+# Start it with scripts/ollama-up.sh, which adds compose.gpu.yaml only when Docker
+# has the nvidia runtime, creates the models dir, and pulls the default model.
+# A host that keeps its own /opt/docker/ollama/compose.yaml uses that one instead.
+name: ollama
+services:
+  ollama:
+    image: ollama/ollama:0.35.1
+    container_name: ollama        # healthcheck.sh and ollama-up.sh address it by name
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"   # loopback only
+    environment:
+      OLLAMA_KEEP_ALIVE: 10m      # unload idle models; matters on CPU-only hosts (RAM)
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - ${OLLAMA_MODELS_DIR:-/opt/models/ollama}:/root/.ollama

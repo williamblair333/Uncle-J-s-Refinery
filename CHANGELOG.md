@@ -2,6 +2,44 @@
 
 ---
 
+## 2026-10-05 — fresh-host install: Debian 11 / no GPU / no compiler
+
+First install on a second host (`tc-vmh-03`, Debian 11, glibc 2.31, no GPU, no C compiler)
+exposed gaps that the original host hid because it was set up partly by hand.
+
+- **`install.sh` pysqlite3 step:** checks the interpreter's own SQLite first (`python -S`).
+  The uv CPython now ships 3.53.1, past the 3.51.3 WAL fix, so no build is needed. The vendored
+  `pysqlite3` wheel needs glibc 2.33 and fails to import here; it's left installed (`uv sync`
+  would only reinstall it) because the `.pth` patch catches its `ImportError`. When a build
+  *is* needed and there's no `cc`, it stops with `apt install build-essential` instead of a
+  compiler traceback. The closing line now names the real source (`stdlib` or `pysqlite3`).
+- **`install.sh` crons:** registers `uncle-j-jdocmunch-reindex` (01:30). Healthcheck has
+  required it since 2026-07-18, but it was only ever installed by hand, so healthcheck's
+  "fix" (re-run install.sh) looped.
+- **jcodemunch-watch ships:** `install.sh` runs `jcodemunch-mcp watch-install` (writes and
+  enables `~/.config/systemd/user/jcodemunch-watch.service`) and `loginctl enable-linger`.
+  Both are non-fatal without a systemd user bus. The healthcheck hint now points at
+  `watch-install`; `systemctl --user enable --now` failed when the unit had never been written.
+- **Ollama backend ships:** new `docker/ollama/compose.yaml` (pinned `ollama/ollama:0.35.1`,
+  loopback, 10 min keep-alive, one model), `compose.gpu.yaml` overlay, and
+  `scripts/ollama-up.sh` (start, wait for the API, pull `qwen3.5:9b`). The overlay is applied
+  only when Docker has the `nvidia` runtime. A host-managed `/opt/docker/ollama/compose.yaml`
+  still wins. `install.sh` calls it unless `--skip-optional`; healthcheck hints point at it.
+- **`healthcheck.sh` ask_local probe:** `$(docker inspect … || echo missing)` yielded
+  `"\nmissing"` because docker prints a blank line before failing, so a missing container was
+  reported as "running but does not answer". Fixed.
+- **`healthcheck.sh` jdocmunch probe:** skips the `.summary.json` sidecar that jdocmunch writes
+  since 2026-08. It was reported as a broken repo with 0 sections. `jdocmunch-reindex.sh`
+  already skipped it.
+- **`scripts/check-stack-freshness.sh`:** a `[[ … ]] && …` as a function's last command made
+  `return` fail under `set -e`, killing the script at the first Langfuse infra image, so the
+  healthcheck always warned. Hosts without the Langfuse template now print "not installed"
+  instead of counting every image as a pending upgrade.
+- **`uv.lock`:** jcodemunch-mcp 1.108.327→.328, jdatamunch-mcp 1.31.12→.13, jdocmunch-mcp
+  1.143.0→1.145.0.
+
+---
+
 ## 2026-10-04 — memweave sync reclaims a dead lock; Jarvis has two homes
 
 - **`scripts/memweave/sync_memory.sh`:** a sync killed around 08:40 left

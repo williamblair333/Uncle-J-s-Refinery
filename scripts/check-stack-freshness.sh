@@ -201,6 +201,13 @@ _check_docker_svc() {
   local label=$1 image_fragment=$2 source=$3 mode=${4:-actionable}
   local pinned
 
+  # Langfuse is optional; on a host without it every image reads "no tag pinned"
+  # and would count as a pending upgrade forever.
+  if [[ ! -f "$SCRIPT_DIR/../claude-code-langfuse-template/docker-compose.yml" ]]; then
+    printf "  ${DIM}·${NC}  %-22s Langfuse not installed\n" "$label"
+    return 0
+  fi
+
   pinned=$(compose_tag "$image_fragment")
 
   if [[ "$source" == "chainguard" ]]; then
@@ -210,8 +217,9 @@ _check_docker_svc() {
 
   if [[ -z "$pinned" ]]; then
     printf "  ${YELLOW}~${NC}  %-22s no tag pinned\n" "$label"
-    [[ "$mode" == "actionable" ]] && UPGRADES=$((UPGRADES + 1))
-    return
+    # Explicit if: a false `[[ ]] && …` as the last status makes `return` fail, and set -e exits.
+    if [[ "$mode" == "actionable" ]]; then UPGRADES=$((UPGRADES + 1)); fi
+    return 0
   fi
 
   local pinned_major
