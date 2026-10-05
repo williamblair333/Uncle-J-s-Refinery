@@ -2,6 +2,12 @@
 
 ## 2026-10-05 — second host (tc-vmh-03) brought up from a clean install
 
+**Status: committed locally, NOT pushed, no PR.** This host can't push (GitHub rejects
+`~/.ssh/github`; no `gh`, no token, no Gitea remote). Next session, first thing: authorize this
+host (add `~/.ssh/github.pub` to GitHub, or `gh auth login`), then push the branch, open the PR,
+and merge. Or `git bundle` it to the original host. Tested here: full non-interactive
+`install.sh` exit 0, `HEALTHCHECK: ok`, 964 tests pass, ask_local answers on CPU (16 s cold).
+
 Branch `fix/fresh-host-install-gaps`. Installing on a Debian 11 box with no GPU and no compiler
 surfaced 7 gaps; all fixed in `install.sh`, `healthcheck.sh`, `check-stack-freshness.sh`, plus
 a new shipped Ollama backend (`docker/ollama/`, `scripts/ollama-up.sh`). Details in CHANGELOG.
