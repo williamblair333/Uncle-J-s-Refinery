@@ -162,6 +162,18 @@ else
     SKIP_CLAUDE_CLI=1
 fi
 
+# The vendored pysqlite3 wheel (pyproject.toml) covers linux/x86_64 only. Anywhere else
+# (e.g. aarch64 Raspberry Pi) `uv sync` builds the PyPI sdist, which compiles against the
+# system SQLite and needs a C compiler plus sqlite3.h — fail here, not mid-sync.
+if [ "$(uname -s)/$(uname -m)" != "Linux/x86_64" ]; then
+    if ! has cc || ! printf '#include <sqlite3.h>\n' | cc -E - >/dev/null 2>&1; then
+        warn "pysqlite3 must be built from source on $(uname -m): needs a C compiler and sqlite3.h."
+        warn "Debian/Ubuntu: sudo apt install -y build-essential libsqlite3-dev   then re-run ./install.sh"
+        exit 1
+    fi
+    ok "C compiler and sqlite3.h found (pysqlite3 source build)"
+fi
+
 # --- 2. Create venv and install Python stack --------------------------------
 step "Creating .venv with uv"
 [ -d .venv ] || uv venv --python 3.11
@@ -226,10 +238,16 @@ fi
 cat > "$SITE_PKGS/_pysqlite3_patch.py" << 'PYEOF'
 # WAL data-race fix: swap stdlib sqlite3 for pysqlite3 (SQLite 3.51.3+).
 # Applies to every process in this venv at interpreter startup via .pth file.
+# Swaps only when pysqlite3 links a NEWER SQLite than stdlib: on aarch64 the PyPI
+# sdist builds against the system lib (Debian 13: 3.46.1), which would otherwise
+# downgrade a stdlib that already ships 3.53.1.
 try:
-    __import__('pysqlite3')
     import sys
-    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+    import sqlite3 as _std
+    import pysqlite3 as _psq
+    if _psq.sqlite_version_info > _std.sqlite_version_info:
+        sys.modules['sqlite3'] = _psq
+        sys.modules['sqlite3.dbapi2'] = _psq.dbapi2
 except ImportError:
     pass  # graceful fallback if pysqlite3 is ever removed
 PYEOF
@@ -305,9 +323,10 @@ mkdir -p "$(dirname "$SERENA_CFG")"
 
 # Nudge Serena to write its default config if it hasn't yet. `--help`
 # exits before config load, so we briefly start the MCP server (stdin
-# closed so it exits fast) and let timeout reap it.
+# closed so it exits fast) and let timeout reap it. A Pi 4 needs ~15 s to reach
+# the config write; 8 s killed it first and fell through to the stub below.
 if [ ! -f "$SERENA_CFG" ]; then
-    timeout 8 uvx --from git+https://github.com/oraios/serena \
+    timeout 60 uvx --from git+https://github.com/oraios/serena \
         serena start-mcp-server --context ide-assistant \
         </dev/null >/dev/null 2>&1 || true
 fi
@@ -319,6 +338,9 @@ if [ -f "$SERENA_CFG" ]; then
     else
         printf '\nweb_dashboard_open_on_launch: false\n' >> "$SERENA_CFG"
     fi
+    # Serena refuses to start without a `projects` key (SerenaConfigError) — repairs
+    # stubs written by older installs.
+    grep -qE '^projects:' "$SERENA_CFG" || printf '\nprojects: []\n' >> "$SERENA_CFG"
     ok "Serena dashboard auto-open disabled"
 else
     cat > "$SERENA_CFG" <<'YML'
@@ -327,6 +349,8 @@ else
 # start. Dashboard still reachable at http://localhost:24282/dashboard/
 # (port increments if multiple Serena instances run concurrently).
 web_dashboard_open_on_launch: false
+# Required: Serena refuses to start without it.
+projects: []
 YML
     ok "Serena config stub written"
 fi

@@ -360,6 +360,19 @@ chesslab, mkit, free-energy) are still live; Bill to decide.
 `local/rea-d4348978`. Don't index it with git identity, or it merges into the Refinery index.
 The Refinery docs-gate hook also fires on commits inside that nested clone; ignore it there.
 
+## 2026-10-06 — third host (ha-pi-01, Raspberry Pi 4, aarch64) brought up
+
+- Fixed in `install.sh`: pysqlite3 downgrade of stdlib SQLite on aarch64, and the Serena
+  config stub crash. Details in CHANGELOG. Healthcheck: SQLite 3.53.1 OK, all 5 MCP servers
+  Connected.
+- **Ollama is stopped on this host** (`docker update --restart=no ollama`). A 9B model on CPU
+  in 7.6 GB RAM, shared with Home Assistant, isn't usable. ask_local falls back to Claude.
+- The Pi reports `throttled=0x50005` (under-voltage now and before). That's the power
+  supply, not the stack.
+- Still failing here: dreaming and session-stats (optional features, not installed). Either
+  install them or list them in `state/disabled-features`.
+- The memweave store on this host is empty (`sync_memory.sh --all` not run yet).
+
 ## 2026-10-05 (main host) — #155/#156 forwarded to Gitea; Langfuse hint fixed
 
 - GitHub #155 and #156 reached Gitea as fast-forward PRs #102 and #103. Local, Gitea and

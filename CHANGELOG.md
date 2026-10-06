@@ -592,6 +592,20 @@ indexes every project's transcripts into one store, so an Implementer's
   REA tiers, spec scrub rules, release checklist). `install-reliability.sh` symlinks it into
   `~/.claude/skills/`, so every project sees it.
 
+## 2026-10-06 — install on a Raspberry Pi 4 (aarch64, Debian 13)
+
+- **`install.sh` pysqlite3 patch:** the `.pth` patch now swaps stdlib `sqlite3` for
+  `pysqlite3` only when pysqlite3 links a newer SQLite. On aarch64 there's no vendored wheel,
+  so `uv sync` builds the PyPI sdist against the system lib (Debian 13: 3.46.1), and the
+  unconditional swap was downgrading a stdlib that already ships 3.53.1. Healthcheck failed
+  with `venv sqlite3 = 3.46.1`.
+- **`install.sh` pysqlite3 prereq:** on non-x86_64 hosts, stop early when there's no C
+  compiler or `sqlite3.h` (`apt install build-essential libsqlite3-dev`), not mid-`uv sync`.
+- **`install.sh` Serena config:** the default-config nudge gets 60 s, up from 8 (a Pi 4 needs
+  ~15 s). On timeout the fallback stub had no `projects:` key, so Serena exited with
+  `SerenaConfigError` and healthcheck reported `not Connected: serena`. The stub now carries
+  `projects: []`, and re-runs backfill it into older stubs.
+
 ## 2026-10-05 — healthcheck: Langfuse hint restored
 
 - **`healthcheck.sh` `check_langfuse_compose`:** #155 pointed the "Langfuse unhealthy" hint at
