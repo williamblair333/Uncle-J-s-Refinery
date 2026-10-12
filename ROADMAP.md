@@ -11,12 +11,13 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **PreCompact working-state snapshot** (opened 2026-10-12, from the context-mode review in
-  `reviewed/2026-10-12-context-mode-assessment.md`). Nothing restores working state inside a
-  session after compaction: memweave covers past sessions only. Add a PreCompact hook that
-  writes files touched, open tasks, decisions and the last prompt to `state/`. Have
-  SessionStart(compact) re-inject a short summary. Script only, no LLM. The idea is
-  context-mode's (ELv2), so reimplement it rather than copying code.
+- **Compaction restore: report the per-session gap upstream?** (opened 2026-10-12). The
+  restore half is now wired (see CHANGELOG 2026-10-12, `refinery-doctor` check
+  `jcodemunch-sessionstart`). jcodemunch's live journal is one file per host, not keyed by
+  `session_id`. So with two sessions open, a compaction in one can restore the other's focus
+  files. That's low harm, because the block only lists files and searches. Decide whether to
+  file it with jgravelle/jcodemunch-mcp. A custom snapshot hook (tasks, decisions, prompts) is
+  **not** planned: Claude Code's compaction summary already carries those.
 - **Tests write to the live `state/hook-blocks.log`** (opened 2026-10-05). 668 of its lines
   are `session=test` entries from guard tests, so the weekly hook-blocks review has to filter
   them out by hand. Point the tests at a temp log (env override) and prune the existing lines.

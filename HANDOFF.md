@@ -4,7 +4,13 @@
 
 - `review/context-mode` → `reviewed/context-mode`, with the assessment at
   `reviewed/2026-10-12-context-mode-assessment.md`. Don't install it as a plugin: its routing
-  hooks conflict with ours. The one idea taken is the PreCompact snapshot (ROADMAP → Planned).
+  hooks conflict with ours.
+- The idea it suggested (restoring state after compaction) already exists in jcodemunch. Only
+  the SessionStart half was unwired. `refinery-doctor.sh --check jcodemunch-sessionstart --fix`
+  wires it, and it has been **applied on the main host**. Other hosts (tc-vmh-03) need the same
+  command. Limitation: the journal is per host, not per session (ROADMAP).
+- Pre-existing drift: `refinery-doctor` reports that `~/.claude/CLAUDE.md` is behind the repo
+  copy (claude-md-sync). Not touched here. Run `bash scripts/refinery-doctor.sh --fix` to deploy.
 - Don't run jcodemunch `index_folder` on clones under `review/`. It replaces the Refinery's
   own index. Copy them out first.
 

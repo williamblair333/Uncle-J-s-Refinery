@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # refinery-doctor.sh — config schema drift detection and repair.
 #
-# Checks for .env key renames, stale MCP scopes, CLAUDE.md drift,
-# and placeholder values. Distinct from healthcheck.sh (runtime health).
+# Checks for .env key renames, stale MCP scopes, a missing jcodemunch
+# compaction-restore hook, CLAUDE.md drift, and placeholder values. Distinct from healthcheck.sh (runtime health).
 #
 # Usage:
 #   bash scripts/refinery-doctor.sh            # dry-run: report only
@@ -136,6 +136,70 @@ check_jcodemunch_scope() {
     fi
 }
 
+# jcodemunch's compaction restore is two hooks: hook-precompact (registered by older
+# `jcodemunch-mcp init`) and hook-sessionstart (added later; init merges it only on a
+# re-run that also rewrites CLAUDE.md). With only the first half, nothing is restored.
+# Adds just the SessionStart entry, reusing the exe string the existing hooks carry.
+check_jcodemunch_sessionstart() {
+    step "jcodemunch-sessionstart — compaction restore hook in ~/.claude/settings.json"
+    local settings="$HOME/.claude/settings.json"
+    if [[ ! -f "$settings" ]]; then
+        info "settings.json not found — skipping"
+        return
+    fi
+    local state
+    state=$(python3 - "$settings" "$FIX_MODE" <<'PY'
+import json, os, shutil, sys
+path, fix = sys.argv[1], sys.argv[2] == "true"
+try:
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+except (OSError, ValueError) as e:
+    print(f"unreadable {e}")
+    sys.exit(0)
+hooks = data.get("hooks") or {}
+cmds = [(ev, h.get("command", "")) for ev, groups in hooks.items()
+        for g in groups or [] for h in g.get("hooks", [])]
+if any(ev == "SessionStart" and "jcodemunch-mcp" in c and " hook-sessionstart" in c
+       for ev, c in cmds):
+    print("present")
+    sys.exit(0)
+exe = next((c.split(" hook-")[0] for _, c in cmds
+            if "jcodemunch-mcp" in c and " hook-" in c), None)
+if exe is None:
+    print("no-jcodemunch")
+    sys.exit(0)
+if not fix:
+    print("missing")
+    sys.exit(0)
+hooks.setdefault("SessionStart", []).append({
+    "matcher": "compact|resume|fork",
+    "hooks": [{"type": "command", "command": f"{exe} hook-sessionstart"}],
+})
+data["hooks"] = hooks
+shutil.copy2(path, path + ".bak")
+tmp = path + ".tmp"
+with open(tmp, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+os.replace(tmp, path)
+print("fixed")
+PY
+)
+    case "$state" in
+        present)       ok "hook-sessionstart registered" ;;
+        no-jcodemunch) info "no jcodemunch hooks installed — skipping" ;;
+        unreadable*)   info "settings.json ${state} — skipping" ;;
+        missing|fixed)
+            migration "jcodemunch hook-sessionstart missing — compaction restore never fires"
+            suggest "run: $0 --fix   # adds SessionStart (compact|resume|fork) entry"
+            record_migration "jcodemunch-sessionstart"
+            [[ "$state" == fixed ]] && fixed "added jcodemunch hook-sessionstart (backup: ${settings}.bak)"
+            ;;
+        *) info "check failed (python3 output: ${state:-none}) — skipping" ;;
+    esac
+}
+
 check_claude_md_sync() {
     step "claude-md-sync — ~/.claude/CLAUDE.md vs repo CLAUDE.md"
     local repo_src="$REPO_ROOT/CLAUDE.md"
@@ -252,6 +316,7 @@ check_env_placeholders() {
 
 run_check embed-model
 run_check jcodemunch-scope
+run_check jcodemunch-sessionstart
 run_check claude-md-sync
 run_check env-placeholders
 
