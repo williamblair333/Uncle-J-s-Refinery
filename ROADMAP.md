@@ -121,6 +121,9 @@ Completed items age out after ~4 weeks.
   packages are not repo source and the routing policy has no jcodemunch index for them unless
   `index_dependency` has been run. Either narrow the guard to exclude `.venv/`, or change the
   prompt to route through `index_dependency` — but the two must stop contradicting each other.
+  Seen again 2026-10-12, in an interactive session reading `jcodemunch_mcp/cli/hooks/snapshot.py`.
+  `index_dependency(package="jcodemunch_mcp")` then worked first try, which favours the
+  prompt-side fix.
 - **`post-merge-hook.sh` skipped the reindex on a commit that changed two scripts.** On the PR #136
   merge it logged *"no actionable changes (maintenance/docs only)"* despite
   `scripts/auto-maintain.sh` and `scripts/healthcheck-notify.sh` being in the diff; the index had

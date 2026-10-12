@@ -667,7 +667,7 @@ Automated invocation:
 
 ### Config drift check
 
-`refinery-doctor.sh` detects config schema drift — env key renames, stale MCP scopes, `~/.claude/CLAUDE.md` out of sync, and unfilled template values. Distinct from `healthcheck.sh` (runtime health) — doctor checks migration state.
+`refinery-doctor.sh` detects config schema drift — env key renames, stale MCP scopes, a missing jcodemunch compaction-restore hook (`hook-sessionstart`), `~/.claude/CLAUDE.md` out of sync, and unfilled template values. Distinct from `healthcheck.sh` (runtime health) — doctor checks migration state.
 
 ```bash
 bash scripts/refinery-doctor.sh            # dry-run: report only
