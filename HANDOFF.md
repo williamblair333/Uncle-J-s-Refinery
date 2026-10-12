@@ -1,25 +1,33 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-10-12 — clean-room-rebuild skill + REA wall (awaiting Bill's review)
+## 2026-10-12 — clean-room-rebuild skill + REA wall (merged); REA pitch filed upstream
 
 **Bill's decisions (don't re-ask):**
-- The `clean-room-rebuild` global skill is adopted (merged #106, #107).
-- REA (`morluto/rea`) was reviewed: safe to install, but it must never sit in the default Claude
-  profile. The Investigator gets a separate `CLAUDE_CONFIG_DIR` profile and marked workspace.
-- The upstream pitch to REA is a docs PR plus a design issue, not a full code PR (gttp analysis:
-  a `--scope` flag doesn't protect us, since the real risk is setup running with defaults).
-  Bill reads the drafts on Gitea first, then decides whether to pitch upstream.
-- Run `gttp` whenever Bill asks why something is needed (saved to memory).
+- The `clean-room-rebuild` global skill is adopted (#106, #107), and the clean-room wall is
+  merged (#108): the `scripts/clean-room-investigator.sh` launcher (separate
+  `CLAUDE_CONFIG_DIR` profile), memweave exclusion by the `.clean-room-investigator` marker, and
+  the `check_clean_room_wall` healthcheck.
+- REA (`morluto/rea`) was reviewed: safe to install, but never in the default Claude profile.
+- The upstream pitch is a docs PR plus a design issue, not a full code PR. A `--scope` flag
+  doesn't protect us; the real risk is setup running with defaults (gttp analysis).
+- Upstream text must not mention Bill, his stack, or his Gitea. REA commits use the GitHub
+  no-reply author `60581672+williamblair333@users.noreply.github.com`.
+- Run `gttp` whenever Bill asks why something is needed.
 
-**Open for review (not merged):**
-- Refinery PR `feat/clean-room-wall`: launcher script, memweave exclusion by
-  `.clean-room-investigator` marker, `check_clean_room_wall` healthcheck, skill update.
-- Private Gitea repo `bill/rea`: docs branch `docs/limit-rea-scope` with a PR, plus a design-issue
-  draft. Before filing upstream: install Node ≥22.19, then run `npm ci`, `format:check`,
-  `docs:check`, `docs:build`; replace the `#ISSUE`/`#PR` placeholders; post with Bill's approval
-  (it's public).
-- `review/rea` (gitignored) is the upstream clone. Its jcodemunch index is `local/rea-d4348978`;
-  don't index it with git identity, or it merges into the Refinery index.
+**Filed upstream, awaiting maintainers:** issue morluto/rea#2187 (design for
+`setup --scope local`) and docs PR morluto/rea#2188, from fork `williamblair333/rea`, branch
+`docs/limit-rea-scope`. Only oxfmt ran. REA's `docs:check`/`docs:build` need Node ≥22.19,
+and this host has 20.19. If the maintainer says "PR welcome", the touched modules are listed in
+the issue.
+
+**Cleanup done:** the Gitea review repo `bill/rea` was deleted. The three tokens minted for it
+were removed from `access_token`, with a backup at `/data/gitea/gitea.db.bak-20261012-tokens`
+inside the gitea container. Fifteen older one-shot tokens (ids 5–21: voice-line, moneymaker,
+chesslab, mkit, free-energy) are still live; Bill to decide.
+
+**Notes:** `review/rea` (gitignored) is the upstream clone. Its jcodemunch index is
+`local/rea-d4348978`. Don't index it with git identity, or it merges into the Refinery index.
+The Refinery docs-gate hook also fires on commits inside that nested clone; ignore it there.
 
 ## 2026-10-05 (main host) — #155/#156 forwarded to Gitea; Langfuse hint fixed
 
