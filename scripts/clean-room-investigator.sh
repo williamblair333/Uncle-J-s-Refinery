@@ -3,9 +3,14 @@
 #
 # The Investigator runs under its own Claude profile (CLAUDE_CONFIG_DIR), so
 # REA's registration and skill, its session transcripts, settings, hooks and
-# login stay out of the default profile the Implementer uses. The working
-# directory must carry the .clean-room-investigator marker, which also keeps
-# these sessions out of the memweave store (scripts/memweave/export_transcripts.py).
+# login stay out of the default profile's discovery. The working directory must
+# carry the .clean-room-investigator marker, which also keeps these sessions out
+# of the memweave store (scripts/memweave/export_transcripts.py).
+#
+# This is hygiene, not isolation: any agent running as the same OS account can
+# still read the profile's files. Run it on the isolated Investigator side
+# (another machine, or with the Implementer sandboxed) as the skill's
+# "Isolation" section requires.
 #
 # Usage, from the investigator workspace:
 #   scripts/clean-room-investigator.sh --init    # once: create the marker here

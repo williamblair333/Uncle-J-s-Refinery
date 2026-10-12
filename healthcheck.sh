@@ -711,16 +711,19 @@ check_secrets() {
     fi
 }
 
-# ----- clean-room wall: REA stays out of the default Claude profile ---------
-# global-skills/clean-room-rebuild keeps REA (morluto/rea) in a separate
-# Investigator profile (its own CLAUDE_CONFIG_DIR). `rea setup` and REA's
-# install.sh, which starts setup on its own in a terminal, register REA in the
-# top-level mcpServers of .claude.json and install its skill globally, so every
-# project, the Implementer's included, would load it. Identifiers are REA's own:
-# mcpServerKey "rea" and skillName "reverse-engineer-anything" (src/identity.ts).
+# ----- clean-room wall: REA absent from this account -------------------------
+# global-skills/clean-room-rebuild keeps REA (morluto/rea) away from the
+# Implementer's account. An agent can run anything its account can, so REA
+# installed here is a route across the wall whatever the MCP config says, and
+# `rea setup` (which REA's install.sh starts on its own in a terminal) also
+# registers it in the top-level mcpServers of .claude.json and installs its
+# skill globally. Identifiers are REA's own: package "rea-agents", bin "rea",
+# mcpServerKey "rea", skillName "reverse-engineer-anything" (src/identity.ts).
+# This proves absence of REA only; real isolation (another machine, or a
+# sandboxed Implementer) is the skill's job and can't be checked from here.
 # A host that uses REA globally on purpose opts out via state/disabled-features.
 check_clean_room_wall() {
-    step "clean-room wall: REA not in the default Claude profile"
+    step "clean-room wall: REA absent from this account"
     if feature_disabled "clean-room-wall"; then
         na "clean-room-wall disabled on this host"
         return 0
@@ -742,12 +745,22 @@ sys.exit(0 if isinstance(servers, dict) and "rea" in servers else 1)
     if [ -d "$config_dir/skills/reverse-engineer-anything" ]; then
         found="${found:+$found; }skill $config_dir/skills/reverse-engineer-anything"
     fi
+    local rea_bin
+    rea_bin="$(command -v rea 2>/dev/null || true)"
+    [ -n "$rea_bin" ] && found="${found:+$found; }'rea' on PATH at $rea_bin"
+    # REA's install.sh uses --prefix ~/.local on Linux; a plain global npm
+    # install lands under npm's own prefix, which may differ.
+    local npm_root="" pkg_dir
+    command -v npm >/dev/null 2>&1 && npm_root="$(timeout 10 npm root -g 2>/dev/null || true)"
+    for pkg_dir in "$HOME/.local/lib/node_modules/rea-agents" ${npm_root:+"$npm_root/rea-agents"}; do
+        [ -d "$pkg_dir" ] && found="${found:+$found; }package $pkg_dir"
+    done
     if [ -z "$found" ]; then
-        ok "no user-scope REA registration or skill"
+        ok "REA not installed, registered, or in skills"
     else
-        bad "REA reaches every project: $found"
+        bad "REA is reachable from this account: $found"
         # Deliberately not a "run:" hint: --fixall must never delete on its own.
-        hint "claude mcp remove --scope user rea, delete $config_dir/skills/reverse-engineer-anything, then set REA up under the Investigator's CLAUDE_CONFIG_DIR (global-skills/clean-room-rebuild); or opt out: echo clean-room-wall >> state/disabled-features"
+        hint "uninstall rea-agents from this account (npm uninstall --global rea-agents, with --prefix ~/.local if REA's install.sh put it there), claude mcp remove --scope user rea, delete $config_dir/skills/reverse-engineer-anything; keep REA on the isolated Investigator side (global-skills/clean-room-rebuild); or opt out: echo clean-room-wall >> state/disabled-features"
         record_fail "clean-room-wall"
     fi
 }

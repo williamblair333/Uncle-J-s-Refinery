@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-10-12 — clean-room wall: OS-level isolation, not profiles
+
+A review of the upstream REA docs PR (morluto/rea#2188, Codex P1) found that
+profiles and MCP scopes only control what a session *discovers*. An agent under
+the same OS account can still run `rea` from the `PATH`, start it with `npx`, and
+read the other profile's files. This host's account is also in `docker` and
+`libvirt`, both root-equivalent, so a separate OS user or local VM doesn't keep
+its agents out either.
+
+- **`clean-room-rebuild` skill:** new "Isolation" section, required before any
+  REA use. The options, in order: the Investigator works on another machine; the
+  Implementer runs sandboxed (container with only `implementation/` and `spec/`,
+  no Docker socket); a separate OS user, only if the Implementer's account is in
+  no root-equivalent group; a profile alone only where the separation never
+  needs to be shown. The gatekeeper copies approved spec by hand. The
+  Implementer pre-flight checks `id -nG` and `sudo -n true`. The Investigator
+  profile section is now labelled hygiene.
+- **`healthcheck.sh` `check_clean_room_wall`:** also fails when REA is
+  installed in the account: `rea` on `PATH`, or the `rea-agents` package under
+  `~/.local` (REA's installer prefix) or `npm root -g`. Tested with a fake `rea`
+  on PATH, a fake package, the dirty-profile fixture, and the real account.
+- **`scripts/clean-room-investigator.sh`:** header now says hygiene, not
+  isolation.
+- **Upstream:** fix commit `d98b6ff` on #2188 says the same thing in REA's docs,
+  and the review thread has a reply.
+
 ## 2026-10-12 — clean-room wall: Investigator profile, memweave exclusion, healthcheck guard
 
 Per-project MCP registration (below) closed only one of three leaks across the
