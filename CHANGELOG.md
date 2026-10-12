@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-10-12 — compaction restore wired (jcodemunch hook-sessionstart)
+
+The context-mode review's one idea was a working-state snapshot restored after compaction.
+jcodemunch already ships one, but on this host only half of it was wired: `hook-precompact` was
+registered and `hook-sessionstart` wasn't. The installed `jcodemunch-mcp init` added that entry
+in a later release, and it merges it only on a re-run that also rewrites CLAUDE.md and other
+hooks. So nothing was ever restored after a compaction.
+
+- **`refinery-doctor.sh` check `jcodemunch-sessionstart`:** reports the missing SessionStart
+  entry. `--fix` adds `{matcher: compact|resume|fork, <exe> hook-sessionstart}`, reusing the
+  exe string from the existing jcodemunch hooks. The write is atomic (`.bak`, tmp, rename).
+  It's skipped when no jcodemunch hooks are installed, or when settings.json is missing.
+  Idempotent.
+- **Tests:** `tests/test_doctor_jcodemunch_sessionstart.py`, 6 cases against a temp HOME.
+  Full suite: 984 passed, 2 skipped, 7 xfailed.
+- **Applied on the main host.** `hook-sessionstart` was tested by hand: `source=compact` emits
+  about 1.5 KB (focus files, searches, landmarks); `source=startup` emits nothing.
+- **Known limitation:** the live journal is per host, not per session. With concurrent
+  sessions, a compaction can restore another session's focus files. It's advisory content
+  only. ROADMAP asks whether to report it upstream.
+- **Not built:** a custom snapshot of tasks, decisions and prompts. Claude Code's compaction
+  summary already carries those.
+
 ## 2026-10-12 — context-mode reviewed (not adopted)
 
 - **mksglu/context-mode v1.0.169** assessed and moved to `reviewed/`; the note is
