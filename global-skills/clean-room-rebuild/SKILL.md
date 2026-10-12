@@ -25,18 +25,29 @@ resort, used only for interoperability gaps.
 | Verifier | Original app (as a black box), new app | Decompiled code | Test harness |
 
 Rules:
-- The Implementer's project must not have REA registered as an MCP server. Check its MCP config before every session.
+- The Implementer's account must have no access to REA, the target, or anything the Investigator wrote. "No access" means the OS stops it, not that the agent was told not to. See "Isolation" below.
 - No shared scratch directories, chat history, or memory between Investigator and Implementer.
 - The only artifact crossing the wall is the scrubbed spec in `spec/`.
-- A human gatekeeper approves each spec change before it crosses.
+- A human gatekeeper approves each spec change before it crosses, and copies it across by hand.
 
-## Investigator profile (set up before the first REA call, Tier 2 or 3)
+## Isolation (decide before the first REA call, Tier 2 or 3)
 
-The Investigator runs under its own Claude Code profile, so nothing it loads or
-writes reaches the default profile the Implementer uses. A `CLAUDE_CONFIG_DIR`
-holds its own settings, hooks, skills, session transcripts, and login; Claude
-Code's docs state this for each. Per-project MCP registration alone isn't enough:
-it leaves REA's skill, the transcripts, and shared memory on the default profile.
+An agent can do anything its OS account can do. It can run any `rea` on the `PATH`, start REA with `npx`, and read every file that account can read. Separate Claude Code profiles or MCP scopes only change what a session *discovers*. They don't stop access.
+
+Some groups are as good as root: `docker`, `libvirt`, `lxd`, and passwordless `sudo`. An account in any of them can read every other account's files and every local VM's disk. Check the Implementer's account with `id -nG` and `sudo -n true`. The second must fail.
+
+Choose the first option that fits:
+
+1. **The Investigator works on a different machine.** The Implementer's account has no login there. The gatekeeper copies each approved spec file across by hand and records it in `provenance/wall-log.md`. This is the simplest wall to defend.
+2. **The Implementer runs sandboxed.** Claude Code runs in a container with only `implementation/` and the approved `spec/` mounted. It gets no Docker socket, no host home directory, and no REA. The Investigator can stay on the host.
+3. **The Investigator gets a separate OS user** on the same machine, with a `0700` home that holds REA, the target, and `investigation/`. This only isolates if the Implementer's account is in none of the root-equivalent groups above. On a typical dev host it is, which rules this option out there.
+4. **A separate Claude Code profile only** (next section). This is discovery scoping, not isolation. Use it alone only when nobody will ever need to show the separation held, for example a personal interoperability project.
+
+Whichever you pick, `$STACK_ROOT/healthcheck.sh` must report `clean-room wall: OK` in the Implementer's account. That check fails if REA is installed there or registered in its default Claude profile.
+
+## Investigator profile (hygiene, on top of isolation)
+
+On the Investigator's side, run Claude Code under its own profile. A `CLAUDE_CONFIG_DIR` holds its own settings, hooks, skills, session transcripts, and login; Claude Code's docs state this for each. Combined with the workspace marker, this keeps Investigator sessions out of shared memory and out of the default profile's discovery. It doesn't block file access, which is what the isolation above is for.
 
 1. Mark the workspace once, from `investigator-workspace/`:
    `$STACK_ROOT/scripts/clean-room-investigator.sh --init`.
@@ -61,9 +72,9 @@ it leaves REA's skill, the transcripts, and shared memory on the default profile
    and `$CLAUDE_CONFIG_DIR/skills`.
 5. Never run `rea setup` or REA's `install.sh` without `--no-setup` from a
    normal shell. Both register REA in the default profile for every project.
-6. Confirm: `claude mcp list` in the Investigator session shows `rea`. In a
-   normal shell it must not, and `$STACK_ROOT/healthcheck.sh` reports
-   `clean-room wall: OK`. That check fails while REA sits in the default profile.
+6. Confirm: `claude mcp list` in the Investigator session shows `rea`. In the
+   Implementer's account it must not, and `$STACK_ROOT/healthcheck.sh` there
+   reports `clean-room wall: OK`.
 
 ## Phase 0: Authorization gate (stop if any item fails)
 
@@ -150,7 +161,7 @@ Run on every spec file before it crosses the wall:
 
 ## Phase 4: Implementation (Implementer)
 
-- Start from an empty repo. Pre-flight: the Implementer runs in a normal shell, never the Investigator profile; `claude mcp list` from the implementation directory must not show `rea`; `$STACK_ROOT/healthcheck.sh` reports `clean-room wall: OK`; no access to `investigation/`; no binaries of the target on the Implementer's machine/container.
+- Start from an empty repo. Pre-flight, in the Implementer's account: the isolation option chosen above is in place; `id -nG` shows no `docker`, `libvirt`, or `lxd`, and `sudo -n true` fails (or the Implementer is sandboxed per option 2); `claude mcp list` from the implementation directory doesn't show `rea`; `$STACK_ROOT/healthcheck.sh` reports `clean-room wall: OK`; `investigation/` and the target's binaries can't be read.
 - Implementer's project instructions state: "Build only from `spec/` and public sources. If the spec is insufficient, file a question in `spec/questions.md`. Never request decompiled output."
 - Questions go back through the Investigator, who answers by updating the spec (scrubbed again).
 - Choose architecture independently. Do not mirror the original's module layout even when described by behavior.

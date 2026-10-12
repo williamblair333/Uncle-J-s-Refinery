@@ -8,6 +8,11 @@
   `CLAUDE_CONFIG_DIR` profile), memweave exclusion by the `.clean-room-investigator` marker, and
   the `check_clean_room_wall` healthcheck.
 - REA (`morluto/rea`) was reviewed: safe to install, but never in the default Claude profile.
+- **The wall is OS-level, not profile-level** (from the Codex review of #2188). Profiles and MCP
+  scopes are hygiene only. Real isolation: the Investigator on another machine, or the
+  Implementer sandboxed. This host's account is in `docker` and `libvirt` (root-equivalent), so
+  a separate local user or VM doesn't count here. The healthcheck now fails if REA is installed
+  in the account. Fix commit `d98b6ff` on #2188 says the same upstream, with a reply in the thread.
 - The upstream pitch is a docs PR plus a design issue, not a full code PR. A `--scope` flag
   doesn't protect us; the real risk is setup running with defaults (gttp analysis).
 - Upstream text must not mention Bill, his stack, or his Gitea. REA commits use the GitHub
