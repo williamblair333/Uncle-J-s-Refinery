@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-10-12 — clean-room-rebuild: REA at local scope only
+
+- **Tier 3 setup:** REA's `rea setup` registers itself in `~/.claude.json` top-level `mcpServers`
+  (user scope, every project — `SupportedClients.ts:355-364` in rea 6.4.0), which would put it in
+  the Implementer's project. The skill now says: install with `--no-setup`, register with
+  `claude mcp add --scope local` from `investigator-workspace/` only, never `--scope project`, and
+  verify with `claude mcp list` inside and outside that directory. The Implementer pre-flight
+  check uses the same command.
+- **Examples section:** requests where the skill will, might, and won't apply.
+
 ## 2026-10-12 — global skill: clean-room-rebuild
 
 - **`global-skills/clean-room-rebuild/`:** new skill for lawful clean-room reimplementation of an
