@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-12 — global skill: clean-room-rebuild
+
+- **`global-skills/clean-room-rebuild/`:** new skill for lawful clean-room reimplementation of an
+  existing app (Investigator / Spec Scrubber / Implementer / Verifier wall, authorization gate,
+  REA tiers, spec scrub rules, release checklist). `install-reliability.sh` symlinks it into
+  `~/.claude/skills/`, so every project sees it.
+
 ## 2026-10-05 — healthcheck: Langfuse hint restored
 
 - **`healthcheck.sh` `check_langfuse_compose`:** #155 pointed the "Langfuse unhealthy" hint at
