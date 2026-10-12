@@ -587,6 +587,29 @@ Skills installed: `product-brief` (write the brief), `first-run-gate` (read a
 result), `product-focus-review` (judge features against the core job), and
 `ux-heuristics` (vendored, MIT — see `global-skills/ux-heuristics/ATTRIBUTION.md`).
 
+### 21. Clean-room rebuild (REA)
+
+For building original software that does what an existing app does, without
+copying it. The `clean-room-rebuild` global skill walks through the authorization
+gate, the investigation tiers, the spec scrub, and the release checklist. It
+also covers how to use [REA](https://github.com/morluto/rea) on the
+Investigator's side only.
+
+The wall between the agent that studies the target and the agent that writes
+the new code has to be enforced by the OS: the Investigator on another machine,
+or the Implementer in a sandbox. Claude profiles and MCP scopes only change what
+a session discovers. The stack adds hygiene on top:
+
+```bash
+scripts/clean-room-investigator.sh --init   # mark the investigator workspace once
+scripts/clean-room-investigator.sh          # start claude under ~/.claude-investigator
+```
+
+Sessions under a marked workspace never enter the memweave store.
+`healthcheck.sh` fails if REA is installed in, registered in, or skilled into
+the account it runs in. A host that uses REA globally on purpose opts out with
+`clean-room-wall` in `state/disabled-features`.
+
 ---
 
 ## Daily usage
