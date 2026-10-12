@@ -59,7 +59,15 @@ Use the lowest tier that answers the question. Record which tier answered each i
 - Hardware/USB devices: `usbmon` + Wireshark with the vendor software in a VM.
 
 ### Tier 3: Static analysis with REA (only if authorized in Phase 0)
-- Setup: `npx rea-agents setup`, then `rea doctor` to confirm the provider (Hopper, Ghidra, or IDA).
+- Install without client setup: `install.sh --no-setup`, or `npm install --global --prefix ~/.local rea-agents@<exact version>`.
+- Do NOT let `rea setup` configure Claude Code. It writes REA into the top-level `mcpServers` of `~/.claude.json` (user scope) and its skills into `~/.claude/skills`, which puts REA in every project on the machine, the Implementer's included. If setup asks which clients to configure, deselect Claude Code. Configure the analysis provider with `rea doctor` only.
+- Register REA in the Investigator project only, at local scope. Run this from inside `investigator-workspace/`:
+  ```bash
+  claude mcp add --scope local rea -- npx rea-agents mcp
+  ```
+  Local scope is stored under that directory's entry in `~/.claude.json`. It isn't committed, isn't shared, and isn't visible from any other directory. Don't use `--scope project`: it writes `.mcp.json` into the repo, where it can be copied or committed across the wall.
+- Confirm: `claude mcp list` inside `investigator-workspace/` shows `rea`; run from any other directory, it must not. If REA was already registered at user scope, remove it first with `claude mcp remove --scope user rea` and delete the REA skills it added to `~/.claude/skills`.
+- Then `rea doctor` to confirm the provider (Hopper, Ghidra, or IDA).
 - Electron/JS: `rea analyze-javascript-application <path> --json` for modules, IPC, routes.
 - .NET: static metadata and CIL inspection.
 - Native: `rea analyze` / `rea decompile` for pseudocode on the specific function in question.
@@ -114,7 +122,7 @@ Run on every spec file before it crosses the wall:
 
 ## Phase 4: Implementation (Implementer)
 
-- Start from an empty repo. Pre-flight: confirm no REA MCP registration, no access to `investigation/`, no binaries of the target on the Implementer's machine/container.
+- Start from an empty repo. Pre-flight: confirm no REA MCP registration (`claude mcp list` from the implementation directory must not show `rea`, and `~/.claude/skills` must hold no REA skills), no access to `investigation/`, no binaries of the target on the Implementer's machine/container.
 - Implementer's project instructions state: "Build only from `spec/` and public sources. If the spec is insufficient, file a question in `spec/questions.md`. Never request decompiled output."
 - Questions go back through the Investigator, who answers by updating the spec (scrubbed again).
 - Choose architecture independently. Do not mirror the original's module layout even when described by behavior.
@@ -160,6 +168,27 @@ provenance/
 - The goal is a drop-in replacement using the original's name or branding.
 - The target's EULA forbids reverse engineering and there's no counsel sign-off for Tier 3.
 - The project targets a single company's paid features to resell unchanged with its look and feel.
+
+## Examples: when this skill applies
+
+Will fire (the goal is a working replacement for something that already exists):
+- "Build an open-source app that does what <paid photo editor> does." Tier 1 + 2; no REA.
+- "Write a reader/writer for <app>'s undocumented project file format so we can migrate our data out." Tier 2 file diffing first; Tier 3 REA on the parser only if diffing can't resolve a field.
+- "Our USB label printer's vendor app is Windows-only; write a Linux driver." Tier 2 `usbmon` captures; Tier 3 only for a command checksum you can't infer.
+- "Replace a discontinued vendor tool our team still depends on." Tier 1 + 2; check the EULA first.
+- "Make a self-hosted server compatible with <app>'s sync protocol." Tier 2 HAR captures; Tier 3 if the payload encoding is opaque.
+- Any request to register REA, or run `rea analyze`/`rea decompile` on a third-party binary, as part of building something.
+
+Might fire (decide at Phase 0):
+- "Build something like <app>." If it only takes ideas, with no compatibility goal and no study of the target, the full wall is optional. Keep the Phase 6 branding and UI checklist.
+- Exporting your own data from a closed app. Use the app's export or API first. If that fails, interop format work falls under this skill.
+- Porting a game or tool whose engine is open but whose assets are proprietary. Never ship the assets; the rest is ordinary development.
+
+Won't fire:
+- Rewriting or porting your own code, or code under an open license that you comply with.
+- Integrating with a documented public API or SDK.
+- Malware analysis or security research where nothing is rebuilt. REA is fine there, and this process isn't needed.
+- Cracking, keygens, DRM or license bypass. Refuse; no tier covers it.
 
 ## When decompiling is unnecessary (most cases)
 
