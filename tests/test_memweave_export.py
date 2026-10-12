@@ -208,6 +208,72 @@ def test_export_project_removes_stale_md_when_now_too_small(tmp_path):
     assert not stale.exists()
 
 
+def _session(sid_dir, sid, cwds, text="the investigator saw decompiled output "):
+    """Write a transcript whose turns ran in the given working directories."""
+    lines = [json.dumps({"type": "user", "cwd": str(c),
+                         "message": {"role": "user", "content": text * 20}})
+             for c in cwds]
+    (sid_dir / f"{sid}.jsonl").write_text("\n".join(lines) + "\n")
+
+
+def test_export_skips_clean_room_investigator_sessions(tmp_path):
+    """Clean-room wall: a session that ran under a directory holding the
+    investigator marker must never reach the shared store, and a doc exported
+    before the marker existed must be removed — otherwise an Implementer's
+    memory_search could surface the Investigator's decompiled findings."""
+    from export_transcripts import INVESTIGATOR_MARKER, export_project  # noqa: E402
+
+    work = tmp_path / "work"
+    investigator = work / "investigator-workspace"
+    (investigator / "investigation" / "notes").mkdir(parents=True)
+    (investigator / INVESTIGATOR_MARKER).write_text("")
+    other = work / "other-project"
+    other.mkdir()
+
+    proot = tmp_path / "projects"
+    pdir = proot / "-work"
+    pdir.mkdir(parents=True)
+    _session(pdir, "eeeeeeee-5555", [investigator / "investigation" / "notes"])
+    _session(pdir, "ffffffff-6666", [other])
+
+    out = tmp_path / "store"
+    mem = out / "memory"
+    mem.mkdir(parents=True)
+    stale = mem / "eeeeeeee-5555.md"
+    stale.write_text("exported before the marker was added")
+
+    written, small, empty, failed = export_project(
+        "-work", projects_root=proot, out_workspace=out, min_chars=50)
+
+    assert written == 1 and failed == 0
+    assert (mem / "ffffffff-6666.md").exists()
+    assert not stale.exists()
+
+
+def test_export_skips_session_that_entered_investigator_dir_midway(tmp_path):
+    """A session that starts elsewhere and later works inside the investigator
+    workspace carries investigator content all the same — exclude all of it."""
+    from export_transcripts import INVESTIGATOR_MARKER, export_project  # noqa: E402
+
+    investigator = tmp_path / "investigator-workspace"
+    investigator.mkdir()
+    (investigator / INVESTIGATOR_MARKER).write_text("")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+
+    proot = tmp_path / "projects"
+    pdir = proot / "-mixed"
+    pdir.mkdir(parents=True)
+    _session(pdir, "abababab-7777", [elsewhere, investigator])
+
+    out = tmp_path / "store"
+    written, small, empty, failed = export_project(
+        "-mixed", projects_root=proot, out_workspace=out, min_chars=50)
+
+    assert written == 0 and failed == 0
+    assert not (out / "memory" / "abababab-7777.md").exists()
+
+
 def test_export_round_trips_characters_cp1252_cannot_encode(tmp_path):
     """The regression that started this: transcripts are UTF-8, but Python picks the
     locale encoding when none is given — cp1252 on Windows. Reading UTF-8 as cp1252

@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-10-12 — clean-room wall: Investigator profile, memweave exclusion, healthcheck guard
+
+Per-project MCP registration (below) closed only one of three leaks across the
+clean-room wall. REA's setup also installs its skill globally, and memweave
+indexes every project's transcripts into one store, so an Implementer's
+`memory_search` could return the Investigator's decompiled findings.
+
+- **`scripts/memweave/export_transcripts.py`:** skips any session whose
+  transcript `cwd` (any turn, so a session that cd's in midway counts) is
+  under a directory holding `.clean-room-investigator`, and deletes a doc that
+  was exported before the marker existed. It prints a count of excluded
+  sessions. Two new tests in `tests/test_memweave_export.py`.
+- **`scripts/clean-room-investigator.sh`:** `--init` marks a workspace;
+  otherwise it refuses to run outside a marked one and launches `claude` with
+  `CLAUDE_CONFIG_DIR=~/.claude-investigator`. That profile has its own skills,
+  settings, hooks, transcripts, and login (per Claude Code's docs), so REA's
+  default setup lands there instead of in every project.
+- **`healthcheck.sh` `check_clean_room_wall`:** fails when the default profile
+  has a top-level `mcpServers.rea` or a `skills/reverse-engineer-anything`
+  (REA's own identifiers, `src/identity.ts`). Per-project entries don't trip
+  it. The hint is plain text, so `--fixall` never deletes anything. Opt out
+  with `clean-room-wall` in `state/disabled-features`.
+- **`clean-room-rebuild` skill:** new "Investigator profile" section that
+  applies before any REA use (Tier 2 uses REA too). REA registration is pinned
+  to an exact version (`npx -y rea-agents@<version> mcp`), as REA's docs
+  require. Local scope is kept as the fallback.
+
 ## 2026-10-12 — clean-room-rebuild: REA at local scope only
 
 - **Tier 3 setup:** REA's `rea setup` registers itself in `~/.claude.json` top-level `mcpServers`

@@ -711,6 +711,47 @@ check_secrets() {
     fi
 }
 
+# ----- clean-room wall: REA stays out of the default Claude profile ---------
+# global-skills/clean-room-rebuild keeps REA (morluto/rea) in a separate
+# Investigator profile (its own CLAUDE_CONFIG_DIR). `rea setup` and REA's
+# install.sh, which starts setup on its own in a terminal, register REA in the
+# top-level mcpServers of .claude.json and install its skill globally, so every
+# project, the Implementer's included, would load it. Identifiers are REA's own:
+# mcpServerKey "rea" and skillName "reverse-engineer-anything" (src/identity.ts).
+# A host that uses REA globally on purpose opts out via state/disabled-features.
+check_clean_room_wall() {
+    step "clean-room wall: REA not in the default Claude profile"
+    if feature_disabled "clean-room-wall"; then
+        na "clean-room-wall disabled on this host"
+        return 0
+    fi
+    local config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    local config_json="${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+    local found=""
+    if [ -f "$config_json" ] && python3 -I -c '
+import json, sys
+try:
+    doc = json.load(open(sys.argv[1], encoding="utf-8"))
+except (OSError, ValueError):
+    sys.exit(1)
+servers = doc.get("mcpServers") if isinstance(doc, dict) else None
+sys.exit(0 if isinstance(servers, dict) and "rea" in servers else 1)
+' "$config_json"; then
+        found="user-scope MCP server 'rea' in $config_json"
+    fi
+    if [ -d "$config_dir/skills/reverse-engineer-anything" ]; then
+        found="${found:+$found; }skill $config_dir/skills/reverse-engineer-anything"
+    fi
+    if [ -z "$found" ]; then
+        ok "no user-scope REA registration or skill"
+    else
+        bad "REA reaches every project: $found"
+        # Deliberately not a "run:" hint: --fixall must never delete on its own.
+        hint "claude mcp remove --scope user rea, delete $config_dir/skills/reverse-engineer-anything, then set REA up under the Investigator's CLAUDE_CONFIG_DIR (global-skills/clean-room-rebuild); or opt out: echo clean-room-wall >> state/disabled-features"
+        record_fail "clean-room-wall"
+    fi
+}
+
 # ----- 9i. jcodemunch index not stale --------------------------------------
 check_jcodemunch_index_fresh() {
     step "jcodemunch — index up to date with git HEAD"
@@ -1123,6 +1164,7 @@ check_post_merge_hook
 check_memory_staleness
 check_docmunch_indexed
 check_secrets
+check_clean_room_wall
 check_jcodemunch_index_fresh
 check_untracked_skills
 check_auto_maintain_cron
