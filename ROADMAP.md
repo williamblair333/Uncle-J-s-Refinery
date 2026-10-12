@@ -17,7 +17,14 @@ Completed items age out after ~4 weeks.
 - **Pre-commit doc gate fired on a read-only Bash call** (opened 2026-10-05). A `git rev-parse` /
   `ls-remote` / `gh api` command got "Commit blocked — update CHANGELOG.md HANDOFF.md
   docs/RELIABILITY.md" after it ran. Find which PreToolUse hook matches it and narrow it to
-  real `git commit` invocations.
+  real `git commit` invocations. Seen again 2026-10-12 on a commit inside the nested,
+  gitignored `review/rea` clone, a different repo the gate shouldn't police.
+- **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
+  (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
+  touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
+- **Old one-shot Gitea tokens** (opened 2026-10-12). `access_token` ids 5–21 (voice-line,
+  moneymaker, chesslab, mkit, free-energy) are still live. Bill to decide which to revoke.
+  Method: back up `gitea.db`, then delete by exact id and name, as done for 22–24.
 - **Prune stale Gitea branches** (opened 2026-10-05). About 20 merged-era branches from May to
   July 2026 are still on Gitea and get mirrored to GitHub.
 - **Rebuild the vendored pysqlite3 wheel on an older glibc** (opened 2026-10-05). The wheel in
@@ -250,6 +257,15 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-10-12 — clean-room-rebuild skill and an OS-level wall)
+
+- `clean-room-rebuild` global skill adopted (#106, #107) and REA reviewed (safe; MIT; no telemetry).
+- Wall hygiene (#108): `scripts/clean-room-investigator.sh`, memweave exclusion by the
+  `.clean-room-investigator` marker, and the `check_clean_room_wall` healthcheck.
+- OS-level isolation (#109), after a Codex review showed profiles only scope discovery. The
+  healthcheck now also fails if REA is installed in the account.
+- Upstream pitch filed: morluto/rea#2187 and #2188.
 
 ## Recently completed (2026-09-01/03 — `review/` triaged; `jscrub` extracted and hardened)
 
