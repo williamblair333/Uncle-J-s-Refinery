@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-12 (later) — context-mode reviewed, not adopted
+
+- `review/context-mode` → `reviewed/context-mode`, with the assessment at
+  `reviewed/2026-10-12-context-mode-assessment.md`. Don't install it as a plugin: its routing
+  hooks conflict with ours. The one idea taken is the PreCompact snapshot (ROADMAP → Planned).
+- Don't run jcodemunch `index_folder` on clones under `review/`. It replaces the Refinery's
+  own index. Copy them out first.
+
 ## 2026-10-12 — clean-room-rebuild skill + REA wall (merged); REA pitch filed upstream
 
 **Bill's decisions (don't re-ask):**

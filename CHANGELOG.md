@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-10-12 — context-mode reviewed (not adopted)
+
+- **mksglu/context-mode v1.0.169** assessed and moved to `reviewed/`; the note is
+  `reviewed/2026-10-12-context-mode-assessment.md`. Verdict: don't install. Its PreToolUse
+  routing contradicts the grep-guard. Its `ctx_execute` "sandbox" is a temp dir plus a scrubbed
+  env, not isolation. ELv2 license. No telemetry upload found in `src/`; the shipped bundles
+  were not audited.
+- **Borrowed:** the PreCompact working-state snapshot idea, now a ROADMAP item.
+- **Pitfall:** `index_folder` on a clone nested under this repo reuses the Refinery's repo id
+  and replaces its code index. A full re-index of the root restores it.
+
 ## 2026-10-12 — clean-room wall: OS-level isolation, not profiles
 
 A review of the upstream REA docs PR (morluto/rea#2188, Codex P1) found that
