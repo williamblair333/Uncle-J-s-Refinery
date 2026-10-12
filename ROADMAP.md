@@ -11,6 +11,12 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **PreCompact working-state snapshot** (opened 2026-10-12, from the context-mode review in
+  `reviewed/2026-10-12-context-mode-assessment.md`). Nothing restores working state inside a
+  session after compaction: memweave covers past sessions only. Add a PreCompact hook that
+  writes files touched, open tasks, decisions and the last prompt to `state/`. Have
+  SessionStart(compact) re-inject a short summary. Script only, no LLM. The idea is
+  context-mode's (ELv2), so reimplement it rather than copying code.
 - **Tests write to the live `state/hook-blocks.log`** (opened 2026-10-05). 668 of its lines
   are `session=test` entries from guard tests, so the weekly hook-blocks review has to filter
   them out by hand. Point the tests at a temp log (env override) and prune the existing lines.
