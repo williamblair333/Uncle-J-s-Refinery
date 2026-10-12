@@ -111,6 +111,9 @@ returns `{"error": ...}` on failure, never raises. Each call is logged to
 - Semantic/hybrid search: a nonzero `skipped_dim_mismatch` means a partial corpus; a
   `semantic_topup` block means part of the ranking is lexical-only; a semantic channel of
   `unavailable` (with `semantic_channel_error`) is a failure, not "no embeddings".
+  A `semantic_store_mismatch` body block (`reason`: model/task-type change,
+  `embedding_metadata_missing`, `embedding_dimension_mismatch`) means the stored vectors were
+  skipped — the ranking is lexical-only and `semantic_only` returns no rows. Run `embed_repo`.
 
 **References & call graph**
 - "Where is this name used?" → `check_references` (every use: imports + content mentions;

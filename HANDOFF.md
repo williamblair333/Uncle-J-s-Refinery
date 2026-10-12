@@ -12,6 +12,7 @@
 - **Next session:** the Jarvis track is unchanged. Daily email triage is the recommended first
   pick, the Codex MCP is the alternative. Three small follow-ups are in ROADMAP → Planned: test
   noise in `hook-blocks.log`, a doc gate firing on read-only calls, and stale Gitea branches.
+- **jcodemunch-mcp breaking change**: semantic and fusion `search_symbols` no longer score vectors built by another model, task type or no metadata (for example from a full re-index before v1.108.331). They return `semantic_store_mismatch` with `channels.semantic: "unavailable"`, and `semantic_only` returns no rows. Callers must run `embed_repo` to restore the semantic channel.
 
 ## 2026-10-05 — second host (tc-vmh-03) brought up from a clean install
 
