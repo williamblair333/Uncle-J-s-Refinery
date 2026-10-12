@@ -43,6 +43,14 @@ _SYS_REMINDER_RE = re.compile(r"<system-reminder>.*?</system-reminder>", re.DOTA
 # to today's behavior (a guard test pins the keep-real-prose side).
 _SKILL_BODY_PREFIX = "Base directory for this skill:"
 
+# Clean-room wall (global-skills/clean-room-rebuild): a session whose working
+# directory sits under a directory holding this marker is an Investigator
+# session. Its transcript never enters the shared store, because an Implementer's
+# memory_search would otherwise surface decompiled findings across the wall.
+# Checked per session from the transcript's own `cwd` fields, so it holds even
+# when the Investigator forgot to run under its separate CLAUDE_CONFIG_DIR.
+INVESTIGATOR_MARKER = ".clean-room-investigator"
+
 
 def is_skill_body(text: str) -> bool:
     """True when a turn's text is a harness skill-body injection, not conversation."""
@@ -105,6 +113,29 @@ def iter_turns(lines) -> list[tuple[str, str]]:
     return turns
 
 
+def is_investigator_session(lines) -> bool:
+    """True when any turn ran under a directory holding INVESTIGATOR_MARKER.
+
+    Every distinct `cwd` counts, not just the first: a session that cd's into
+    the investigator workspace midway carries its content all the same."""
+    cwds = set()
+    for line in lines:
+        if '"cwd"' not in line:
+            continue
+        try:
+            rec = json.loads(line)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        cwd = rec.get("cwd") if isinstance(rec, dict) else None
+        if isinstance(cwd, str) and cwd:
+            cwds.add(cwd)
+    for cwd in cwds:
+        path = Path(cwd)
+        if any((d / INVESTIGATOR_MARKER).exists() for d in (path, *path.parents)):
+            return True
+    return False
+
+
 def render_markdown(session_id, turns, *, project=None, date_iso=None) -> str:
     """Render turns as a markdown memory doc. Empty turns → '' (caller skips)."""
     if not turns:
@@ -141,7 +172,7 @@ def export_project(project, *, projects_root=PROJECTS_ROOT, out_workspace=DEFAUL
     mem_dir = Path(out_workspace).expanduser() / "memory"
     mem_dir.mkdir(parents=True, exist_ok=True)
 
-    written = skipped_small = skipped_empty = failed = 0
+    written = skipped_small = skipped_empty = failed = excluded = 0
     for tp in transcripts:
         try:
             # encoding= is NOT redundant, however much it looks it on Linux.
@@ -155,10 +186,16 @@ def export_project(project, *, projects_root=PROJECTS_ROOT, out_workspace=DEFAUL
             # the dangerous half. errors="replace" is kept only for genuinely
             # malformed bytes, which is what it was meant for.
             raw = tp.read_text(encoding="utf-8", errors="replace")
-            turns = iter_turns(raw.splitlines())
+            lines = raw.splitlines()
+            out_path = mem_dir / f"{tp.stem}.md"
+            if is_investigator_session(lines):
+                # Also drop a doc exported before the marker existed.
+                out_path.unlink(missing_ok=True)
+                excluded += 1
+                continue
+            turns = iter_turns(lines)
             date_iso = datetime.fromtimestamp(tp.stat().st_mtime, timezone.utc).strftime("%Y-%m-%d")
             md = render_markdown(tp.stem, turns, project=project, date_iso=date_iso)
-            out_path = mem_dir / f"{tp.stem}.md"
             if not md or len(md) < min_chars:
                 # Too-small/empty after filtering. Remove any stale .md left by a prior
                 # export so a newly-tightened filter (e.g. skill-body stripping that
@@ -185,6 +222,9 @@ def export_project(project, *, projects_root=PROJECTS_ROOT, out_workspace=DEFAUL
             print(f"export_transcripts: FAILED {tp.name}: {type(exc).__name__}: {exc}",
                   file=sys.stderr)
             failed += 1
+    if excluded:
+        print(f"export_transcripts: excluded {excluded} clean-room investigator "
+              f"session(s) in {project}")
     return written, skipped_small, skipped_empty, failed
 
 

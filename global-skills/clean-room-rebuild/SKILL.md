@@ -30,6 +30,41 @@ Rules:
 - The only artifact crossing the wall is the scrubbed spec in `spec/`.
 - A human gatekeeper approves each spec change before it crosses.
 
+## Investigator profile (set up before the first REA call, Tier 2 or 3)
+
+The Investigator runs under its own Claude Code profile, so nothing it loads or
+writes reaches the default profile the Implementer uses. A `CLAUDE_CONFIG_DIR`
+holds its own settings, hooks, skills, session transcripts, and login; Claude
+Code's docs state this for each. Per-project MCP registration alone isn't enough:
+it leaves REA's skill, the transcripts, and shared memory on the default profile.
+
+1. Mark the workspace once, from `investigator-workspace/`:
+   `$STACK_ROOT/scripts/clean-room-investigator.sh --init`.
+   The `.clean-room-investigator` marker keeps every session that runs under it
+   out of the memweave store, even one started without the separate profile.
+   The check runs against the directory at export time, so archive the
+   workspace when the project ends, marker included. Never delete or move it.
+2. Start every Investigator session with `$STACK_ROOT/scripts/clean-room-investigator.sh`.
+   It refuses to run outside a marked workspace and launches `claude` with
+   `CLAUDE_CONFIG_DIR=~/.claude-investigator` (override: `CLEAN_ROOM_CONFIG_DIR`).
+   The first launch asks for a login, since the profile keeps its own credentials.
+   The profile starts without the stack's skills, hooks, and MCP servers. That's
+   intended; add only what the Investigator needs.
+3. Install REA with `install.sh --no-setup`, or
+   `npm install --global --prefix ~/.local rea-agents@<exact version>`.
+4. Inside an Investigator session, register REA with the exact version, as REA's
+   own docs do. `rea doctor` reports unpinned registrations as stale:
+   `claude mcp add --scope user rea -- npx -y rea-agents@<exact version> mcp`.
+   User scope is correct here because the user is the Investigator profile.
+   `rea setup --client claude_code` also works, if run from that session's shell
+   with `CLAUDE_CONFIG_DIR` set. REA writes to `$CLAUDE_CONFIG_DIR/.claude.json`
+   and `$CLAUDE_CONFIG_DIR/skills`.
+5. Never run `rea setup` or REA's `install.sh` without `--no-setup` from a
+   normal shell. Both register REA in the default profile for every project.
+6. Confirm: `claude mcp list` in the Investigator session shows `rea`. In a
+   normal shell it must not, and `$STACK_ROOT/healthcheck.sh` reports
+   `clean-room wall: OK`. That check fails while REA sits in the default profile.
+
 ## Phase 0: Authorization gate (stop if any item fails)
 
 - [ ] A lawfully obtained, licensed copy of the target is owned.
@@ -59,15 +94,8 @@ Use the lowest tier that answers the question. Record which tier answered each i
 - Hardware/USB devices: `usbmon` + Wireshark with the vendor software in a VM.
 
 ### Tier 3: Static analysis with REA (only if authorized in Phase 0)
-- Install without client setup: `install.sh --no-setup`, or `npm install --global --prefix ~/.local rea-agents@<exact version>`.
-- Do NOT let `rea setup` configure Claude Code. It writes REA into the top-level `mcpServers` of `~/.claude.json` (user scope) and its skills into `~/.claude/skills`, which puts REA in every project on the machine, the Implementer's included. If setup asks which clients to configure, deselect Claude Code. Configure the analysis provider with `rea doctor` only.
-- Register REA in the Investigator project only, at local scope. Run this from inside `investigator-workspace/`:
-  ```bash
-  claude mcp add --scope local rea -- npx rea-agents mcp
-  ```
-  Local scope is stored under that directory's entry in `~/.claude.json`. It isn't committed, isn't shared, and isn't visible from any other directory. Don't use `--scope project`: it writes `.mcp.json` into the repo, where it can be copied or committed across the wall.
-- Confirm: `claude mcp list` inside `investigator-workspace/` shows `rea`; run from any other directory, it must not. If REA was already registered at user scope, remove it first with `claude mcp remove --scope user rea` and delete the REA skills it added to `~/.claude/skills`.
-- Then `rea doctor` to confirm the provider (Hopper, Ghidra, or IDA).
+- Setup: the Investigator profile above, then `rea doctor` in an Investigator session to confirm the provider (Hopper, Ghidra, or IDA).
+- If the separate profile isn't available, the fallback is per-project registration in the default profile: from `investigator-workspace/`, `claude mcp add --scope local rea -- npx -y rea-agents@<exact version> mcp`. Never use `--scope project`; it writes `.mcp.json` into the repo, where it can cross the wall. This fallback still leaves REA's skill (if `rea setup` installed it) and memory on the shared profile. The workspace marker covers memory; delete the skill by hand.
 - Electron/JS: `rea analyze-javascript-application <path> --json` for modules, IPC, routes.
 - .NET: static metadata and CIL inspection.
 - Native: `rea analyze` / `rea decompile` for pseudocode on the specific function in question.
@@ -122,7 +150,7 @@ Run on every spec file before it crosses the wall:
 
 ## Phase 4: Implementation (Implementer)
 
-- Start from an empty repo. Pre-flight: confirm no REA MCP registration (`claude mcp list` from the implementation directory must not show `rea`, and `~/.claude/skills` must hold no REA skills), no access to `investigation/`, no binaries of the target on the Implementer's machine/container.
+- Start from an empty repo. Pre-flight: the Implementer runs in a normal shell, never the Investigator profile; `claude mcp list` from the implementation directory must not show `rea`; `$STACK_ROOT/healthcheck.sh` reports `clean-room wall: OK`; no access to `investigation/`; no binaries of the target on the Implementer's machine/container.
 - Implementer's project instructions state: "Build only from `spec/` and public sources. If the spec is insufficient, file a question in `spec/questions.md`. Never request decompiled output."
 - Questions go back through the Investigator, who answers by updating the spec (scrubbed again).
 - Choose architecture independently. Do not mirror the original's module layout even when described by behavior.
