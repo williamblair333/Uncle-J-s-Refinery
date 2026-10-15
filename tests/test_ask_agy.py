@@ -20,6 +20,8 @@ def load(name, rel):
 
 ask = load("ask_agy", "scripts/ask_agy.py")
 perms = load("apply_permissions", "features/antigravity/apply_permissions.py")
+sync = load("sync_mcp", "features/antigravity/sync_mcp.py")
+rules_mod = load("install_rules", "features/antigravity/install_rules.py")
 
 
 def step(state, cmd="ls", error=None):
@@ -136,6 +138,53 @@ def test_shipped_rules_have_no_wildcards_and_deny_destructive():
     rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
     joined = " ".join(rules["allow"])
     assert "(*)" not in joined and "regex:" not in joined
-    for must in ("command(rm)", "command(sudo)", "command(git push)", "command(curl)"):
+    for must in ("command(rm)", "command(sudo)", "command(git push)", "command(curl)",
+                 "mcp(jdocmunch/delete_index)", "mcp(jdatamunch/delete_dataset)"):
         assert must in rules["deny"]
     assert not set(rules["allow"]) & set(rules["deny"])
+    # write-capable servers are never wholesale-allowed
+    assert "mcp(serena/*)" not in rules["allow"] and "mcp(duckdb/*)" not in rules["allow"]
+
+
+# ── sync_mcp: Claude user-scope servers -> agy mcp_config.json ───────────────
+
+def test_sync_mcp_copies_servers_keeps_others_and_is_private(tmp_path):
+    claude = tmp_path / ".claude.json"
+    claude.write_text(json.dumps({"mcpServers": {
+        "jcodemunch": {"type": "stdio", "command": "/v/jcodemunch-mcp", "args": [], "env": {}},
+        "context7": {"command": "npx", "args": ["-y", "c7"], "env": {"CONTEXT7_API_KEY": "k"}},
+        "remote": {"type": "http", "url": "https://x/mcp", "headers": {"A": "b"}},
+    }, "other": 1}))
+    target = tmp_path / "config" / "mcp_config.json"
+    target.parent.mkdir()
+    target.write_text("")                                      # agy ships it empty
+    assert sync.sync(claude, target) == ["context7", "jcodemunch", "remote"]
+    data = json.loads(target.read_text())["mcpServers"]
+    assert data["jcodemunch"] == {"command": "/v/jcodemunch-mcp", "args": []}
+    assert data["context7"]["env"] == {"CONTEXT7_API_KEY": "k"}
+    assert data["remote"] == {"url": "https://x/mcp", "headers": {"A": "b"}}
+    assert oct(target.stat().st_mode & 0o777) == "0o600"
+    # a server added on the agy side survives a re-sync
+    d = json.loads(target.read_text()); d["mcpServers"]["mine"] = {"command": "x"}
+    target.write_text(json.dumps(d))
+    sync.sync(claude, target)
+    assert "mine" in json.loads(target.read_text())["mcpServers"]
+
+
+# ── install_rules: marker-delimited block in a user-owned rules file ─────────
+
+def test_rules_block_appends_then_replaces_only_its_block(tmp_path):
+    target = tmp_path / "GEMINI.md"
+    target.write_text("# Global Personal Memory\n\n- keep me\n")
+    rules_mod.install(target, "<!-- S -->\nv1\n<!-- E -->", "<!-- S -->", "<!-- E -->")
+    rules_mod.install(target, "<!-- S -->\nv2\n<!-- E -->", "<!-- S -->", "<!-- E -->")
+    text = target.read_text()
+    assert text.startswith("# Global Personal Memory\n\n- keep me\n")
+    assert "v2" in text and "v1" not in text and text.count("<!-- S -->") == 1
+    assert (tmp_path / "GEMINI.md.bak").exists()
+
+
+def test_shipped_rules_block_includes_claude_md_and_fits():
+    block = (REPO / "features/antigravity/rules-block.md").read_text()
+    assert "@[" in block and "CLAUDE.md)" in block
+    assert len((REPO / "CLAUDE.md").read_bytes()) + len(block.encode()) < 24_000  # agy per-file cap

@@ -28,8 +28,13 @@
 - Headless: use `scripts/ask_agy.py` (honest exit codes). Read-only shell allow list applied
   from `features/antigravity/permissions.json`; re-run the probe table in that README after
   agy self-updates.
-- Next: item #2 — register the stack MCP servers with `agy mcp add` and write the agy
-  equivalent of the CLAUDE.md routing policy.
+- Item #2 done: `bash features/antigravity/install.sh` wires permissions, the 8 MCP servers,
+  the routing policy (`~/.gemini/GEMINI.md` includes CLAUDE.md) and skills. Verified live.
+- Open for Bill: repo `GEMINI.md` mandate 6 still asks the agent to draft skills with
+  `gemini-auto-skill`, which agy cannot see (it lives in features/gemini-integration/skills,
+  not global-skills). Keep, move, or drop it.
+- Remaining list: item #3 cleanups (delete `~/.claude/skills/adversarial-review`, decide the
+  pre-existing `uv.lock` change), item #4 try the new skills, then the whisper dictation script.
 - Never run mattpocock's `scripts/link-skills.sh`: it `rm -rf`s real dirs in `~/.claude/skills`.
 
 ## 2026-10-12 (later) — context-mode reviewed, not adopted
