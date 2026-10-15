@@ -133,7 +133,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Dreaming | Daily Langfuse trace mining → mistake patterns + playbooks → memweave store + CLAUDE.md |
 | | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
 | | Auto-skill | Stop hook — analyzes session transcript; drafts a SKILL.md to `state/skill-drafts/`; pitches via Telegram for approval |
-| | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start |
+| | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start, and `global-skills/` into `~/.agents/skills/` so Codex, Gemini CLI and Copilot CLI see the same skills. Full list: [`docs/SKILLS.md`](docs/SKILLS.md) |
 | | Agent library | 6 specialist subagents in `global-agents/` — planner, code-reviewer, security-reviewer, architect, tdd-guide, silent-failure-hunter — symlinked to `~/.claude/agents/` |
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
@@ -176,6 +176,8 @@ Commercial use is governed by [Anthropic's Commercial Terms of Service](https://
 Everything outside the `/ee` folder is MIT — free for commercial use with no usage limits. The `/ee` folder contains enterprise-only features (SCIM, audit logs, data retention policies) that require a commercial license. See [Langfuse open-source FAQ](https://langfuse.com/docs/open-source).
 
 **Everything else** — memweave, Serena, DuckDB MCP, Context7, Superpowers, dwarvesf/claude-guardrails, and the Langfuse template — is MIT-licensed. No commercial restrictions beyond attribution.
+
+**Vendored skills** — the `global-skills/` folders that contain an `UPSTREAM` file are copied from [mattpocock/skills](https://github.com/mattpocock/skills) and stay **MIT** (each carries its `LICENSE`), not AGPL.
 
 **This repo's glue code** — install scripts, merged CLAUDE.md, custom skills, Ralph harness, and all supporting scripts — is **AGPL-3.0** (see `LICENSE`). Free for personal and commercial use; network-deployed modifications must be released under the same license.
 

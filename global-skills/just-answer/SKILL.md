@@ -1,6 +1,6 @@
 ---
 name: just-answer
-description: Use on every question: answer exactly what was asked and stop; give reasons, risks, or alternatives only when the user asks for them.
+description: "Use on every question: answer exactly what was asked and stop; give reasons, risks, or alternatives only when the user asks for them."
 ---
 
 # just-answer

@@ -1,5 +1,27 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-15 — skills portability
+
+**Bill's decisions (don't re-ask):**
+- Skills must stay usable if Claude Code is dropped. Repo copies plus `~/.agents/skills` links
+  are the mechanism; `docs/SKILLS.md` is the list.
+- From mattpocock/skills, adopt only: handoff, teach, retro, wizard, grilling, grill-me,
+  to-questionnaire, wait-what, writing-for-agents (narrowed description). Everything else
+  was rejected (reasons in CHANGELOG). Re-vendoring an update is a deliberate act; `UPSTREAM`
+  pins the commit.
+- The local-only security skills are fine in the public mirror (no secrets; the guard code
+  they describe is already public).
+
+**State:**
+- `~/.claude/skills/{red-team,blue-team,building-circuit-boards}` are now symlinks. The
+  originals are in a scratch tarball for this session only; the repo is the copy now.
+- `~/.claude/skills/adversarial-review` is a loose companion file of the workflow, not a
+  skill. Its content is in `global-workflows/adversarial-review.md`. It can be deleted.
+- No other agent is installed on this host yet. `~/.agents/skills` is ready for one.
+- Follow-up: healthcheck 9a reads `description:` with grep, so it passes invalid YAML
+  (`just-answer` slipped through). Switching it to a YAML parse would catch that.
+- Never run mattpocock's `scripts/link-skills.sh`: it `rm -rf`s real dirs in `~/.claude/skills`.
+
 ## 2026-10-12 (later) — context-mode reviewed, not adopted
 
 - `review/context-mode` → `reviewed/context-mode`, with the assessment at

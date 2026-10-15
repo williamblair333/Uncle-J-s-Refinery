@@ -34,6 +34,35 @@ link_skill_dirs() {
   done
 }
 
+# ~/.agents/skills is the cross-harness skill dir (Codex, Gemini CLI, Copilot CLI).
+# Other tools install into it, so a real directory there is never replaced or deleted:
+# only our own symlinks are created, repointed, or pruned when dangling.
+link_agents_skills() {
+  local base_dir="$1" agents_skills="$HOME/.agents/skills"
+  [[ -d "$base_dir" ]] || return 0
+  mkdir -p "$agents_skills"
+  for skill_dir in "$base_dir"/*/; do
+    [[ -d "$skill_dir" ]] || continue
+    local link="$agents_skills/$(basename "$skill_dir")"
+    if [[ -L "$link" && "$(readlink "$link")" == "$base_dir"/* ]]; then
+      [[ "$(readlink -f "$link")" == "$(readlink -f "$skill_dir")" ]] || ln -sfn "$skill_dir" "$link"
+    elif [[ -L "$link" || -e "$link" ]]; then
+      echo "skill-link: $link is not our symlink; left alone" >&2
+    else
+      ln -s "$skill_dir" "$link"
+    fi
+  done
+  for link in "$agents_skills"/*; do
+    if [[ -L "$link" && ! -e "$link" && "$(readlink "$link")" == "$base_dir"/* ]]; then
+      rm -f "$link"
+    fi
+  done
+  return 0
+}
+
 link_skill_dirs "$PROJ_ROOT/skills"        "${1:-}"
 # Global skills are permanent (managed by install-reliability.sh) — link only, never unlink
-[[ "${1:-}" == "link" ]] && link_skill_dirs "$PROJ_ROOT/global-skills" "link"
+if [[ "${1:-}" == "link" ]]; then
+  link_skill_dirs "$PROJ_ROOT/global-skills" "link"
+  link_agents_skills "$PROJ_ROOT/global-skills"
+fi
