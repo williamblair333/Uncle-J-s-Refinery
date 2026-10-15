@@ -1,0 +1,141 @@
+"""Tests for scripts/ask_agy.py and features/antigravity/apply_permissions.py.
+
+A fake `agy` replays a stream-json transcript, so no network or quota is used. The event
+shapes are copied from real agy 1.3.5 runs (2026-10-15)."""
+import importlib.util
+import json
+import os
+import stat
+from pathlib import Path
+
+REPO = Path(__file__).parent.parent
+
+
+def load(name, rel):
+    spec = importlib.util.spec_from_file_location(name, REPO / rel)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+ask = load("ask_agy", "scripts/ask_agy.py")
+perms = load("apply_permissions", "features/antigravity/apply_permissions.py")
+
+
+def step(state, cmd="ls", error=None):
+    info = {"name": "run_command", "parameters": {"CommandLine": cmd}}
+    if error:
+        info["error"] = {"type": "TOOL_ERROR", "message": error}
+    return {"event": "step_update", "step_update": {"step_type": "tool", "tool_name": "run_command",
+                                                     "state": state, "tool_info": info}}
+
+
+def result(response, status="SUCCESS", denied=None):
+    r = {"status": status, "response": response, "num_turns": 1}
+    if denied:
+        r["denied_actions"] = denied
+    return {"event": "result", "result": r}
+
+
+def fake_agy(tmp_path, events, exit_code=0):
+    """Write an executable that prints `events` as JSON lines and records its argv."""
+    data = tmp_path / "events.jsonl"
+    data.write_text("\n".join(json.dumps(e) for e in events) + "\n")
+    argv_log = tmp_path / "argv.json"
+    script = tmp_path / "agy"
+    script.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, sys\n"
+        f"json.dump(sys.argv[1:], open({str(argv_log)!r}, 'w'))\n"
+        f"sys.stdout.write(open({str(data)!r}).read())\n"
+        f"sys.exit({exit_code})\n")
+    script.chmod(script.stat().st_mode | stat.S_IXUSR)
+    return script, argv_log
+
+
+def run(tmp_path, events, *args, exit_code=0):
+    script, argv_log = fake_agy(tmp_path, events, exit_code)
+    outcome = ask.ask(*args or ("hello",), agy_bin=str(script), cwd=str(tmp_path))
+    return outcome, json.loads(argv_log.read_text())
+
+
+# ── ask_agy: success and the failure modes agy reports as SUCCESS ──────────
+
+def test_clean_success(tmp_path):
+    out, argv = run(tmp_path, [step("DONE"), result("the answer\n")])
+    assert out["ok"] and out["response"] == "the answer"
+    assert "--output-format" in argv and "stream-json" in argv
+
+
+def test_hard_deny_is_failure_even_when_model_says_done(tmp_path):
+    msg = "Permission denied for unsandboxed(ls; touch x). Matches user-configured deny rule."
+    out, _ = run(tmp_path, [step("ERROR", "ls; touch x", msg), result("DONE\n")])
+    assert not out["ok"]
+    assert out["tool_errors"] and "deny rule" in out["tool_errors"][0]["message"]
+
+
+def test_soft_deny_is_failure(tmp_path):
+    out, _ = run(tmp_path, [result("", denied=[{"action": "command", "display_name": "RunCommand"}])])
+    assert not out["ok"] and out["denied"] == ["RunCommand"]
+
+
+def test_empty_response_is_failure(tmp_path):
+    out, _ = run(tmp_path, [result("   \n")])
+    assert not out["ok"] and "empty" in out["error"]
+
+
+def test_non_success_status_is_failure(tmp_path):
+    out, _ = run(tmp_path, [result("partial", status="ERROR")])
+    assert not out["ok"]
+
+
+def test_nonzero_exit_and_no_result_is_failure(tmp_path):
+    out, _ = run(tmp_path, [{"event": "init"}], exit_code=3)
+    assert not out["ok"] and "exit 3" in out["error"]
+
+
+def test_edits_flag_and_timeout_passed(tmp_path):
+    script, argv_log = fake_agy(tmp_path, [result("ok")])
+    ask.ask("p", agy_bin=str(script), cwd=str(tmp_path), edits=True, timeout=42)
+    argv = json.loads(argv_log.read_text())
+    assert argv[argv.index("--mode") + 1] == "accept-edits"
+    assert argv[argv.index("--print-timeout") + 1] == "42s"
+
+
+def test_cli_exit_codes(tmp_path, capsys):
+    script, _ = fake_agy(tmp_path, [result("fine")])
+    assert ask.main(["--agy-bin", str(script), "--cwd", str(tmp_path), "q"]) == 0
+    assert capsys.readouterr().out.strip() == "fine"
+    script, _ = fake_agy(tmp_path, [result("", denied=[{"display_name": "RunCommand"}])])
+    assert ask.main(["--agy-bin", str(script), "--cwd", str(tmp_path), "q"]) == 1
+    assert json.loads(capsys.readouterr().err)["ok"] is False
+
+
+# ── apply_permissions: merge without clobbering agy's own keys ──────────────
+
+def test_merge_keeps_other_keys_and_is_idempotent(tmp_path):
+    settings = tmp_path / "settings.json"
+    settings.write_text(json.dumps({"trustedWorkspaces": ["/a"]}))
+    rules = {"allow": ["command(ls)"], "deny": ["command(rm)"], "ask": []}
+    assert perms.apply(settings, rules) is True
+    data = json.loads(settings.read_text())
+    assert data["trustedWorkspaces"] == ["/a"]
+    assert data["permissions"]["allow"] == ["command(ls)"]
+    assert oct(settings.stat().st_mode & 0o777) == "0o600"
+    assert perms.apply(settings, rules) is False          # unchanged: no rewrite
+    assert (tmp_path / "settings.json.bak").exists()
+
+
+def test_merge_creates_missing_file(tmp_path):
+    settings = tmp_path / "sub" / "settings.json"
+    perms.apply(settings, {"allow": [], "deny": ["command(rm)"], "ask": []})
+    assert json.loads(settings.read_text())["permissions"]["deny"] == ["command(rm)"]
+
+
+def test_shipped_rules_have_no_wildcards_and_deny_destructive():
+    rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
+    joined = " ".join(rules["allow"])
+    assert "(*)" not in joined and "regex:" not in joined
+    for must in ("command(rm)", "command(sudo)", "command(git push)", "command(curl)"):
+        assert must in rules["deny"]
+    assert not set(rules["allow"]) & set(rules["deny"])
