@@ -75,6 +75,18 @@ Check `.session-end.yml` `consider` list for `when:` conditions:
 - `when: security` — surfaces if any `tg_security.py`, `scripts/lib/`, or auth-related file changed. If triggered, check SECURITY.md.
 - `when: stack` — surfaces if `pyproject.toml`, `uv.lock`, or `mcp-clients/` changed. If triggered, check `docs/STACK.md`.
 
+### Step 5b — Skills reference (when skills changed)
+
+If the repo has `scripts/gen-skills-reference.py` (Refinery only), regenerate the reference and
+stage it when it changed; it is deterministic, so an unchanged skill set produces no diff:
+
+```bash
+.venv/bin/python scripts/gen-skills-reference.py && git add docs/SKILLS.md
+```
+
+If any row in its "Local only — not backed up" section appears, tell the user: those skills
+exist only in `~/.claude/skills` and are lost with that directory.
+
 ### Step 6 — Hook-blocks log review (weekly)
 
 Check `state/hook-blocks.log`. If the file is non-empty:

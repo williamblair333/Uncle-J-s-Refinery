@@ -810,6 +810,34 @@ check_untracked_skills() {
     fi
 }
 
+# ----- 9k. skills portability: reference current, ~/.agents/skills linked ----
+# Warn-only: drift here loses no data, it only makes docs/SKILLS.md or other harnesses stale.
+check_skills_portability() {
+    step "skills — docs/SKILLS.md current and global-skills linked into ~/.agents/skills"
+    local py="$REPO_ROOT/.venv/bin/python"; [[ -x "$py" ]] || py=python3
+    local rc=0
+    "$py" "$REPO_ROOT/scripts/gen-skills-reference.py" --check 2>/dev/null || rc=$?
+    if (( rc == 0 )); then
+        ok "docs/SKILLS.md is current"
+    elif (( rc == 2 )); then
+        warn "skills reference not checked: pyyaml missing for $py"
+        hint "run: bash $REPO_ROOT/install.sh (rebuilds the stack venv)"
+    else
+        warn "docs/SKILLS.md is stale"
+        hint "run: $py $REPO_ROOT/scripts/gen-skills-reference.py"
+    fi
+    local missing=0 skill_dir
+    for skill_dir in "$REPO_ROOT/global-skills"/*/; do
+        [[ -e "$HOME/.agents/skills/$(basename "$skill_dir")" ]] || missing=$((missing + 1))
+    done
+    if (( missing == 0 )); then
+        ok "all global skills visible to other harnesses (~/.agents/skills)"
+    else
+        warn "$missing global skill(s) missing from ~/.agents/skills"
+        hint "run: bash $REPO_ROOT/scripts/skill-link.sh link"
+    fi
+}
+
 # ----- 9l. embedding model downloaded + canary pinned ----------------------
 check_embedding_canary() {
     step "jcodemunch — embedding model + canary"
@@ -1180,6 +1208,7 @@ check_secrets
 check_clean_room_wall
 check_jcodemunch_index_fresh
 check_untracked_skills
+check_skills_portability
 check_auto_maintain_cron
 check_embedding_canary
 check_jcodemunch_watch

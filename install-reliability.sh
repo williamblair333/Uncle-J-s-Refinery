@@ -49,6 +49,21 @@ for link in "$CLAUDE_DIR/skills"/*; do
     ok "removed stale skill symlink: $(basename "$link")"
 done
 
+# ── Cross-harness skills (~/.agents/skills: Codex, Gemini CLI, Copilot CLI) ──
+# skill-link.sh never replaces a real directory there; it only manages its own links.
+step "Linking global skills into $HOME/.agents/skills"
+bash "$STACK_ROOT/scripts/skill-link.sh" link
+missing_agents=0
+for src in "$STACK_ROOT/global-skills"/*/; do
+    [ -d "$src" ] || continue
+    [ -e "$HOME/.agents/skills/$(basename "$src")" ] || missing_agents=$((missing_agents + 1))
+done
+if [ "$missing_agents" -eq 0 ]; then
+    ok "global skills linked for other harnesses"
+else
+    warn "$missing_agents global skill(s) not linked into ~/.agents/skills (a real dir or foreign link has the name, or linking failed)"
+fi
+
 # ── Agents ───────────────────────────────────────────────────────────────────
 step "Installing agents to $CLAUDE_DIR/agents"
 mkdir -p "$CLAUDE_DIR/agents"
@@ -68,6 +83,30 @@ else
         ok "agent installed: $agent_name"
     done
 fi
+
+# ── Workflows ────────────────────────────────────────────────────────────────
+step "Installing workflows to $CLAUDE_DIR/workflows"
+mkdir -p "$CLAUDE_DIR/workflows"
+for src in "$STACK_ROOT/global-workflows"/*.js; do
+    [ -f "$src" ] || continue
+    wf_name=$(basename "$src")
+    dst="$CLAUDE_DIR/workflows/$wf_name"
+    if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
+        ok "workflow already linked: $wf_name"
+        continue
+    fi
+    # Replace only a plain file identical to the repo copy; anything else (a different file,
+    # a link elsewhere, a directory) is someone's local work and is left alone.
+    if [ -e "$dst" ] || [ -L "$dst" ]; then
+        if [ -L "$dst" ] || ! [ -f "$dst" ] || ! cmp -s "$dst" "$src"; then
+            warn "workflow $wf_name exists and is not the repo copy — left alone; reconcile by hand"
+            continue
+        fi
+    fi
+    rm -f "$dst"
+    ln -sfn "$src" "$dst"
+    ok "workflow installed: $wf_name"
+done
 
 # ── Write OUTCOMES_MAX_ITERATIONS to settings.json ───────────────────────────
 step "Ensuring OUTCOMES_MAX_ITERATIONS in $CLAUDE_DIR/settings.json"
