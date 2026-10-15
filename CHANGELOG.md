@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-15 — session close: Docker Agent assessed, next builds queued
+
+- **Docker Agent (pasted proposal) not piloted.** Checked against this host: not installed
+  (Debian Docker Engine 26.1.5, no `docker agent`); its Langfuse endpoint `localhost:3000` is
+  Gitea here (Langfuse is `127.0.0.1:3050`, v3.169); it still names MemPalace; its addendum
+  rests on Gemini CLI, now dead for personal accounts; a Gemini-backed agent would need a paid
+  API key, where agy uses the subscription. Multi-provider is covered by `ask_agy` +
+  `ask_local`, and the 2026-10-04 decision (no Hermes, capabilities as servers inside Uncle J)
+  argues against a second agent runtime.
+- **README** section 22 (Antigravity CLI). **ROADMAP:** referee on `ask_agy`,
+  `media-teardown`, `verifiable-task`, agy probe re-runs added.
+
 ## 2026-10-15 — cleanups: stack lockfile, gemini-auto-skill mandate, stray file
 
 - **`uv.lock`:** jcodemunch-mcp 1.108.328 → 1.108.360 and jdocmunch-mcp 1.145.0 → 1.146.0, installed

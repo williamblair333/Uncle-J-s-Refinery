@@ -612,6 +612,23 @@ Sessions under a marked workspace never enter the memweave store.
 the account it runs in. A host that uses REA globally on purpose opts out with
 `clean-room-wall` in `state/disabled-features`.
 
+### 22. Antigravity CLI (agy) — the off-Claude agent (optional)
+
+Gemini CLI stopped serving personal Google accounts on 2026-06-18; Antigravity CLI
+(`agy`, Google AI Pro subscription) replaces it. One command gives it the stack:
+read-only shell and MCP permission rules, the same 8 MCP servers Claude runs, the
+routing policy (`~/.gemini/GEMINI.md` includes `CLAUDE.md`), and every global skill.
+
+```bash
+bash features/antigravity/install.sh                       # after installing and signing in to agy
+.venv/bin/python scripts/ask_agy.py --cwd <repo> "question"  # headless, honest exit codes
+```
+
+Skills run by `/name` in agy; they do not fire on their own in print mode. See
+`features/antigravity/README.md` for the install, the permission probe table to re-run
+after agy updates, and why `ask_agy.py` exists (agy reports success when a command was
+blocked).
+
 ---
 
 ## Daily usage

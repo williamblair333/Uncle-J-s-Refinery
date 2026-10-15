@@ -11,6 +11,17 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Cross-provider referee on `ask_agy`** (opened 2026-10-15). Gemini (agy, subscription)
+  judges Claude's work; a different model than the one that produced it. Chosen over a
+  Docker Agent pilot: same result, no API cost, no second agent runtime (2026-10-04 rule).
+- **`media-teardown` skill** (opened 2026-10-15). For a video, article or post: source claims
+  vs the creator's spin, guesses labelled as guesses, omissions, the sales motive. Done by
+  hand twice; plain instructions so it works in any agent.
+- **`verifiable-task` skill** (opened 2026-10-15). Before delegating to agy or the local
+  model, write the check that proves the result. Motivated by agy answering "DONE" after
+  its command was denied.
+- **Re-run the agy permission probes after agy self-updates** (opened 2026-10-15). Table in
+  `features/antigravity/README.md`; verified on 1.3.5 only.
 - **Compaction restore: report the per-session gap upstream?** (opened 2026-10-12). The
   restore half is now wired (see CHANGELOG 2026-10-12, `refinery-doctor` check
   `jcodemunch-sessionstart`). jcodemunch's live journal is one file per host, not keyed by
@@ -267,6 +278,16 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-10-15 — skills portable; Antigravity gets the stack)
+
+- Skills: 9 vendored from mattpocock/skills, 3 local-only skills and the adversarial-review
+  workflow backed up, `~/.agents/skills` + `~/.gemini/skills` linked, `docs/SKILLS.md`
+  generated (PRs #114–#117).
+- Antigravity CLI: installed, signed in, read-only permissions, `ask_agy.py`, 8 MCP servers,
+  routing policy include (PRs #118, #119). Verified live.
+- Healthcheck 9a parses YAML; 8 skills fixed for strict harnesses (PR #116).
+- Stack lockfile committed after review (PR #120). Dictation into any window (voice-line #10).
 
 ## Recently completed (2026-10-12 — clean-room-rebuild skill and an OS-level wall)
 
