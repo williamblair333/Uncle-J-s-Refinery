@@ -1,4 +1,3 @@
-
 ---
 name: catch-up-pull
 description: Use when returning to a repo after time away, when git status reports "up to date" but commits may have landed upstream, or when you need to safely absorb a large batch of upstream changes without losing local work.

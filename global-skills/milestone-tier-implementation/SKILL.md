@@ -1,4 +1,3 @@
-
 ---
 name: milestone-tier-implementation
 description: Implement one or more new library tiers in a milestone-based Python project — read handoff, match existing patterns, implement, wire up, test, then update all docs atomically.

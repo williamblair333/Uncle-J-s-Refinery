@@ -1,4 +1,3 @@
-
 ---
 name: agent-harness-competitive-analysis
 description: Structured competitive analysis of an AI agent harness or framework — maps the product against direct/indirect competitors, produces a comparison table, and identifies uncontested advantages

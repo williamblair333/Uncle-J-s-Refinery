@@ -1,4 +1,3 @@
-
 ---
 name: verify-handoff-claims
 description: Before repeating any "outstanding" or "not yet done" item from a handoff doc, cross-check it against the actual source. Prevents propagating stale claims that were already resolved upstream.

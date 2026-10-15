@@ -413,47 +413,82 @@ check_skills() {
 }
 
 # ----- 9a. agentskills.io compliance: name matches folder, description present -----
+# Parses the frontmatter as YAML (a grep passed an unquoted-colon description that strict
+# parsers reject) and requires '---' on line 1 (Gemini CLI / Antigravity skip the skill otherwise).
 check_skill_compliance() {
-    step "skills — agentskills.io compliance (name matches folder, description present)"
+    step "skills — agentskills.io compliance (frontmatter on line 1, valid YAML, name matches folder, description)"
     local skills_dir="$REPO_ROOT/global-skills"
-    local failed=0
+    local py="$REPO_ROOT/.venv/bin/python"; [[ -x "$py" ]] || py=python3
+    local out rc=0
+    out="$("$py" - "$skills_dir" <<'PY'
+import pathlib
+import sys
 
-    for skill_dir in "$skills_dir"/*/; do
-        [[ -d "$skill_dir" ]] || continue
-        local folder_name
-        folder_name="$(basename "$skill_dir")"
-        local skill_md="$skill_dir/SKILL.md"
+try:
+    import yaml
+except ImportError:
+    print("NOYAML")
+    sys.exit(0)
 
-        if [[ ! -f "$skill_md" ]]; then
-            bad "skill: $folder_name — missing SKILL.md"
-            hint "inspect: ls $skill_dir"
-            record_fail "skill-compliance-missing-$folder_name"
-            failed=$((failed + 1))
-            continue
-        fi
+root = pathlib.Path(sys.argv[1])
+count = 0
+for d in sorted(p for p in root.iterdir() if p.is_dir()):
+    count += 1
+    f = d / "SKILL.md"
+    if not f.is_file():
+        print(f"FAIL\t{d.name}\tmissing SKILL.md")
+        continue
+    text = f.read_text(encoding="utf-8", errors="replace")
+    if text.split("\n", 1)[0].rstrip("\r") != "---":
+        print(f"FAIL\t{d.name}\tline 1 is not '---' (Gemini CLI / Antigravity skip the skill)")
+        continue
+    end = text.find("\n---", 3)
+    if end == -1:
+        print(f"FAIL\t{d.name}\tno closing '---' for the frontmatter")
+        continue
+    try:
+        fm = yaml.safe_load(text[3:end]) or {}
+    except yaml.YAMLError as e:
+        print(f"FAIL\t{d.name}\tfrontmatter is not valid YAML: {str(e).splitlines()[0]}")
+        continue
+    if not isinstance(fm, dict):
+        print(f"FAIL\t{d.name}\tfrontmatter is not a mapping")
+        continue
+    if str(fm.get("name", "")) != d.name:
+        print(f"FAIL\t{d.name}\tname: '{fm.get('name', '')}' does not match folder")
+    desc = fm.get("description")
+    if not isinstance(desc, str) or not desc.strip():
+        print(f"FAIL\t{d.name}\tmissing description")
+print(f"COUNT\t{count}")
+PY
+)" || rc=$?
 
-        local name_field
-        name_field="$(grep -m1 '^name:' "$skill_md" | sed 's/^name:[[:space:]]*//' | tr -d '\r')"
-        if [[ "$name_field" != "$folder_name" ]]; then
-            bad "skill: $folder_name — name: '$name_field' does not match folder"
-            hint "edit $skill_md: set name: $folder_name"
-            record_fail "skill-compliance-name-$folder_name"
-            failed=$((failed + 1))
-        fi
+    if (( rc != 0 )); then
+        bad "skill compliance checker crashed (rc=$rc)"
+        hint "run: $py -c 'import yaml' and check $skills_dir"
+        record_fail "skill-compliance-checker"
+        return
+    fi
+    if [[ "$out" == NOYAML* ]]; then
+        warn "skill compliance not checked: pyyaml missing for $py"
+        hint "run: bash $REPO_ROOT/install.sh (rebuilds the stack venv)"
+        return
+    fi
 
-        local desc_field
-        desc_field="$(grep -m1 '^description:' "$skill_md" | sed 's/^description:[[:space:]]*//' | tr -d '\r')"
-        if [[ -z "$desc_field" ]]; then
-            bad "skill: $folder_name — missing description field"
-            hint "edit $skill_md: add description: <one-line summary>"
-            record_fail "skill-compliance-desc-$folder_name"
-            failed=$((failed + 1))
-        fi
-    done
-
-    local skill_count
-    skill_count="$(ls -d "$skills_dir"/*/ 2>/dev/null | wc -l | tr -d ' ')"
-    [[ $failed -eq 0 ]] && ok "all $skill_count global skills agentskills.io compliant"
+    local failed=0 kind folder reason count=0
+    while IFS=$'\t' read -r kind folder reason; do
+        case "$kind" in
+            FAIL)
+                bad "skill: $folder — $reason"
+                hint "edit $skills_dir/$folder/SKILL.md"
+                record_fail "skill-compliance-$folder"
+                failed=$((failed + 1))
+                ;;
+            COUNT) count="$folder" ;;
+        esac
+    done <<< "$out"
+    (( failed == 0 )) && ok "all $count global skills agentskills.io compliant"
+    return 0
 }
 
 # ----- agents installed -----

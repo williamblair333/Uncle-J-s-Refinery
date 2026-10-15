@@ -1,4 +1,3 @@
-
 ---
 name: stale-lock-diagnosis
 description: Diagnose and fix stale lock directories blocking background automation scripts (mine, index, sync jobs). Use when hooks are wired but silently not firing, or when a recurring job stopped producing output without any error.

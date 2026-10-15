@@ -1,4 +1,3 @@
-
 ---
 name: deep-repo-analysis
 description: Full codebase health audit using jcodemunch — cycles, complexity, coupling, dead code, test gaps, and architectural debt. Use when you need a scored health report with prioritized action items.
