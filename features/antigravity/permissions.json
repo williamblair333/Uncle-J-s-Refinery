@@ -18,7 +18,21 @@
     "command(git show)",
     "command(git ls-files)",
     "command(git rev-parse)",
-    "command(git blame)"
+    "command(git blame)",
+    "mcp(jcodemunch/*)",
+    "mcp(jdocmunch/*)",
+    "mcp(jdatamunch/*)",
+    "mcp(memweave/*)",
+    "mcp(context7/*)",
+    "mcp(ask_local/*)",
+    "mcp(serena/initial_instructions)",
+    "mcp(serena/activate_project)",
+    "mcp(serena/find_symbol)",
+    "mcp(serena/find_referencing_symbols)",
+    "mcp(serena/find_declaration)",
+    "mcp(serena/find_implementations)",
+    "mcp(serena/get_symbols_overview)",
+    "mcp(serena/get_diagnostics_for_file)"
   ],
   "deny": [
     "command(rm)",
@@ -39,7 +53,10 @@
     "command(git reset)",
     "command(git clean)",
     "command(git checkout)",
-    "write_file(.git/)"
+    "write_file(.git/)",
+    "mcp(jdocmunch/delete_index)",
+    "mcp(jdatamunch/delete_dataset)",
+    "mcp(jcodemunch/invalidate_cache)"
   ],
   "ask": []
 }

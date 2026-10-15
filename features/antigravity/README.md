@@ -3,19 +3,33 @@
 Gemini CLI stopped serving personal Google accounts (AI Pro, Ultra, free) on 2026-06-18.
 `agy` is the replacement and runs on the Google AI Pro subscription.
 
+## Install
+
+```bash
+curl -fsSL -o /tmp/agy-install.sh https://antigravity.google/cli/install.sh   # read it, then:
+bash /tmp/agy-install.sh && agy          # sign in with the Google AI Pro account
+bash features/antigravity/install.sh     # permissions, MCP servers, rules, skills
+```
+
 ## Pieces
 
 | File | What it does |
 |---|---|
-| `permissions.json` | Read-only shell allow list plus a deny list for destructive commands. |
-| `apply_permissions.py` | Merges those rules into `~/.gemini/antigravity-cli/settings.json` (keeps agy's own keys, atomic, `.bak`). |
+| `install.sh` | Runs the four steps below; every step merges and keeps a `.bak`. |
+| `permissions.json` | Read-only shell allow list, MCP allow list (read-oriented servers, Serena read tools only, no DuckDB), deny list for destructive commands and index-deleting tools. |
+| `apply_permissions.py` | Merges those rules into `~/.gemini/antigravity-cli/settings.json` (keeps agy's own keys). |
+| `sync_mcp.py` | Copies Claude's user-scope MCP servers (`~/.claude.json`) into `~/.gemini/config/mcp_config.json` (mode 0600; agy-only servers kept). Re-run when registrations change. |
+| `install_rules.py` + `rules-block.md` | Marker-delimited block in `~/.gemini/GEMINI.md` that includes `CLAUDE.md` via `@[...](path)` plus the Claude→agy translations. The rest of the file is left alone. |
 | `../../scripts/ask_agy.py` | Runs one prompt headless; exit 0 only when the turn really succeeded. |
 
 ```bash
-.venv/bin/python features/antigravity/apply_permissions.py
 .venv/bin/python scripts/ask_agy.py --cwd /path/to/repo "question"
 .venv/bin/python scripts/ask_agy.py --cwd /tmp/work --edits "/to-questionnaire ..."
 ```
+
+Verified live 2026-10-15: jcodemunch `resolve_repo` and memweave `memory_search` called from
+agy; the routing policy's heading and table quoted back from the rules context, both in this
+repo and in an untrusted project (`/opt/proj/voice-line`).
 
 ## Why the wrapper exists
 

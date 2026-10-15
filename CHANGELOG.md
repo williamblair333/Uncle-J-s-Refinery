@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-10-15 — agy gets the stack: MCP servers + routing policy
+
+- **`features/antigravity/sync_mcp.py`:** copies the 8 MCP servers Claude runs (user scope)
+  into `~/.gemini/config/mcp_config.json`. Applied: agy called jcodemunch `resolve_repo` and
+  memweave `memory_search` live.
+- **MCP permissions:** jcodemunch, jdocmunch, jdatamunch, memweave, context7 and ask_local
+  allowed headless; Serena read tools only; DuckDB not allowed (it can write files); index
+  deletion (`delete_index`, `delete_dataset`, `invalidate_cache`) denied.
+- **Routing policy for agy:** `install_rules.py` puts a marker block in `~/.gemini/GEMINI.md`
+  that includes `CLAUDE.md` through agy's `@[label](path)` include plus Claude→agy
+  translations, leaving the existing text alone. agy quoted the policy back in this repo and in
+  an untrusted project.
+- **Repo `GEMINI.md`:** mandate 2 told the agent to run `jcodemunch-mcp` as a shell command,
+  which cannot work; it now points at the MCP tools (changed in
+  `features/gemini-integration/install.sh`, regenerated).
+- **`features/antigravity/install.sh`** runs permissions, MCP sync, rules and skill linking;
+  idempotent. Tests: `tests/test_ask_agy.py` now 14 cases.
+
 ## 2026-10-15 — agy usable headless: read-only permissions + honest wrapper
 
 Acceptance for the Antigravity switch: `/skills` lists all 64 skills, and `/to-questionnaire`
