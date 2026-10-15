@@ -1,41 +1,32 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-10-15 — skills portability
+## 2026-10-15 — skills portable, Antigravity wired, dictation
 
 **Bill's decisions (don't re-ask):**
-- Skills must stay usable if Claude Code is dropped. Repo copies plus `~/.agents/skills` links
-  are the mechanism; `docs/SKILLS.md` is the list.
-- From mattpocock/skills, adopt only: handoff, teach, retro, wizard, grilling, grill-me,
-  to-questionnaire, wait-what, writing-for-agents (narrowed description). Everything else
-  was rejected (reasons in CHANGELOG). Re-vendoring an update is a deliberate act; `UPSTREAM`
-  pins the commit.
-- The local-only security skills are fine in the public mirror (no secrets; the guard code
-  they describe is already public).
+- Skills must stay usable if Claude Code is dropped (cost). Mechanism: repo copies in
+  `global-skills/`, linked into `~/.claude/skills`, `~/.agents/skills` and `~/.gemini/skills`;
+  `docs/SKILLS.md` is the list (`--host` adds plugins and local-only).
+- From mattpocock/skills, adopted only: handoff, teach, retro, wizard, grilling, grill-me,
+  to-questionnaire, wait-what, writing-for-agents (narrowed description). `UPSTREAM` pins the
+  commit; re-vendoring is deliberate. Local-only security skills are fine in the public mirror.
+- Off-Claude agent is **Antigravity CLI (`agy`)** on the Google AI Pro sub. Gemini CLI is dead
+  for personal accounts (2026-06-18). Codex with an API key is the fallback if agy quotas bite.
+- `gemini-auto-skill` mandate dropped. No Hermes: a decision, not a pause (2026-10-04).
+- Docker Agent: not piloted (reasons in CHANGELOG). Next builds instead: referee on
+  `ask_agy`, `media-teardown`, `verifiable-task` (ROADMAP Planned).
 
 **State:**
-- `~/.claude/skills/{red-team,blue-team,building-circuit-boards}` are now symlinks. The
-  originals are in a scratch tarball for this session only; the repo is the copy now.
-- `~/.claude/skills/adversarial-review` is a loose companion file of the workflow, not a
-  skill. Its content is in `global-workflows/adversarial-review.md`. It can be deleted.
-- No other agent is installed on this host yet. `~/.agents/skills` is ready for one.
-- Done (same day): healthcheck 9a now parses YAML and requires `---` on line 1; 8 skills fixed
-  so Gemini loads all 64.
-- **Gemini CLI is dead for this account** (Google cut personal tiers 2026-06-18). Bill chose
-  Antigravity CLI (`agy`) on his Google AI Pro sub as the off-Claude test bed; Codex with an
-  API key is the fallback if agy's quota lockouts bite.
-- `agy` 1.3.5 installed and signed in (Google AI Pro). Acceptance passed: `/skills` lists all
-  64; `/to-questionnaire` works. Skills fire only by `/name` in print mode.
-- Headless: use `scripts/ask_agy.py` (honest exit codes). Read-only shell allow list applied
-  from `features/antigravity/permissions.json`; re-run the probe table in that README after
-  agy self-updates.
-- Item #2 done: `bash features/antigravity/install.sh` wires permissions, the 8 MCP servers,
-  the routing policy (`~/.gemini/GEMINI.md` includes CLAUDE.md) and skills. Verified live.
-- Cleanups done: mandate 6 dropped (Bill's call), `uv.lock` upgrade reviewed and committed,
-  stray `adversarial-review` file removed.
-- Still drifted (pre-existing): the deployed `~/.claude/CLAUDE.md` lacks the
+- agy 1.3.5, signed in. `bash features/antigravity/install.sh` applied: read-only shell/MCP
+  permissions, 8 MCP servers, routing policy (`~/.gemini/GEMINI.md` includes `CLAUDE.md`),
+  skills. Verified live. Skills fire only by `/name` in print mode. Use
+  `scripts/ask_agy.py` for headless calls; agy itself reports success when a command was
+  blocked. Re-run the probe table in `features/antigravity/README.md` after agy self-updates.
+- Dictation (voice-line #10): `scripts/dictate.sh`, hold Right Alt. Pipeline verified with
+  synthesized speech; **Bill hasn't tried a real hold yet.** Whisper and Kokoro servers were
+  left running.
+- Still drifted (pre-existing): deployed `~/.claude/CLAUDE.md` lacks the
   `semantic_store_mismatch` bullet. `refinery-doctor.sh --fix` syncs it; check first that it
-  keeps the auto-generated "Dreaming Notes" section in the deployed file.
-- Dictation: `voice-line` repo, `scripts/dictate.sh` (hold Right Alt, local whisper, xdotool).
+  keeps the auto-generated "Dreaming Notes" section.
 - Never run mattpocock's `scripts/link-skills.sh`: it `rm -rf`s real dirs in `~/.claude/skills`.
 
 ## 2026-10-12 (later) — context-mode reviewed, not adopted
