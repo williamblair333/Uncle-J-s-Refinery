@@ -279,10 +279,9 @@ Completed items age out after ~4 weeks.
   work through agy and returns a JSON verdict; anything but a well-formed verdict exits 1.
 - **`media-teardown` skill.** Six-part output with required slots for source vs spin and
   omissions, the two parts the no-skill baselines left out.
-- **`verifiable-task`: evaluated, not built.** Six no-skill baselines (Opus and Haiku, with
-  time pressure) all wrote their own checks before reporting delegated work done, and none
-  trusted agy's "DONE". There was no failure for the skill to fix. Revisit if a delegation
-  is ever reported done without a check.
+- **`verifiable-task` skill.** Write the check before delegating, run it yourself, report
+  what it measured. Six no-skill baselines on Claude (Opus and Haiku) already did this, so
+  the skill is aimed at the weaker agents the skills are portable to (agy, local, Codex).
 
 ## Recently completed (2026-10-15 — skills portable; Antigravity gets the stack)
 

@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 68 repo, 1 workflows.
+Totals: 69 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -87,6 +87,7 @@ Totals: 68 repo, 1 workflows.
 | `token-economy-prompt-authoring` | Craft a minimal, effective system prompt to constrain Claude verbosity in plain web sessions (no harness tooling). | auto | Refinery stack | repo |
 | `ux-heuristics` | Evaluate and improve interface usability using heuristic analysis. | auto | Claude Code | repo |
 | `validate-external-audit` | Use when responding to an external critique, audit, or code review of a codebase before accepting or rejecting any finding. | auto | any agent | repo |
+| `verifiable-task` | Use when about to delegate work to another agent or model — a subagent, agy (ask_agy), the local model (ask_local), Codex, a background job — or when about to… | auto | Refinery stack | repo |
 | `verify-handoff-claims` | Before repeating any "outstanding" or "not yet done" item from a handoff doc, cross-check it against the actual source. | auto | Refinery stack | repo |
 | `verify-pr-branch-before-resolve` | Before resolving a PR's merge conflicts, verify which branch the PR actually targets — avoids wasted work on the wrong branch | auto | any agent | repo |
 | `wait-what` | Stop. That last message did not land: re-pitch it. | you | any agent | vendored: mattpocock/skills |

@@ -13,8 +13,8 @@
   for personal accounts (2026-06-18). Codex with an API key is the fallback if agy quotas bite.
 - `gemini-auto-skill` mandate dropped. No Hermes: a decision, not a pause (2026-10-04).
 - Docker Agent: not piloted (reasons in CHANGELOG). Built instead (later the same day):
-  `scripts/referee.py` + `referee` skill, and the `media-teardown` skill. `verifiable-task`
-  was dropped after baselines showed no failure to fix.
+  `scripts/referee.py` + `referee` skill, and the `media-teardown` and `verifiable-task`
+  skills.
 - The referee pins `gemini-3.8-flash-medium`: agy also serves Claude models, and its default
   overthinks long reviews. Small inputs take ~10 s, a 10 KB file ~3.5 min.
 - Run tests as `pytest tests/` (1279 pass). Bare `pytest` also collects the third-party

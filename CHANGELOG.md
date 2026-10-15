@@ -2,7 +2,7 @@
 
 ---
 
-## 2026-10-15 — referee, media-teardown; verifiable-task not built
+## 2026-10-15 — referee, media-teardown, verifiable-task
 
 - **`scripts/referee.py`:** Gemini judges Claude's work through `ask_agy` (read-only, AI Pro
   subscription). Inputs: `--diff [REV]`, `--file`, `--work-file`, judged against `--task`.
@@ -22,8 +22,10 @@
   omissions, motive ladder, what to keep. Baselines without it skipped omissions, merged the
   creator's spin into the source, and called an unsourced claim "made up".
 - **`referee` skill:** when to run it and how to read each exit code.
-- **`verifiable-task` dropped:** six no-skill baselines already checked delegated work.
-- `docs/SKILLS.md` regenerated; both skills linked into `~/.claude`, `~/.agents` and
+- **`verifiable-task` skill:** a check, where it runs, and what to do on failure, written
+  before delegating; routes by whether a check exists. Claude baselines (six runs) already
+  did this unprompted, so it targets agy, the local model and Codex.
+- `docs/SKILLS.md` regenerated; all three skills linked into `~/.claude`, `~/.agents` and
   `~/.gemini` skill dirs.
 
 ## 2026-10-15 — session close: Docker Agent assessed, next builds queued
