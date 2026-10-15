@@ -18,8 +18,11 @@
 - `~/.claude/skills/adversarial-review` is a loose companion file of the workflow, not a
   skill. Its content is in `global-workflows/adversarial-review.md`. It can be deleted.
 - No other agent is installed on this host yet. `~/.agents/skills` is ready for one.
-- Follow-up: healthcheck 9a reads `description:` with grep, so it passes invalid YAML
-  (`just-answer` slipped through). Switching it to a YAML parse would catch that.
+- Done (same day): healthcheck 9a now parses YAML and requires `---` on line 1; 8 skills fixed
+  so Gemini loads all 64.
+- **Gemini CLI is dead for this account** (Google cut personal tiers 2026-06-18). Bill chose
+  Antigravity CLI (`agy`) on his Google AI Pro sub as the off-Claude test bed; Codex with an
+  API key is the fallback if agy's quota lockouts bite.
 - Never run mattpocock's `scripts/link-skills.sh`: it `rm -rf`s real dirs in `~/.claude/skills`.
 
 ## 2026-10-12 (later) — context-mode reviewed, not adopted

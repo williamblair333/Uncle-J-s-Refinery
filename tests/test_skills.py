@@ -58,6 +58,12 @@ class TestSkillFrontmatter:
     def test_skill_md_exists(self, skill_dir):
         assert (skill_dir / "SKILL.md").exists(), "SKILL.md missing"
 
+    def test_frontmatter_opens_on_line_one(self, skill_dir):
+        # Claude Code tolerates a leading blank line; Gemini CLI / Antigravity (agentskills.io
+        # spec) silently skip the skill. Keep the strict form so every harness loads it.
+        first = (skill_dir / "SKILL.md").read_text().split("\n", 1)[0]
+        assert first.rstrip("\r") == "---", f"line 1 must be '---', got {first!r}"
+
     def test_frontmatter_is_valid_yaml(self, skill_dir):
         skill_file = skill_dir / "SKILL.md"
         try:

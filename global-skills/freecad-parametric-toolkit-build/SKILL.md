@@ -1,4 +1,3 @@
-
 ---
 name: freecad-parametric-toolkit-build
 description: Build a FreeCAD parametric CAD toolkit tier by tier — probe APIs first, implement modules, run tests with freecadcmd, fix stdout capture issues.

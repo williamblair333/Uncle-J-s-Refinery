@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-10-15 — skill frontmatter strict enough for every harness
+
+First real off-Claude test: Gemini CLI 0.46 loaded 56 of the 64 skills in `~/.agents/skills`.
+The 8 it skipped all had a blank line before the opening `---`. Claude Code and our tests
+tolerated that; the agentskills.io spec (Gemini CLI, Antigravity) does not.
+
+- **Fixed** the 8 (`agent-harness-competitive-analysis`, `catch-up-pull`, `deep-repo-analysis`,
+  `fog-of-chess-engine-mode-implementation`, `freecad-parametric-toolkit-build`,
+  `milestone-tier-implementation`, `stale-lock-diagnosis`, `verify-handoff-claims`): one
+  leading blank line removed each. Gemini now loads 64 of 64.
+- **`tests/test_skills.py`:** new `test_frontmatter_opens_on_line_one`.
+- **Healthcheck 9a** now parses frontmatter as YAML instead of grepping it, and requires `---`
+  on line 1. The grep had passed `just-answer`'s unquoted-colon description. Checked against
+  fixtures: blank first line, invalid YAML, wrong name, missing description, missing SKILL.md.
+- **Found, not fixed (decision pending):** Gemini CLI itself no longer runs on this account.
+  Google stopped serving Gemini CLI for personal accounts (Google AI Pro, Ultra, free) on
+  2026-06-18; the saved login now fails with `IneligibleTierError ... migrate to Antigravity`.
+  Next: Antigravity CLI (`agy`) on the Google AI Pro subscription.
+- Full suite: 1218 passed, 2 skipped, 7 xfailed.
+
 ## 2026-10-15 — skills portability: vendored mattpocock skills, backups, ~/.agents/skills, SKILLS.md
 
 Goal: every skill stays usable if Claude Code is dropped. Skills are plain `SKILL.md` folders,
