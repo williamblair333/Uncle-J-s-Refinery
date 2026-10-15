@@ -24,9 +24,10 @@
 - Dictation (voice-line #10): `scripts/dictate.sh`, hold Right Alt. Pipeline verified with
   synthesized speech; **Bill hasn't tried a real hold yet.** Whisper and Kokoro servers were
   left running.
-- Still drifted (pre-existing): deployed `~/.claude/CLAUDE.md` lacks the
-  `semantic_store_mismatch` bullet. `refinery-doctor.sh --fix` syncs it; check first that it
-  keeps the auto-generated "Dreaming Notes" section.
+- `~/.claude/CLAUDE.md` drift fixed (2026-10-15): `refinery-doctor.sh --check claude-md-sync
+  --fix` added the `semantic_store_mismatch` bullet; Dreaming Notes kept; `DOCTOR: ok`.
+- **tc-vmh-03 is shut down for now.** When it's back, run
+  `refinery-doctor.sh --check jcodemunch-sessionstart --fix` there (see 2026-10-12 entry).
 - Never run mattpocock's `scripts/link-skills.sh`: it `rm -rf`s real dirs in `~/.claude/skills`.
 
 ## 2026-10-12 (later) — context-mode reviewed, not adopted
