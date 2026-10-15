@@ -21,6 +21,7 @@ bash features/antigravity/install.sh     # permissions, MCP servers, rules, skil
 | `sync_mcp.py` | Copies Claude's user-scope MCP servers (`~/.claude.json`) into `~/.gemini/config/mcp_config.json` (mode 0600; agy-only servers kept). Re-run when registrations change. |
 | `install_rules.py` + `rules-block.md` | Marker-delimited block in `~/.gemini/GEMINI.md` that includes `CLAUDE.md` via `@[...](path)` plus the Claude→agy translations. The rest of the file is left alone. |
 | `../../scripts/ask_agy.py` | Runs one prompt headless; exit 0 only when the turn really succeeded. |
+| `../../scripts/referee.py` | Gemini judges a diff, files or text against a task; JSON verdict, exit 0 pass / 2 fail / 3 unsure / 1 error. See the `referee` skill. |
 
 ```bash
 .venv/bin/python scripts/ask_agy.py --cwd /path/to/repo "question"
@@ -40,6 +41,18 @@ In print mode agy exits 0 with `status: SUCCESS` even when the work did not happ
 - **Command on no list:** it is soft-denied (`denied_actions` set) and the response is empty.
 
 `ask_agy.py` reads the stream-json events and fails on either, naming the command.
+
+A soft deny also ends the turn, so a prompt that invites "check it yourself" gets an empty
+answer the moment the model reaches for `python` or `pytest`. `referee.py` names the
+allowed commands in its prompt, read from `permissions.json`.
+
+## Models
+
+`agy models` lists Gemini 3.8 Flash (low/medium/high), Claude Opus and Sonnet 5.5, and
+GPT-OSS 120B, and the stream doesn't say which one ran. Pass `--model` whenever the
+provider matters. `referee.py` pins `gemini-3.8-flash-medium` and refuses `claude-*`. On a
+10 KB file review the default model was still thinking at the 4-minute timeout (~32k thinking
+tokens); Flash medium answered in about 3.5 minutes.
 
 ## Verified behaviour (agy 1.3.5, 2026-10-15)
 
