@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 66 repo, 1 workflows.
+Totals: 69 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -49,6 +49,7 @@ Totals: 66 repo, 1 workflows.
 | `just-answer` | Use on every question: answer exactly what was asked and stop; give reasons, risks, or alternatives only when the user asks for them. | auto | any agent | repo |
 | `library-backend-adoption-eval` | Structured evaluation of a new library as a potential backend replacement. | auto | Refinery stack | repo |
 | `mcp-index-empty-diagnosis` | Diagnose and fix an MCP retrieval tool (jdocmunch, jcodemunch, jdatamunch) that is registered and running but silently returns empty results due to an unpopula… | auto | Refinery stack | repo |
+| `media-teardown` | Use when the user shares a video transcript, article, post, newsletter or thread and asks to analyze it, whether it's worth their time, what's going on, or "th… | auto | any agent | repo |
 | `milestone-tier-implementation` | Implement one or more new library tiers in a milestone-based Python project — read handoff, match existing patterns, implement, wire up, test, then update all… | auto | any agent | repo |
 | `occams-razor` | Use when diagnosing a bug/failure or choosing between competing explanations, hypotheses, or root causes — especially when an exotic, elaborate, or "interestin… | auto | any agent | repo |
 | `orchestrator` | Decompose a PRD or task into a structured JSON task manifest of parallelizable subtasks for multi-agent execution | auto | Refinery stack | repo |
@@ -67,6 +68,7 @@ Totals: 66 repo, 1 workflows.
 | `reading-screenshot-documents` | Use when a .odt/.docx/.pptx or PDF yields no text on extraction because its content is embedded screenshots, when recovering quiz or exam questions from LMS sc… | auto | any agent | repo |
 | `readme-sync` | Audit a README against actual repo contents, identify undocumented features, and make targeted edits to bring docs in sync with what's actually installed/shipp… | auto | Refinery stack | repo |
 | `red-team` | Use when performing offensive security work — vulnerability discovery, penetration testing, exploit development, adversarial review of controls or codebases, b… | auto | Claude Code | repo |
+| `referee` | Use when work you produced is about to be acted on and a second opinion from a different model provider would catch what you can't see in your own output — bef… | auto | any agent | repo |
 | `retro` | Conduct a retrospective on a coding session. | you | Claude Code | vendored: mattpocock/skills |
 | `review-queue-triage` | Audit _review/ items, classify by completion signals (status: resolved, REPO-ASSESSMENT + landing commit), auto-move resolved items to _reviewed/, leave uncert… | auto | any agent | repo |
 | `session-end-checklist` | Session wrap-up checklist — updates CHANGELOG, HANDOFF, considers ROADMAP/README, then commits. | auto | Refinery stack | repo |
@@ -85,6 +87,7 @@ Totals: 66 repo, 1 workflows.
 | `token-economy-prompt-authoring` | Craft a minimal, effective system prompt to constrain Claude verbosity in plain web sessions (no harness tooling). | auto | Refinery stack | repo |
 | `ux-heuristics` | Evaluate and improve interface usability using heuristic analysis. | auto | Claude Code | repo |
 | `validate-external-audit` | Use when responding to an external critique, audit, or code review of a codebase before accepting or rejecting any finding. | auto | any agent | repo |
+| `verifiable-task` | Use when about to delegate work to another agent or model — a subagent, agy (ask_agy), the local model (ask_local), Codex, a background job — or when about to… | auto | Refinery stack | repo |
 | `verify-handoff-claims` | Before repeating any "outstanding" or "not yet done" item from a handoff doc, cross-check it against the actual source. | auto | Refinery stack | repo |
 | `verify-pr-branch-before-resolve` | Before resolving a PR's merge conflicts, verify which branch the PR actually targets — avoids wasted work on the wrong branch | auto | any agent | repo |
 | `wait-what` | Stop. That last message did not land: re-pitch it. | you | any agent | vendored: mattpocock/skills |

@@ -8,6 +8,8 @@ makes sure Claude *actually uses them correctly*. Four components:
 | ----------------------------- | ----------------------------------------------------------------- | --------------------------- |
 | prior-art-check skill         | memweave (mw_search.py) lookup BEFORE the first real tool call every session | never; it's just a lookup   |
 | judge skill                   | Gathers blast radius + PR risk, then delegates to specialist agents | for throwaway prototyping  |
+| referee skill + `scripts/referee.py` | Gemini (via agy) judges Claude's work; JSON verdict, fails closed | when quota is short or the work is private |
+| verifiable-task skill         | Write the check before delegating; run it yourself; report what it measured | never; it's a habit, not a tool |
 | Specialist agents (6)         | Code review, security, silent failures, planning, architecture, TDD — each with precise trigger conditions | individually per task type |
 | Ralph harness                 | while-true loop that only stops when risk is low + PRD is DONE    | only in live runs           |
 | dwarvesf claude-guardrails    | Block pasted secrets, scan tool output for prompt-injection       | never (low cost, high value)|

@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-10-15 — referee, media-teardown, verifiable-task
+
+- **`scripts/referee.py`:** Gemini judges Claude's work through `ask_agy` (read-only, AI Pro
+  subscription). Inputs: `--diff [REV]`, `--file`, `--work-file`, judged against `--task`.
+  Output is a JSON verdict; exit 0 pass, 2 fail, 3 unsure, 1 error. Fails closed: an agy
+  failure, prose instead of JSON, an unknown verdict or a malformed finding is an error, and
+  a pass carrying a high finding becomes unsure. Refuses credential-like paths, content
+  matching common key formats, and input over 60k chars (never truncates). Pins
+  `gemini-3.8-flash-medium`, because agy also serves Claude models; `claude-*` is refused.
+  Logs verdict and counts (never content) to `state/referee.jsonl`. 20 tests; their
+  key-shaped fixtures are built by concatenation, since a literal `sk-lf-…` trips the
+  healthcheck's tracked-secret scan.
+- Found on the way: agy ends a print-mode turn with an empty answer when it soft-denies a
+  command, so the referee prompt lists the allowed commands from `permissions.json`. Gemini's
+  first live review of `referee.py` found four real defects (task-file traceback, errors on
+  stderr, task not counted toward the cap, `secrets/` dirs not refused); all fixed with tests.
+- **`media-teardown` skill:** verdict, source vs spin, claims table with fixed statuses,
+  omissions, motive ladder, what to keep. Baselines without it skipped omissions, merged the
+  creator's spin into the source, and called an unsourced claim "made up".
+- **`referee` skill:** when to run it and how to read each exit code.
+- **`verifiable-task` skill:** a check, where it runs, and what to do on failure, written
+  before delegating; routes by whether a check exists. Claude baselines (six runs) already
+  did this unprompted, so it targets agy, the local model and Codex.
+- `docs/SKILLS.md` regenerated; all three skills linked into `~/.claude`, `~/.agents` and
+  `~/.gemini` skill dirs.
+
 ## 2026-10-15 — session close: Docker Agent assessed, next builds queued
 
 - **Docker Agent (pasted proposal) not piloted.** Checked against this host: not installed

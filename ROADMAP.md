@@ -11,15 +11,9 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Cross-provider referee on `ask_agy`** (opened 2026-10-15). Gemini (agy, subscription)
-  judges Claude's work; a different model than the one that produced it. Chosen over a
-  Docker Agent pilot: same result, no API cost, no second agent runtime (2026-10-04 rule).
-- **`media-teardown` skill** (opened 2026-10-15). For a video, article or post: source claims
-  vs the creator's spin, guesses labelled as guesses, omissions, the sales motive. Done by
-  hand twice; plain instructions so it works in any agent.
-- **`verifiable-task` skill** (opened 2026-10-15). Before delegating to agy or the local
-  model, write the check that proves the result. Motivated by agy answering "DONE" after
-  its command was denied.
+- **Review `state/referee.jsonl`** after a few weeks of use (opened 2026-10-15). How often
+  does a referee `fail` find a real defect, and how often does it error? If it rarely
+  catches anything, drop the skill's trigger to on-request only.
 - **Re-run the agy permission probes after agy self-updates** (opened 2026-10-15). Table in
   `features/antigravity/README.md`; verified on 1.3.5 only.
 - **Compaction restore: report the per-session gap upstream?** (opened 2026-10-12). The
@@ -278,6 +272,16 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+
+## Recently completed (2026-10-15 — referee and media-teardown)
+
+- **Cross-provider referee** (`scripts/referee.py` + `referee` skill). Gemini judges Claude's
+  work through agy and returns a JSON verdict; anything but a well-formed verdict exits 1.
+- **`media-teardown` skill.** Six-part output with required slots for source vs spin and
+  omissions, the two parts the no-skill baselines left out.
+- **`verifiable-task` skill.** Write the check before delegating, run it yourself, report
+  what it measured. Six no-skill baselines on Claude (Opus and Haiku) already did this, so
+  the skill is aimed at the weaker agents the skills are portable to (agy, local, Codex).
 
 ## Recently completed (2026-10-15 — skills portable; Antigravity gets the stack)
 
