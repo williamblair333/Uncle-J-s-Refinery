@@ -23,6 +23,10 @@
 - **Gemini CLI is dead for this account** (Google cut personal tiers 2026-06-18). Bill chose
   Antigravity CLI (`agy`) on his Google AI Pro sub as the off-Claude test bed; Codex with an
   API key is the fallback if agy's quota lockouts bite.
+- `agy` 1.3.5 installed (`~/.local/bin/agy`). Global skills are linked into `~/.gemini/skills`,
+  which agy reads. **Acceptance test still open:** Bill signs in (`agy`, Google AI Pro account)
+  and runs `/skills`; all 64 should be listed. Then MCP servers + an AGENTS.md/GEMINI.md
+  equivalent of the routing policy (item #2).
 - Never run mattpocock's `scripts/link-skills.sh`: it `rm -rf`s real dirs in `~/.claude/skills`.
 
 ## 2026-10-12 (later) — context-mode reviewed, not adopted

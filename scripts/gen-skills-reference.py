@@ -154,8 +154,8 @@ HEADER = """# Skills reference
 
 Every skill and workflow kept in this repo, with what it does and how portable it is. Skills
 are plain `SKILL.md` folders (the agentskills.io format), so any agent that reads that format
-can use them; `scripts/skill-link.sh` links `global-skills/` into both `~/.claude/skills`
-(Claude Code) and `~/.agents/skills` (Codex, Gemini CLI, Copilot CLI).
+can use them; `scripts/skill-link.sh` links `global-skills/` into `~/.claude/skills`
+(Claude Code), `~/.agents/skills` (Codex, Copilot CLI) and `~/.gemini/skills` (Antigravity).
 
 Third-party plugin skills (superpowers and others) and skills that exist only on one machine
 are not listed here, because they differ per host. See them with

@@ -167,9 +167,14 @@ def run_skill_link(home: Path):
                           env=env, capture_output=True, text=True)
 
 
-def test_skill_link_agents_respects_foreign_entries(tmp_path):
+import pytest  # noqa: E402
+
+
+# ~/.agents/skills: Codex, Copilot CLI. ~/.gemini/skills: shared by Antigravity CLI/IDE.
+@pytest.mark.parametrize("dest", [".agents/skills", ".gemini/skills"])
+def test_skill_link_respects_foreign_entries(tmp_path, dest):
     home = tmp_path / "home"
-    agents = home / ".agents" / "skills"
+    agents = home / dest
     agents.mkdir(parents=True)
     (agents / "teach").mkdir()                                   # another tool's real dir
     (agents / "teach" / "SKILL.md").write_text("theirs")

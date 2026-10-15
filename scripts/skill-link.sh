@@ -34,11 +34,12 @@ link_skill_dirs() {
   done
 }
 
-# ~/.agents/skills is the cross-harness skill dir (Codex, Gemini CLI, Copilot CLI).
-# Other tools install into it, so a real directory there is never replaced or deleted:
-# only our own symlinks are created, repointed, or pruned when dangling.
+# Other harnesses' skill dirs: ~/.agents/skills (Codex, Copilot CLI, Gemini CLI) and
+# ~/.gemini/skills (shared by Antigravity CLI and IDE; agy does not read ~/.agents/skills).
+# Other tools install into these, so a real directory or foreign link there is never
+# replaced or deleted: only our own symlinks are created, repointed, or pruned when dangling.
 link_agents_skills() {
-  local base_dir="$1" agents_skills="$HOME/.agents/skills"
+  local base_dir="$1" agents_skills="$2"
   [[ -d "$base_dir" ]] || return 0
   mkdir -p "$agents_skills"
   for skill_dir in "$base_dir"/*/; do
@@ -64,5 +65,6 @@ link_skill_dirs "$PROJ_ROOT/skills"        "${1:-}"
 # Global skills are permanent (managed by install-reliability.sh) — link only, never unlink
 if [[ "${1:-}" == "link" ]]; then
   link_skill_dirs "$PROJ_ROOT/global-skills" "link"
-  link_agents_skills "$PROJ_ROOT/global-skills"
+  link_agents_skills "$PROJ_ROOT/global-skills" "$HOME/.agents/skills"
+  link_agents_skills "$PROJ_ROOT/global-skills" "$HOME/.gemini/skills"
 fi

@@ -49,20 +49,23 @@ for link in "$CLAUDE_DIR/skills"/*; do
     ok "removed stale skill symlink: $(basename "$link")"
 done
 
-# ── Cross-harness skills (~/.agents/skills: Codex, Gemini CLI, Copilot CLI) ──
+# ── Cross-harness skills ─────────────────────────────────────────────────────
+# ~/.agents/skills (Codex, Copilot CLI, Gemini CLI) and ~/.gemini/skills (Antigravity).
 # skill-link.sh never replaces a real directory there; it only manages its own links.
-step "Linking global skills into $HOME/.agents/skills"
+step "Linking global skills into ~/.agents/skills and ~/.gemini/skills"
 bash "$STACK_ROOT/scripts/skill-link.sh" link
-missing_agents=0
-for src in "$STACK_ROOT/global-skills"/*/; do
-    [ -d "$src" ] || continue
-    [ -e "$HOME/.agents/skills/$(basename "$src")" ] || missing_agents=$((missing_agents + 1))
+for dest in "$HOME/.agents/skills" "$HOME/.gemini/skills"; do
+    missing_agents=0
+    for src in "$STACK_ROOT/global-skills"/*/; do
+        [ -d "$src" ] || continue
+        [ -e "$dest/$(basename "$src")" ] || missing_agents=$((missing_agents + 1))
+    done
+    if [ "$missing_agents" -eq 0 ]; then
+        ok "global skills linked into $dest"
+    else
+        warn "$missing_agents global skill(s) not linked into $dest (a real dir or foreign link has the name, or linking failed)"
+    fi
 done
-if [ "$missing_agents" -eq 0 ]; then
-    ok "global skills linked for other harnesses"
-else
-    warn "$missing_agents global skill(s) not linked into ~/.agents/skills (a real dir or foreign link has the name, or linking failed)"
-fi
 
 # ── Agents ───────────────────────────────────────────────────────────────────
 step "Installing agents to $CLAUDE_DIR/agents"

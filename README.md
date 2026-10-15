@@ -133,7 +133,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Dreaming | Daily Langfuse trace mining → mistake patterns + playbooks → memweave store + CLAUDE.md |
 | | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
 | | Auto-skill | Stop hook — analyzes session transcript; drafts a SKILL.md to `state/skill-drafts/`; pitches via Telegram for approval |
-| | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start, and `global-skills/` into `~/.agents/skills/` so Codex, Gemini CLI and Copilot CLI see the same skills. Full list: [`docs/SKILLS.md`](docs/SKILLS.md) |
+| | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start, and `global-skills/` into `~/.agents/skills/` (Codex, Copilot CLI) and `~/.gemini/skills/` (Antigravity CLI) so other agents see the same skills. Full list: [`docs/SKILLS.md`](docs/SKILLS.md) |
 | | Agent library | 6 specialist subagents in `global-agents/` — planner, code-reviewer, security-reviewer, architect, tdd-guide, silent-failure-hunter — symlinked to `~/.claude/agents/` |
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
