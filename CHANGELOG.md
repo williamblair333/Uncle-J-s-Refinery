@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-10-15 — cleanups: stack lockfile, gemini-auto-skill mandate, stray file
+
+- **`uv.lock`:** jcodemunch-mcp 1.108.328 → 1.108.360 and jdocmunch-mcp 1.145.0 → 1.146.0, installed
+  by the 03:00 auto-maintain run and left uncommitted. Reviewed before committing (88 + 22
+  commits): no caller-visible breaking change and no CLAUDE.md line made wrong. Additive only:
+  `surface_notice` on the first `resolve_repo`, `rebuild_reason` on `embed_repo`, fewer
+  dead-code false positives, .NET `unseen_consumer` downgrades in `check_delete_safe`, a
+  `path_glob` `**/` fix in jdocmunch.
+- **Repo `GEMINI.md` mandate 6 removed** (in `features/gemini-integration/install.sh`). It
+  told the agent to draft skills with `gemini-auto-skill` into `.gemini/skills/`, which
+  never received a draft, bypassed the Telegram-approved `state/skill-drafts/` path, and is
+  not a folder agy loads.
+- `~/.claude/skills/adversarial-review` (loose companion file, identical to
+  `global-workflows/adversarial-review.md`) moved out.
+
 ## 2026-10-15 — agy gets the stack: MCP servers + routing policy
 
 - **`features/antigravity/sync_mcp.py`:** copies the 8 MCP servers Claude runs (user scope)

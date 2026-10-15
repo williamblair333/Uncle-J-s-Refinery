@@ -30,11 +30,12 @@
   agy self-updates.
 - Item #2 done: `bash features/antigravity/install.sh` wires permissions, the 8 MCP servers,
   the routing policy (`~/.gemini/GEMINI.md` includes CLAUDE.md) and skills. Verified live.
-- Open for Bill: repo `GEMINI.md` mandate 6 still asks the agent to draft skills with
-  `gemini-auto-skill`, which agy cannot see (it lives in features/gemini-integration/skills,
-  not global-skills). Keep, move, or drop it.
-- Remaining list: item #3 cleanups (delete `~/.claude/skills/adversarial-review`, decide the
-  pre-existing `uv.lock` change), item #4 try the new skills, then the whisper dictation script.
+- Cleanups done: mandate 6 dropped (Bill's call), `uv.lock` upgrade reviewed and committed,
+  stray `adversarial-review` file removed.
+- Still drifted (pre-existing): the deployed `~/.claude/CLAUDE.md` lacks the
+  `semantic_store_mismatch` bullet. `refinery-doctor.sh --fix` syncs it; check first that it
+  keeps the auto-generated "Dreaming Notes" section in the deployed file.
+- Dictation: `voice-line` repo, `scripts/dictate.sh` (hold Right Alt, local whisper, xdotool).
 - Never run mattpocock's `scripts/link-skills.sh`: it `rm -rf`s real dirs in `~/.claude/skills`.
 
 ## 2026-10-12 (later) — context-mode reviewed, not adopted
