@@ -848,7 +848,7 @@ check_untracked_skills() {
 # ----- 9k. skills portability: reference current, ~/.agents/skills linked ----
 # Warn-only: drift here loses no data, it only makes docs/SKILLS.md or other harnesses stale.
 check_skills_portability() {
-    step "skills — docs/SKILLS.md current and global-skills linked into ~/.agents/skills"
+    step "skills — docs/SKILLS.md current and global-skills linked into ~/.agents/skills + ~/.gemini/skills"
     local py="$REPO_ROOT/.venv/bin/python"; [[ -x "$py" ]] || py=python3
     local rc=0
     "$py" "$REPO_ROOT/scripts/gen-skills-reference.py" --check 2>/dev/null || rc=$?
@@ -861,16 +861,19 @@ check_skills_portability() {
         warn "docs/SKILLS.md is stale"
         hint "run: $py $REPO_ROOT/scripts/gen-skills-reference.py"
     fi
-    local missing=0 skill_dir
-    for skill_dir in "$REPO_ROOT/global-skills"/*/; do
-        [[ -e "$HOME/.agents/skills/$(basename "$skill_dir")" ]] || missing=$((missing + 1))
+    local dest missing skill_dir
+    for dest in "$HOME/.agents/skills" "$HOME/.gemini/skills"; do
+        missing=0
+        for skill_dir in "$REPO_ROOT/global-skills"/*/; do
+            [[ -e "$dest/$(basename "$skill_dir")" ]] || missing=$((missing + 1))
+        done
+        if (( missing == 0 )); then
+            ok "all global skills visible in $dest"
+        else
+            warn "$missing global skill(s) missing from $dest"
+            hint "run: bash $REPO_ROOT/scripts/skill-link.sh link"
+        fi
     done
-    if (( missing == 0 )); then
-        ok "all global skills visible to other harnesses (~/.agents/skills)"
-    else
-        warn "$missing global skill(s) missing from ~/.agents/skills"
-        hint "run: bash $REPO_ROOT/scripts/skill-link.sh link"
-    fi
 }
 
 # ----- 9l. embedding model downloaded + canary pinned ----------------------

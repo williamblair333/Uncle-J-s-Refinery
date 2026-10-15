@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-15 — Antigravity CLI installed; skills linked into ~/.gemini/skills
+
+- **Antigravity CLI (`agy`) 1.3.5** installed to `~/.local/bin/agy` from Google's install
+  script (downloaded and read first; it SHA-512-checks the binary against the release
+  manifest, then appends a PATH line to `~/.bashrc` and `~/.profile`). It self-updates.
+- **agy does not read `~/.agents/skills`.** It reads `<project>/.agents/skills`,
+  `~/.gemini/antigravity-cli/skills` (agy only) and `~/.gemini/skills` (shared by Antigravity
+  tools). `skill-link.sh` now links global skills into `~/.gemini/skills` as well, with the same
+  ownership rule (never touch a real dir or foreign link). Installer and healthcheck 9k count
+  both destinations.
+- Tests: the skill-link ownership test now runs for both destinations. Full suite: 1219 passed.
+
 ## 2026-10-15 — skill frontmatter strict enough for every harness
 
 First real off-Claude test: Gemini CLI 0.46 loaded 56 of the 64 skills in `~/.agents/skills`.
