@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-10-15 — agy usable headless: read-only permissions + honest wrapper
+
+Acceptance for the Antigravity switch: `/skills` lists all 64 skills, and `/to-questionnaire`
+ran correctly on the Google AI Pro account. Headless use was not reliable yet: shell commands
+were auto-denied, and agy reports `SUCCESS` with exit 0 even when nothing happened.
+
+- **`features/antigravity/permissions.json`** + **`apply_permissions.py`:** a read-only allow
+  list (ls, cat, grep, git log/diff/show/status, ...) and a deny list (rm, sudo, curl,
+  git push/reset/clean/checkout, writes to `.git/`), merged into
+  `~/.gemini/antigravity-cli/settings.json` without touching agy's own keys. Applied on this
+  host.
+- **Chaining checked live first (agy 1.3.5):** each part of a compound command is checked, so
+  `ls; touch`, `ls && mkdir`, `$(...)`, `| xargs` and a `>` redirect outside the workspace are
+  all refused. Table in `features/antigravity/README.md`; re-run after agy updates.
+- **`scripts/ask_agy.py`:** runs one prompt headless and exits 0 only on a real success. It
+  fails on a deny-rule tool error (the model answered "DONE" in that case), a soft-denied
+  action, an empty response, or a non-SUCCESS status.
+- Tests: `tests/test_ask_agy.py`, 11 cases with a fake agy replaying real event shapes.
+
 ## 2026-10-15 — Antigravity CLI installed; skills linked into ~/.gemini/skills
 
 - **Antigravity CLI (`agy`) 1.3.5** installed to `~/.local/bin/agy` from Google's install
