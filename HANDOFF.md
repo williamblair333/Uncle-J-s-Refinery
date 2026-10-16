@@ -1,6 +1,36 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-16 — session close: referee + 3 skills shipped, dictation tried live
+
+**Most important:** new this session are `scripts/referee.py` (Gemini judges Claude's work)
+and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Details in the
+2026-10-15 entry below and CHANGELOG.
+
+**Bill's decisions (don't re-ask):**
+- "Do them all" means every item gets built. A skill-process rule (e.g. "no failing
+  baseline, don't write it") doesn't license dropping one.
+- Whisper on the GPU: **not now.** Path when wanted: `sudo apt install nvidia-cuda-toolkit`,
+  then `/opt/proj/voice-line/install/install.sh --only whisper` (it auto-rebuilds with CUDA).
+  Untested risk: Debian 13's gcc 14 vs CUDA 12.4.
+
+**State:**
+- Dictation works (Bill dictated into this session). It runs only while
+  `/opt/proj/voice-line/scripts/dictate.sh` is running; there's no autostart, and holding
+  Right Alt without it does nothing. Whisper is a CPU build with `base.en`, which mishears
+  jargon ("LLM" → "LOL"). Right Alt also turns the cursor into a crosshair: some KDE or app
+  binding, not found yet. Find it before adding autostart.
+- Left running: whisper-server (:2022) and Kokoro (:8880, ~0.9 GB VRAM, not needed for
+  dictation). The dictate listener stops with this session.
+- The 03:00 auto-maintain commit `d679e22` (jcodemunch 1.108.369, `repo_visibility`) was
+  local-only again; it ships in this session-end PR with its `uv.lock`. The new CLAUDE.md
+  bullet was checked against installed code (`config.py:100,525`, `tools/_visibility.py:128`).
+- `~/.claude/CLAUDE.md` synced to include that bullet (`refinery-doctor.sh --check
+  claude-md-sync --fix`; Dreaming Notes kept). Expect this drift after every 03:00 upgrade
+  that edits CLAUDE.md, since auto-maintain doesn't deploy it.
+
 ## 2026-10-15 — skills portable, Antigravity wired, dictation
+
+- **jcodemunch-mcp breaking change**: `list_repos` now lists only indexes under the server's working directory by default (`repo_visibility: workspace`, v1.108.367) and reports the rest as a top-level `visibility.hidden_count`; callers must treat a miss with `hidden_count` > 0 as hidden rather than absent, pass the exact repo id, or set `repo_visibility: "all"`.
 
 **Bill's decisions (don't re-ask):**
 - Skills must stay usable if Claude Code is dropped (cost). Mechanism: repo copies in

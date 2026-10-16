@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-10-16 — session close
+
+- **Shipped the 03:00 auto-maintain commit** `d679e22` (jcodemunch-mcp 1.108.360 → 1.108.369,
+  `repo_visibility` bullet in CLAUDE.md §1) with the `uv.lock` bump it left unstaged. The
+  bullet was verified against the installed package before shipping.
+- **Dictation (voice-line) tried live:** it works once `dictate.sh` is running. It isn't a
+  hotkey daemon. Whisper is CPU-only (`GGML_CUDA=OFF`, no `nvcc`); the GPU rebuild path and
+  the `base.en` accuracy limit are recorded in HANDOFF.
+- **`~/.claude/CLAUDE.md` synced** with `refinery-doctor.sh --check claude-md-sync --fix`
+  (the missing `semantic_store_mismatch` bullet; Dreaming Notes kept). PR #122.
+- **README** section 22 lists `referee.py`. **ROADMAP:** dictation follow-ups and three guard
+  false positives found in the weekly hook-blocks review.
+
 ## 2026-10-15 — referee, media-teardown, verifiable-task
 
 - **`scripts/referee.py`:** Gemini judges Claude's work through `ask_agy` (read-only, AI Pro

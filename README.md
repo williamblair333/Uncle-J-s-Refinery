@@ -622,6 +622,7 @@ routing policy (`~/.gemini/GEMINI.md` includes `CLAUDE.md`), and every global sk
 ```bash
 bash features/antigravity/install.sh                       # after installing and signing in to agy
 .venv/bin/python scripts/ask_agy.py --cwd <repo> "question"  # headless, honest exit codes
+.venv/bin/python scripts/referee.py --task "what it must do" --diff main  # Gemini judges Claude's work
 ```
 
 Skills run by `/name` in agy; they do not fire on their own in print mode. See
