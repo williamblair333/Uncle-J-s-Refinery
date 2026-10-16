@@ -11,6 +11,15 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Dictation follow-ups** (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
+  turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
+  (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
+  (path in HANDOFF).
+- **Guard false positives outside the repo** (found 2026-10-16, weekly hook-blocks review).
+  grep-guard blocked reads of `/opt/proj/voice-line` sources and of `~/.gemini` config, and
+  surface-write-guard blocked writing a scratch `.py` under `/tmp`. The block message itself
+  says paths outside the repo are allowed. Narrow both to this repo's tree; each needs its
+  own pre-mortem and tests, since they're security controls.
 - **Review `state/referee.jsonl`** after a few weeks of use (opened 2026-10-15). How often
   does a referee `fail` find a real defect, and how often does it error? If it rarely
   catches anything, drop the skill's trigger to on-request only.
