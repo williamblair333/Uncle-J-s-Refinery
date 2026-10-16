@@ -78,6 +78,10 @@ returns `{"error": ...}` on failure, never raises. Each call is logged to
   stops at a nested independent clone — pass `repo` explicitly for the outer one.
   `CODE_INDEX_PATH` moves the whole index root; an index built under another value is
   simply not found (`degraded`, never `absent`).
+- `list_repos` lists only indexes in the server's working directory by default
+  (`repo_visibility`). A top-level `visibility` block with `hidden_count` means other indexes
+  exist; a miss there is not grounds to re-index. Pass the exact repo id (it still loads), or
+  set `"repo_visibility": "all"` / `JCODEMUNCH_REPO_VISIBILITY=all` to list all of them.
 - Unfamiliar repo: `plan_turn`, then `get_repo_map` / `suggest_queries`. Familiar repo:
   `digest`. Analysis session: `get_repo_health` first.
 - Never `Read` a source file to "see what's in it" — `get_file_outline`, `search_symbols`,

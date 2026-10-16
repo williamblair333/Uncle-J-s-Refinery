@@ -2,6 +2,8 @@
 
 ## 2026-10-15 — skills portable, Antigravity wired, dictation
 
+- **jcodemunch-mcp breaking change**: `list_repos` now lists only indexes under the server's working directory by default (`repo_visibility: workspace`, v1.108.367) and reports the rest as a top-level `visibility.hidden_count`; callers must treat a miss with `hidden_count` > 0 as hidden rather than absent, pass the exact repo id, or set `repo_visibility: "all"`.
+
 **Bill's decisions (don't re-ask):**
 - Skills must stay usable if Claude Code is dropped (cost). Mechanism: repo copies in
   `global-skills/`, linked into `~/.claude/skills`, `~/.agents/skills` and `~/.gemini/skills`;
