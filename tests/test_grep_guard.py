@@ -11,17 +11,37 @@ the ALLOW cases are as important as the DENY cases.
 import json
 import os
 import subprocess
+import tempfile
+import uuid
 
 import pytest
 
 HOOK = os.path.join(os.path.dirname(__file__), "..", "hooks", "discipline", "grep-guard.sh")
+LIVE_LOG = "/opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log"
+
+# Keep test denials out of the live state/hook-blocks.log (1191 `session=test` lines
+# had piled up there, which the weekly review had to filter by hand). The guard logs
+# to <first existing projects root>/Uncle-J-s-Refinery/state/hook-blocks.log;
+# UNCLE_J_PROJ_ROOT is tried first, so an EMPTY existing dir wins and the append
+# fails silently (`|| true`). The extra root only widens the fallback in-repo set
+# with a dir no test path lives under.
+_LOG_SINK = tempfile.mkdtemp(prefix="grep-guard-test-")
+ENV = {**os.environ, "UNCLE_J_PROJ_ROOT": _LOG_SINK}
 
 
-def _denied(cmd: str) -> bool:
+def _denied(cmd: str, session: str = "test") -> bool:
     """Run the guard with a fake PreToolUse payload; True iff it denies."""
-    payload = json.dumps({"tool_input": {"command": cmd}, "session_id": "test"})
-    r = subprocess.run(["bash", HOOK], input=payload, capture_output=True, text=True)
+    payload = json.dumps({"tool_input": {"command": cmd}, "session_id": session})
+    r = subprocess.run(["bash", HOOK], input=payload, capture_output=True, text=True, env=ENV)
     return '"deny"' in r.stdout.replace(" ", "")
+
+
+def test_denials_do_not_reach_the_live_log():
+    probe = f"isolation-probe-{uuid.uuid4().hex}"
+    assert _denied("grep -rn foo scripts/", session=probe) is True
+    if os.path.exists(LIVE_LOG):
+        with open(LIVE_LOG, encoding="utf-8", errors="replace") as f:
+            assert probe not in f.read(), "test denial was written to the live hook-blocks.log"
 
 
 # ── DENY: reading/searching repo source for exploration ──────────────────────
@@ -162,7 +182,8 @@ def _denied_in(cmd: str, cwd) -> bool:
     payload = {"tool_input": {"command": cmd}, "session_id": "test"}
     if cwd is not None:
         payload["cwd"] = str(cwd)
-    r = subprocess.run(["bash", HOOK], input=json.dumps(payload), capture_output=True, text=True)
+    r = subprocess.run(["bash", HOOK], input=json.dumps(payload), capture_output=True, text=True,
+                       env=ENV)
     return '"deny"' in r.stdout.replace(" ", "")
 
 
