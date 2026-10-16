@@ -71,6 +71,12 @@ returns `{"error": ...}` on failure, never raises. Each call is logged to
 
 ## Operating rules
 
+### 0. Project commands — the justfile
+`just` is the entry point in Bill's repos. Where a repo has a `justfile`, run `just --list`
+before guessing how to test, run, start or stop it, and use the recipe (`just test`, not a
+pytest line you inferred). If a recipe fails, read what it runs and fall back to that.
+New repos get a justfile: one-line recipes over scripts, never logic in the justfile.
+
 ### 1. Code work — jCodeMunch first, Serena for LSP-hard questions
 
 **Setup & orientation**
