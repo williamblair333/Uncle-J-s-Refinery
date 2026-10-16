@@ -188,7 +188,49 @@ SCRATCH_ESCAPE_BLOCK = [
     ("eval-rebind",         'd=/tmp/x; eval "d""=/opt/proj/R/hooks"; echo x > $d/a.sh ;'),
     # mv into /tmp deletes the surface source (found replaying hook-blocks.log)
     ("mv-surface-into-tmp", "mv analyzer/chesslab/lines.py /tmp/lines.py.bak && echo moved"),
+    # heredoc bodies that get EXECUTED stay scanned (body skip is cat-to-file only)
+    ("heredoc-piped-to-bash", "cat <<'EOF' | bash\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
+    ("heredoc-cmd-subst",     "bash -c \"$(cat <<'EOF'\necho x > /opt/proj/x/hooks/a.sh\nEOF\n)\""),
+    ("heredoc-into-bash",     "bash <<'EOF'\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
+    ("heredoc-to-surface",    "cat > /opt/proj/x/hooks/a.sh <<'EOF'\nhi\nEOF"),
+    ("after-heredoc-end",     "cat > /tmp/n.md <<'EOF'\nhi\nEOF\necho x > /opt/proj/x/hooks/a.sh"),
+    # a quoted or escaped `<<` is an argument, not a heredoc: the next lines are commands
+    ("quoted-lt-lt",          "cat \"<<X\"\necho x > /opt/proj/x/hooks/a.sh"),
+    ("escaped-lt-lt",         "cat \\<<X\necho x > /opt/proj/x/hooks/a.sh"),
+    # the body becomes code if anything in the same command can execute it
+    ("heredoc-then-run",      "cat > /tmp/x.sh <<'EOF'\necho x > /opt/proj/x/hooks/a.sh\nEOF\nbash /tmp/x.sh"),
+    ("heredoc-procsub-bash",  "cat <<'EOF' > >(bash)\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
+    ("heredoc-exec-fd",       "exec 3> >(sh)\ncat <<'EOF' >&3\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
+    ("heredoc-then-dot-slash", "cat > x.txt <<'EOF'\necho x > /opt/proj/x/hooks/a.sh\nEOF\nchmod +x x.txt; ./x.txt"),
+    # security review 2026-10-16 (round 2): the parser must end the body where bash does
+    ("pieced-delimiter-dq",   'cat <<E"OF"\nx\nEOF\necho hi > /opt/proj/x/hooks/evil.sh\nE'),
+    ("pieced-delimiter-sq",   "cat <<E'O'F\nx\nEOF\necho hi > /opt/proj/x/hooks/evil.sh\nE"),
+    ("continuation-target",   "cat <<EOF \\\n> /opt/proj/x/hooks/evil.sh\nbody\nEOF"),
+    ("continuation-and",      "cat <<EOF && \\\necho hi > /opt/proj/x/hooks/evil.sh\nbody\nEOF"),
+    ("crlf-delimiter",        "cat <<EOF\r\nbody\r\nEOF\r\necho hi > /opt/proj/x/hooks/evil.sh\r\n"),
+    ("group-cat-bash",        "{ cat; bash; } <<EOF\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
+    ("no-space-then-write",   "cat<<EOF\nx\nEOF\necho y > /opt/proj/x/hooks/a.sh"),
+    ("sh-dash-s",             "sh -s <<EOF\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
 ]
+
+
+# ── A cat heredoc's BODY is data, not commands (2026-10-16) ──────────────────────
+#    Notes and audit records that merely mention a redirect-shaped path were blocked.
+
+HEREDOC_BODY_ALLOW = [
+    ("audit-note",  "cat >> ~/.uncle-j-memory/memory/audit-baselines.md <<'PM_EOF'\n"
+                    "- closed: `echo > /opt/proj/R/hooks/tmp/foo` erased the marker\nPM_EOF"),
+    ("dash-heredoc", "cat > /tmp/s/notes.txt <<-EOF\n\tcp a.sh /opt/proj/x/scripts/b.sh\n\tEOF"),
+    # <<- strips TABS only: "  EOF" never closes it, so bash reads every later line as
+    # body (data for cat), exactly as the parser does
+    ("dash-heredoc-spaces-unclosed", "cat <<-EOF\n  x\n  EOF\necho hi > /opt/proj/x/hooks/b.sh && echo"),
+]
+
+
+@pytest.mark.parametrize("name,cmd", HEREDOC_BODY_ALLOW, ids=[c[0] for c in HEREDOC_BODY_ALLOW])
+def test_cat_heredoc_body_is_not_scanned(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert not blocked(res), f"{name}: heredoc body text was scanned as a command.\ncmd={cmd}"
 
 
 @pytest.mark.parametrize("name,cmd", SCRATCH_ESCAPE_BLOCK, ids=[c[0] for c in SCRATCH_ESCAPE_BLOCK])

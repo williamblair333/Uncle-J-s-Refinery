@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-10-16 — guard follow-ups: Write-tool scratch files, `cat` heredoc bodies
+
+- **edit-surface-guard:** a Write/Edit to a scratch file under `/tmp` no longer needs a
+  pre-mortem. The log shows 75 such blocks. Same rule as the Bash-side exemption: the path must
+  resolve under `/tmp` with `realpath -m`, so `..` and symlinks out are refused, and the token
+  path is never exempt. It now has a test file: `tests/test_edit_surface_guard.py`. Its log
+  goes to a dead path, so it adds no `session=test` noise. Replay of every file this guard
+  has blocked: 70 distinct `/tmp` files are now allowed, none outside `/tmp`.
+- **surface-write-guard: the body of a `cat` heredoc is data.** Notes and audit records that
+  mention a redirect-shaped path were blocked, including this session's own audit-baseline
+  write. The body is skipped only when:
+  - the heredoc's command is `cat`;
+  - the `<<` is real (unquoted, unescaped, the only one on its line);
+  - the line has no `|`, `$(` or backtick;
+  - nothing in the rest of the command can execute code (a shell, an interpreter, `exec`,
+    `source`, `xargs`, `./`).
+
+  The parser also refuses to strip when the body boundary is ambiguous:
+  - a delimiter assembled from pieces (`E"OF"` reads as `EOF` to bash);
+  - a `\` line continuation on the `<<` line;
+  - any CR in the command.
+
+  Escapes stay blocked and are tested: write a script and then run it, `> >(bash)`,
+  `exec 3> >(sh)`, `bash <<EOF`, `sh -s`, `{ cat; bash; } <<EOF`, `cat <<EOF | bash`,
+  `$(cat <<EOF)`, and a quoted or escaped `<<`. Two adversarial review rounds: the first
+  found nothing in the `/tmp` Write exemption, and the pieced-delimiter and continuation
+  holes it found in the parser are fixed above.
+- Tests: +10 edit-surface-guard, +22 surface-write-guard. Full suite: 1368 passed, 2
+  skipped, 7 xfailed (the known gaps, unchanged).
+
 ## 2026-10-16 — guard false positives outside the repo fixed
 
 - **grep-guard: "the repo" is now the session's repo.** It treated all of `/opt/proj` as the

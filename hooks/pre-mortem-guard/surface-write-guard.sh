@@ -79,7 +79,59 @@ CP_RE="(cp|mv)[[:space:]].*[[:space:]](['\"]?[^[:space:]]*${SURF_EXT}['\"]?|['\"
 #   * removal is per whole operand, line by line — never a substring replace, which
 #     would also strip `/tmp/foo` out of `…/hooks/tmp/foo`;
 #   * the pre-mortem token path is never exempt.
-SCAN="$CMD"
+
+# ── A `cat` heredoc's body is data, not commands (2026-10-16) ────────────────────
+# Notes and audit records that merely MENTION a redirect-shaped path were blocked.
+# The body is dropped from the scan only when it can't be executed: the heredoc's
+# command is `cat`, the `<<` is real (unquoted, unescaped, the only one on the
+# line) and the line has no pipe, $( or backtick that could feed the body to a
+# shell. `bash <<EOF`, `cat <<EOF | bash` and `bash -c "$(cat <<EOF…)"` stay
+# scanned. The line holding `<<`, so the write target, is always scanned.
+strip_cat_heredoc_bodies() {
+  local line delim="" dash=0 out="" pre seg w rest cmp
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ -n "$delim" ]]; then
+      cmp="$line"
+      [[ $dash -eq 1 ]] && cmp="${line#"${line%%[!$'\t']*}"}"
+      [[ "$cmp" == "$delim" ]] && delim=""
+      continue
+    fi
+    out+="$line"$'\n'
+    [[ "$line" == *"<<"* ]] || continue
+    # A trailing `\` continues the command onto the next line, so the body starts
+    # later than this line suggests — don't guess, keep scanning.
+    [[ "$line" == *\\ ]] && continue
+    [[ $(printf '%s' "$line" | grep -o '<<' | wc -l) -eq 1 ]] || continue
+    [[ "$line" == *"|"* || "$line" == *'$('* || "$line" == *'`'* ]] && continue
+    pre=${line%%<<*}
+    [[ "$pre" == *\\ ]] && continue
+    local dq=${pre//[^\"]/} sq=${pre//[^\']/}
+    (( ${#dq} % 2 == 0 && ${#sq} % 2 == 0 )) || continue
+    seg=${pre##*[;&(]}
+    read -r w _ <<< "$seg"
+    [[ "$w" == cat ]] || continue
+    rest=${line#*<<}; dash=0
+    [[ "$rest" == -* ]] && { dash=1; rest=${rest#-}; }
+    # The delimiter must be exactly 'WORD', "WORD" or WORD, then a word break.
+    # Bash joins pieces (`E"OF"` is EOF); reading only the first piece would end
+    # the body somewhere bash doesn't.
+    [[ "$rest" =~ $HEREDOC_DELIM_RE ]] || continue
+    delim="${BASH_REMATCH[2]}${BASH_REMATCH[3]}${BASH_REMATCH[4]}"
+  done <<< "$1"
+  printf '%s' "$out"
+}
+HEREDOC_DELIM_RE="^[[:space:]]*('([A-Za-z_][A-Za-z0-9_]*)'|\"([A-Za-z_][A-Za-z0-9_]*)\"|([A-Za-z_][A-Za-z0-9_]*))([[:space:];>&)]|\$)"
+
+# A CR is part of a word to bash (`EOF\r` is the delimiter), so with CRLF input the
+# body would end where this parser can't see it. No stripping then.
+if [[ "$CMD" == *$'\r'* ]]; then SCAN="$CMD"; else SCAN=$(strip_cat_heredoc_bodies "$CMD"); fi
+# The body is code again if anything left in the command can execute it: write a
+# script then run it, `> >(bash)`, `exec 3> >(sh)` then `>&3`, `./file`. Any
+# shell, interpreter or exec word outside the bodies → scan the bodies after all.
+EXEC_RE='(^|[^[:alnum:]_./-])(bash|sh|zsh|dash|ksh|fish|source|exec|eval|xargs|python[0-9.]*|perl|ruby|node|php|lua|tclsh|env|sudo|su)([^[:alnum:]_.-]|$)|(^|[^[:alnum:]_.])\./|(^|[;&|(])[[:space:]]*\.[[:space:]]'
+if [[ "$SCAN" != "$CMD"$'\n' && "$SCAN" != "$CMD" ]] && printf '%s' "$SCAN" | grep -qE "$EXEC_RE"; then
+  SCAN="$CMD"
+fi
 if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_.-])(ln|mv)[[:space:]]'; then
   if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_])(for|read|mapfile|readarray|declare|local|typeset|eval|printf[[:space:]]+-v|getopts|unset|source|let)[[:space:]]|(^|[;&|(])[[:space:]]*\.[[:space:]]|\(\('; then
     while IFS= read -r asg; do
