@@ -7,6 +7,10 @@ and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Deta
 2026-10-15 entry below and CHANGELOG.
 
 **Bill's decisions (don't re-ask):**
+- **`just` is the standard in every repo** (2026-10-16). The justfile is a thin menu and
+  logic lives in scripts. Run `just` here to see the recipes. Rolling out repo by repo as
+  each is touched; the Refinery and voice-line are done. Other hosts need `apt install just`.
+- voice-line: `just status`, `just stop kokoro`, `just start dictate` (`scripts/vl`).
 - "Do them all" means every item gets built. A skill-process rule (e.g. "no failing
   baseline, don't write it") doesn't license dropping one.
 - Whisper on the GPU: **not now.** Path when wanted: `sudo apt install nvidia-cuda-toolkit`,

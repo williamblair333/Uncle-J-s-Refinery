@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-10-16 — `just` is the standard: Refinery justfile, CLAUDE.md §0
+
+- **Decision (Bill):** `just` is the entry point in every repo, for humans and agents.
+  The justfile is a menu of one-line recipes; logic stays in scripts.
+- **`justfile`:** `setup`, `test` (encodes `pytest tests/`; bare `pytest` collects
+  `reviewed/` clones and fails ~300 times), `health`, `doctor`, `reindex`, `skills`,
+  `recall`, `referee`, `agy`.
+- **CLAUDE.md §0:** list the recipes before guessing a command; fall back to what a recipe
+  runs if it fails; new repos get a justfile. Deployed to `~/.claude/CLAUDE.md` with
+  `refinery-doctor --fix`. agy picks it up through `GEMINI.md`, which includes CLAUDE.md.
+- voice-line got the same treatment (voice-line PR #11): `scripts/vl` start/stop/status
+  plus a justfile.
+
 ## 2026-10-16 — session close
 
 - **Shipped the 03:00 auto-maintain commit** `d679e22` (jcodemunch-mcp 1.108.360 → 1.108.369,

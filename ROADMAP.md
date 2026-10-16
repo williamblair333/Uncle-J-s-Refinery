@@ -11,6 +11,13 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Referee: retry once on a soft deny** (opened 2026-10-16). Gemini sometimes runs a
+  command outside the allow list despite the prompt listing it, and agy then ends the turn
+  with no answer. The referee correctly reports an error, but the same review passed on a
+  re-run. Retry once with "that command was blocked; use only: …" before giving up.
+- **Roll out justfiles** (opened 2026-10-16). Each repo gets one when it's next worked on;
+  the Refinery and voice-line are done. Keep recipe names shared: setup, test, run, start,
+  stop, status, doctor.
 - **Dictation follow-ups** (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
   (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
