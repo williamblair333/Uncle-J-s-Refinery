@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 69 repo, 1 workflows.
+Totals: 70 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -47,6 +47,7 @@ Totals: 69 repo, 1 workflows.
 | `install-script-cp-to-symlink` | Use when a bash install script silently skips steps due to `cp` failing on pre-existing symlinks, or when converting copy-based installs to symlink-based for a… | auto | Claude Code | repo |
 | `judge` | Before any Edit or Write lands, spawn an independent code-reviewer subagent that cross-checks the proposed change against structural evidence from jcodemunch (… | auto | Refinery stack | repo |
 | `just-answer` | Use on every question: answer exactly what was asked and stop; give reasons, risks, or alternatives only when the user asks for them. | auto | any agent | repo |
+| `just-do-it` | Use when the user asks for work to move forward — "now what", "what's next", "go", "get it done", "do it", "handle it" — or when you are about to end a turn wi… | auto | any agent | repo |
 | `library-backend-adoption-eval` | Structured evaluation of a new library as a potential backend replacement. | auto | Refinery stack | repo |
 | `mcp-index-empty-diagnosis` | Diagnose and fix an MCP retrieval tool (jdocmunch, jcodemunch, jdatamunch) that is registered and running but silently returns empty results due to an unpopula… | auto | Refinery stack | repo |
 | `media-teardown` | Use when the user shares a video transcript, article, post, newsletter or thread and asks to analyze it, whether it's worth their time, what's going on, or "th… | auto | any agent | repo |

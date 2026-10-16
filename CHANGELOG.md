@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-16 — `just-do-it` skill: pick the means, don't ask
+
+- **Decision (Bill):** once the goal is agreed, the agent takes its own recommendation and
+  starts work in the same turn. No "want me to start on X?" and no "which do you prefer?"
+- **`global-skills/just-do-it/`:** says when the goal counts as clear (named task, written-down
+  next work, or "ok/go" to a proposal) and lists the red-flag phrasings. When the goal isn't
+  clear it asks one question about the goal. Pre-mortem, gates, and
+  irreversible/outward-facing actions without standing authorization still stop it.
+- **Tested** with sonnet subagents. "now what" over a ROADMAP: without the skill 0/2 acted
+  (both recommended an item and then waited); with it 3/3 branched and started. Unclear goal
+  ("make the dashboard better" with 3 dashboards): 2/2 still asked one goal question.
+
 ## 2026-10-16 — `just` is the standard: Refinery justfile, CLAUDE.md §0
 
 - **Decision (Bill):** `just` is the entry point in every repo, for humans and agents.
