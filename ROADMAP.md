@@ -22,11 +22,12 @@ Completed items age out after ~4 weeks.
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
   (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
   (path in HANDOFF).
-- **Guard false positives outside the repo** (found 2026-10-16, weekly hook-blocks review).
-  grep-guard blocked reads of `/opt/proj/voice-line` sources and of `~/.gemini` config, and
-  surface-write-guard blocked writing a scratch `.py` under `/tmp`. The block message itself
-  says paths outside the repo are allowed. Narrow both to this repo's tree; each needs its
-  own pre-mortem and tests, since they're security controls.
+- **edit-surface-guard: Write/Edit to a `/tmp` scratch `.py`/`.yaml` needs a pre-mortem**
+  (opened 2026-10-16). Same false positive the surface-write-guard had for Bash writes, now
+  fixed there (CHANGELOG 2026-10-16). It's the Write-tool path in
+  `hooks/discipline/edit-surface-guard.sh` `is_surface`. Reuse the same rule: resolve with
+  `realpath -m`, exempt under `/tmp`, never the token path. It has no test file yet, so add
+  one first.
 - **Review `state/referee.jsonl`** after a few weeks of use (opened 2026-10-15). How often
   does a referee `fail` find a real defect, and how often does it error? If it rarely
   catches anything, drop the skill's trigger to on-request only.

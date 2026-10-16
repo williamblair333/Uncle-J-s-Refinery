@@ -60,15 +60,82 @@ AWK_RE="(^|[[:space:];|&(])awk[[:space:]].*>[[:space:]]*(['\"]?[^[:space:]]*${SU
 # Detect: cp/mv to a surface directory or surface extension
 CP_RE="(cp|mv)[[:space:]].*[[:space:]](['\"]?[^[:space:]]*${SURF_EXT}['\"]?|['\"]?[^[:space:]]*${SURF_PATH}[^[:space:]]*['\"]?)"
 
+# ── Scratch targets under /tmp are not surface writes (2026-10-16) ───────────────
+# The regexes above match on text, so `cat > $scratchpad/probe.py` and a backup
+# copied INTO scratch were blocked as surface writes. Before matching, remove the
+# operands that provably resolve under /tmp; the regexes then run, unchanged, on
+# what remains. Each exemption is narrow because a write guard's false negative is
+# worse than its false positive:
+#   * operand = plain path characters only, so `>/tmp/a;cp …` can't swallow `cp`;
+#   * resolved with realpath -m, so `/tmp/../…` and existing symlinks out of /tmp
+#     stay in the scan; `ln` anywhere in the command disables the exemption, since a
+#     link created by this very command doesn't exist yet to be resolved;
+#   * `mv` anywhere disables it too: `mv repo/x.py /tmp/x.bak` writes /tmp but
+#     deletes the surface source, and CP_RE only sees non-first operands;
+#   * a `$VAR` is expanded only when VAR is assigned exactly once, as a statement of
+#     its own (`S=/tmp/x;` — not the `S=/tmp/x cmd` prefix form, which doesn't bind
+#     for the redirect), to a quote-balanced /tmp value, in a command with nothing
+#     that can rebind it without a literal `VAR=` (loops, read, printf -v, eval, …);
+#   * removal is per whole operand, line by line — never a substring replace, which
+#     would also strip `/tmp/foo` out of `…/hooks/tmp/foo`;
+#   * the pre-mortem token path is never exempt.
+SCAN="$CMD"
+if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_.-])(ln|mv)[[:space:]]'; then
+  if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_])(for|read|mapfile|readarray|declare|local|typeset|eval|printf[[:space:]]+-v|getopts|unset|source|let)[[:space:]]|(^|[;&|(])[[:space:]]*\.[[:space:]]|\(\('; then
+    while IFS= read -r asg; do
+      [[ -z "$asg" ]] && continue
+      asg=${asg#export }
+      var=${asg%%=*}; raw=${asg#*=}; val=$raw
+      case "$raw" in
+        \"*) [[ ${#raw} -gt 1 && "$raw" == *\" ]] || continue; val=${raw:1:${#raw}-2} ;;
+        \'*) [[ ${#raw} -gt 1 && "$raw" == *\' ]] || continue; val=${raw:1:${#raw}-2} ;;
+      esac
+      [[ "$val" =~ ^/tmp/[A-Za-z0-9._/+@%:,=-]*$ ]] || continue
+      n=$(printf '%s' "$CMD" | grep -oE "(^|[^[:alnum:]_])${var}\+?=" | wc -l)
+      [[ "$n" -eq 1 ]] || continue
+      SCAN=${SCAN//"\${$var}"/$val}
+      SCAN=${SCAN//"\$$var/"/$val/}
+    # Statement-form assignments only: at line start or after ; & | (, and followed by
+    # end of statement. grep -o is per line, so ^ and $ are line boundaries.
+    done < <(printf '%s' "$CMD" \
+      | grep -oE "(^|[;&|(])[[:space:]]*(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=[^[:space:];&|)]+[[:space:]]*(;|&&|\|\||$)" \
+      | sed -E 's/^[;&|(]?[[:space:]]*//; s/[[:space:]]*(;|&&|\|\|)?$//')
+  fi
+  OUT=""
+  set -f
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    newline=""
+    for tok in $line; do
+      keep="$tok"
+      pre=${tok%%/tmp/*}                      # redirect/quote prefix, e.g. `>` `2>` `"`
+      if [[ "$pre" =~ ^[0-9]?\>{0,2}[\"\']?$ ]]; then
+        t=${tok:${#pre}}; t=${t%\"}; t=${t%\'}
+        if [[ "$t" =~ ^/tmp/[A-Za-z0-9._/+@%:,=-]+$ ]]; then
+          r=$(realpath -m -- "$t" 2>/dev/null) || r=""
+          if [[ "$r" == /tmp/?* && "$r" != /tmp/premortem-cleared* ]]; then
+            keep="${pre%[\"\']}"
+          fi
+        fi
+      fi
+      newline+="${newline:+ }$keep"
+    done
+    # No trailing space: REDIR_RE needs a delimiter after the filename, so padding the
+    # line end would silently change what the regexes detect (see KNOWN_GAPS).
+    OUT+="$newline"$'\n'
+  done <<< "$SCAN"
+  set +f
+  SCAN="$OUT"
+fi
+
 HIT=0
-echo "$CMD" | grep -qE "$REDIR_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$CMD" | grep -qE "$SED_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$CMD" | grep -qE "$PY_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$CMD" | grep -qE "$PERL_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$CMD" | grep -qE "$RUBY_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$CMD" | grep -qE "$NODE_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$CMD" | grep -qE "$AWK_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$CMD" | grep -qE "$CP_RE" && HIT=1
+echo "$SCAN" | grep -qE "$REDIR_RE" && HIT=1
+[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$SED_RE" && HIT=1
+[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$PY_RE" && HIT=1
+[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$PERL_RE" && HIT=1
+[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$RUBY_RE" && HIT=1
+[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$NODE_RE" && HIT=1
+[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$AWK_RE" && HIT=1
+[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$CP_RE" && HIT=1
 
 [[ $HIT -eq 0 ]] && exit 0
 

@@ -20,10 +20,20 @@ set -uo pipefail
 # Both spellings are treated as in-repo regardless of which platform we are on:
 # the test is a containment check, and denying a path that happens not to exist
 # here costs nothing, while missing one silently allows a source read.
-REPO_ROOTS="${UNCLE_J_PROJ_ROOT:+$UNCLE_J_PROJ_ROOT }/opt/proj /c/opt/proj"
+PROJ_ROOTS="${UNCLE_J_PROJ_ROOT:+$UNCLE_J_PROJ_ROOT }/opt/proj /c/opt/proj"
+# Fallback scope only. Once the payload is parsed, SESSION_ROOT (the git toplevel
+# of the session's cwd, see session_repo_root below) replaces it — "this repo" in the
+# block message. The projects root stays the fallback so a missing or unusable cwd
+# fails closed rather than open.
+REPO_ROOTS="$PROJ_ROOTS"
+SESSION_ROOT=""   # held apart from the word-split list: a toplevel may contain spaces
 
 in_repo() {
   local p="$1" r
+  if [[ -n "$SESSION_ROOT" ]]; then
+    case "$p" in "$SESSION_ROOT"/*) return 0 ;; esac
+    return 1
+  fi
   for r in $REPO_ROOTS; do
     case "$p" in "$r"/*) return 0 ;; esac
   done
@@ -32,7 +42,7 @@ in_repo() {
 
 # LOG must point at a directory that exists, so pick the root actually present.
 LOG_ROOT=/opt/proj
-for _cand in $REPO_ROOTS; do
+for _cand in $PROJ_ROOTS; do
   [ -d "$_cand" ] && { LOG_ROOT="$_cand"; break; }
 done
 LOG="$LOG_ROOT/Uncle-J-s-Refinery/state/hook-blocks.log"
@@ -47,6 +57,25 @@ fi
 INPUT=$(cat)
 CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "unknown"' 2>/dev/null || echo "unknown")
+
+# Scope "the repo" to the session's own repo: jcodemunch serves the project being
+# worked on, so another project's source read from this session is "outside the
+# repo" (2026-10-16: /opt/proj/voice-line reads from a Refinery session were denied).
+# Git Bash prints the toplevel as C:/..., which never prefix-matches the /c/...
+# spelling of a command's paths and would make every path look external — fail
+# open. cygpath -u normalises it; anything that still isn't absolute is discarded.
+session_repo_root() {
+  local cwd top
+  cwd=$(echo "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)
+  [[ -n "$cwd" && -d "$cwd" ]] || return 1
+  top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null) || return 1
+  if command -v cygpath >/dev/null 2>&1; then
+    top=$(cygpath -u "$top" 2>/dev/null) || return 1
+  fi
+  [[ "$top" == /?* ]] || return 1
+  printf '%s' "$top"
+}
+SESSION_ROOT=$(session_repo_root) || SESSION_ROOT=""
 
 log_entry() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG" 2>/dev/null || true; }
 
