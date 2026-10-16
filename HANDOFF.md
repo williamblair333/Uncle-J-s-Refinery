@@ -1,14 +1,43 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-10-16 — session close: referee + 3 skills shipped, dictation tried live
+## 2026-10-16 (afternoon) — just-do-it skill; guard false positives; referee retry
+
+**Most important:** Bill wants work done, not options. The new `just-do-it` skill (PR #127)
+means: once the goal is clear, pick the means yourself and start in the same turn. "now
+what" or "just do it" means take the next ROADMAP item and carry it through to a merged PR.
+
+**Bill's decisions (don't re-ask):**
+- **Just do it:** don't end a turn on "want me to…?" or "which do you prefer?". Ask only
+  when the *goal* is unclear, and then one question. Items only Bill can decide go in one
+  line at the end of the report and don't block the work.
+
+**State:**
+- Main = origin at the session-end merge. PRs #127–#131 merged; nothing in flight.
+- Guards (PRs #128, #129):
+  - grep-guard scopes "the repo" to the session's git repo.
+  - surface-write-guard and edit-surface-guard allow scratch writes that resolve under
+    `/tmp`.
+  - surface-write-guard skips the body of a non-executable `cat` heredoc.
+  - Two adversarial review rounds plus log replays. Invariants and closed bypasses are in
+    `~/.uncle-j-memory/memory/audit-baselines.md`. Any edit to those blocks needs its own
+    adversarial pass.
+- `state/hook-blocks.log`: 1201 `session=test` lines pruned (PR #130), and guard tests no
+  longer write to it. Delete `state/hook-blocks.log.bak-2026-10-16` once a weekly review
+  has run clean.
+- Referee retries once on a soft deny (PR #131). Its live review of that change caught a
+  real bug in it.
+- **Gitea PRs:** `gh` talks only to GitHub. Create and merge PRs through the Gitea API with
+  the stored credential (`git credential fill` for host 10.0.0.100:3000; the token has
+  `write:repository`). `gh pr create` fails with "No commits between".
+- In this shell, `grep` is a profile function that can swallow output; use `command grep`.
+
+## 2026-10-16 (morning) — session close: referee + 3 skills shipped, dictation tried live
 
 **Most important:** new this session are `scripts/referee.py` (Gemini judges Claude's work)
 and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Details in the
 2026-10-15 entry below and CHANGELOG.
 
 **Bill's decisions (don't re-ask):**
-- **Just do it** (2026-10-16): once the goal is clear, pick the means and start work in the
-  same turn, without asking which option or whether to start. Skill: `just-do-it`.
 - **`just` is the standard in every repo** (2026-10-16). The justfile is a thin menu and
   logic lives in scripts. Run `just` here to see the recipes. Rolling out repo by repo as
   each is touched; the Refinery and voice-line are done. Other hosts need `apt install just`.
@@ -21,9 +50,6 @@ and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Deta
   Untested risk: Debian 13's gcc 14 vs CUDA 12.4.
 
 **State:**
-- Guard false positives fixed (2026-10-16): grep-guard allows other projects' source; surface-write-guard allows `/tmp` scratch writes. The Write-tool version (edit-surface-guard) and `cat` heredoc bodies followed in PR #129.
-- `state/hook-blocks.log` is test-free now (1201 `session=test` lines pruned; backup `state/hook-blocks.log.bak-2026-10-16`, delete after a clean weekly review). Guard tests no longer write to it.
-- Referee retries once on a soft deny (PR #131). Its first live review caught a real bug in its own retry change, so it earned a point for the `referee.jsonl` review.
 - Dictation works (Bill dictated into this session). It runs only while
   `/opt/proj/voice-line/scripts/dictate.sh` is running; there's no autostart, and holding
   Right Alt without it does nothing. Whisper is a CPU build with `base.en`, which mishears

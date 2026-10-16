@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-16 — session close (afternoon)
+
+- Merged PRs #127–#131: the `just-do-it` skill, the guard false-positive fixes (two PRs),
+  test-log isolation, and the referee retry. Details in the entries below.
+- HANDOFF: new top entry, with the "just do it" decision and how to make Gitea PRs without
+  `gh`.
+
 ## 2026-10-16 — referee retries once on a soft deny
 
 - **`scripts/referee.py`:** sometimes agy runs a command outside the allow list despite the
