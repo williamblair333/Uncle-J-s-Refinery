@@ -14,6 +14,7 @@
   `refinery-doctor --fix`. agy picks it up through `GEMINI.md`, which includes CLAUDE.md.
 - voice-line got the same treatment (voice-line PR #11): `scripts/vl` start/stop/status
   plus a justfile.
+- README: `just` under Prerequisites (optional) and Daily usage.
 
 ## 2026-10-16 — session close
 

@@ -189,6 +189,7 @@ Everything outside the `/ee` folder is MIT — free for commercial use with no u
 - **Python 3.11+** — auto-installed via `uv` if missing
 - **Node.js 18+** — for Context7
 - **Git 2.30+**
+- **`just`** (`apt install just`): the repo's command menu. Optional; each recipe is one line you can run by hand
 - **Docker + Docker Compose plugin** — for the ask_local Ollama backend and Langfuse (both optional, but recommended)
 - **~22 GB free disk** — Langfuse images are ~5 GB; Postgres/ClickHouse/MinIO grow as they run; the ask_local model (`qwen3.5:9b`) is ~7 GB
 - **ask_local without a GPU** works, slowly: a minute or more per call and ~6 GB of RAM while the model is loaded
@@ -635,6 +636,10 @@ blocked).
 ## Daily usage
 
 Just use Claude Code normally. The stack is global — every project, every session, the routing policy and hooks apply automatically.
+
+For upkeep, run `just` in this repo to see the commands: `just health`, `just test`,
+`just doctor --fix`, `just reindex`, `just recall "…"`, `just referee "…" --diff main`.
+`just` is the entry point in every repo, and CLAUDE.md §0 tells agents to use it.
 
 **Signs it's working:**
 - Claude reaches for `search_symbols` / `get_file_outline` instead of `Read` on a source file

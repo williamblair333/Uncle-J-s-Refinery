@@ -11,6 +11,7 @@ and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Deta
   logic lives in scripts. Run `just` here to see the recipes. Rolling out repo by repo as
   each is touched; the Refinery and voice-line are done. Other hosts need `apt install just`.
 - voice-line: `just status`, `just stop kokoro`, `just start dictate` (`scripts/vl`).
+  At session end, Kokoro and dictation were stopped and whisper (:2022) left running.
 - "Do them all" means every item gets built. A skill-process rule (e.g. "no failing
   baseline, don't write it") doesn't license dropping one.
 - Whisper on the GPU: **not now.** Path when wanted: `sudo apt install nvidia-cuda-toolkit`,
