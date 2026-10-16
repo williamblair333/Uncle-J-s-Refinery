@@ -34,9 +34,6 @@ Completed items age out after ~4 weeks.
   files. That's low harm, because the block only lists files and searches. Decide whether to
   file it with jgravelle/jcodemunch-mcp. A custom snapshot hook (tasks, decisions, prompts) is
   **not** planned: Claude Code's compaction summary already carries those.
-- **Tests write to the live `state/hook-blocks.log`** (opened 2026-10-05). 668 of its lines
-  are `session=test` entries from guard tests, so the weekly hook-blocks review has to filter
-  them out by hand. Point the tests at a temp log (env override) and prune the existing lines.
 - **Pre-commit doc gate fired on a read-only Bash call** (opened 2026-10-05). A `git rev-parse` /
   `ls-remote` / `gh api` command got "Commit blocked — update CHANGELOG.md HANDOFF.md
   docs/RELIABILITY.md" after it ran. Find which PreToolUse hook matches it and narrow it to

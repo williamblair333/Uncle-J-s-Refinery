@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-10-16 — guard tests no longer write to the live hook-blocks log
+
+- **`tests/test_grep_guard.py`** runs the hook with `UNCLE_J_PROJ_ROOT` set to an empty temp
+  dir, so the guard's log append lands nowhere. This was the only remaining polluter: the
+  surface-write and edit-surface tests already redirect their logs. A new test proves that a
+  denial with a unique session id never reaches `state/hook-blocks.log`. A full suite run now
+  adds 0 lines (it was dozens per run).
+- **Pruned** the 1201 `session=test` lines from `state/hook-blocks.log`
+  (10990 → 9789 lines). The prune filtered a snapshot, re-appended anything written during
+  the rewrite, and swapped the file with an atomic rename. The full pre-prune copy is
+  `state/hook-blocks.log.bak-2026-10-16` (gitignored); delete it once a weekly review has run
+  clean.
+
 ## 2026-10-16 — guard follow-ups: Write-tool scratch files, `cat` heredoc bodies
 
 - **edit-surface-guard:** a Write/Edit to a scratch file under `/tmp` no longer needs a

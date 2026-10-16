@@ -22,6 +22,7 @@ and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Deta
 
 **State:**
 - Guard false positives fixed (2026-10-16): grep-guard allows other projects' source; surface-write-guard allows `/tmp` scratch writes. The Write-tool version (edit-surface-guard) and `cat` heredoc bodies followed in PR #129.
+- `state/hook-blocks.log` is test-free now (1201 `session=test` lines pruned; backup `state/hook-blocks.log.bak-2026-10-16`, delete after a clean weekly review). Guard tests no longer write to it.
 - Dictation works (Bill dictated into this session). It runs only while
   `/opt/proj/voice-line/scripts/dictate.sh` is running; there's no autostart, and holding
   Right Alt without it does nothing. Whisper is a CPU build with `base.en`, which mishears
