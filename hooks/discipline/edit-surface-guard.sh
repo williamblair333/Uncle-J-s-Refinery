@@ -77,6 +77,17 @@ is_surface() {
 
 is_surface "$FILE_PATH" || exit 0
 
+# A scratch file under /tmp is not a surface edit (2026-10-16: 75 logged blocks of
+# Write to $scratchpad/*.py). Exempt only what RESOLVES under /tmp — realpath -m
+# folds `..` and follows existing symlinks — and never the token path, so the
+# forgery check below still sees it. realpath missing → no exemption (fail closed).
+# Same rule as the /tmp exemption in surface-write-guard.sh.
+_resolved=$(realpath -m -- "$FILE_PATH" 2>/dev/null) || _resolved=""
+if [[ "$_resolved" == /tmp/?* && "$_resolved" != "${BYPASS_PREFIX}"* \
+      && "$FILE_PATH" != "${BYPASS_PREFIX}"* ]]; then
+  exit 0
+fi
+
 # Block Write/Edit tool directly to any token path (prevents token forgery via Write tool)
 if [[ "$FILE_PATH" == "${BYPASS_PREFIX}-"* ]]; then
   log_entry "BLOCKED token-path-write file=$FILE_PATH session=$SESSION_ID"
