@@ -2,6 +2,39 @@
 
 ---
 
+## 2026-10-16 — guard false positives outside the repo fixed
+
+- **grep-guard: "the repo" is now the session's repo.** It treated all of `/opt/proj` as the
+  repo, so a Refinery session reading `/opt/proj/voice-line` sources was denied, despite the
+  block message saying source outside this repo is allowed. It now scopes to the git toplevel
+  of the hook payload's `cwd` (normalised with `cygpath -u` on Git Bash). If there's no cwd,
+  the cwd is missing or it isn't a git repo, it falls back to the old projects root (fail
+  closed).
+- **surface-write-guard: scratch writes under `/tmp` are allowed.** `cat > $scratchpad/x.py`
+  and backups copied into scratch were blocked as surface writes. Operands that resolve under
+  `/tmp` are now removed before the unchanged regexes run. Escapes stay blocked, each pinned
+  by a test:
+  - `..`
+  - existing symlinks out of `/tmp`
+  - `ln` in the same command
+  - reassigned, appended, loop-bound or quote-split variables
+  - a `/tmp` token glued to `;cp …`
+  - the pre-mortem token path
+- **Reviewed adversarially before merge.** A security-reviewer agent found three regressions,
+  all now fixed and tested:
+  - removal was a global substring replace, so it also stripped `/tmp/foo` from inside
+    `…/hooks/tmp/foo`;
+  - the prefix form `d=/tmp/x cmd > $d/a.sh` was treated as binding `$d`;
+  - `printf -v` and `eval` can rebind a variable without a literal `d=`.
+
+  Replaying all 413 commands this guard has ever blocked (`state/hook-blocks.log`) against the
+  old and new versions found one more: `mv repo/x.py /tmp/x.bak` deletes the source, so `mv`
+  now disables the exemption. Final replay: 93 flip from block to allow, all scratch writes or
+  copies into `/tmp`. No command was newly blocked.
+- Tests: +10 grep-guard, +21 surface-write-guard; the full suite is 1336 passed. Detection
+  regexes are byte-identical, and the KNOWN_GAPS xfails are unchanged. The same false
+  positive via the Write tool (edit-surface-guard) is a ROADMAP follow-up.
+
 ## 2026-10-16 — `just-do-it` skill: pick the means, don't ask
 
 - **Decision (Bill):** once the goal is agreed, the agent takes its own recommendation and

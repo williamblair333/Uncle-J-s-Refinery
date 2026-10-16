@@ -21,6 +21,7 @@ and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Deta
   Untested risk: Debian 13's gcc 14 vs CUDA 12.4.
 
 **State:**
+- Guard false positives fixed (2026-10-16): grep-guard allows other projects' source; surface-write-guard allows `/tmp` scratch writes. Follow-up: the same FP via the Write tool in edit-surface-guard (ROADMAP).
 - Dictation works (Bill dictated into this session). It runs only while
   `/opt/proj/voice-line/scripts/dictate.sh` is running; there's no autostart, and holding
   Right Alt without it does nothing. Whisper is a CPU build with `base.en`, which mishears

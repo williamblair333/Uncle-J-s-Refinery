@@ -147,6 +147,65 @@ ALLOW_CASES = [
 ]
 
 
+# ── Scratch writes under /tmp are not surface writes (2026-10-16) ────────────────
+#    The guard blocked `cat > $scratchpad/probe.py` and backups copied INTO scratch.
+#    A /tmp target is exempt only when it RESOLVES under /tmp: `..`, symlinks, `ln`
+#    in the same command, reassigned variables and the pre-mortem token path are not.
+
+SCRATCH_ALLOW = [
+    ("heredoc-scratch-py",  "cat > /tmp/claude-1000/s/scratchpad/probe.py <<'EOF'\nprint(1)\nEOF"),
+    ("redirect-scratch-sh", "echo x > /tmp/probe.sh && echo done"),
+    ("cp-backup-to-scratch", "cp /opt/proj/hearth/house/house.yaml /tmp/claude-1000/s/house.yaml.bak"),
+    ("scratch-var-heredoc", "S=/tmp/claude-1000/s/scratchpad; cat > $S/rehearsal.yaml <<'EOF'\na: 1\nEOF"),
+    ("scratch-var-braced",  'S=/tmp/claude-1000/s; echo x > "${S}/run.sh" && bash ${S}/run.sh'),
+]
+
+
+@pytest.mark.parametrize("name,cmd", SCRATCH_ALLOW, ids=[c[0] for c in SCRATCH_ALLOW])
+def test_scratch_writes_under_tmp_allowed(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert not blocked(res), f"{name}: false positive on a /tmp scratch write.\ncmd={cmd}"
+
+
+SCRATCH_ESCAPE_BLOCK = [
+    ("dotdot-escape",       "echo x > /tmp/../opt/proj/x/scripts/a.sh"),
+    ("ln-same-command",     "ln -s /opt/proj/x/hooks /tmp/l && echo x > /tmp/l/a.sh && echo done"),
+    ("var-reassigned",      "S=/tmp/x; S=/opt/proj/x/scripts; echo y > $S/a.sh && echo done"),
+    ("var-appended",        "S=/tmp/x; S+=/../../opt/proj/x; echo y > $S/a.sh && echo done"),
+    ("var-from-loop",       "for S in /opt/proj/x/hooks; do S=/tmp/x; done; echo y > $S/a.sh && echo done"),
+    ("cp-from-tmp-to-surface", "cp /tmp/evil.sh /opt/proj/x/scripts/good.sh"),
+    # a /tmp token glued to shell syntax must not take the next command with it
+    ("glued-separator",     "echo x >/tmp/a;cp /tmp/e hooks/g.sh"),
+    ("token-path",          "cp payload.sh /tmp/premortem-cleared-sess.sh && echo done"),
+    ("quote-split-var",     'S="/tmp/x /opt/proj/x/hooks"; cp a.txt $S/a.sh && echo done'),
+    # security review 2026-10-16: removal must be per-operand, not a global substring
+    ("substring-in-hooks",  ": /tmp/foo ; echo hi > /opt/proj/R/hooks/tmp/foo ;"),
+    ("substring-in-ext",    ": /tmp/foo.sh ; echo hi > /opt/proj/R/tmp/foo.sh ;"),
+    # a prefix assignment binds only for that command, not the redirect's expansion
+    ("prefix-assignment",   "d=/tmp/x cat > $d/a.sh ;"),
+    # rebinding without a literal `d=`
+    ("printf-v-rebind",     "d=/tmp/x; printf -v d %s /opt/proj/R/hooks; echo x > $d/a.sh ;"),
+    ("eval-rebind",         'd=/tmp/x; eval "d""=/opt/proj/R/hooks"; echo x > $d/a.sh ;'),
+    # mv into /tmp deletes the surface source (found replaying hook-blocks.log)
+    ("mv-surface-into-tmp", "mv analyzer/chesslab/lines.py /tmp/lines.py.bak && echo moved"),
+]
+
+
+@pytest.mark.parametrize("name,cmd", SCRATCH_ESCAPE_BLOCK, ids=[c[0] for c in SCRATCH_ESCAPE_BLOCK])
+def test_tmp_exemption_cannot_be_escaped(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert blocked(res), f"{name}: /tmp exemption escaped — false negative.\ncmd={cmd}"
+
+
+def test_existing_symlink_out_of_tmp_still_blocked(tmp_path):
+    # tmp_path lives under /tmp; a link inside it pointing at a hooks dir resolves out.
+    assert str(tmp_path.resolve()).startswith("/tmp/")
+    link = tmp_path / "l"
+    link.symlink_to(REPO_ROOT / "hooks")
+    res = run_guard(f"echo x > {link}/a.sh && echo done", tmp_path)
+    assert blocked(res), "symlink out of /tmp was treated as scratch"
+
+
 @pytest.mark.parametrize("name,cmd", ALLOW_CASES, ids=[c[0] for c in ALLOW_CASES])
 def test_ordinary_commands_are_allowed(name, cmd, tmp_path):
     res = run_guard(cmd, tmp_path)

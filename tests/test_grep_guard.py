@@ -146,3 +146,55 @@ def test_multiline_blocked_command_logs_exactly_one_line(tmp_path):
     assert lines[0].endswith("session=multiline-test"), (
         f"session id must survive on the same line as the command: {lines[0]!r}"
     )
+
+
+# ── "The repo" is the SESSION's repo, not every project under /opt/proj ─────────
+#    (2026-10-16, weekly hook-blocks review.) REPO_ROOTS was the projects root, so a
+#    Refinery session reading /opt/proj/voice-line sources was denied even though the
+#    block message says source outside this repo is allowed. The guard now scopes to
+#    the git toplevel of the hook payload's `cwd`; with no usable cwd it falls back to
+#    the broad projects roots (fail closed).
+
+REPO = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+
+
+def _denied_in(cmd: str, cwd) -> bool:
+    payload = {"tool_input": {"command": cmd}, "session_id": "test"}
+    if cwd is not None:
+        payload["cwd"] = str(cwd)
+    r = subprocess.run(["bash", HOOK], input=json.dumps(payload), capture_output=True, text=True)
+    return '"deny"' in r.stdout.replace(" ", "")
+
+
+SESSION_REPO_ALLOW = [
+    "grep -n listen /opt/proj/voice-line/scripts/dictate.sh",   # another project's source
+    "sed -n '1,40p' /opt/proj/hearth/src/hearth/cli.py",
+    "grep -rn dotenv /opt/proj/hearth/src/",                    # recursive, other project
+]
+
+SESSION_REPO_DENY = [
+    f"cat {REPO}/scripts/referee.py",                           # this repo, absolute
+    f"grep -rn foo {REPO}/scripts/",
+    "grep -rn foo scripts/",                                    # relative → session repo
+    "head -20 scripts/referee.py",
+]
+
+
+@pytest.mark.parametrize("cmd", SESSION_REPO_ALLOW)
+def test_other_projects_source_allowed_from_this_session(cmd):
+    assert _denied_in(cmd, REPO) is False, f"expected ALLOW: {cmd}"
+
+
+@pytest.mark.parametrize("cmd", SESSION_REPO_DENY)
+def test_session_repo_source_still_denied(cmd):
+    assert _denied_in(cmd, REPO) is True, f"expected DENY: {cmd}"
+
+
+@pytest.mark.parametrize("cwd", [None, "/nonexistent/dir"])
+def test_no_usable_cwd_falls_back_to_projects_root(cwd):
+    # Fail closed: without a session repo, every /opt/proj project counts as in-repo.
+    assert _denied_in("cat /opt/proj/voice-line/scripts/stt.py", cwd) is True
+
+
+def test_non_git_cwd_falls_back_to_projects_root(tmp_path):
+    assert _denied_in("cat /opt/proj/voice-line/scripts/stt.py", tmp_path) is True
