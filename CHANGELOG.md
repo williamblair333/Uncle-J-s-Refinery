@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-10-16 — referee retries once on a soft deny
+
+- **`scripts/referee.py`:** sometimes agy runs a command outside the allow list despite the
+  prompt, then ends the turn with no answer. When that happens (a failed tool call or an
+  auto-denied action), the referee now retries exactly once. The retry prompt names the
+  blocked command and restates the allowed ones.
+  - Not retried: timeouts, a non-SUCCESS status with nothing blocked, and replies that can't
+    be parsed.
+  - A second soft deny returns `error`, never a third call.
+  - `retried: true` is set in the result and in `state/referee.jsonl`.
+- **Dogfooded:** the referee reviewed this change live (Gemini via agy, 4 min). It returned
+  `fail` with one real finding: a retry whose reply couldn't be parsed dropped `retried`.
+  That's fixed, and there's a test for it.
+- Tests: +6 in `tests/test_referee.py` (a fake agy that replays a different transcript per
+  call). The full suite passes.
+
 ## 2026-10-16 — guard tests no longer write to the live hook-blocks log
 
 - **`tests/test_grep_guard.py`** runs the hook with `UNCLE_J_PROJ_ROOT` set to an empty temp

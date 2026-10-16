@@ -11,10 +11,6 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Referee: retry once on a soft deny** (opened 2026-10-16). Gemini sometimes runs a
-  command outside the allow list despite the prompt listing it, and agy then ends the turn
-  with no answer. The referee correctly reports an error, but the same review passed on a
-  re-run. Retry once with "that command was blocked; use only: …" before giving up.
 - **Roll out justfiles** (opened 2026-10-16). Each repo gets one when it's next worked on;
   the Refinery and voice-line are done. Keep recipe names shared: setup, test, run, start,
   stop, status, doctor.
@@ -23,7 +19,7 @@ Completed items age out after ~4 weeks.
   (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
   (path in HANDOFF).
 - **Review `state/referee.jsonl`** after a few weeks of use (opened 2026-10-15). How often
-  does a referee `fail` find a real defect, and how often does it error? If it rarely
+  does a referee `fail` find a real defect, and how often does it error? Lines with `"retried": true` count soft denies the retry recovered (or not). If it rarely
   catches anything, drop the skill's trigger to on-request only.
 - **Re-run the agy permission probes after agy self-updates** (opened 2026-10-15). Table in
   `features/antigravity/README.md`; verified on 1.3.5 only.
