@@ -208,3 +208,86 @@ def test_log_records_verdict_not_content(tmp_path):
     line = json.loads(log.read_text().splitlines()[0])
     assert line["verdict"] == "fail" and line["findings"] == 1
     assert "hidden" not in log.read_text()
+
+
+# ── retry once on a soft deny ───────────────────────────────────────────────────
+#    agy sometimes runs a command outside the allow list despite the prompt, then ends
+#    the turn with no answer. The same review passed on a re-run, so retry exactly once,
+#    naming what was blocked. Other failures (timeouts, bad JSON) are not retried.
+
+def blocked_step(cmd="python3 -c 'print(1)'"):
+    return {"step_update": {"step_type": "tool", "state": "ERROR", "tool_name": "run_command",
+                            "tool_info": {"parameters": {"CommandLine": cmd},
+                                          "error": {"message": "denied by policy"}}}}
+
+
+def sequenced_agy(tmp_path, runs):
+    """A fake agy that replays runs[0] on the first call, runs[1] on the second, ..."""
+    for i, events in enumerate(runs):
+        (tmp_path / f"run{i}.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
+    calls = tmp_path / "calls.jsonl"
+    script = tmp_path / "agy"
+    script.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, sys, os\n"
+        f"calls = {str(calls)!r}\n"
+        "n = sum(1 for _ in open(calls)) if os.path.exists(calls) else 0\n"
+        "open(calls, 'a').write(json.dumps(sys.argv[1:]) + '\\n')\n"
+        f"sys.stdout.write(open(os.path.join({str(tmp_path)!r}, f'run{{n}}.jsonl')).read())\n")
+    script.chmod(script.stat().st_mode | stat.S_IXUSR)
+    return script, calls
+
+
+def run_ref(tmp_path, runs, log_path=None):
+    script, calls = sequenced_agy(tmp_path, runs)
+    out = ref.referee(task="add a --dry-run flag", work="+dry_run = True\n", agy_bin=str(script),
+                      cwd=str(tmp_path), log_path=log_path)
+    return out, [json.loads(l) for l in calls.read_text().splitlines()]
+
+
+def test_soft_deny_is_retried_once_and_can_pass(tmp_path):
+    out, calls = run_ref(tmp_path, [[blocked_step(), result("")], [result(verdict("pass"))]])
+    assert len(calls) == 2
+    assert out["verdict"] == "pass" and out.get("retried") is True
+    retry_prompt = calls[1][calls[1].index("-p") + 1]
+    assert "python3 -c 'print(1)'" in retry_prompt          # names what was blocked
+    assert "git diff" in retry_prompt                       # restates what is allowed
+
+
+def test_auto_denied_action_is_retried(tmp_path):
+    denied = {"event": "result", "result": {"status": "SUCCESS", "response": "",
+                                            "denied_actions": [{"display_name": "rm -rf x"}]}}
+    out, calls = run_ref(tmp_path, [[denied], [result(verdict("fail", [
+        {"severity": "low", "where": "", "problem": "p"}]))]])
+    assert len(calls) == 2 and out["verdict"] == "fail" and out["retried"] is True
+
+
+def test_second_soft_deny_is_an_error_not_a_third_call(tmp_path):
+    out, calls = run_ref(tmp_path, [[blocked_step(), result("")], [blocked_step("sed -n 1p x"), result("")]])
+    assert len(calls) == 2
+    assert out["verdict"] == "error" and ref.exit_code(out) != 0
+    assert "retry" in out["error"]
+
+
+def test_non_deny_failure_is_not_retried(tmp_path):
+    out, calls = run_ref(tmp_path, [[result("not json at all")], [result(verdict("pass"))]])
+    assert len(calls) == 1 and out["verdict"] == "error"
+    sub = tmp_path / "status-error"
+    sub.mkdir()
+    out, calls = run_ref(sub, [[result("", status="ERROR")], [result(verdict("pass"))]])
+    assert len(calls) == 1 and out["verdict"] == "error"
+
+
+def test_retry_with_unparseable_reply_still_marks_retried(tmp_path):
+    # found by the referee itself when it reviewed this change
+    log = tmp_path / "referee.jsonl"
+    out, calls = run_ref(tmp_path, [[blocked_step(), result("")], [result("no json here")]],
+                         log_path=log)
+    assert len(calls) == 2 and out["verdict"] == "error" and out["retried"] is True
+    assert json.loads(log.read_text().splitlines()[0])["retried"] is True
+
+
+def test_log_marks_retried(tmp_path):
+    log = tmp_path / "referee.jsonl"
+    run_ref(tmp_path, [[blocked_step(), result("")], [result(verdict("pass"))]], log_path=log)
+    assert json.loads(log.read_text().splitlines()[0])["retried"] is True

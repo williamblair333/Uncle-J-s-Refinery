@@ -80,6 +80,13 @@ Reply with ONLY a JSON object, no prose before or after:
 Use "unsure" when you could not check enough to decide."""
 
 
+RETRY_NOTE = """
+
+YOUR PREVIOUS ATTEMPT ENDED WITH NO ANSWER because it ran a blocked command: {blocked}.
+This time run ONLY these commands: {allowed}. If they can't settle a point, reason from the
+text and say so in the evidence. Reply with the JSON object."""
+
+
 class RefereeInputError(ValueError):
     pass
 
@@ -148,6 +155,8 @@ def _log(log_path, out: dict, seconds: float):
             "seconds": round(seconds, 1)}
     if out.get("error"):
         line["error"] = out["error"][:120]
+    if out.get("retried"):
+        line["retried"] = True
     try:
         Path(log_path).parent.mkdir(parents=True, exist_ok=True)
         with open(log_path, "a", encoding="utf-8") as fh:
@@ -177,22 +186,47 @@ def _judge(task, work, cwd, agy_bin, timeout, model) -> dict:
                                              "narrow it (fewer files, a smaller diff range)"}
     if _SECRET.search(work) or _SECRET.search(task):
         return {"verdict": "error", "error": "input looks like it contains a secret; not sent"}
-    res = ask_agy.ask(PROMPT.format(task=task, work=work, allowed=_allowed_commands()),
-                      agy_bin=agy_bin, cwd=cwd,
-                      edits=False, timeout=timeout, model=model)
+    allowed = _allowed_commands()
+    prompt = PROMPT.format(task=task, work=work, allowed=allowed)
+    res = ask_agy.ask(prompt, agy_bin=agy_bin, cwd=cwd, edits=False, timeout=timeout, model=model)
+    retried = False
+    blocked = _blocked_commands(res)
+    if not res.get("ok") and blocked:
+        # Soft deny: agy ran a command outside the allow list despite the prompt and
+        # ended the turn with no answer. A re-run usually passes, so retry exactly once,
+        # naming what was blocked. Timeouts and bad replies are not retried.
+        retried = True
+        res = ask_agy.ask(prompt + RETRY_NOTE.format(blocked="; ".join(blocked), allowed=allowed),
+                          agy_bin=agy_bin, cwd=cwd, edits=False, timeout=timeout, model=model)
     if not res.get("ok"):
-        return {"verdict": "error", "error": f"agy: {res.get('error')}",
-                "tool_errors": res.get("tool_errors", [])}
+        err = f"agy: {res.get('error')}"
+        if retried:
+            err += " (after one retry following a blocked command)"
+        out = {"verdict": "error", "error": err, "tool_errors": res.get("tool_errors", [])}
+        if retried:
+            out["retried"] = True
+        return out
     data = _extract_json(res["response"])
     problem = _validate(data)
     if problem:
-        return {"verdict": "error", "error": problem, "raw": res["response"][:2000]}
+        out = {"verdict": "error", "error": problem, "raw": res["response"][:2000]}
+        if retried:
+            out["retried"] = True
+        return out
     out = {"verdict": data["verdict"], "findings": data.get("findings", []),
            "summary": data.get("summary", "")}
     if out["verdict"] == "pass" and any(f["severity"] == "high" for f in out["findings"]):
         out["verdict"] = "unsure"
         out["note"] = "downgraded from pass: the referee reported a high-severity finding"
+    if retried:
+        out["retried"] = True
     return out
+
+
+def _blocked_commands(res: dict) -> list:
+    """What agy tried and was refused: failed tool calls plus auto-denied actions."""
+    cmds = [e.get("input") or e.get("tool") or "?" for e in res.get("tool_errors") or []]
+    return cmds + [d for d in res.get("denied") or [] if d]
 
 
 def exit_code(out: dict) -> int:
