@@ -23,6 +23,82 @@
 - Tests: +64 (59 in five new `tests/test_scout_*.py` files, 5 scout cases in
   `tests/test_tg_security.py`, including the gateway run on recorded taps with the network
   stubbed).
+- **Whole-branch review fixes** (0 Critical, 4 Important, all fixed test-first):
+  - A dry run now works on a throwaway copy of the state. Before, it consumed taps, and the
+    48-hour expiry could then turn a "yes" into "maybe".
+  - Model prose with a link or a star count is rejected. Description URLs are stripped,
+    and messages go out with link previews off (the scout's own send, not `lib/notify.sh`).
+  - README text is fenced with an unpredictable marker. Find pages and hand-offs carry an
+    untrusted-text banner and drop code and shell lines.
+  - The spec's "maybe" watchlist: a maybe is checked weekly and comes back after a new
+    release.
+  - Tests: now +77 in all.
+
+## 2026-10-17 — credential-guard: no tool touches credential files, reads included
+
+- **New `hooks/discipline/credential-guard.sh`:** a PreToolUse hook on every tool
+  (matcher `*`). It denies any call that touches a system or private credential file.
+  - **Why:** claude-guardrails' `Read(~/.ssh/**)` rules cover built-in tools only. Its own
+    docs note that `cat ~/.ssh/id_rsa` through Bash gets around them, and so would any MCP
+    tool that takes a path.
+  - **Inspected:** Bash command text, and the path-like arguments of every other tool
+    (MCP included). File contents are never inspected, so code that mentions the paths can
+    still be written.
+  - **Covered:**
+    - `~/.ssh` (all of it), `.gnupg`, `.aws`, `.azure`, `.kube`, `.docker`, `.password-store`,
+      `.config/gcloud`, `.config/gh`, keyrings;
+    - `.netrc`, `.pgpass`, `.git-credentials`, `.npmrc`, `.pypirc`, `.claude.json`,
+      `.claude/.credentials.json`;
+    - `.env*` (not `.example` or `.template`), private SSH keys (not `.pub`), key stores;
+    - `/etc/shadow`, `/etc/sudoers`, SSH host keys, `/etc/ssl/private`, `/root`,
+      `/proc/*/environ`.
+- **Fails open:** the settings entry is `bash … || exit 1`. A broken guard (syntax error,
+  missing jq or script) is reported without blocking, so it can never lock Edit out of a
+  session.
+- **Residual risk (pre-mortem, accepted):** obfuscated paths get past text matching. This
+  is not a sandbox.
+- **Wiring:** `install-reliability.sh` wires it on its own idempotent key. The existing
+  discipline block skips once any discipline hook exists.
+- **Tests:** +56 in `tests/test_credential_guard.py` (block and allow cases per tool type,
+  fail-open, log isolation).
+
+## 2026-10-17 — live_preview: a live browser view of any build
+
+- **New `scripts/live_preview/`:** any project publishes one or more images plus a label per
+  step. A localhost page shows the newest frame and the step history, and refreshes about
+  once a second. There are three ways in:
+  - the `live_preview` MCP server: `preview_publish`, `preview_watch`, `preview_stop`,
+    `preview_status`;
+  - `just preview publish|watch|status|list`, which runs in the caller's directory;
+  - the `live-preview` global skill, which tells agents when to use it.
+- **Origin:** the viewer and bundle format are vendored from HKUDS/CLI-Anything@34f5195
+  (Apache-2.0; see `NOTICE`). The `cli-hub` command, which sends PostHog analytics, is not
+  included.
+- **Pre-mortem fixes (MEDIUM bundle, acknowledged by Bill):**
+  - A per-session flock means concurrent publishers never drop steps.
+  - Every JSON write is temp file + fsync + `os.replace`. That includes the vendored
+    `bundle.write_json`, our one change to upstream code.
+  - Only images are accepted: png/jpg/gif/webp, checked by magic bytes, no symlinks, at
+    most 20 MB each.
+  - Project and session names are slugs under `~/.live-preview`.
+- **Prune:** keeps the newest 300 bundles. A test caught it ordering same-second bundles by
+  hash instead of age, and it now sorts by manifest write time.
+- **Independent review before commit:**
+  - **Correctness:** `just preview` split labels containing spaces, and `preview_stop` held
+    its port. Both fixed, plus checks on `keep` and best-effort pruning.
+  - **Security (one HIGH):** an image's filename went into the vendored page's
+    `<img src>` without escaping, so a crafted name injected script. Images are now stored
+    under generated names (`00-hero.png`). Fixed alongside:
+    - validation and copy through one `O_NOFOLLOW` descriptor, so a file swapped mid-copy
+      isn't what gets copied;
+    - a Host-header check against DNS rebinding;
+    - no directory listings;
+    - caps on images per step, text length, watched sessions and ports;
+    - `~/.live-preview` at mode 0700.
+  - The vendored `viewer.py` is still unmodified. Every fix is in our own files.
+- **Registration:** `install.sh` registers `live_preview` at user scope.
+- **Tests:** +31 in `tests/test_live_preview.py`, one per review finding. They also cover 6
+  processes publishing into one session and a write interrupted at `os.replace`.
 
 ## 2026-10-16 — session close (afternoon)
 

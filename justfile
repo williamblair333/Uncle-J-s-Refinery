@@ -52,3 +52,8 @@ scout *args:
 # repo scout: map review state, queue, pending message, answers so far
 scout-status:
     python3 scripts/scout/run.py status
+
+# live build view for any project: just preview publish|watch|status|list (runs in your cwd)
+[positional-arguments]
+preview *args:
+    cd "{{invocation_directory()}}" && "{{justfile_directory()}}/.venv/bin/python" "{{justfile_directory()}}/scripts/live_preview/cli.py" "$@"
