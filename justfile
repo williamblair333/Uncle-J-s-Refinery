@@ -29,6 +29,10 @@ reindex:
 skills:
     .venv/bin/python scripts/gen-skills-reference.py && ./scripts/skill-link.sh link
 
+# skill library on disk, loaded by nothing: just skill-lib sync | list [filter] | add <skill>
+skill-lib *args:
+    python3 scripts/skill_library.py {{args}}
+
 # search cross-project memory: just recall "what did we decide about X"
 recall query:
     .venv-memweave/bin/python scripts/memweave/mw_search.py "{{query}}" --k 5

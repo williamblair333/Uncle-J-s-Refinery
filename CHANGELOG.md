@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-10-17 — skill library; astropy, markitdown, timesfm-forecasting vendored
+
+- **New `scripts/skill_library.py`** (`just skill-lib sync | list | add`): whole skill
+  collections live in `../skill-library/` (`/opt/proj/skill-library` here), outside every
+  folder an agent loads skills from, so they cost nothing until one is pulled in.
+  - `add` runs cisco-ai-skill-scanner (`--use-behavioral`, in an isolated `uvx` env) and
+    refuses anything MEDIUM or above, or when the scanner can't run unless `--no-scan` is
+    passed.
+  - It copies the skill verbatim, adds the repo `LICENSE` and an `UPSTREAM` file (source,
+    path, commit, scan result), and never overwrites an existing skill.
+  - First library: K-Dense-AI/scientific-agent-skills (177 skills, `a1043ef5`).
+- **Vendored from it** (each read in full, scanned, byte-identical to upstream):
+  - `astropy` (SAFE), for the Magician's Almanac's sky and time maths.
+  - `markitdown` (SAFE), for documents to Markdown; core conversion works offline.
+  - `timesfm-forecasting` (2 LOW: a CDN link in an example page, and a tool-list note). Its
+    first run downloads model weights from Hugging Face.
+- Together the three add about 900 characters of skill descriptions per session. The full
+  collection would have cost about 69 KB.
+- Tests: +11 (`tests/test_skill_library.py`).
+
 ## 2026-10-17 — scout cron installed; top-100 sweep planned
 
 - Bill installed the repo-scout cron (04:15 nightly). The inbox goes out tomorrow morning;

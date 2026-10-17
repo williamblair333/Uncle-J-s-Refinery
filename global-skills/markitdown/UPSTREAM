@@ -1,0 +1,5 @@
+Vendored from https://github.com/K-Dense-AI/scientific-agent-skills
+Path: skills/markitdown
+Commit: a1043ef5 (2026-10-12)
+License: MIT (repository LICENSE copied as LICENSE)
+Scan: SAFE (cisco-ai-skill-scanner --use-behavioral)
