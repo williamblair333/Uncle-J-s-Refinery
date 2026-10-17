@@ -304,6 +304,38 @@ def record_stack_callback(state_path: str, message_id: int, data: str) -> None:
     os.replace(tmp, state_path)
 
 
+_SCOUT_CALLBACK_RE = re.compile(
+    r'scout:(yes|maybe|no|e-yes|e-maybe|e-no|r-have|r-goals|r-heavy|r-later):\d{1,20}')
+
+
+def record_scout_callback(state_path: str, message_id: int, data: str) -> bool:
+    """
+    Record a repo-scout button press for the scout's next run to apply.
+
+    Unlike stack alerts, the scout needs every tap in order ("no", then a reason), so
+    this appends one JSON line per tap rather than overwriting. The scout renames the
+    file aside before reading it, so an append racing a read lands in a fresh file.
+    Returns False, writing nothing, when data isn't a well-formed scout callback.
+    """
+    if not isinstance(data, str) or not _SCOUT_CALLBACK_RE.fullmatch(data):
+        return False
+    line = json.dumps({"message_id": int(message_id), "data": data, "ts": int(time.time())})
+    with open(state_path, 'a') as f:
+        f.write(line + "\n")
+    return True
+
+
+def scout_reason_keyboard(repo_id: int) -> str:
+    """Inline keyboard asking why a scout find was turned down."""
+    rid = int(repo_id)
+    return json.dumps([
+        [{"text": "Already have it", "callback_data": f"scout:r-have:{rid}"},
+         {"text": "Not my goals", "callback_data": f"scout:r-goals:{rid}"}],
+        [{"text": "Too heavy", "callback_data": f"scout:r-heavy:{rid}"},
+         {"text": "Not now", "callback_data": f"scout:r-later:{rid}"}],
+    ])
+
+
 def read_stack_callback(state_path: str, target_message_id: int) -> str:
     """
     Read (and on match, consume) the recorded stack-alert callback.

@@ -475,6 +475,99 @@ def test_record_stack_callback_atomic_no_partial(tmp_path):
     assert os.path.exists(p)
     assert not os.path.exists(p + ".tmp")
 
+
+# ── scout callbacks ────────────────────────────────────────────────────────────
+# Scout buttons get their own append-only file so a "no" followed by a reason tap,
+# or a tap while the scout is reading, never overwrites an earlier answer.
+
+def test_record_scout_callback_rejects_bad_data(tmp_path):
+    from tg_security import record_scout_callback
+    p = str(tmp_path / "scout.jsonl")
+    for bad in ("scout:rm -rf:1", "scout:yes:", "scout:yes:12a", "approve",
+                "scout:yes:1\nscout:no:2", "scout:yes:" + "9" * 21):
+        assert record_scout_callback(p, 1, bad) is False
+    assert not os.path.exists(p)
+
+
+def test_record_scout_callback_appends(tmp_path):
+    from tg_security import record_scout_callback
+    p = str(tmp_path / "scout.jsonl")
+    assert record_scout_callback(p, 10, "scout:no:42") is True
+    assert record_scout_callback(p, 10, "scout:r-heavy:42") is True
+    lines = [json.loads(x) for x in open(p).read().splitlines()]
+    assert [l["data"] for l in lines] == ["scout:no:42", "scout:r-heavy:42"]
+    assert lines[0]["message_id"] == 10 and "ts" in lines[0]
+
+
+def test_scout_reason_keyboard_values(tmp_path):
+    from tg_security import scout_reason_keyboard
+    rows = json.loads(scout_reason_keyboard(42))
+    datas = [b["callback_data"] for row in rows for b in row]
+    assert datas == ["scout:r-have:42", "scout:r-goals:42", "scout:r-heavy:42", "scout:r-later:42"]
+
+
+_GATEWAY = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'telegram-gateway-poll.sh')
+
+_NET_STUB = '''
+import urllib.request as _ur, json as _json
+_CALLS = []
+class _Resp:
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+    def read(self): return b"{}"
+def _fake_urlopen(req, timeout=0):
+    _CALLS.append({"url": req.full_url.rsplit("/", 1)[-1], "body": _json.loads(req.data or b"{}")})
+    return _Resp()
+_ur.urlopen = _fake_urlopen
+'''
+
+
+def _run_gateway_python(tmp_path, updates):
+    """Run the gateway's embedded Python on recorded updates. The network is stubbed:
+    no getUpdates happens here (the bash wrapper does that) and no send leaves the box."""
+    import subprocess
+    src = open(_GATEWAY).read()
+    body = src.split("<< 'PYEOF'\n", 1)[1].split("\nPYEOF\n", 1)[0]
+    root = tmp_path / "root"
+    (root / "state").mkdir(parents=True)
+    (root / "scripts").mkdir()
+    os.symlink(os.path.abspath(os.path.join(os.path.dirname(_GATEWAY), 'lib')),
+               root / "scripts" / "lib")
+    calls_file = tmp_path / "calls.json"
+    prog = _NET_STUB + body + f'\nopen({str(calls_file)!r}, "w").write(_json.dumps(_CALLS))\n'
+    env = dict(os.environ, UPDATES_JSON=json.dumps({"ok": True, "result": updates}),
+               TELEGRAM_BOT_TOKEN="000:test", TELEGRAM_CHAT_ID="555")
+    r = subprocess.run([sys.executable, "-c", prog, str(root), "claude", "0",
+                        str(root / "state" / "gw.log"), str(root / "state" / "off.txt")],
+                       env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    return root, json.loads(calls_file.read_text())
+
+
+def _cq(uid, data, msg_id, chat=555):
+    return {"update_id": uid, "callback_query": {
+        "id": f"c{uid}", "data": data, "message": {"message_id": msg_id, "chat": {"id": chat}}}}
+
+
+def test_gateway_routes_scout_no_and_asks_reason(tmp_path):
+    root, calls = _run_gateway_python(tmp_path, [_cq(1, "scout:no:42", 10)])
+    lines = (root / "state" / "scout-callbacks.jsonl").read_text().splitlines()
+    assert json.loads(lines[0])["data"] == "scout:no:42"
+    edits = [c for c in calls if c["url"] == "editMessageReplyMarkup"]
+    assert edits and edits[0]["body"]["message_id"] == 10
+    assert "scout:r-heavy:42" in json.dumps(edits[0]["body"])
+
+
+def test_gateway_scout_bad_data_does_not_break_stack_alerts(tmp_path):
+    root, calls = _run_gateway_python(tmp_path, [
+        _cq(1, "scout:bogus:1", 11),
+        _cq(2, "approve", 12),
+    ])
+    assert not (root / "state" / "scout-callbacks.jsonl").exists()
+    stack = json.loads((root / "state" / "stack-alerts-callback.json").read_text())
+    assert stack == {"message_id": 12, "data": "approve"}
+    assert sum(1 for c in calls if c["url"] == "answerCallbackQuery") == 2
+
 # ── build_claude_argv ──────────────────────────────────────────────────────────
 # The restricted agent serves an untrusted Telegram channel and MUST run with no
 # host access. The trusted /work agent (system_prompt != "restricted") keeps full

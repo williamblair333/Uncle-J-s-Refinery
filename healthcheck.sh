@@ -1222,6 +1222,23 @@ check_auto_maintain_runtime() {
     fi
 }
 
+# ----- repo scout: nightly run is alive (only once its cron is installed) -----
+# Warn, never fail: a missed night (machine asleep at 04:15) loses one digest, not data.
+check_repo_scout() {
+    step "repo scout — nightly run"
+    if [[ "$(scheduled_jobs)" != *uncle-j-repo-scout* ]]; then
+        ok "repo scout cron not installed (skipped)"
+        return
+    fi
+    local log="$REPO_ROOT/state/scout.log"
+    if [ -f "$log" ] && [ -n "$(find "$log" -mmin -2160 2>/dev/null)" ]; then
+        ok "repo scout ran in the last 36 h"
+    else
+        warn "repo scout cron installed but no run logged in 36 h"
+        hint "check: tail $log; run by hand: just scout --dry-run"
+    fi
+}
+
 # ===== main =================================================================
 # verify.sh is install-time (uvx cache warmup takes ~5s); run it only in
 # --full mode. --quick sticks to runtime invariants for a ~6s session-start
@@ -1256,6 +1273,7 @@ check_memweave_fresh
 check_ask_local_backend
 check_dreaming_runtime
 check_auto_maintain_runtime
+check_repo_scout
 if [ "$MODE" = "full" ]; then
     check_verify
     check_smoke_hook

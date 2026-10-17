@@ -41,6 +41,18 @@ referee task *args:
 agy *args:
     .venv/bin/python scripts/ask_agy.py {{args}}
 
+# repo scout: build the capability map once (review scout/map.md after)
+scout-seed *args:
+    python3 scripts/scout/run.py seed {{args}}
+
+# repo scout: one nightly run by hand (--dry-run prints instead of sending)
+scout *args:
+    python3 scripts/scout/run.py run {{args}}
+
+# repo scout: map review state, queue, pending message, answers so far
+scout-status:
+    python3 scripts/scout/run.py status
+
 # live build view for any project: just preview publish|watch|status|list (runs in your cwd)
 [positional-arguments]
 preview *args:
