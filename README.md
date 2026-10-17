@@ -116,6 +116,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Context7 | Third-party library docs, version-pinned |
 | **Retrieval — memory** | memweave | Offline cross-project memory: markdown corpus + local semantic search. MCP server (`memory_search`, `memory_read` — `scripts/memweave/mw_mcp.py`) plus the `mw_search.py` CLI |
 | **Local model** | ask_local | MCP server handing bounded grunt work (summarize, extract JSON, drafts) to a local Ollama model on your GPU — `scripts/ask_local/server.py`; needs Ollama (see `docs/STACK.md`) |
+| **Live view** | live_preview | Watch any build step by step in a browser: a project publishes one image per step, and a localhost page shows the newest frame and the step history. MCP server (`preview_publish`/`preview_watch`) plus `just preview …`, from any project — `scripts/live_preview/` (viewer vendored from CLI-Anything, Apache-2.0) |
 | **Efficiency — output** | jOutputMunch | System-prompt rules that cut output tokens 25–40% |
 | **Hygiene — text** | jscrub | Finds and removes invisible Unicode (zero-width, bidi, tag chars, space homoglyphs) that breaks diffs, grep and paste. Local CLI, not an MCP server — `scripts/jscrub/` |
 | **Reliability** | Superpowers | 20+ skills: brainstorming, TDD, systematic debugging, verification |
@@ -126,6 +127,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | **Governance** | jCodeMunch hooks | PreToolUse / PostToolUse / PreCompact / TaskCompleted / SubagentStart enforcement |
 | | dwarvesf guardrails | UserPromptSubmit secret scanner + PostToolUse prompt-injection defender |
 | | Bash-matcher rules | Block destructive `rm`, pipe-to-shell, direct pushes to main, exfil to webhook services, escalation flags |
+| | credential-guard | PreToolUse hook on **every** tool, Bash and MCP included: no tool call may touch credential files (`~/.ssh`, cloud CLI creds, `.env*`, private keys, `/etc/shadow`…), read-only included. It fails open if broken — `hooks/discipline/credential-guard.sh` |
 | **Observability** | Langfuse | Self-hosted (Docker) — every assistant turn traced with tool calls, timings, token counts |
 | **Optional features** | Stack alerts | Daily cron checks GitHub HEAD for each package; Claude assesses relevance; Telegram inline-button pitch; tap ✅ to upgrade |
 | | Telegram gateway | Approval + monitoring channel: skill promotion, healthcheck alerts, Ralph plateau, dreaming FYI, post-merge notices |
@@ -138,7 +140,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
 
-All 8 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically. (`ask_local` is optional — skipped by `--skip-optional`, and useful only with a local Ollama.)
+All 9 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically. (`ask_local` is optional — skipped by `--skip-optional`, and useful only with a local Ollama.)
 
 ---
 
@@ -272,7 +274,7 @@ Expect **all PASS**. See [Troubleshooting](#troubleshooting) if anything fails �
 claude mcp list
 ```
 
-All eight should show `✓ Connected` (seven if you skipped the optional `ask_local`). The three Google remotes (Drive/Gmail/Calendar) show `! Needs authentication` until you OAuth them via `/mcp` inside Claude Code — that's expected.
+All nine should show `✓ Connected` (eight if you skipped the optional `ask_local`). The three Google remotes (Drive/Gmail/Calendar) show `! Needs authentication` until you OAuth them via `/mcp` inside Claude Code — that's expected.
 
 ### 5. Global routing policy
 

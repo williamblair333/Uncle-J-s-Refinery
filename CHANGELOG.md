@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-10-17 — session close: CLI-Anything review → live_preview, credential-guard, Partikus MCP
+
+- Merged #133 (`live_preview`) and #134 (`credential-guard`). Details are in their entries
+  below.
+- **Partikus** (separate repo, PR #39): a `partikus_mcp/` MCP server registered at user
+  scope as `partikus`, the first real user of `live_preview`. Headless FreeCAD rendering
+  works with the 1.1.1 AppImage at about 0.2 s per view.
+- **Docs:**
+  - README: live_preview and credential-guard rows; 9 MCP servers.
+  - SECURITY.md: both new components.
+  - docs/STACK.md: a live_preview section.
+  - ROADMAP: three new Planned items (multiplayer viewer, guard on Windows,
+    surface-write-guard `cp` false positive).
+
 ## 2026-10-17 — skill library; astropy, markitdown, timesfm-forecasting vendored
 
 - **New `scripts/skill_library.py`** (`just skill-lib sync | list | add`): whole skill
