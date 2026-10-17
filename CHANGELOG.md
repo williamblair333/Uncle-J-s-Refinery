@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-10-17 — session close (scout + skill library)
+
+- Merged this session: PR #135 (repo scout), #136 (top-100 sweep planned and
+  scientific-agent-skills evaluated), #137 (skill library and three vendored skills).
+  Details are in the entries below.
+- ROADMAP: the scout and the skill library moved to "Recently completed"; the five deferred
+  scout minors are listed under "Planned".
+- Design memory: a repo-scout audit baseline (10 invariants, 6 closed vectors) appended to
+  `~/.uncle-j-memory/memory/audit-baselines.md`.
+
 ## 2026-10-17 — skill library; astropy, markitdown, timesfm-forecasting vendored
 
 - **New `scripts/skill_library.py`** (`just skill-lib sync | list | add`): whole skill

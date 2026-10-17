@@ -283,6 +283,21 @@ Completed items age out after ~4 weeks.
   (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
   currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
   autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
+- **Scout minors from the 2026-10-17 review** (deferred, none blocking):
+  - Make the Telegram send idempotent; a timeout after delivery can send twice.
+  - Add a run lock, plus a one-message-per-calendar-day guard.
+  - Have the healthcheck look for a "run done" line, not the log's mtime.
+  - Pick the library eval skill for library finds.
+  - Log the gh responses a message used (spec §10).
+
+## Recently completed (2026-10-17 — repo scout and skill library)
+
+- **Repo scout** (PR #135, cron installed 04:15): a capability map plus one Telegram find
+  each morning, and a three-yes ladder from find to trial. The map is awaiting Bill's
+  review. Design: `docs/superpowers/specs/2026-10-17-repo-scout-design.md`.
+- **Skill library** (PR #137): `just skill-lib sync|list|add` keeps whole collections in
+  `../skill-library`, loaded by nothing. astropy, markitdown and timesfm-forecasting are
+  vendored from K-Dense-AI/scientific-agent-skills.
 
 ## Recently completed (2026-10-15 — referee and media-teardown)
 
