@@ -1,5 +1,36 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-17 — live_preview stack tool (from the CLI-Anything review)
+
+**Most important:** Bill reviewed HKUDS/CLI-Anything (clone in `review/CLI-Anything`, which
+is gitignored). He wanted its live build view usable from every project. That is now
+`scripts/live_preview/`, on branch `feat/live-preview` (worktree
+`~/.config/superpowers/worktrees/Uncle-J-s-Refinery/live-preview`).
+
+**Bill's decisions (don't re-ask):**
+- **Integration:** take pieces of CLI-Anything, not the repo. In: the viewer and the bundle
+  format. Out:
+  - `cli-hub`: it sends PostHog analytics by default and installs from a remote registry;
+  - their FreeCAD CLI: a separate CAD model that knows nothing about Partikus;
+  - the generator plugin.
+- **Where it lives:** a stack tool, like `ask_local`. The shared code only handles "images +
+  label + timeline". Each project brings its own renderer.
+- **Pre-mortem:** MEDIUM bundle, acknowledged by name (concurrency, data integrity,
+  security). All three fixes are in the code and tested.
+
+**State:**
+- The guard blocks `cp` into `scripts/` even with a clearance token. Bill copied the three
+  vendored files with `scratchpad/vendor-copy.sh`, and sha256 matched upstream.
+- **After merge:**
+  - `claude mcp add -s user live_preview -- <repo>/.venv/bin/python <repo>/scripts/live_preview/server.py`,
+    or re-run `install.sh`;
+  - `just skills` to link the new skill.
+- **Next uses, in Bill's order:**
+  1. Partikus: render offscreen with the FreeCAD 1.1.1 AppImage (`QT_QPA_PLATFORM=offscreen`,
+     `view.saveImage`) and publish after each step. First measure seconds per frame.
+  2. A Partikus MCP server built from `auto_dialog` signatures and `_ALLOWED_FUNCTIONS`.
+  3. A multiplayer-AI viewer: one lane per agent, plus Langfuse traces for the reasoning.
+
 ## 2026-10-16 (afternoon) — just-do-it skill; guard false positives; referee retry
 
 **Most important:** Bill wants work done, not options. The new `just-do-it` skill (PR #127)

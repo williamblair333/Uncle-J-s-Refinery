@@ -1,0 +1,14 @@
+live_preview includes code from CLI-Anything
+https://github.com/HKUDS/CLI-Anything, commit 34f519533bc175d2fe287ab8316b0dd99bb9cc43
+Copyright the CLI-Anything authors. Licensed under the Apache License, Version 2.0
+(full text: LICENSE.CLI-Anything in this directory).
+
+Files taken from it:
+  viewer.py  <- cli-hub/cli_hub/preview.py                                   (unmodified)
+  bundle.py  <- freecad/agent-harness/cli_anything/freecad/utils/preview_bundle.py
+                MODIFIED 2026-10-17: write_json writes to a temp file, fsyncs and
+                os.replace()s it, so a reader never sees a truncated file and an
+                interrupted write never corrupts the previous one.
+
+publish.py, cli.py, server.py and __init__.py are original to Uncle J's Refinery.
+The cli-hub command itself (which sends usage analytics to PostHog) is NOT included.

@@ -437,6 +437,8 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     # Needs a local Ollama on 127.0.0.1:11434; without one every call returns ollama_unreachable.
     [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add ask_local -- "$VENV_BIN/python" "$STACK_ROOT/scripts/ask_local/server.py"
     mcp_add memweave -- "$STACK_ROOT/.venv-memweave/bin/python" "$STACK_ROOT/scripts/memweave/mw_mcp.py"
+    # Stdlib + mcp only; writes under ~/.live-preview, serves on 127.0.0.1.
+    mcp_add live_preview -- "$VENV_BIN/python" "$STACK_ROOT/scripts/live_preview/server.py"
     ok "Registered. Verify with: claude mcp list"
 fi
 

@@ -2,6 +2,44 @@
 
 ---
 
+## 2026-10-17 — live_preview: a live browser view of any build
+
+- **New `scripts/live_preview/`:** any project publishes one or more images plus a label per
+  step. A localhost page shows the newest frame and the step history, and refreshes about
+  once a second. There are three ways in:
+  - the `live_preview` MCP server: `preview_publish`, `preview_watch`, `preview_stop`,
+    `preview_status`;
+  - `just preview publish|watch|status|list`, which runs in the caller's directory;
+  - the `live-preview` global skill, which tells agents when to use it.
+- **Origin:** the viewer and bundle format are vendored from HKUDS/CLI-Anything@34f5195
+  (Apache-2.0; see `NOTICE`). The `cli-hub` command, which sends PostHog analytics, is not
+  included.
+- **Pre-mortem fixes (MEDIUM bundle, acknowledged by Bill):**
+  - A per-session flock means concurrent publishers never drop steps.
+  - Every JSON write is temp file + fsync + `os.replace`. That includes the vendored
+    `bundle.write_json`, our one change to upstream code.
+  - Only images are accepted: png/jpg/gif/webp, checked by magic bytes, no symlinks, at
+    most 20 MB each.
+  - Project and session names are slugs under `~/.live-preview`.
+- **Prune:** keeps the newest 300 bundles. A test caught it ordering same-second bundles by
+  hash instead of age, and it now sorts by manifest write time.
+- **Independent review before commit:**
+  - **Correctness:** `just preview` split labels containing spaces, and `preview_stop` held
+    its port. Both fixed, plus checks on `keep` and best-effort pruning.
+  - **Security (one HIGH):** an image's filename went into the vendored page's
+    `<img src>` without escaping, so a crafted name injected script. Images are now stored
+    under generated names (`00-hero.png`). Fixed alongside:
+    - validation and copy through one `O_NOFOLLOW` descriptor, so a file swapped mid-copy
+      isn't what gets copied;
+    - a Host-header check against DNS rebinding;
+    - no directory listings;
+    - caps on images per step, text length, watched sessions and ports;
+    - `~/.live-preview` at mode 0700.
+  - The vendored `viewer.py` is still unmodified. Every fix is in our own files.
+- **Registration:** `install.sh` registers `live_preview` at user scope.
+- **Tests:** +31 in `tests/test_live_preview.py`, one per review finding. They also cover 6
+  processes publishing into one session and a write interrupted at `os.replace`.
+
 ## 2026-10-16 — session close (afternoon)
 
 - Merged PRs #127–#131: the `just-do-it` skill, the guard false-positive fixes (two PRs),
