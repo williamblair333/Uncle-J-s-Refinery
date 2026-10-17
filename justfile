@@ -40,3 +40,8 @@ referee task *args:
 # one headless Antigravity (agy) prompt with honest exit codes
 agy *args:
     .venv/bin/python scripts/ask_agy.py {{args}}
+
+# live build view for any project: just preview publish|watch|status|list (runs in your cwd)
+[positional-arguments]
+preview *args:
+    cd "{{invocation_directory()}}" && "{{justfile_directory()}}/.venv/bin/python" "{{justfile_directory()}}/scripts/live_preview/cli.py" "$@"
