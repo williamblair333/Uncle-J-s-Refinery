@@ -631,6 +631,27 @@ Skills run by `/name` in agy; they do not fire on their own in print mode. See
 after agy updates, and why `ask_agy.py` exists (agy reports success when a command was
 blocked).
 
+### 23. Repo scout — one open-source find each morning (optional)
+
+An overnight job that keeps a map of the open-source agent landscape laid over what Uncle J
+already covers (each category **covered**, **thin** or **blank**). It scouts one category a
+night and sends you one find by Telegram with ✅ Yes / 🤔 Maybe / ❌ No buttons. A yes gets a
+read-only deep evaluation the next night; a yes to that writes a hand-off note for a trial
+in a session. Nothing third-party is ever cloned or installed by the job. Stars, licence and
+dates come from `gh api`, never from the model.
+
+```bash
+just scout-seed                         # build scout/map.md once, then review it
+bash features/repo-scout/install.sh     # nightly at 04:15 (SCOUT_TIME=HH:MM to change)
+just scout --dry-run                    # one run by hand, printed instead of sent
+just scout-status                       # map review state, queue, pending, answers
+```
+
+Discovery stays off until you set `reviewed: true` in `scout/map.md`. Repos you list in
+`scout/inbox.md` are scouted first. Answers are kept in `scout/answers.json`; a "no" is
+never pitched again. Needs `gh` logged in and the Telegram setup from section 10 or 13.
+Design: `docs/superpowers/specs/2026-10-17-repo-scout-design.md`.
+
 ---
 
 ## Daily usage

@@ -1,5 +1,30 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-17 — repo scout built; map awaiting review; cron not installed
+
+**Most important:** the repo scout is built (branch `feat/repo-scout`, worktree
+`/opt/proj/Uncle-J-wt-scout`). Bill reviews `scout/map.md` next; nothing scouts on its own
+until he sets `reviewed: true` and runs `bash features/repo-scout/install.sh` from the main
+checkout after merge.
+
+**Bill's decisions (don't re-ask):**
+- One find per morning by Telegram, read anywhere (phone): the message is self-contained,
+  with no link. Buttons only: yes / maybe / no, and a no asks for a reason by button.
+- Three yeses before anything lands: find → read-only eval → trial in a session → normal
+  PR path. Cron never installs or clones third-party code.
+- Voice wake word ("Hey Claude") and general chat-with-Claude are separate threads, parked.
+
+**State:**
+- Spec `docs/superpowers/specs/2026-10-17-repo-scout-design.md`; plan
+  `docs/superpowers/plans/2026-10-17-repo-scout.md`.
+- Map: "voice and wake word" is marked blank, but voice-line exists outside this repo
+  (push-to-talk), so it's really thin. The inventory only sees this repo.
+- Inbox: MadsLorentzen/ai-job-search (Bill's request). The dry-run take: a job-hunting
+  framework that doesn't plug into Uncle J; low scores.
+- Nightly runs change `scout/answers.json` (tracked) and write `scout/finds/` pages, and
+  nothing commits them. Decide whether session-end or auto-maintain picks them up.
+- After merge, remove the worktree: `git worktree remove ../Uncle-J-wt-scout`.
+
 ## 2026-10-16 (afternoon) — just-do-it skill; guard false positives; referee retry
 
 **Most important:** Bill wants work done, not options. The new `just-do-it` skill (PR #127)

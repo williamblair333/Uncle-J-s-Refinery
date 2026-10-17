@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-10-17 — repo scout: one open-source find each morning
+
+- **New `scripts/scout/`** (stdlib Python): `gh.py` (facts and search through `gh api`
+  only), `store.py` (state files), `judge.py` (restricted `claude -p`, validated JSON),
+  `message.py` (Telegram HTML), `run.py` (`seed`, `run [--dry-run]`, `status`).
+- **Capability map:** `scout/map.md`, 18 categories (7 covered, 8 thin, 3 blank), seeded and
+  **awaiting Bill's review**. Nightly discovery is off until `reviewed: true`.
+- **Inbox:** `scout/inbox.md` jumps the queue. First entry: MadsLorentzen/ai-job-search.
+- **Ladder:** a find → yes → a read-only deep evaluation the next night → yes → a hand-off
+  note in `scout/handoffs/`. Trials and adoption happen only in a session with Bill.
+- **Telegram gateway:** `scout:` buttons are recorded to `state/scout-callbacks.jsonl`
+  (append-only). A "no" swaps in reason buttons. The scout branch is guarded so a scout bug
+  can't stop the poll loop; `getUpdates` handling is untouched.
+- **Found on the first live seed:** about 60 back-to-back searches hit GitHub's 30-a-minute
+  search limit, and failed searches were read as "no results", dropping 10 categories'
+  queries. Searches are now paced (2.1 s), and a failed search never drops a query.
+- `features/repo-scout/install.sh` (cron, default 04:15, `--uninstall`) — **not installed**.
+  The healthcheck warns when the cron is installed but no run is logged in 36 h.
+- Tests: +64 (59 in five new `tests/test_scout_*.py` files, 5 scout cases in
+  `tests/test_tg_security.py`, including the gateway run on recorded taps with the network
+  stubbed).
+
 ## 2026-10-16 — session close (afternoon)
 
 - Merged PRs #127–#131: the `just-do-it` skill, the guard false-positive fixes (two PRs),
