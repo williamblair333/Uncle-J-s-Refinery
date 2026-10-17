@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-10-17 — credential-guard: no tool touches credential files, reads included
+
+- **New `hooks/discipline/credential-guard.sh`:** a PreToolUse hook on every tool
+  (matcher `*`). It denies any call that touches a system or private credential file.
+  - **Why:** claude-guardrails' `Read(~/.ssh/**)` rules cover built-in tools only. Its own
+    docs note that `cat ~/.ssh/id_rsa` through Bash gets around them, and so would any MCP
+    tool that takes a path.
+  - **Inspected:** Bash command text, and the path-like arguments of every other tool
+    (MCP included). File contents are never inspected, so code that mentions the paths can
+    still be written.
+  - **Covered:**
+    - `~/.ssh` (all of it), `.gnupg`, `.aws`, `.azure`, `.kube`, `.docker`, `.password-store`,
+      `.config/gcloud`, `.config/gh`, keyrings;
+    - `.netrc`, `.pgpass`, `.git-credentials`, `.npmrc`, `.pypirc`, `.claude.json`,
+      `.claude/.credentials.json`;
+    - `.env*` (not `.example` or `.template`), private SSH keys (not `.pub`), key stores;
+    - `/etc/shadow`, `/etc/sudoers`, SSH host keys, `/etc/ssl/private`, `/root`,
+      `/proc/*/environ`.
+- **Fails open:** the settings entry is `bash … || exit 1`. A broken guard (syntax error,
+  missing jq or script) is reported without blocking, so it can never lock Edit out of a
+  session.
+- **Residual risk (pre-mortem, accepted):** obfuscated paths get past text matching. This
+  is not a sandbox.
+- **Wiring:** `install-reliability.sh` wires it on its own idempotent key. The existing
+  discipline block skips once any discipline hook exists.
+- **Tests:** +56 in `tests/test_credential_guard.py` (block and allow cases per tool type,
+  fail-open, log isolation).
+
 ## 2026-10-17 — live_preview: a live browser view of any build
 
 - **New `scripts/live_preview/`:** any project publishes one or more images plus a label per

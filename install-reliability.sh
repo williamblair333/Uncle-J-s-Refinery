@@ -193,6 +193,26 @@ else
             ok "discipline PreToolUse hooks already wired in settings.json"
         fi
 
+        # Wire credential-guard (all tools) on its own key: the block above skips once any
+        # discipline hook exists, so hosts installed before this guard would never get it.
+        # `|| exit 1` is load-bearing: a broken guard (bash exits 2 on a syntax error, and
+        # 2 means "block") must fail open and loud, never lock every tool out of a session.
+        _cred_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("credential-guard"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_cred_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"*","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/credential-guard.sh || exit 1","timeout":10}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "credential-guard PreToolUse hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "credential-guard PreToolUse hook already wired in settings.json"
+        fi
+
         # Wire Stop hook (unpushed-warn) if not already present
         _stop_already=$(jq '[.hooks.Stop[]?.hooks[]?.command // ""] | map(select(contains("unpushed"))) | length' "$_settings" 2>/dev/null || echo 0)
         if [ "$_stop_already" -eq 0 ]; then
