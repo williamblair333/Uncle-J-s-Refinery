@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 70 repo, 1 workflows.
+Totals: 74 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -28,6 +28,7 @@ Totals: 70 repo, 1 workflows.
 |---|---|---|---|---|
 | `agent-harness-backend-adoption-eval` | Evaluate a proposed library or backend as a replacement for an existing one. | auto | Refinery stack | repo |
 | `agent-harness-competitive-analysis` | Structured competitive analysis of an AI agent harness or framework — maps the product against direct/indirect competitors, produces a comparison table, and id… | auto | Refinery stack | repo |
+| `astropy` | Core Python library for astronomy and astrophysics workflows that need Astropy APIs, including units/quantities, coordinates, FITS I/O, tables, time systems, W… | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `audit-pipeline-fabrication-risk` | Systematically audit an AI pipeline for hallucination/fabrication propagation paths — where model-generated content (especially URLs, issue numbers, citations)… | auto | Refinery stack | repo |
 | `auto-maintain-commit-and-deploy` | Use when a cron-based auto-maintenance script commits new skills or plugins to git but the install script still has a hardcoded list that needs manual updating… | auto | Claude Code | repo |
 | `blue-team` | Use when performing defensive security work — hardening controls, implementing patches from red-team findings, threat modeling, detection engineering, incident… | auto | Claude Code | repo |
@@ -49,6 +50,8 @@ Totals: 70 repo, 1 workflows.
 | `just-answer` | Use on every question: answer exactly what was asked and stop; give reasons, risks, or alternatives only when the user asks for them. | auto | any agent | repo |
 | `just-do-it` | Use when the user asks for work to move forward — "now what", "what's next", "go", "get it done", "do it", "handle it" — or when you are about to end a turn wi… | auto | any agent | repo |
 | `library-backend-adoption-eval` | Structured evaluation of a new library as a potential backend replacement. | auto | Refinery stack | repo |
+| `live-preview` | Use when building something visual step by step — a CAD part, 3D model, diagram, web page, game scene, character, generated image — or when agents act in a gam… | auto | any agent | repo |
+| `markitdown` | Converts heterogeneous documents and selected URIs to Markdown with Microsoft MarkItDown for text analysis, search, and LLM/RAG ingestion. | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `mcp-index-empty-diagnosis` | Diagnose and fix an MCP retrieval tool (jdocmunch, jcodemunch, jdatamunch) that is registered and running but silently returns empty results due to an unpopula… | auto | Refinery stack | repo |
 | `media-teardown` | Use when the user shares a video transcript, article, post, newsletter or thread and asks to analyze it, whether it's worth their time, what's going on, or "th… | auto | any agent | repo |
 | `milestone-tier-implementation` | Implement one or more new library tiers in a milestone-based Python project — read handoff, match existing patterns, implement, wire up, test, then update all… | auto | any agent | repo |
@@ -84,6 +87,7 @@ Totals: 70 repo, 1 workflows.
 | `telegram-gateway-security-audit` | Diagnose and harden a Telegram → Claude CLI gateway: fix update_id deduplication failures that spawn duplicate sessions, and inject a disclosure-restriction sy… | auto | Claude Code | repo |
 | `telegram-inline-button-promote` | Wire up a Telegram inline keyboard button in a polling bot — add button to outbound notification, subscribe to callback_query updates, answer the callback, and… | auto | Refinery stack | repo |
 | `terse-reply` | Edit the most recent draft reply to strip verbosity. | auto | any agent | repo |
+| `timesfm-forecasting` | Performs zero-shot time-series forecasting with Google's TimesFM, including regular-grid CSV preparation, quantile forecasts, XReg covariates, and held-out eva… | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `to-questionnaire` | Turn a decision you can't fully answer into a questionnaire for someone else to fill in. | you | any agent | vendored: mattpocock/skills |
 | `token-economy-prompt-authoring` | Craft a minimal, effective system prompt to constrain Claude verbosity in plain web sessions (no harness tooling). | auto | Refinery stack | repo |
 | `ux-heuristics` | Evaluate and improve interface usability using heuristic analysis. | auto | Claude Code | repo |

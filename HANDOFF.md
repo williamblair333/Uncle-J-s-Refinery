@@ -15,9 +15,14 @@
     - `markitdown`, for document ingestion, which the scout map lists as thin. Its core
       conversion works offline.
     - Maybe `timesfm-forecasting`, a local time-series model.
-  - Install one at a time into `global-skills/` after reading the skill.
-    `skill-scanner scan --use-behavioral` is the upstream's own check.
-  - Waiting on Bill's pick.
+  - **Done (Bill: "do the worth-taking ones"):** astropy, markitdown and
+    timesfm-forecasting vendored with `just skill-lib add`.
+  - The whole collection is at `/opt/proj/skill-library/scientific-agent-skills`, loaded by
+    nothing. `just skill-lib list <word>` finds one; `just skill-lib add <name>` then
+    `just skills` installs it. `just skill-lib sync` updates the shelf; vendored copies stay
+    pinned until re-added.
+  - Upstream's astropy and markitdown end with a "cite this paper" section. It's kept
+    verbatim so re-vendoring stays clean, and only applies when writing a manuscript.
 
 ## 2026-10-17 — repo scout built; map awaiting review; cron not installed
 

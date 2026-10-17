@@ -1,0 +1,5 @@
+Vendored from https://github.com/K-Dense-AI/scientific-agent-skills
+Path: skills/timesfm-forecasting
+Commit: a1043ef5 (2026-10-12)
+License: Apache-2.0 license (repository LICENSE copied as LICENSE)
+Scan: LOW (cisco-ai-skill-scanner --use-behavioral) — LOW ALLOWED_TOOLS_GREP_VIOLATION; LOW UNDECLARED_NETWORK_DESTINATION
