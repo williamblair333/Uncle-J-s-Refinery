@@ -11,6 +11,20 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Multiplayer-AI viewer** (opened 2026-10-17). For watching AI players cooperate or compete
+  in a game, in real time. The plan:
+  - a game-side bridge (localhost state/action API, fixed screen types; the pattern is from
+    CLI-Anything's Slay the Spire II mod);
+  - `live_preview` for the board, with the agent's name in each label;
+  - Langfuse traces for what each agent saw, said and did.
+  - A per-agent lane view needs work in the vendored viewer.
+  - Blocked on Bill naming the game and engine.
+- **credential-guard on Windows** (opened 2026-10-17). `scripts/win/hook.sh` has no
+  `credential-guard` case, and the Windows settings don't wire it.
+- **surface-write-guard: `cp` inside `mcp`** (opened 2026-10-17). `CP_RE` matches the "cp"
+  in `claude mcp add … scripts/…` and in `partikus_mcp tests/x.py`. Twice today the
+  workaround was quoting `"mcp"` or `git add -A`. Fix: require a word boundary before
+  `cp|mv`. The guard is a hardening surface, so it needs an adversarial pass.
 - **Scout: top-100 sweep, on demand** (opened 2026-10-17, Bill's idea). A command such as
   `just scout-top` pulls GitHub's top 100 repos by stars (one search call:
   `stars:>N sort:stars per_page=100`, optionally limited to agent/AI topics). It diffs them
@@ -298,6 +312,16 @@ Completed items age out after ~4 weeks.
 - **Skill library** (PR #137): `just skill-lib sync|list|add` keeps whole collections in
   `../skill-library`, loaded by nothing. astropy, markitdown and timesfm-forecasting are
   vendored from K-Dense-AI/scientific-agent-skills.
+
+## Recently completed (2026-10-17 — live build view, credential guard, Partikus MCP)
+
+- **live_preview** (#133): a live browser view of any build for any project. Its viewer
+  comes from the HKUDS/CLI-Anything review. An independent review found a stored-XSS HIGH,
+  fixed before merge.
+- **credential-guard** (#134): no tool touches credential files, reads included. Bill
+  asked for it.
+- **Partikus MCP server** (partikus #39): an agent builds parts through one persistent
+  offscreen FreeCAD worker, and every step shows up in live_preview.
 
 ## Recently completed (2026-10-15 — referee and media-teardown)
 

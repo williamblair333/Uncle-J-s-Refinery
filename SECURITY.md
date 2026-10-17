@@ -25,6 +25,8 @@ Security-relevant components:
 - `install.sh` / `install-reliability.sh` — System-level installation scripts
 - `.env` — Credential storage (never committed; covered by `.gitignore`)
 - `hooks/discipline/edit-surface-guard.sh` — PreToolUse guard enforcing pre-mortem before surface file edits
+- `hooks/discipline/credential-guard.sh` — PreToolUse guard on every tool (matcher `*`): denies any call touching credential or system secret files, read-only included. Wired as `… || exit 1`, so a broken guard fails open, never locks tools out. Text matching, so obfuscated paths get through; not a sandbox
+- `scripts/live_preview/` — serves build images on 127.0.0.1 only. Host-header check (DNS rebinding), image-only inputs copied through one `O_NOFOLLOW` fd, generated stored filenames (the vendored page doesn't escape them), `~/.live-preview` at 0700
 - `~/.claude/hooks/pre-mortem-guard/` — Token-based enforcement layer: `token-guard.sh`, `surface-write-guard.sh`, `write-clearance-token.sh`
 - `scripts/jdocmunch-reindex.sh` — `LOCAL_ONLY_REPOS` allowlist forcing summaries/embeddings off for personal-context doc corpora
 - `~/.config/systemd/user/jdocmunch-watch.service.d/override.conf` — drop-in pinning the doc watcher's indexing posture (survives `watch-install`)

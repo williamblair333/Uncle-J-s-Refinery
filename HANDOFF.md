@@ -1,5 +1,39 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-17 (session close) — live_preview, credential-guard, Partikus MCP all live
+
+**Most important:** three things are live and registered.
+- `live_preview` (#133): watch any build in a browser.
+- `credential-guard` (#134): no tool may touch credential files, reads included.
+- `partikus` MCP server (partikus #39): an agent builds parts, and you watch them render
+  step by step.
+
+`claude mcp list` shows both new servers ✔ Connected. The full story is in the
+"live_preview stack tool" entry below.
+
+**Bill's decisions (don't re-ask):**
+- **CLI-Anything:** take pieces, never the repo. Its `cli-hub` sends PostHog analytics by
+  default.
+- **credential-guard:** Bill asked for it ("blocks any tool call touching credential files,
+  even read-only"). His script never arrived, so this one was written from scratch.
+  - It denies Bash commands that merely *mention* such a path. That's the accepted cost of
+    text matching.
+  - To get something past it, write the payload with the Write tool and pipe it in. Never
+    weaken the guard.
+
+**State:**
+- Both repos are on `main` and clean. Bill's untracked `partikus/examples/stove_knob.py`
+  is left out on purpose.
+- **Open, all in ROADMAP Planned:**
+  - multiplayer-AI viewer (needs Bill's game/engine);
+  - credential-guard on Windows;
+  - surface-write-guard's `cp`-in-`mcp` false positive.
+- **Partikus bug found, not fixed:** `rounded_box(60, 40, 4, fillet_radius=3)` returns an
+  invalid solid instead of refusing. It's in Partikus HANDOFF.
+- The two sessions closed at the same time. The scout session's note below about
+  "uncommitted README/SECURITY/STACK edits" refers to this session's docs; they landed in
+  this docs PR.
+
 ## 2026-10-17 — session close: repo scout live, skill library
 
 **Most important:** the scout cron runs at 04:15. The first message (ai-job-search, from

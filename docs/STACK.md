@@ -209,6 +209,22 @@ never content. Use it to decide whether ask_local earns its place.
 
 ---
 
+## live_preview (watch any build in a browser)
+
+`scripts/live_preview/server.py` runs on `.venv` and needs only the standard library plus
+`mcp`. It's registered by `install.sh` as `live_preview`.
+
+- **Tools:** `preview_publish`, `preview_watch`, `preview_stop`, `preview_status`.
+- **Shell:** the same operations via `just preview publish|watch|status|list`.
+- **Storage:** sessions live in `LIVE_PREVIEW_HOME` (default `~/.live-preview/<project>/<session>/`).
+- **Origin:** the viewer and bundle format are vendored from HKUDS/CLI-Anything@34f5195;
+  `scripts/live_preview/NOTICE` records what changed. CLI-Anything's own `cli-hub` isn't
+  included, because it sends PostHog analytics by default.
+- **First user:** the Partikus MCP server (`/opt/proj/partikus/partikus_mcp`, registered as
+  `partikus`), which publishes a 4-view FreeCAD render per build step.
+
+---
+
 ## Serena (LSP-grade code intelligence — second opinion)
 
 **What it does.** Same niche as jCodeMunch but backed by real Language
