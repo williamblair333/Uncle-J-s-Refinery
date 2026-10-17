@@ -30,6 +30,32 @@
   - surface-write-guard's `cp`-in-`mcp` false positive.
 - **Partikus bug found, not fixed:** `rounded_box(60, 40, 4, fillet_radius=3)` returns an
   invalid solid instead of refusing. It's in Partikus HANDOFF.
+- The two sessions closed at the same time. The scout session's note below about
+  "uncommitted README/SECURITY/STACK edits" refers to this session's docs; they landed in
+  this docs PR.
+
+## 2026-10-17 — session close: repo scout live, skill library
+
+**Most important:** the scout cron runs at 04:15. The first message (ai-job-search, from
+the inbox) arrives on the morning of 2026-10-18. Discovery stays off until Bill sets
+`reviewed: true` in `scout/map.md`; while he's in there, voice should go from blank to
+thin.
+
+**Bill's decisions (don't re-ask):**
+- When Bill says "put this repo on your todo list", add it to `scout/inbox.md`.
+- Keep whole skill collections on disk (`just skill-lib`) but install them one at a time.
+  Never install a whole collection.
+- The top-100 sweep is a ROADMAP idea, not built yet.
+
+**State:**
+- Main = origin at `2802fa3` before this docs PR. PRs #135–#137 merged; nothing of this
+  session's in flight.
+- **Another session was wrapping up at the same time.** It left uncommitted README.md,
+  SECURITY.md and docs/STACK.md edits in the main checkout (documenting live_preview and
+  credential-guard) and has a branch `docs/session-end-2026-10-17`. Those edits are its
+  work; this session didn't touch them.
+- Gitea PRs: `git credential fill` for host 10.0.0.100:3000 feeds the API token; it still
+  works with credential-guard on.
 
 ## 2026-10-17 (later) — scout cron installed; scientific-agent-skills evaluated
 
