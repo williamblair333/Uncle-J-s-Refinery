@@ -18,7 +18,23 @@ is gitignored). He wanted its live build view usable from every project. That is
 - **Pre-mortem:** MEDIUM bundle, acknowledged by name (concurrency, data integrity,
   security). All three fixes are in the code and tested.
 
+**Credential guard (later the same session):**
+- Bill asked for a PreToolUse hook blocking every tool from credential files, reads
+  included. It's `hooks/discipline/credential-guard.sh`, wired with matcher `*`.
+- **If it ever blocks everything:** remove the PreToolUse entry naming `credential-guard`
+  from `~/.claude/settings.json`, or delete the symlink
+  `~/.claude/hooks/discipline/credential-guard.sh`. Its settings entry ends in `|| exit 1`,
+  so a broken script already fails open. Only a logic bug that matches everything could
+  block all calls, and the tests pin both the block and the allow cases.
+- **Windows:** not wired. `scripts/win/hook.sh` has no `credential-guard` case. Add one when
+  next on that host.
+- **Guard false positive:** surface-write-guard's `cp|mv` pattern matches the "cp" inside
+  `claude mcp add … scripts/…`. Quoting `"mcp"` got past it. Fix the pattern to require a
+  word boundary before `cp`.
+
 **State:**
+- `live_preview` is merged (#133), registered at user scope (✔ Connected), and its skill
+  is linked.
 - The guard blocks `cp` into `scripts/` even with a clearance token. Bill copied the three
   vendored files with `scratchpad/vendor-copy.sh`, and sha256 matched upstream.
 - **After merge:**
