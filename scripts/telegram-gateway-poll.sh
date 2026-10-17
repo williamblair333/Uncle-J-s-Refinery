@@ -85,7 +85,7 @@ offset_file    = sys.argv[5]
 updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
-from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe, record_stack_callback
+from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe, record_stack_callback, record_scout_callback, scout_reason_keyboard
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
 
@@ -237,6 +237,41 @@ def install_skill(draft_path, skill_name, scope):
     os.symlink(skill_dir, link)
     return skill_dir
 
+def edit_reply_markup(message_id, keyboard_json):
+    """Swap the buttons under a sent message (an empty list removes them)."""
+    payload = json.dumps({
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "reply_markup": {"inline_keyboard": json.loads(keyboard_json)},
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        f"{API_BASE}/editMessageReplyMarkup",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as _:
+            pass
+    except Exception as e:
+        log(f"editMessageReplyMarkup failed: {e}")
+
+def handle_scout_callback(callback_query, cq_data):
+    """Record a repo-scout tap for the scout's next run; on 'no', ask why."""
+    cb_msg_id = callback_query.get("message", {}).get("message_id")
+    if cb_msg_id is None:
+        return
+    cb_path = os.path.join(proj_root, 'state', 'scout-callbacks.jsonl')
+    if not record_scout_callback(cb_path, cb_msg_id, cq_data):
+        log(f"scout callback rejected: malformed data ({len(cq_data)} chars)")
+        return
+    log(f"scout callback recorded: {cq_data} message_id={cb_msg_id}")
+    kind, repo_id = cq_data.split(":")[1:3]
+    if kind in ("no", "e-no"):
+        edit_reply_markup(cb_msg_id, scout_reason_keyboard(int(repo_id)))
+    else:
+        edit_reply_markup(cb_msg_id, "[]")
+
 def answer_callback(cq_id):
     payload = json.dumps({"callback_query_id": cq_id}).encode("utf-8")
     req = urllib.request.Request(
@@ -298,6 +333,13 @@ for update in updates:
                             except ValueError as e:
                                 log(f"promote_global: rejected — {e}")
                                 tg_send("❌ Skill name failed validation.")
+            elif cq_data.startswith("scout:"):
+                # Repo-scout buttons. Guarded: a scout bug must never stop the poll loop
+                # that also carries stack alerts, skill promotion and chat.
+                try:
+                    handle_scout_callback(callback_query, cq_data)
+                except Exception as e:
+                    log(f"scout callback error (ignored): {type(e).__name__}: {e}")
             elif cq_data in ("approve", "skip"):
                 # Stack-alert approve/skip button. The gateway is the SOLE getUpdates
                 # consumer; record the decision to a state file the stack-alerts poller

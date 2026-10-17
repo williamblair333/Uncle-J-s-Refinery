@@ -125,6 +125,81 @@ def read_inbox(p: Path) -> list:
     return out
 
 
+EXPIRY = datetime.timedelta(hours=48)
+REASONS = {"r-have": "already have it", "r-goals": "not my goals",
+           "r-heavy": "too heavy", "r-later": "not now"}
+_TAP = re.compile(r"scout:([a-z-]+):(\d{1,20})")
+
+
+def _parse_ts(s: str) -> datetime.datetime:
+    return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%SZ").replace(
+        tzinfo=datetime.timezone.utc)
+
+
+def _take_callbacks(paths: Paths) -> list:
+    """Move the gateway's tap file aside, then read it. A tap the gateway appends after
+    the move starts a fresh file and waits for the next run, so nothing is lost. A
+    leftover .processing file from a crashed run is read first."""
+    processing = paths.callbacks.with_name(paths.callbacks.name + ".processing")
+    text = ""
+    if processing.exists():
+        text += processing.read_text(encoding="utf-8")
+    if paths.callbacks.exists():
+        incoming = paths.callbacks.with_name(paths.callbacks.name + ".incoming")
+        os.replace(paths.callbacks, incoming)
+        text += incoming.read_text(encoding="utf-8")
+        with open(processing, "w", encoding="utf-8") as f:
+            f.write(text)
+        incoming.unlink()
+    taps = []
+    for line in text.splitlines():
+        try:
+            d = json.loads(line)
+            m = _TAP.fullmatch(d["data"])
+            if m:
+                taps.append((int(d["message_id"]), m.group(1), int(m.group(2))))
+        except (ValueError, KeyError, TypeError):
+            continue
+    if processing.exists():
+        processing.unlink()
+    return taps
+
+
+def apply_callbacks(paths: Paths, answers: dict, pending, now: datetime.datetime):
+    """Apply Bill's taps in order, then expire a stale pending message to 'maybe'.
+
+    The first yes/maybe/no on a find wins; a reason only attaches to a 'no'; a tap on a
+    find that expired to 'maybe' replaces it once. Returns (answers, pending)."""
+    finds = answers.setdefault("finds", {})
+    for message_id, kind, repo_id in _take_callbacks(paths):
+        key = str(repo_id)
+        entry = finds.get(key)
+        if kind in REASONS:
+            if entry and entry.get("answer") == "no" and not entry.get("reason"):
+                entry["reason"] = REASONS[kind]
+            continue
+        rung = 2 if kind.startswith("e-") else 1
+        answer = kind[2:] if rung == 2 else kind
+        expired = bool(entry and entry.get("expired") and entry.get("rung") == rung)
+        if rung == 1:
+            allowed = entry is None or expired
+        else:
+            allowed = bool(entry) and (entry.get("rung") == 1 and entry.get("answer") == "yes"
+                                       or expired)
+        if allowed:
+            name = (entry or {}).get("full_name") or (pending or {}).get("full_name", "")
+            record_answer(answers, repo_id, name, rung, answer, None, now)
+            finds[key].pop("expired", None)
+        if pending and pending.get("message_id") == message_id:
+            pending = None
+    if pending and now - _parse_ts(pending["sent_at"]) > EXPIRY:
+        record_answer(answers, pending["repo_id"], pending.get("full_name", ""),
+                      pending.get("rung", 1), "maybe", None, now)
+        finds[str(pending["repo_id"])]["expired"] = True
+        pending = None
+    return answers, pending
+
+
 def front_matter(p: Path) -> dict:
     try:
         text = Path(p).read_text(encoding="utf-8")
