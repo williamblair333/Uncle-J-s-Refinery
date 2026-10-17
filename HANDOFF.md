@@ -1,5 +1,24 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-17 (later) — scout cron installed; scientific-agent-skills evaluated
+
+- **Scout:** Bill installed the cron (04:15). The map is still `reviewed: false`, so only
+  the inbox (ai-job-search) goes out. ROADMAP has the on-demand top-100 sweep.
+- **K-Dense-AI/scientific-agent-skills** (MIT, 177 skills, about 52k stars, maintained;
+  checked 2026-10-17). Verdict: **cherry-pick, never install all.**
+  - All 177 skill descriptions together are about 69 KB, roughly 17k tokens, loaded into
+    every session.
+  - 10 skills call OpenRouter, a paid cloud service that needs an API key.
+  - It's mostly life sciences and chemistry.
+  - Candidates:
+    - `astropy`, for the Magician's Almanac's planetary and time maths.
+    - `markitdown`, for document ingestion, which the scout map lists as thin. Its core
+      conversion works offline.
+    - Maybe `timesfm-forecasting`, a local time-series model.
+  - Install one at a time into `global-skills/` after reading the skill.
+    `skill-scanner scan --use-behavioral` is the upstream's own check.
+  - Waiting on Bill's pick.
+
 ## 2026-10-17 — repo scout built; map awaiting review; cron not installed
 
 **Most important:** the repo scout is built (branch `feat/repo-scout`, worktree

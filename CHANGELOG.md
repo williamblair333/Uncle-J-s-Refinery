@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-10-17 — scout cron installed; top-100 sweep planned
+
+- Bill installed the repo-scout cron (04:15 nightly). The inbox goes out tomorrow morning;
+  discovery waits for the map review.
+- ROADMAP: on-demand top-100 sweep that judges only new entries.
+- Evaluated K-Dense-AI/scientific-agent-skills (verdict in HANDOFF): cherry-pick, don't
+  install all.
+
 ## 2026-10-17 — repo scout: one open-source find each morning
 
 - **New `scripts/scout/`** (stdlib Python): `gh.py` (facts and search through `gh api`
