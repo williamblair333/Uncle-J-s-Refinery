@@ -50,6 +50,10 @@ class Paths:
         return self.root / "state" / "scout-callbacks.jsonl"
 
     @property
+    def rotation(self) -> Path:
+        return self.root / "state" / "scout-rotation.json"
+
+    @property
     def log(self) -> Path:
         return self.root / "state" / "scout.log"
 
