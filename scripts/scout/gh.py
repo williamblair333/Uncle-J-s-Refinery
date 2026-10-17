@@ -94,6 +94,17 @@ def search(query: str, limit: int = 10, run=None) -> list:
     return search_checked(query, limit, run) or []
 
 
+def latest_release(full_name: str, run=_gh):
+    """published_at of the latest release, or None (no releases, or gh failed)."""
+    rc, out = run(["api", f"repos/{full_name}/releases/latest"])
+    if rc != 0:
+        return None
+    try:
+        return json.loads(out).get("published_at") or None
+    except (ValueError, AttributeError):
+        return None
+
+
 def readme(full_name: str, run=_gh) -> str:
     rc, out = run(["api", f"repos/{full_name}/readme",
                    "-H", "Accept: application/vnd.github.raw"])

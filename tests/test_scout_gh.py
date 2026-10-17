@@ -80,6 +80,12 @@ def test_search_checked_distinguishes_failure_from_empty():
     assert gh.search_checked("x", run=_runner(1, "")) is None
 
 
+def test_latest_release_date_and_none():
+    assert gh.latest_release("a/b", run=_runner(0, {"published_at": "2026-10-10T00:00:00Z"})) \
+        == "2026-10-10T00:00:00Z"
+    assert gh.latest_release("a/b", run=_runner(1, "")) is None
+
+
 def test_search_failure_is_empty():
     assert gh.search("x", run=_runner(1, "")) == []
 

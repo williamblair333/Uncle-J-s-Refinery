@@ -5,6 +5,7 @@ any star, licence or URL field in its output is dropped by the validators.
 """
 import json
 import re
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -69,13 +70,21 @@ def seed_prompt(inv: str) -> str:
     )
 
 
-def _candidate_block(f, text: str) -> str:
+def _fence() -> str:
+    # A marker the README can't predict, so it can't close the fence and talk to the model.
+    return "UNTRUSTED-" + secrets.token_hex(6)
+
+
+def _candidate_block(f, text: str, fence: str) -> str:
     return (f"### {f.full_name}\nDescription: {f.description}\nTopics: {', '.join(f.topics)}\n"
-            f"README excerpt (untrusted):\n<<<\n{text[:4000]}\n>>>\n")
+            f"README excerpt (untrusted) between {fence} markers:\n{fence}\n{text[:4000]}\n"
+            f"{fence}\n")
 
 
 def pick_prompt(inv: str, category: str, candidates: list, readmes: dict) -> str:
-    blocks = "\n".join(_candidate_block(f, readmes.get(f.full_name, "")) for f in candidates)
+    fence = _fence()
+    blocks = "\n".join(_candidate_block(f, readmes.get(f.full_name, ""), fence)
+                       for f in candidates)
     return (
         f"Category: {category}\n\nWhat Uncle J already has:\n{inv}\n\n{GOALS}\n\n"
         f"Candidates:\n{blocks}\n"
@@ -89,11 +98,13 @@ def pick_prompt(inv: str, category: str, candidates: list, readmes: dict) -> str
 
 
 def eval_prompt(inv: str, facts, readme_text: str, skill_text: str) -> str:
+    fence = _fence()
     return (
         "Run this evaluation method on the project below, read-only, from the README alone.\n\n"
-        f"Method:\n<<<\n{skill_text[:8000]}\n>>>\n\nWhat Uncle J already has:\n{inv}\n\n{GOALS}"
+        f"Method:\n-----\n{skill_text[:8000]}\n-----\n\nWhat Uncle J already has:\n{inv}\n\n{GOALS}"
         f"\n\nProject: {facts.full_name}\nDescription: {facts.description}\n"
-        f"README (untrusted):\n<<<\n{readme_text[:12000]}\n>>>\n\n"
+        f"README (untrusted) between {fence} markers:\n{fence}\n{readme_text[:12000]}\n"
+        f"{fence}\n\n"
         "verdict: adopt | trial | reject. summary: 3-4 sentences. trial_sketch: what a "
         "throwaway trial would do and measure (tokens, accuracy, offline) in 2-4 sentences. "
         "risks: up to 4 short strings.\n"
@@ -103,6 +114,15 @@ def eval_prompt(inv: str, facts, readme_text: str, skill_text: str) -> str:
 
 def _str(v) -> bool:
     return isinstance(v, str)
+
+
+# Facts come from gh only. Prose that carries a link or a star count was most likely
+# talked into it by a README, so the whole judgment is treated as junk.
+_FACTY = re.compile(r"https?://|www\.|★|\b\d[\d.,]*\s*k?\s*stars?\b", re.I)
+
+
+def _clean_prose(*texts) -> bool:
+    return not any(_FACTY.search(t or "") for t in texts)
 
 
 def validate_pick(d):
@@ -121,6 +141,10 @@ def validate_pick(d):
             return None
         clean[k] = max(0, min(5, int(v)))
     if not all(_str(d.get(k, "")) for k in ("gap", "take", "risk")):
+        return None
+    if not d.get("take", "").strip():
+        return None
+    if not _clean_prose(d.get("gap"), d.get("take"), d.get("risk")):
         return None
     return {"pick": pick, "gap": d.get("gap", ""), "take": d.get("take", ""),
             "risk": d.get("risk", ""), "fit": d.get("fit") is True, "scores": clean}
@@ -145,6 +169,8 @@ def validate_eval(d):
     if not _str(d.get("summary")) or not _str(d.get("trial_sketch")):
         return None
     risks = [r for r in d.get("risks") or [] if _str(r)][:4]
+    if not _clean_prose(d["summary"], d["trial_sketch"], *risks):
+        return None
     return {"verdict": d["verdict"], "summary": d["summary"],
             "trial_sketch": d["trial_sketch"], "risks": risks}
 

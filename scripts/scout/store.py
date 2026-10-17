@@ -186,7 +186,8 @@ def apply_callbacks(paths: Paths, answers: dict, pending, now: datetime.datetime
         answer = kind[2:] if rung == 2 else kind
         expired = bool(entry and entry.get("expired") and entry.get("rung") == rung)
         if rung == 1:
-            allowed = entry is None or expired
+            rewatch = bool(entry and entry.get("rewatch") and entry.get("answer") == "maybe")
+            allowed = entry is None or expired or rewatch
         else:
             allowed = bool(entry) and (entry.get("rung") == 1 and entry.get("answer") == "yes"
                                        or expired)
@@ -194,12 +195,18 @@ def apply_callbacks(paths: Paths, answers: dict, pending, now: datetime.datetime
             name = (entry or {}).get("full_name") or (pending or {}).get("full_name", "")
             record_answer(answers, repo_id, name, rung, answer, None, now)
             finds[key].pop("expired", None)
+            finds[key].pop("rewatch", None)
         if pending and pending.get("message_id") == message_id:
             pending = None
     if pending and now - _parse_ts(pending["sent_at"]) > EXPIRY:
-        record_answer(answers, pending["repo_id"], pending.get("full_name", ""),
-                      pending.get("rung", 1), "maybe", None, now)
-        finds[str(pending["repo_id"])]["expired"] = True
+        entry = finds.get(str(pending["repo_id"]))
+        answered = bool(entry and entry.get("rung") == pending.get("rung", 1)
+                        and entry.get("answer") and not entry.get("rewatch"))
+        if not answered:  # never overwrite an answer Bill already gave
+            record_answer(answers, pending["repo_id"], pending.get("full_name", ""),
+                          pending.get("rung", 1), "maybe", None, now)
+            finds[str(pending["repo_id"])]["expired"] = True
+            finds[str(pending["repo_id"])].pop("rewatch", None)
         pending = None
     return answers, pending
 

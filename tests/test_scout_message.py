@@ -27,6 +27,24 @@ def test_render_escapes_html():
     assert "<script>" not in out
 
 
+def test_render_strips_urls_from_description():
+    out = message.render_find("voice", "thin", _facts(description="Docs at https://evil.example/x now"),
+                              PICK, "discovered")
+    assert "evil.example" not in out and "Docs at" in out
+
+
+def test_render_watchlist_label():
+    out = message.render_find("", "", _facts(), PICK, "watchlist")
+    assert "new release" in out
+
+
+def test_send_payload_disables_link_previews():
+    p = message.send_payload("555", "hi", message.keyboard_find(1))
+    assert p["link_preview_options"] == {"is_disabled": True}
+    assert p["parse_mode"] == "HTML" and p["chat_id"] == "555"
+    assert p["reply_markup"]["inline_keyboard"][0][0]["callback_data"] == "scout:yes:1"
+
+
 def test_render_facts_line_from_facts_only():
     out = message.render_find("voice", "thin", _facts(), PICK, "discovered")
     assert "★49478" in out and "MIT" in out and "2026-10-15" in out

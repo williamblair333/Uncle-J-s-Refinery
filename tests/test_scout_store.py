@@ -105,6 +105,24 @@ def test_apply_not_expired_at_47h(tmp_path):
     assert "42" not in ans["finds"] and pend is not None
 
 
+def test_apply_expiry_never_overwrites_a_recorded_answer(tmp_path):
+    paths = store.Paths(tmp_path)
+    ans = {"finds": {"42": {"full_name": "a/b", "rung": 1, "answer": "yes"}}}
+    ans, pend = store.apply_callbacks(paths, ans, _pending(hours_ago=49), NOW)
+    assert ans["finds"]["42"]["answer"] == "yes" and "expired" not in ans["finds"]["42"]
+    assert pend is None
+
+
+def test_apply_tap_on_rewatched_maybe_records_new_answer(tmp_path):
+    paths = store.Paths(tmp_path)
+    ans = {"finds": {"42": {"full_name": "a/b", "rung": 1, "answer": "maybe",
+                            "rewatch": True}}}
+    _tap(paths, 10, "scout:yes:42")
+    ans, _ = store.apply_callbacks(paths, ans, _pending(), NOW)
+    assert ans["finds"]["42"]["answer"] == "yes"
+    assert "rewatch" not in ans["finds"]["42"]
+
+
 def test_apply_late_tap_upgrades_expired_maybe(tmp_path):
     paths = store.Paths(tmp_path)
     ans, _ = store.apply_callbacks(paths, {"finds": {}}, _pending(hours_ago=49), NOW)
