@@ -227,7 +227,7 @@ def step_discover(paths, deps, inv, answers, queue, pending):
         return
     seen, results = set(), []
     for q in cat["queries"][:3]:
-        for f in deps.search(q):
+        for f in deps.search(q) or []:
             if f.id not in seen:
                 seen.add(f.id)
                 results.append(f)
@@ -337,7 +337,8 @@ def seed(paths: store.Paths, deps: Deps, inv: str, force=False) -> bool:
         store.log(paths, "seed: no valid judgment")
         return False
     for c in j["categories"]:
-        c["queries"] = [q for q in c["queries"] if deps.search(q)]
+        # Drop a query only when it really finds nothing; a failed search (None) keeps it.
+        c["queries"] = [q for q in c["queries"] if deps.search(q) != []]
     write_map(paths.map, j["categories"], deps.now)
     store.log(paths, f"seed: wrote {len(j['categories'])} categories")
     return True
@@ -377,7 +378,7 @@ def _telegram_send(root: Path):
 
 def real_deps(root: Path) -> Deps:
     claude_bin = os.environ.get("CLAUDE_BIN", "claude")
-    return Deps(facts=gh.repo_facts, search=gh.search, readme=gh.readme,
+    return Deps(facts=gh.repo_facts, search=gh.search_checked, readme=gh.readme,
                 ask=lambda prompt, validate: judge.ask(prompt, claude_bin, validate),
                 send=_telegram_send(root),
                 now=datetime.datetime.now(datetime.timezone.utc))

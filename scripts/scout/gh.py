@@ -5,9 +5,14 @@ Each function takes a `run` callable so tests can feed canned responses.
 """
 import json
 import subprocess
+import time
 from dataclasses import dataclass, field
 
 README_CAP = 20000
+SEARCH_INTERVAL = 2.1  # seconds; GitHub allows 30 authenticated searches a minute
+_clock = time.monotonic
+_sleep = time.sleep
+_last_search = 0.0
 
 
 @dataclass
@@ -58,17 +63,35 @@ def repo_facts(full_name: str, run=_gh):
         return None
 
 
-def search(query: str, limit: int = 10, run=_gh) -> list:
+def _pace() -> None:
+    """Keep real searches under GitHub's 30-a-minute search limit."""
+    global _last_search
+    wait = SEARCH_INTERVAL - (_clock() - _last_search)
+    if wait > 0:
+        _sleep(wait)
+    _last_search = _clock()
+
+
+def search_checked(query: str, limit: int = 10, run=None):
+    """Search repositories. Returns None when the search itself failed (rate limit,
+    network, auth), so callers can tell "nothing found" from "couldn't look"."""
+    if run is None:
+        _pace()
+        run = _gh
     rc, out = run(["api", "-X", "GET", "search/repositories",
                    "-f", f"q={query}", "-f", "sort=stars", "-f", f"per_page={limit}"])
     if rc != 0:
-        return []
+        return None
     try:
         items = json.loads(out).get("items", [])
         facts = [_facts(i) for i in items]
     except (ValueError, KeyError, TypeError, AttributeError):
-        return []
+        return None
     return [f for f in facts if not f.archived and not f.fork]
+
+
+def search(query: str, limit: int = 10, run=None) -> list:
+    return search_checked(query, limit, run) or []
 
 
 def readme(full_name: str, run=_gh) -> str:

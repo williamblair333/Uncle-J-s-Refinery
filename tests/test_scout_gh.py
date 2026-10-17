@@ -63,6 +63,23 @@ def test_search_drops_archived_and_forks():
     assert "search/repositories" in run.calls[0]
 
 
+def test_real_search_is_paced_under_rate_limit(monkeypatch):
+    # GitHub allows 30 searches a minute; seeding runs ~60 back to back.
+    sleeps, clock = [], [100.0]
+    monkeypatch.setattr(gh, "_gh", _runner(0, {"items": []}))
+    monkeypatch.setattr(gh, "_clock", lambda: clock[0])
+    monkeypatch.setattr(gh, "_sleep", lambda s: (sleeps.append(s), clock.__setitem__(0, clock[0] + s)))
+    monkeypatch.setattr(gh, "_last_search", 0.0)
+    gh.search("a")
+    gh.search("b")
+    assert sleeps and abs(sleeps[0] - gh.SEARCH_INTERVAL) < 0.01
+
+
+def test_search_checked_distinguishes_failure_from_empty():
+    assert gh.search_checked("x", run=_runner(0, {"items": []})) == []
+    assert gh.search_checked("x", run=_runner(1, "")) is None
+
+
 def test_search_failure_is_empty():
     assert gh.search("x", run=_runner(1, "")) == []
 

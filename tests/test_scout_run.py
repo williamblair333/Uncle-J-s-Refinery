@@ -198,6 +198,28 @@ def test_rotation_covered_only_after_30_days():
     assert run.pick_category(cats, {"a": "2026-09-01T00:00:00Z"}, NOW)["name"] == "a"
 
 
+def test_seed_keeps_query_when_search_failed(tmp_path):
+    # A rate-limited search (None) says nothing about the query; only a real
+    # empty result drops it.
+    paths = store.Paths(tmp_path)
+    seed = {"categories": [{"name": "voice", "status": "blank", "why": "w",
+                            "queries": ["failed", "empty"]}]}
+    deps = run.Deps(facts=None, readme=None, send=None, now=NOW,
+                    search=lambda q: None if q == "failed" else [],
+                    ask=lambda p, v: seed)
+    run.seed(paths, deps, "INV")
+    assert run.parse_map(paths.map)[0]["queries"] == ["failed"]
+
+
+def test_discover_survives_failed_search(tmp_path):
+    paths = setup(tmp_path, reviewed=True)
+    fake = Fake()
+    fake.search = lambda q: None
+    run.run_once(paths, fake.deps(), "INV")
+    assert fake.sent == []
+    assert "failed" not in paths.log.read_text()
+
+
 def test_seed_writes_unreviewed_map_and_refuses_reviewed(tmp_path):
     paths = store.Paths(tmp_path)
     seed = {"categories": [{"name": "voice", "status": "blank", "why": "w",
