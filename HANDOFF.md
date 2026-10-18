@@ -7,6 +7,11 @@ skipped. An `@reboot` entry now runs `scripts/cron_catchup.py` two minutes after
 it runs whatever came due while the box was down. Check `state/cron-catchup.log` after the
 next boot. The first real run was by hand on 2026-10-18; see the log.
 
+**First catch-up run (by hand, 2026-10-18 10:18):** 8 missed jobs ran, all exit 0 except
+session-stats, which had never worked (Langfuse limit 500 > max 100). Fixed the same day; the
+weekly table now has Observations instead of Tokens, because the Langfuse hook records no
+token usage. Making the hook record usage is a possible follow-up.
+
 **Still first:** the live Partikus demo below. Bill will do it at the box, not over SSH.
 The live view binds only to 127.0.0.1, so over SSH it would need
 `ssh -N -L <port>:127.0.0.1:<port>` with the same port on both sides.
