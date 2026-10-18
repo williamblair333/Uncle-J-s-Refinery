@@ -7,7 +7,10 @@ Completed items age out after ~4 weeks.
 
 ## In Progress
 
-- _(nothing in flight)_
+- **Live Partikus build demo, with Bill watching** (opened 2026-10-17). live_preview and the
+  `partikus` MCP server shipped, but Bill hasn't seen a part being built: the only session
+  was a batch published after the fact. Open `partikus_watch` first, give the URL alone,
+  then build step by step. Not done until Bill has watched one grow. HANDOFF has the steps.
 
 ## Planned
 

@@ -1,5 +1,24 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-17 (close) — Bill: "I didn't see any parts being built"
+
+**Bill's feedback, and it's accurate:** nothing was ever built live in front of him.
+- The only live_preview session is `partikus/aaa-tray`. Its 5 stages were rendered in one
+  batch by a scratch probe and published *afterwards*. The page showed finished pictures,
+  not a part growing step by step.
+- The `partikus` MCP server has never been used for real. Every build ran in tests with
+  temp dirs, and `~/.local/share/partikus-mcp` doesn't exist. The `partikus_*` tools load
+  only in a new Claude session.
+- The URLs were given only at the end of long reports.
+
+**First thing next session:** a real live demo with Bill watching.
+1. Start a new Claude session, so the `partikus` tools are loaded.
+2. Call `partikus_watch` and put the URL *first*, alone, before any building.
+3. Wait for Bill to have the tab open, then build one step per `partikus_build`
+   (base → features → holes → export), a few seconds apart, so he sees it grow.
+
+Only then judge whether live_preview delivers what drew Bill to CLI-Anything.
+
 ## 2026-10-17 (evening) — local-model lineup picked; game buddies parked
 
 **Most important:** Qwen3.6-35B-A3B Abliterated Heretic is downloaded and its checksums are
