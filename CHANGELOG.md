@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-10-17 — local-model lineup picked; game-buddy research parked
+
+- **Added (outside the repo):** Qwen3.6-35B-A3B Abliterated Heretic, Q4_K_M plus its mmproj
+  vision file, in `/opt/models/gguf/qwen3.6-35b-a3b-heretic/`. SHA-256 of both files matches
+  Hugging Face. It hasn't been run yet. It needs llama.cpp `llama-server --n-cpu-moe`, not
+  Ollama.
+- **Decided:** use one abliterated LLM for every text and vision domain. Heretic was chosen
+  over Huihui because it had the lower KL divergence on every comparison found. Image, video
+  and speech each need their own model: FLUX.1-dev, Wan 2.2, Parakeet plus a TTS. None of
+  those are downloaded.
+- **Parked:** AI game companions (the Kev-4B GGUF, the Bannerlord AI mods, co-op). The full
+  record is in the vault at `13 - Resources/Local Models and AI Game Buddies.md`, vault
+  commit `f46647a`.
+- **ROADMAP:** the Jarvis "video generation" item is corrected, because Wan 2.2 GGUF does run
+  on 12 GB, slowly. Added a Planned item to trial Qwen3.6 as the `ask_local` backend.
+
 ## 2026-10-17 — session close: CLI-Anything review → live_preview, credential-guard, Partikus MCP
 
 - Merged #133 (`live_preview`) and #134 (`credential-guard`). Details are in their entries

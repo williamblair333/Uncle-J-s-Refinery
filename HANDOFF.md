@@ -1,5 +1,29 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-17 (evening) — local-model lineup picked; game buddies parked
+
+**Most important:** Qwen3.6-35B-A3B Abliterated Heretic is downloaded and its checksums are
+verified, in `/opt/models/gguf/qwen3.6-35b-a3b-heretic/`. It hasn't been run. It's an MoE
+model, so it needs `llama-server --n-cpu-moe` (the experts stay in RAM); Ollama would run it
+slowly. The full record is in the vault at
+`13 - Resources/Local Models and AI Game Buddies.md`.
+
+**Bill's decisions (don't re-ask):**
+- Use the fewest abliterated models that cover every domain: one LLM, plus separate image,
+  video and speech models.
+- Use Heretic builds over Huihui.
+- Skip Granite. It adds no domain the Qwen model lacks, and `granite4.2:8b` is a candidate for
+  removal.
+- The game-buddy topic is **parked**. Bill is buying Bannerlord on Steam. Resume only when he
+  raises it.
+
+**State:**
+- The repo had no code changes this session.
+- **Next, when resumed:**
+  1. Benchmark Qwen3.6 against `qwen3.5:9b`.
+  2. Decide whether `ask_local` moves to llama-server.
+  3. Ask before downloading FLUX, Wan or the speech models.
+
 ## 2026-10-17 (session close) — live_preview, credential-guard, Partikus MCP all live
 
 **Most important:** three things are live and registered.
