@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-10-18 — cron catch-up: jobs missed while the machine was off now run at boot
+
+- **Found:** the box is shut down most nights (journal: down 2026-10-17 22:09 → 2026-10-18
+  08:06), so cron silently skipped every job from 01:00 to 08:00: both reindexes, the gitea
+  backup, the memweave sync, auto-maintain, the repo scout, healthcheck-notify and the
+  weekly session stats. Cron never catches up on its own.
+- **Added:** `scripts/cron_catchup.py`, run by an `@reboot` cron entry
+  (`features/cron-catchup/install.sh`, marker `uncle-j-cron-catchup`). Two minutes after
+  boot it reads the downtime gap from `journalctl --list-boots` and runs, once each and in
+  schedule order, every fixed-time crontab job that came due in the gap. It runs under
+  nice/ionice, records the boot it caught up in `state/cron-catchup.json`, and logs to
+  `state/cron-catchup.log`.
+- **Guard:** auto-maintain (a `claude -p` agent that commits) runs only when the repo is
+  clean on main; otherwise it's deferred to its next normal run.
+- **healthcheck:** new `check_cron_catchup` warns if the entry is missing or any job failed
+  at the last boot.
+- Suspend isn't covered: the journal shows no gap for it.
+
 ## 2026-10-17 — local-model lineup picked; game-buddy research parked
 
 - **Added (outside the repo):** Qwen3.6-35B-A3B Abliterated Heretic, Q4_K_M plus its mmproj

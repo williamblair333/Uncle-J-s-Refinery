@@ -1239,6 +1239,28 @@ check_repo_scout() {
     fi
 }
 
+# ----- cron catch-up: jobs missed while the machine was off got run at boot -----
+# Warn, never fail: a failed catch-up job still gets its normal cron run next night.
+check_cron_catchup() {
+    step "cron catch-up — missed jobs run at boot"
+    if [[ "$(crontab -l 2>/dev/null)" != *uncle-j-cron-catchup* ]]; then
+        warn "cron catch-up not installed: jobs due while the machine is off never run"
+        hint "fix: bash $REPO_ROOT/features/cron-catchup/install.sh"
+        return
+    fi
+    local state="$REPO_ROOT/state/cron-catchup.json"
+    [ -f "$state" ] || { ok "cron catch-up installed (no boot caught up yet)"; return; }
+    local failed
+    failed=$(python3 -c 'import json,sys; print(" ".join(json.load(open(sys.argv[1])).get("failed", [])))' \
+        "$state" 2>/dev/null) || { warn "cron catch-up state unreadable: $state"; return; }
+    if [ -n "$failed" ]; then
+        warn "cron catch-up: failed at last boot: $failed"
+        hint "check: tail $REPO_ROOT/state/cron-catchup.log and each job's own log"
+    else
+        ok "cron catch-up: last boot clean"
+    fi
+}
+
 # ===== main =================================================================
 # verify.sh is install-time (uvx cache warmup takes ~5s); run it only in
 # --full mode. --quick sticks to runtime invariants for a ~6s session-start
@@ -1274,6 +1296,7 @@ check_ask_local_backend
 check_dreaming_runtime
 check_auto_maintain_runtime
 check_repo_scout
+check_cron_catchup
 if [ "$MODE" = "full" ]; then
     check_verify
     check_smoke_hook

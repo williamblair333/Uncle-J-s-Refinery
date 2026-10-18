@@ -1,5 +1,16 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-18 — cron catch-up installed
+
+**Most important:** the machine is off most nights, so every 01:00–08:00 cron job was being
+skipped. An `@reboot` entry now runs `scripts/cron_catchup.py` two minutes after boot, and
+it runs whatever came due while the box was down. Check `state/cron-catchup.log` after the
+next boot. The first real run was by hand on 2026-10-18; see the log.
+
+**Still first:** the live Partikus demo below. Bill will do it at the box, not over SSH.
+The live view binds only to 127.0.0.1, so over SSH it would need
+`ssh -N -L <port>:127.0.0.1:<port>` with the same port on both sides.
+
 ## 2026-10-17 (close) — Bill: "I didn't see any parts being built"
 
 **Bill's feedback, and it's accurate:** nothing was ever built live in front of him.
