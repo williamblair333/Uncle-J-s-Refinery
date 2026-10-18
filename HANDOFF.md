@@ -11,6 +11,8 @@ next boot. The first real run was by hand on 2026-10-18; see the log.
 The live view binds only to 127.0.0.1, so over SSH it would need
 `ssh -N -L <port>:127.0.0.1:<port>` with the same port on both sides.
 
+- **jcodemunch-mcp breaking change**: `index_file` now refuses any file the folder walk excludes (venv site-packages, node_modules, gitignored, over `max_file_size`, …) with `success: false` and the reason in `skipped`, where it used to answer `success: true`. Callers such as the PostToolUse index hook must treat a `skipped` refusal as expected, not as an indexing failure.
+
 ## 2026-10-17 (close) — Bill: "I didn't see any parts being built"
 
 **Bill's feedback, and it's accurate:** nothing was ever built live in front of him.
