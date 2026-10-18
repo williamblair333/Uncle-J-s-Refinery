@@ -87,7 +87,16 @@ Completed items age out after ~4 weeks.
      model.
   4. **Outbound phone calls.** A phone number (Twilio or ElevenLabs agents) plus a voice
      pipeline. This is the largest piece.
-  5. **Video generation.** Paid API only; local models need far more than 12 GB of VRAM.
+  5. **Video generation.** Wan 2.2 14B GGUF at Q4–Q5 runs locally on the 3060, at about
+     10–15 minutes per 480p clip (checked 2026-10-17). Use it for background jobs; use a paid
+     API for anything interactive.
+
+- **Trial Qwen3.6-35B-A3B Heretic as the `ask_local` backend** (opened 2026-10-17). It's
+  downloaded to `/opt/models/gguf/qwen3.6-35b-a3b-heretic/`.
+  - **Runtime:** it needs `llama-server --n-cpu-moe` rather than Ollama.
+  - **Test:** measure tok/s and quality against `qwen3.5:9b`.
+  - **If it wins:** add an OpenAI-compatible backend to `scripts/ask_local/server.py`.
+  - **Background:** the vault note `13 - Resources/Local Models and AI Game Buddies.md`.
 
 - **Review `state/ask_local.jsonl`** after about 2 weeks of use (opened 2026-10-04). Does
   offloading save Claude tokens without wrong results acted on? If not, the standing test
