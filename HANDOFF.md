@@ -11,6 +11,10 @@ the latest score in one line at session start. To stop it, delete the cron line.
 - Session-stats fix merged (#145); RELIABILITY.md entry (#146); "one front door" plan on
   ROADMAP (#147).
 - tc-vmh-03 hadn't pushed anything as of 10:00 today; its morning work exists only there.
+- Scout: discovery is on and the top-100 sweep is live. Three finds are queued
+  (firecrawl, playwright-mcp, code-sandbox-mcp) behind the unanswered ai-job-search message.
+  Bill's phone was offline; Telegram still sends one message at a time. He hasn't decided
+  whether to change that to one a night.
 
 ## 2026-10-19 (ha-pi-01, later) — Pi fix merged; push to Gitea, not GitHub
 

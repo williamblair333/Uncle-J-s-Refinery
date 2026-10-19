@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-10-19 — scout: nightly discovery on, top-100 sweep built
+
+- **Discovery on:** Bill reviewed `scout/map.md` (#149). The scout had run every night all
+  along (04:15 plus boot catch-up), but the `reviewed: false` gate skipped discovery, so only
+  the inbox find existed.
+- **Top-100 sweep** (`step_top` in `scripts/scout/run.py`): each run searches GitHub's top 100
+  overall (`stars:>10000`) and the top 100 tagged `llm`, diffs them against
+  `state/scout-top100.json`, and judges only new entries (up to 5, READMEs included). It queues
+  at most one find a night, through the normal queue. The first run had no snapshot, so it judged
+  the current lists once from descriptions (top 40 by stars) instead of staying silent. A failed
+  search or judgment leaves the snapshot alone, so nothing is skipped. Deleting the file
+  re-seeds it.
+- **First results:** the sweep picked `firecrawl/firecrawl` (web crawl to markdown, has an
+  MCP). Discovery found `microsoft/playwright-mcp` (browser automation) and
+  `lemonlyue/code-sandbox-mcp` (weak: 1 star, no licence).
+- **Tests:** 5 new in `tests/test_scout_run.py`; the full suite passes.
+
 ## 2026-10-19 — focus check: a weekly estate-vs-questions scoreboard
 
 - **Why:** a survey of all 37 repos showed Uncle J has the most commits (976 since April) and
