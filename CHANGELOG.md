@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-10-19 — ha-pi-01 Wi-Fi outage diagnosed and hardened; Pi install branch rebased
+
+- **Found:** ha-pi-01 was unreachable 04:00–08:39. It didn't crash: crons and Home Assistant kept
+  running, but Wi-Fi dropped between 03:57 and 04:07 and never reconnected (HA log:
+  `Errno 101 Network unreachable` every 10 min). Wi-Fi power save was on (`brcmfmac`); the
+  likely trigger is the Xfinity gateway's overnight reboot. No journal survived the reboot
+  (Pi OS sets `Storage=volatile`).
+- **Fixed on the host (outside the repo):** Wi-Fi power save off
+  (`/etc/NetworkManager/conf.d/99-wifi-powersave-off.conf`); persistent journal, capped at
+  200 MB (`/etc/systemd/journald.conf.d/40-rpi-volatile-storage.conf`, `90-size-cap.conf`);
+  `wifi-watchdog.timer`, every 2 min (`/usr/local/sbin/wifi-watchdog`). The watchdog
+  reconnects, restarts NetworkManager after 6 min, and reboots after 20 min, with a 30-min
+  uptime floor and a 6-h cooldown. The Debian `watchdog` package was rejected: it competes
+  with systemd for `/dev/watchdog`, and its main action is a reboot.
+- **Docs:** follow-along write-ups in `/home/bill/pi-server/` (`01` diagnosis, `02` Pi-server
+  checklist from `debian-howto-guides/debian-wifi-uplink-guide.md`, `03` applied fixes + undo).
+- **Branch `fix/pi-sqlite-serena-install`:** rebased onto `origin/main` (`b84e52a`). install.sh
+  merged without conflicts; it was checked against #155's stdlib-version logic. CHANGELOG/HANDOFF
+  conflicts resolved by date order. Not pushed: this Pi has no GitHub credentials and no `gh`.
+
 ## 2026-10-18 — weekly session stats fixed (it never produced a report)
 
 - **Found** by the first cron catch-up run: `features/session-stats/stats.sh` exited 22 every
@@ -605,6 +625,20 @@ indexes every project's transcripts into one store, so an Implementer's
   existing app (Investigator / Spec Scrubber / Implementer / Verifier wall, authorization gate,
   REA tiers, spec scrub rules, release checklist). `install-reliability.sh` symlinks it into
   `~/.claude/skills/`, so every project sees it.
+
+## 2026-10-06 — install on a Raspberry Pi 4 (aarch64, Debian 13)
+
+- **`install.sh` pysqlite3 patch:** the `.pth` patch now swaps stdlib `sqlite3` for
+  `pysqlite3` only when pysqlite3 links a newer SQLite. On aarch64 there's no vendored wheel,
+  so `uv sync` builds the PyPI sdist against the system lib (Debian 13: 3.46.1), and the
+  unconditional swap was downgrading a stdlib that already ships 3.53.1. Healthcheck failed
+  with `venv sqlite3 = 3.46.1`.
+- **`install.sh` pysqlite3 prereq:** on non-x86_64 hosts, stop early when there's no C
+  compiler or `sqlite3.h` (`apt install build-essential libsqlite3-dev`), not mid-`uv sync`.
+- **`install.sh` Serena config:** the default-config nudge gets 60 s, up from 8 (a Pi 4 needs
+  ~15 s). On timeout the fallback stub had no `projects:` key, so Serena exited with
+  `SerenaConfigError` and healthcheck reported `not Connected: serena`. The stub now carries
+  `projects: []`, and re-runs backfill it into older stubs.
 
 ## 2026-10-05 — healthcheck: Langfuse hint restored
 
