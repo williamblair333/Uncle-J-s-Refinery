@@ -1,5 +1,17 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-19 (main host) — focus check live; front-door plan on ROADMAP
+
+**Most important:** Bill asked to be reminded of a test: give immortality or Klarheit as many
+sessions as Uncle J gets this week. `features/focus-check/focus-check.sh` sends the score by
+Telegram every Monday at 08:00 (cron `# uncle-j-focus-check`, log `state/focus-check.log`).
+Baseline for the week to 2026-10-19: Uncle J 303 traces, questions 132 (all Klarheit). Mention
+the latest score in one line at session start. To stop it, delete the cron line.
+
+- Session-stats fix merged (#145); RELIABILITY.md entry (#146); "one front door" plan on
+  ROADMAP (#147).
+- tc-vmh-03 hadn't pushed anything as of 10:00 today; its morning work exists only there.
+
 ## 2026-10-19 (ha-pi-01, later) — Pi fix merged; push to Gitea, not GitHub
 
 **Most important:** push to the `gitea` remote. `origin` is GitHub and is no longer used, so
