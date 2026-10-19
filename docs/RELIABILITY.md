@@ -481,6 +481,29 @@ This is a known open gap, tracked in ROADMAP — not a regression.
 
 ---
 
+## A cron job that never succeeds looks like one that has nothing to say
+
+`features/session-stats/stats.sh` (Sunday 08:00) exited 22 every week from install until
+2026-10-18 and no one noticed. It asked Langfuse for `limit=500` (the API max is 100),
+and `curl -sf` turned the HTTP 400 into a bare exit code, so `state/stats.log` held only
+"Querying Langfuse". A weekly report that never arrives is indistinguishable from a quiet
+week. It surfaced only because the cron catch-up run (`scripts/cron_catchup.py`) reports
+each job's exit code at boot.
+
+Practical rules:
+
+- **Never `curl -sf` against an API whose error body matters.** Capture the HTTP code and
+  print the response body on failure; `stats.sh` now does.
+- **Respect documented page limits and page explicitly.** `stats.sh` reads
+  `/api/public/traces` 100 at a time, capped at 50 pages, and says so when truncated.
+- **Don't pass bulk data through environment variables.** Linux caps a single env string
+  at 128 KB; a week of traces (~400 KB) broke the old hand-off. Use a temp file
+  (`mktemp -d` + `trap … EXIT`).
+- **Drop a column that can only ever be zero.** The Claude Code Langfuse hook records no
+  token usage, so the Tokens column was removed rather than left reporting 0.
+
+---
+
 ## A standing red check is worse than no check
 
 `Skill frontmatter regression` failed on every PR for long enough that ROADMAP recorded
