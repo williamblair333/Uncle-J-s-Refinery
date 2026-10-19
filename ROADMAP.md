@@ -94,6 +94,24 @@ Completed items age out after ~4 weeks.
      10–15 minutes per 480p clip (checked 2026-10-17). Use it for background jobs; use a paid
      API for anything interactive.
 
+- **Stop being the glue: one front door to every project** (opened 2026-10-19). Today Bill `cd`s
+  into a project, starts Claude Code, and syncs the Pi and tc-vmh-03 by hand. The goal is to
+  minimize his attention per finished outcome (local-first, portable off Claude). Agreed order:
+  1. **Measure startup, then trim.** Every session start runs the startup checks and launches
+     about 10 MCP servers. Find what's slow before building anything. Meanwhile, keep warm
+     sessions (a tmux window per active project, `claude -c`).
+  2. **One recipe server plus `ask_project`.** A single MCP server finds every
+     `/opt/proj/*/justfile` and exposes its recipes as tools (using a project). `ask_project`
+     runs a headless `claude -p` inside a repo and returns a summary (changing a project).
+     Recipes with side effects need a confirmation step. This replaces "one MCP server per
+     project". A dedicated server (like Partikus) is worth it only for a project called many
+     times a day with typed parameters.
+  3. **Move recurring "do x" asks to scheduled jobs**, each one reporting its exit code (see
+     RELIABILITY.md, "A cron job that never succeeds…").
+  4. **One always-on host as the brain**, reached by Telegram or voice. The other hosts become
+     clients, which removes the manual sync instead of automating it. Decide which host, and
+     what remote access it needs.
+
 - **Trial Qwen3.6-35B-A3B Heretic as the `ask_local` backend** (opened 2026-10-17). It's
   downloaded to `/opt/models/gguf/qwen3.6-35b-a3b-heretic/`.
   - **Runtime:** it needs `llama-server --n-cpu-moe` rather than Ollama.
