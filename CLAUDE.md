@@ -95,7 +95,8 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   `get_ranked_context` ("how does X work" in one budgeted call), `assemble_task_context`.
 - `search_text` for strings/comments/config (`context_lines` like `grep -C`); `winnow_symbols`
   for multi-constraint queries.
-- Also: `index_file` (surgical re-index after an edit), `get_session_snapshot` (after
+- Also: `index_file` (surgical re-index after an edit; a file the folder walk excludes is
+  refused with `success: false` and the reason in `skipped`), `get_session_snapshot` (after
   compaction), `index_dependency` (the *installed* version's source — prefer over context7
   when the exact API matters), `check_embedding_drift`.
 - `_meta` reaches you on this host (`meta_fields: null`); on a default install

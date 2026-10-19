@@ -31,6 +31,20 @@
   merged without conflicts; it was checked against #155's stdlib-version logic. CHANGELOG/HANDOFF
   conflicts resolved by date order. Not pushed: this Pi has no GitHub credentials and no `gh`.
 
+## 2026-10-18 — weekly session stats fixed (it never produced a report)
+
+- **Found** by the first cron catch-up run: `features/session-stats/stats.sh` exited 22 every
+  week. It asked Langfuse for `limit=500` (max is 100, HTTP 400), and `curl -sf` hid the
+  error, so `state/stats.log` showed only "Querying Langfuse". Two more bugs waited behind it:
+  the report called `.get()` on observation ids (strings), and a week of traces (~400 KB)
+  can't pass through an env var (128 KB cap per string).
+- **Fixed:** pages through `/api/public/traces` 100 at a time (`fields=core,observations,metrics`,
+  capped at 50 pages), passes the data by temp file, and prints Langfuse's HTTP code and
+  message on failure. The table is now Date / Project / Traces / Observations.
+- **Tokens dropped:** the Claude Code Langfuse hook records no token usage (every GENERATION
+  has usage 0), so the old Tokens column and its "high" flag could only ever show 0.
+- Also carries the 2026-10-18 auto-maintain jcodemunch-mcp bump (`uv.lock`, 1.108.378).
+
 ## 2026-10-18 — cron catch-up: jobs missed while the machine was off now run at boot
 
 - **Found:** the box is shut down most nights (journal: down 2026-10-17 22:09 → 2026-10-18
