@@ -105,6 +105,24 @@ Completed items age out after ~4 weeks.
      clients, which removes the manual sync instead of automating it. Decide which host, and
      what remote access it needs.
 
+- **Build a trafilatura web-to-markdown crawler** (opened 2026-10-19, from the scout review).
+  It replaces firecrawl, which was rejected: 7 services, 3.4 GiB, and a Playwright browser
+  path. trafilatura (Apache-2.0, no Playwright) gave about half the markdown on the same pages
+  in 1–2 s. Shape: a script that takes a URL, sitemap or crawl and writes markdown files to a
+  folder, then `jdocmunch index_local`, so repeat web lookups become local retrieval. Check that
+  the smaller output doesn't drop content that matters, and measure tokens against WebFetch
+  on a real task. Verdict and numbers: `review/2026-10-19-firecrawl.md` (main host).
+  Resume: "build the trafilatura crawler".
+- **Trial firefox-devtools-mcp for browser control** (opened 2026-10-19). It's Mozilla's, with
+  no Google or Microsoft code at runtime. Snapshots measured 10–40× smaller than
+  chrome-devtools-mcp's (~4–23K vs ~186K chars per page); Bill avoids Microsoft, so
+  playwright-mcp is out. Plan: register it for sessions that need it only, set
+  `SE_AVOID_STATS=true` (Selenium Manager sends stats to plausible.io; the env name is
+  inferred, so verify it), install geckodriver locally so it can run offline, and confirm with
+  a network capture that only the target site is contacted. Known gaps: no wait tool, and
+  network inspection only in the developer preset. Notes:
+  `review/2026-10-19-browser-automation-no-microsoft.md`. Resume: "trial the firefox browser".
+
 - **Trial Qwen3.6-35B-A3B Heretic as the `ask_local` backend** (opened 2026-10-17). It's
   downloaded to `/opt/models/gguf/qwen3.6-35b-a3b-heretic/`.
   - **Runtime:** it needs `llama-server --n-cpu-moe` rather than Ollama.
