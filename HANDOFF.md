@@ -2,14 +2,15 @@
 
 ## 2026-10-19 (main host) — focus check live; front-door plan on ROADMAP
 
-**Next session first (say "review the scout picks"):** deep-dive two finds Bill put in
-review. Notes and shallow clones are in `review/` (gitignored, this host only):
-- `review/2026-10-19-firecrawl.md` + `review/firecrawl`: self-host only? Playwright inside?
-  Token win over WebFetch, measured?
-- `review/2026-10-19-browser-automation-no-microsoft.md`: Bill won't use Microsoft unless
-  nothing else exists, so playwright-mcp is the fallback. The leading alternatives are
-  `chrome-devtools-mcp` (Google, Puppeteer) and `firefox-devtools-mcp` (Mozilla, BiDi), both
-  cloned. Compare token cost per snapshot and check for telemetry.
+**Scout picks reviewed (2026-10-19), awaiting Bill's go:** verdicts are in the `review/`
+notes (gitignored, this host only).
+- **firecrawl: don't adopt.** It needs 7 services and 3.4 GiB, and its browser path is
+  Playwright. A trafilatura script gives about half the markdown for the same pages in one
+  process, so build that instead (crawl → markdown → `jdocmunch index_local`).
+- **Browser: trial firefox-devtools-mcp.** Snapshots are 10–40× smaller than Chrome's (whose
+  are ~186K chars per page). No Google or Microsoft. Set `SE_AVOID_STATS=true` (Selenium
+  Manager phones plausible.io). Register it for sessions that need it only.
+- Say "trial the firefox browser" or "build the trafilatura crawler" to start either.
 - Don't run `index_folder` inside `review/` (nested-clone clobber). Copy clones out first.
 
 **Most important:** Bill asked to be reminded of a test: give immortality or Klarheit as many
