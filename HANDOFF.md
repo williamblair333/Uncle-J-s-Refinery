@@ -2,6 +2,16 @@
 
 ## 2026-10-19 (main host) — focus check live; front-door plan on ROADMAP
 
+**Next session first (say "review the scout picks"):** deep-dive two finds Bill put in
+review. Notes and shallow clones are in `review/` (gitignored, this host only):
+- `review/2026-10-19-firecrawl.md` + `review/firecrawl`: self-host only? Playwright inside?
+  Token win over WebFetch, measured?
+- `review/2026-10-19-browser-automation-no-microsoft.md`: Bill won't use Microsoft unless
+  nothing else exists, so playwright-mcp is the fallback. The leading alternatives are
+  `chrome-devtools-mcp` (Google, Puppeteer) and `firefox-devtools-mcp` (Mozilla, BiDi), both
+  cloned. Compare token cost per snapshot and check for telemetry.
+- Don't run `index_folder` inside `review/` (nested-clone clobber). Copy clones out first.
+
 **Most important:** Bill asked to be reminded of a test: give immortality or Klarheit as many
 sessions as Uncle J gets this week. `features/focus-check/focus-check.sh` sends the score by
 Telegram every Monday at 08:00 (cron `# uncle-j-focus-check`, log `state/focus-check.log`).
