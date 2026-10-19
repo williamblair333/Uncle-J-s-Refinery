@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-10-19 — focus check: a weekly estate-vs-questions scoreboard
+
+- **Why:** a survey of all 37 repos showed Uncle J has the most commits (976 since April) and
+  the life-goal projects the fewest (immortality 6, aquarius 4, hermetic_magic 3). Bill wanted a
+  reminder to test giving those projects equal time.
+- **Added:** `features/focus-check/focus-check.sh`. It sums last week's Langfuse traces per
+  project from session-stats, compares Uncle J with the question projects, and sends the result
+  by Telegram. `--dry-run` prints it instead. Cron: Mondays 08:00.
+- **Verified:** dry run, and one real send at 10:07 (baseline: 303 vs 132).
+
 ## 2026-10-19 (later) — Pi install fix merged via Gitea; antigravity + cron-catchup on ha-pi-01
 
 - **Changed:** pushes go to the `gitea` remote, not `origin` (GitHub). ha-pi-01 now holds a Gitea
