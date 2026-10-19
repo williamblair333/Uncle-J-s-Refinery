@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-10-19 — ha-pi-01 Wi-Fi outage diagnosed and hardened; Pi install branch rebased
+
+- **Found:** ha-pi-01 was unreachable 04:00–08:39. It didn't crash: crons and Home Assistant kept
+  running, but Wi-Fi dropped between 03:57 and 04:07 and never reconnected (HA log:
+  `Errno 101 Network unreachable` every 10 min). Wi-Fi power save was on (`brcmfmac`); the
+  likely trigger is the Xfinity gateway's overnight reboot. No journal survived the reboot
+  (Pi OS sets `Storage=volatile`).
+- **Fixed on the host (outside the repo):** Wi-Fi power save off
+  (`/etc/NetworkManager/conf.d/99-wifi-powersave-off.conf`); persistent journal, capped at
+  200 MB (`/etc/systemd/journald.conf.d/40-rpi-volatile-storage.conf`, `90-size-cap.conf`);
+  `wifi-watchdog.timer`, every 2 min (`/usr/local/sbin/wifi-watchdog`). The watchdog
+  reconnects, restarts NetworkManager after 6 min, and reboots after 20 min, with a 30-min
+  uptime floor and a 6-h cooldown. The Debian `watchdog` package was rejected: it competes
+  with systemd for `/dev/watchdog`, and its main action is a reboot.
+- **Docs:** follow-along write-ups in `/home/bill/pi-server/` (`01` diagnosis, `02` Pi-server
+  checklist from `debian-howto-guides/debian-wifi-uplink-guide.md`, `03` applied fixes + undo).
+- **Branch `fix/pi-sqlite-serena-install`:** rebased onto `origin/main` (`b84e52a`). install.sh
+  merged without conflicts; it was checked against #155's stdlib-version logic. CHANGELOG/HANDOFF
+  conflicts resolved by date order. Not pushed: this Pi has no GitHub credentials and no `gh`.
+
 ## 2026-10-18 — cron catch-up: jobs missed while the machine was off now run at boot
 
 - **Found:** the box is shut down most nights (journal: down 2026-10-17 22:09 → 2026-10-18

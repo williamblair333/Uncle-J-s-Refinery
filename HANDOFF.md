@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-19 (ha-pi-01) — Wi-Fi outage fixed on host; PR branch ready but not pushed
+
+**Most important:** `fix/pi-sqlite-serena-install` is rebased onto `origin/main` (1 ahead,
+0 behind) and needs a push + PR. This Pi can't authenticate to GitHub (no `gh`, no SSH key, no
+stored HTTPS credential), and Gitea (10.0.0.100) was down. Fix:
+`sudo apt install -y gh && gh auth login --web && gh auth setup-git`, or push from the main host.
+
+- The nightly `uv.lock` bump on this host is in `git stash` ("nightly uv.lock bump"). It's not
+  part of the PR.
+- Host hardening (Wi-Fi power save off, persistent journal, `wifi-watchdog.timer`) is documented
+  in `/home/bill/pi-server/`. **Verify after the next reboot:** `iw dev wlan0 get power_save`
+  → off, and `journalctl --list-boots` → 2+ boots.
+- Not tested: the watchdog's real reboot path and its 6-h cooldown.
+- The power supply is good now (Bill, 2026-10-19). The 2026-10-06 `throttled=0x50005` note is stale.
+- memweave store on this host is still empty (every query returns 0). `state/hook-blocks.log`
+  doesn't exist here.
+
 ## 2026-10-18 — cron catch-up installed
 
 **Most important:** the machine is off most nights, so every 01:00–08:00 cron job was being
