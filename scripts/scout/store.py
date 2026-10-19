@@ -54,6 +54,10 @@ class Paths:
         return self.root / "state" / "scout-rotation.json"
 
     @property
+    def top100(self) -> Path:
+        return self.root / "state" / "scout-top100.json"
+
+    @property
     def log(self) -> Path:
         return self.root / "state" / "scout.log"
 

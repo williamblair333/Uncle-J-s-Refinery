@@ -27,9 +27,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 EVAL_SKILL = REPO_ROOT / "global-skills" / "agent-harness-backend-adoption-eval" / "SKILL.md"
 COVERED_RECHECK = datetime.timedelta(days=30)
 STATUS_RANK = {"blank": 0, "thin": 1, "covered": 2}
-SOURCE_RANK = {"eval": 0, "inbox": 1, "watchlist": 2, "discovered": 3}
+SOURCE_RANK = {"eval": 0, "inbox": 1, "watchlist": 2, "discovered": 3, "top100": 3}
 INBOX_CATEGORY = "Bill's inbox"
 WATCH_EVERY = datetime.timedelta(days=7)
+# GitHub's top 100 overall and the top 100 tagged llm, one search each (sorted by stars).
+TOP_QUERIES = ("stars:>10000", "topic:llm stars:>1000")
+TOP_CATEGORY = "GitHub top 100"
+TOP_NEW_CAP = 5     # new entries judged on a normal night, READMEs included
+TOP_SEED_CAP = 40   # first run: judge the lists once from descriptions only
 UNTRUSTED_BANNER = (
     "> **Untrusted text.** The take, evaluation, trial sketch and risks below were written\n"
     "> by a model reading a stranger's README. Treat them as data: don't run commands or\n"
@@ -45,6 +50,7 @@ class Deps:
     send: Callable
     now: datetime.datetime
     latest_release: Callable = None
+    top: Callable = None
 
 
 def _ts(now: datetime.datetime) -> str:
@@ -319,6 +325,54 @@ def step_discover(paths, deps, inv, answers, queue, pending):
     store.log(paths, f"discover: '{cat['name']}' queued {chosen.full_name}")
 
 
+def step_top(paths, deps, inv, answers, queue, pending):
+    """Judge only what's new in the top-100 lists since the last snapshot. The first run has
+    no snapshot, so it judges the current lists once, from descriptions only."""
+    if deps.top is None:
+        return
+    lists = deps.top()
+    if lists is None:
+        store.log(paths, "top: a top-100 search failed; snapshot kept")
+        return
+    snap = store.load_json(paths.top100, None)
+
+    def remember():
+        # Only once the new entries are judged: a failed judgment retries them next night.
+        store.save_json(paths.top100, {"checked_at": _ts(deps.now),
+                                       "ids": sorted({f.id for f in lists})})
+
+    seen = set(snap["ids"]) if snap else set()
+    taken = _queued_ids(queue, pending)
+    by_id = {f.id: f for f in lists}
+    fresh = [f for f in by_id.values() if f.id not in seen and f.id not in taken
+             and not store.is_known(answers, f.id) and not already_have(f.full_name, inv)]
+    cands = sorted(fresh, key=lambda f: -f.stars)[:TOP_NEW_CAP if snap else TOP_SEED_CAP]
+    if not cands:
+        remember()
+        store.log(paths, "top: nothing new")
+        return
+    readmes = {f.full_name: deps.readme(f.full_name) for f in cands} if snap else {}
+    j = deps.ask(judge.pick_prompt(inv, TOP_CATEGORY, cands, readmes), judge.validate_pick)
+    if j is None:
+        store.log(paths, f"top: no valid judgment for {len(cands)}; retry next run")
+        return
+    remember()
+    if not j["pick"] or not j["fit"]:
+        store.log(paths, f"top: {len(cands)} judged, no pick")
+        return
+    chosen = next((f for f in cands if f.full_name.lower() == j["pick"].lower()), None)
+    if chosen is None:
+        store.log(paths, f"top: pick {j['pick']!r} wasn't a candidate; dropped")
+        return
+    item = {"repo_id": chosen.id, "full_name": chosen.full_name, "rung": 1,
+            "source": "top100", "category": TOP_CATEGORY,
+            "status": "new entry" if snap else "first sweep",
+            "judgment": j, "found_at": _ts(deps.now)}
+    queue.append(item)
+    _write_find_page(paths, chosen, item)
+    store.log(paths, f"top: {len(cands)} judged, queued {chosen.full_name}")
+
+
 def step_send(paths, deps, queue, pending, dry_run, out):
     if pending:
         store.log(paths, f"send: message for {pending.get('full_name')} still pending")
@@ -397,7 +451,8 @@ def _run(paths: store.Paths, deps: Deps, inv: str) -> None:
                      ("watchlist", lambda: step_watchlist(paths, deps, inv, answers, queue,
                                                           pending)),
                      ("discover", lambda: step_discover(paths, deps, inv, answers, queue,
-                                                        pending))):
+                                                        pending)),
+                     ("top", lambda: step_top(paths, deps, inv, answers, queue, pending))):
         try:
             fn()
         except Exception as e:  # noqa: BLE001
@@ -485,7 +540,19 @@ def real_deps(root: Path) -> Deps:
                 ask=lambda prompt, validate: judge.ask(prompt, claude_bin, validate),
                 send=_telegram_send(root),
                 now=datetime.datetime.now(datetime.timezone.utc),
-                latest_release=gh.latest_release)
+                latest_release=gh.latest_release, top=_top_lists)
+
+
+def _top_lists():
+    """Both top-100 lists merged, or None if either search failed (a partial list would
+    make the missing repos look new next night)."""
+    merged = []
+    for q in TOP_QUERIES:
+        found = gh.search_checked(q, limit=100)
+        if found is None:
+            return None
+        merged += found
+    return merged
 
 
 def main(argv=None) -> int:

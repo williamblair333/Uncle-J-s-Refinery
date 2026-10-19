@@ -28,13 +28,6 @@ Completed items age out after ~4 weeks.
   in `claude mcp add … scripts/…` and in `partikus_mcp tests/x.py`. Twice today the
   workaround was quoting `"mcp"` or `git add -A`. Fix: require a word boundary before
   `cp|mv`. The guard is a hardening surface, so it needs an adversarial pass.
-- **Scout: top-100 sweep, on demand** (opened 2026-10-17, Bill's idea). A command such as
-  `just scout-top` pulls GitHub's top 100 repos by stars (one search call:
-  `stars:>N sort:stars per_page=100`, optionally limited to agent/AI topics). It diffs them
-  against a stored snapshot (`state/scout-top100.json`) and judges **only the new
-  entries**, which then join the normal queue (rung 1, one Telegram message a day). Reuses
-  `gh.search_checked`, the known-repo filter and `pick_prompt`; the first run seeds the
-  snapshot without pitching, so it doesn't flood.
 - **Roll out justfiles** (opened 2026-10-16). Each repo gets one when it's next worked on;
   the Refinery and voice-line are done. Keep recipe names shared: setup, test, run, start,
   stop, status, doctor.

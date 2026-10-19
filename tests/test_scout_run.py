@@ -300,3 +300,64 @@ def test_seed_writes_unreviewed_map_and_refuses_reviewed(tmp_path):
     assert cats[0]["queries"] == ["wake word"]
     paths.map.write_text(paths.map.read_text().replace("reviewed: false", "reviewed: true"))
     assert run.seed(paths, deps, "INV") is False
+
+
+def top_deps(fake, lists, reads=None):
+    reads = reads if reads is not None else []
+
+    def readme(name):
+        reads.append(name)
+        return "README"
+    return run.Deps(**{**fake.deps().__dict__, "readme": readme, "top": lambda: lists})
+
+
+def test_top_first_run_seeds_and_judges_once_from_descriptions(tmp_path):
+    paths = setup(tmp_path)
+    lists = [F(1, stars=5), F(2, stars=9)]
+    fake, reads = Fake(repos=lists), []
+    run.run_once(paths, top_deps(fake, lists, reads), "INV")
+    assert store.load_json(paths.top100, None)["ids"] == [1, 2]
+    assert reads == []  # first sweep: descriptions only
+    assert len(fake.prompts) == 1
+    assert fake.sent and "o/r2" in fake.sent[0][0]  # highest stars listed first
+    assert (paths.finds_dir / "o__r2.md").exists()
+
+
+def test_top_judges_only_new_entries(tmp_path):
+    paths = setup(tmp_path)
+    store.save_json(paths.top100, {"ids": [1, 2]})
+    fake, reads = Fake(), []
+    run.run_once(paths, top_deps(fake, [F(1), F(2)], reads), "INV")
+    assert fake.prompts == [] and "top: nothing new" in paths.log.read_text()
+    run.run_once(paths, top_deps(fake, [F(1), F(2), F(3)], reads), "INV")
+    assert reads == ["o/r3"]
+    assert store.load_json(paths.top100, None)["ids"] == [1, 2, 3]
+
+
+def test_top_failed_search_keeps_snapshot(tmp_path):
+    paths = setup(tmp_path)
+    store.save_json(paths.top100, {"ids": [1]})
+    fake = Fake()
+    run.run_once(paths, top_deps(fake, None), "INV")
+    assert store.load_json(paths.top100, None) == {"ids": [1]}
+    assert fake.sent == []
+
+
+def test_top_failed_judgment_retries_next_run(tmp_path):
+    paths = setup(tmp_path)
+    store.save_json(paths.top100, {"ids": [1]})
+    fake = Fake()
+    fake.ask = lambda prompt, validate: None
+    run.run_once(paths, top_deps(fake, [F(1), F(2)]), "INV")
+    assert store.load_json(paths.top100, None) == {"ids": [1]}
+
+
+def test_top_skips_answered_repos(tmp_path):
+    paths = setup(tmp_path)
+    store.save_json(paths.top100, {"ids": [1]})
+    answers = store.load_answers(paths.answers)
+    store.save_answers(paths.answers, store.record_answer(answers, 2, "o/r2", 1, "no",
+                                                          None, NOW))
+    fake = Fake()
+    run.run_once(paths, top_deps(fake, [F(1), F(2)]), "INV")
+    assert fake.prompts == []
