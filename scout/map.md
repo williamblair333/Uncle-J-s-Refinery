@@ -1,5 +1,5 @@
 ---
-reviewed: false
+reviewed: true
 seeded: 2026-10-17T14:46:56Z
 ---
 # Capability map
