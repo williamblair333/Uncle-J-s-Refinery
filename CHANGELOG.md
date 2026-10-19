@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-19 (later) — Pi install fix merged via Gitea; antigravity + cron-catchup on ha-pi-01
+
+- **Changed:** pushes go to the `gitea` remote, not `origin` (GitHub). ha-pi-01 now holds a Gitea
+  token in git's credential store, so it can push.
+- **Merged:** PR #143 (`fix/pi-sqlite-serena-install`) on Gitea, merge commit `86b3438`.
+- **Installed on ha-pi-01 (outside the repo):** `features/antigravity/install.sh` (config in
+  `~/.gemini`; `agy` itself isn't installed here) and `features/cron-catchup/install.sh` (@reboot
+  entry). `features/repo-scout` deliberately not installed: the main Uncle J server runs it.
+
 ## 2026-10-19 — ha-pi-01 Wi-Fi outage diagnosed and hardened; Pi install branch rebased
 
 - **Found:** ha-pi-01 was unreachable 04:00–08:39. It didn't crash: crons and Home Assistant kept

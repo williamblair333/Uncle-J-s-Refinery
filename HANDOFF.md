@@ -1,5 +1,20 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-19 (ha-pi-01, later) — Pi fix merged; push to Gitea, not GitHub
+
+**Most important:** push to the `gitea` remote. `origin` is GitHub and is no longer used, so
+`git status` showing `main` ahead of `origin` is expected. PR #143 (Pi install fix) is merged on
+Gitea (`86b3438`).
+
+- ha-pi-01 has a Gitea token in git's credential store. It was pasted in chat; rotate it if that matters.
+- Installed here: antigravity (config only; `agy` is not installed) and cron-catchup. repo-scout
+  is **not** installed on the Pi on purpose: the main server runs it.
+- cron-catchup `--dry-run` fails with "journal holds fewer than two boots" until the Pi has
+  rebooted once with the persistent journal. That's expected; re-check after the next reboot.
+- Still open from the pull: re-run `./install.sh`, re-sync `~/.claude/CLAUDE.md`, run
+  `healthcheck.sh`. The `uv.lock` bump is still in `git stash`.
+- Merged branch `fix/pi-sqlite-serena-install` still exists locally and on Gitea.
+
 ## 2026-10-19 (ha-pi-01) — Wi-Fi outage fixed on host; PR branch ready but not pushed
 
 **Most important:** `fix/pi-sqlite-serena-install` is rebased onto `origin/main` (1 ahead,
