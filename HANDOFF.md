@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-19 (ha-pi-01) — Wi-Fi outage fixed on host; PR branch ready but not pushed
+
+**Most important:** `fix/pi-sqlite-serena-install` is rebased onto `origin/main` (1 ahead,
+0 behind) and needs a push + PR. This Pi can't authenticate to GitHub (no `gh`, no SSH key, no
+stored HTTPS credential), and Gitea (10.0.0.100) was down. Fix:
+`sudo apt install -y gh && gh auth login --web && gh auth setup-git`, or push from the main host.
+
+- The nightly `uv.lock` bump on this host is in `git stash` ("nightly uv.lock bump"). It's not
+  part of the PR.
+- Host hardening (Wi-Fi power save off, persistent journal, `wifi-watchdog.timer`) is documented
+  in `/home/bill/pi-server/`. **Verify after the next reboot:** `iw dev wlan0 get power_save`
+  → off, and `journalctl --list-boots` → 2+ boots.
+- Not tested: the watchdog's real reboot path and its 6-h cooldown.
+- The power supply is good now (Bill, 2026-10-19). The 2026-10-06 `throttled=0x50005` note is stale.
+- memweave store on this host is still empty (every query returns 0). `state/hook-blocks.log`
+  doesn't exist here.
+
 ## 2026-10-18 — cron catch-up installed
 
 **Most important:** the machine is off most nights, so every 01:00–08:00 cron job was being
@@ -359,6 +376,19 @@ chesslab, mkit, free-energy) are still live; Bill to decide.
 **Notes:** `review/rea` (gitignored) is the upstream clone. Its jcodemunch index is
 `local/rea-d4348978`. Don't index it with git identity, or it merges into the Refinery index.
 The Refinery docs-gate hook also fires on commits inside that nested clone; ignore it there.
+
+## 2026-10-06 — third host (ha-pi-01, Raspberry Pi 4, aarch64) brought up
+
+- Fixed in `install.sh`: pysqlite3 downgrade of stdlib SQLite on aarch64, and the Serena
+  config stub crash. Details in CHANGELOG. Healthcheck: SQLite 3.53.1 OK, all 5 MCP servers
+  Connected.
+- **Ollama is stopped on this host** (`docker update --restart=no ollama`). A 9B model on CPU
+  in 7.6 GB RAM, shared with Home Assistant, isn't usable. ask_local falls back to Claude.
+- The Pi reports `throttled=0x50005` (under-voltage now and before). That's the power
+  supply, not the stack.
+- Still failing here: dreaming and session-stats (optional features, not installed). Either
+  install them or list them in `state/disabled-features`.
+- The memweave store on this host is empty (`sync_memory.sh --all` not run yet).
 
 ## 2026-10-05 (main host) — #155/#156 forwarded to Gitea; Langfuse hint fixed
 
