@@ -84,6 +84,10 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   stops at a nested independent clone — pass `repo` explicitly for the outer one.
   `CODE_INDEX_PATH` moves the whole index root; an index built under another value is
   simply not found (`degraded`, never `absent`).
+- Two repo ids that sanitise to one `<owner>-<name>` slot (`foo-bar/baz`, `foo/bar-baz`) no
+  longer share an index: the second is refused (`IndexIdentityConflict`, load status
+  `identity_conflict`). That's a collision, not a missing index — re-index under
+  another `CODE_INDEX_PATH`, don't read it as `absent`.
 - `list_repos` lists only indexes in the server's working directory by default
   (`repo_visibility`). A top-level `visibility` block with `hidden_count` means other indexes
   exist; a miss there is not grounds to re-index. Pass the exact repo id (it still loads), or

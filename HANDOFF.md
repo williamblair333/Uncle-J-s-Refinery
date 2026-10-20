@@ -12,6 +12,7 @@ notes (gitignored, this host only).
   Manager phones plausible.io). Register it for sessions that need it only.
 - Say "trial the firefox browser" or "build the trafilatura crawler" to start either.
 - Don't run `index_folder` inside `review/` (nested-clone clobber). Copy clones out first.
+- **jcodemunch-mcp breaking change**: since v1.108.381 an index slot whose stored repo differs from the requested id (hyphen collisions like `foo-bar/baz` vs `foo/bar-baz`) is refused with `IndexIdentityConflict` / load status `identity_conflict` instead of being silently reused, so callers must treat that status as a collision (re-index elsewhere), not as a missing or absent index.
 
 **Most important:** Bill asked to be reminded of a test: give immortality or Klarheit as many
 sessions as Uncle J gets this week. `features/focus-check/focus-check.sh` sends the score by
