@@ -13,6 +13,7 @@ notes (gitignored, this host only).
 - Say "trial the firefox browser" or "build the trafilatura crawler" to start either.
 - Don't run `index_folder` inside `review/` (nested-clone clobber). Copy clones out first.
 - **jcodemunch-mcp breaking change**: since v1.108.381 an index slot whose stored repo differs from the requested id (hyphen collisions like `foo-bar/baz` vs `foo/bar-baz`) is refused with `IndexIdentityConflict` / load status `identity_conflict` instead of being silently reused, so callers must treat that status as a collision (re-index elsewhere), not as a missing or absent index.
+- **jdocmunch-mcp breaking change**: since v1.147.0 `get_toc`, `get_toc_tree` and `list_docs` return an `error` instead of data when the response would exceed `JDOCMUNCH_RESPONSE_MAX_BYTES` (default 1 MiB), so callers must narrow with `path_glob`/`limit` and page on `next_offset` (or set the env var to `0` to restore the old unbounded behaviour).
 
 **Most important:** Bill asked to be reminded of a test: give immortality or Klarheit as many
 sessions as Uncle J gets this week. `features/focus-check/focus-check.sh` sends the score by

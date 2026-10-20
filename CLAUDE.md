@@ -188,6 +188,9 @@ an audit; it validates every evidence ref against what this session retrieved.
   `source="cache"` doesn't prove the source is current (use `source="live"`).
 - A repo missing from `doc_list_repos` is `degraded`, not absent. `has_embeddings: false`
   means word-only search.
+- `get_toc` / `get_toc_tree` / `list_docs` **refuse** (an `error`, not a short list) when the
+  answer would exceed `JDOCMUNCH_RESPONSE_MAX_BYTES` (default 1 MiB). Retry with `path_glob=`
+  or `limit=` (`suggested_limit` is given); page on `next_offset` until it's `None`.
 - Dotted dirs below the index root are skipped (except `.github`); opt in with
   `include_dot_dirs=` by name. A root that is itself dotted is unaffected.
 - Third-party library docs → **context7**, whenever a named library is involved.
