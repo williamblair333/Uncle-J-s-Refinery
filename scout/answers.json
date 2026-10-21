@@ -1,3 +1,13 @@
 {
-  "finds": {}
+  "finds": {
+    "1185389803": {
+      "answer": "maybe",
+      "answered_at": "2026-10-21T09:51:08Z",
+      "expired": true,
+      "full_name": "MadsLorentzen/ai-job-search",
+      "reason": null,
+      "rung": 1,
+      "watch_checked": "2026-10-21T09:51:08Z"
+    }
+  }
 }

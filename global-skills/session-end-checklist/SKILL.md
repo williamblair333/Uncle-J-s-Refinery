@@ -115,6 +115,20 @@ changes to any component?
   (Skill dir name retained for symlink stability; rename is a Bill-keyboard follow-up.)
 - **No** → note "No hardening this session — design memory step skipped."
 
+### Step 6c — Scout state sweep (Refinery only)
+
+The nightly repo scout writes `scout/answers.json` and `scout/finds/*.md` straight into the
+working tree. Both are kept in git: `answers.json` stops the scout re-sending a find, and the
+find pages are Claude-written, so they can't be cheaply regenerated. Stage them with this
+session's docs so they ride the same PR:
+
+```bash
+git status --short scout/ && git add scout/answers.json scout/finds/ scout/handoffs/ 2>/dev/null
+```
+
+Don't edit them by hand. If `scout/inbox.md` or `scout/map.md` changed, Bill edited them —
+stage those too.
+
 ### Step 7 — Custom checks
 
 Run each `custom_checks` entry from `.session-end.yml`:

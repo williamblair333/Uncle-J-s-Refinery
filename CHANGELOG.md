@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-21 — post-upgrade sync landed; scout state kept in git
+
+- **#154:** merged the two unpushed auto-maintain sync commits (jcodemunch 1.108.385, jdocmunch
+  1.149.0) and the `uv.lock` bump they had left uncommitted. `just doctor --fix` deployed the
+  new CLAUDE.md lines to `~/.claude/CLAUDE.md`.
+- **Scout state tracked:** `scout/answers.json` and `scout/finds/*.md` are committed, not
+  ignored. The session-end checklist has a new Step 6c that stages them, so the scout's
+  nightly writes ride the session's PR instead of needing one of their own.
+
 ## 2026-10-19 — scout: nightly discovery on, top-100 sweep built
 
 - **Discovery on:** Bill reviewed `scout/map.md` (#149). The scout had run every night all
