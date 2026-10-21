@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-10-21 — n8n ideas parked
+
+- `docs/proposals/2026-10-21-n8n-ideas.md`: where n8n would help across current projects,
+  ranked, with traps and open decisions. Nothing is installed. Linked from ROADMAP.
+
 ## 2026-10-21 — post-upgrade sync landed; scout state kept in git
 
 - **#154:** merged the two unpushed auto-maintain sync commits (jcodemunch 1.108.385, jdocmunch
