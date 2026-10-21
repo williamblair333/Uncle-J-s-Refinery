@@ -1,5 +1,16 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
+
+- #154 merged. GitHub mirrors from Gitea on commit (checked: no error, `47e94bd` on both).
+  The `github` remote's SSH key fails; nothing pushes there, so it doesn't matter.
+- Scout state is now committed at session end (checklist Step 6c).
+- Scout finds, Claude's triage (Bill to confirm): **video-transcriber-mcp-rs** is the only one worth a trial (no
+  speech-to-text path today). code-sandbox-mcp: no licence, 1 star; the sandbox gap stays open.
+  firecrawl and playwright-mcp were settled on 10-19 (trafilatura, firefox-devtools-mcp).
+  ai-job-search: not a harness capability.
+- Advisory: auto-maintain commits upgrade syncs without `uv.lock` and never pushes.
+
 ## 2026-10-19 (main host) — focus check live; front-door plan on ROADMAP
 
 **Scout picks reviewed (2026-10-19), awaiting Bill's go:** verdicts are in the `review/`
