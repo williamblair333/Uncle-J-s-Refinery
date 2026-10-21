@@ -667,8 +667,8 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.108.378"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#581c50e18f8a3c0920b69b86bd39db01e0ea3883" }
+version = "1.108.385"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#a27b77e3441496f9b30aa97406d8444cf1a99639" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -707,8 +707,8 @@ dependencies = [
 
 [[package]]
 name = "jdocmunch-mcp"
-version = "1.146.0"
-source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#1e1dbbeef5494290e271dd7d5d0cd26d70255458" }
+version = "1.149.0"
+source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#dc47302e2d4e149098c2f00fb9a74fea00209c34" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },

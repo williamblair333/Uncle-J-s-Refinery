@@ -84,6 +84,10 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   stops at a nested independent clone — pass `repo` explicitly for the outer one.
   `CODE_INDEX_PATH` moves the whole index root; an index built under another value is
   simply not found (`degraded`, never `absent`).
+- Two repo ids that sanitise to one `<owner>-<name>` slot (`foo-bar/baz`, `foo/bar-baz`) no
+  longer share an index: the second is refused (`IndexIdentityConflict`, load status
+  `identity_conflict`). That's a collision, not a missing index — re-index under
+  another `CODE_INDEX_PATH`, don't read it as `absent`.
 - `list_repos` lists only indexes in the server's working directory by default
   (`repo_visibility`). A top-level `visibility` block with `hidden_count` means other indexes
   exist; a miss there is not grounds to re-index. Pass the exact repo id (it still loads), or
@@ -184,6 +188,9 @@ an audit; it validates every evidence ref against what this session retrieved.
   `source="cache"` doesn't prove the source is current (use `source="live"`).
 - A repo missing from `doc_list_repos` is `degraded`, not absent. `has_embeddings: false`
   means word-only search.
+- `get_toc` / `get_toc_tree` / `list_docs` **refuse** (an `error`, not a short list) when the
+  answer would exceed `JDOCMUNCH_RESPONSE_MAX_BYTES` (default 1 MiB). Retry with `path_glob=`
+  or `limit=` (`suggested_limit` is given); page on `next_offset` until it's `None`.
 - Dotted dirs below the index root are skipped (except `.github`); opt in with
   `include_dot_dirs=` by name. A root that is itself dotted is unaffected.
 - Third-party library docs → **context7**, whenever a named library is involved.
