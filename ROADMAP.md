@@ -14,6 +14,11 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **n8n ideas, parked for review** (opened 2026-10-21). n8n would run beside Uncle J for
+  webhooks and OAuth SaaS flows. The full list is ranked by project, with traps and four
+  decisions for Bill: `docs/proposals/2026-10-21-n8n-ideas.md`. The top picks are bizengine,
+  multi-host sync and patentengine deadlines. Resume: "set up n8n".
+
 - **Multiplayer-AI viewer** (opened 2026-10-17). For watching AI players cooperate or compete
   in a game, in real time. The plan:
   - a game-side bridge (localhost state/action API, fixed screen types; the pattern is from

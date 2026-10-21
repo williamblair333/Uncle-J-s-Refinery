@@ -9,6 +9,7 @@
   speech-to-text path today). code-sandbox-mcp: no licence, 1 star; the sandbox gap stays open.
   firecrawl and playwright-mcp were settled on 10-19 (trafilatura, firefox-devtools-mcp).
   ai-job-search: not a harness capability.
+- n8n ideas parked in `docs/proposals/2026-10-21-n8n-ideas.md` for Bill to review (ROADMAP).
 - Advisory: auto-maintain commits upgrade syncs without `uv.lock` and never pushes.
 
 ## 2026-10-19 (main host) — focus check live; front-door plan on ROADMAP
