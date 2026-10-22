@@ -22,9 +22,11 @@ bizengine's HANDOFF. That gap is closed.
   now has a private GitHub push mirror.
 - Justfiles in 18 repos (CHANGELOG). **Mirror-wipe trap fixed in 9 clones**: never merge on
   GitHub for a mirrored repo; land on Gitea.
-- **Waiting on Bill:** acknowledge the 3 MEDIUMs to revoke 15 one-shot Gitea tokens; OK to file
-  the guardrails issue (draft in docs/proposals); remotes for the 5 remote-less repos; the
-  bizengine accounts (Etsy dev app first, then Cults3D, Slant 3D) and its 4 open questions.
+- **Done after session end (Bill's go):** 15 one-shot Gitea tokens revoked (backup, then
+  integrity_check ok, then backup deleted; kept 1/2/4/27). dwarvesf/claude-guardrails#20 filed.
+  Private Gitea repos (no mirror) for larder, patentengine, reciepts, tao-intel, jaredrhod.
+- **Waiting on Bill:** the bizengine accounts (Etsy dev app first, then Cults3D, Slant 3D) and
+  its 4 open questions.
 - Blocked: the f3a7ed9 clone (tc-vmh-03 timed out; the Pi isn't resolvable from here).
 - Audit baselines for push-guard, grep-guard, surface-write-guard, the commit doc gate and the
   guardrails escalation hook are in `~/.uncle-j-memory/memory/audit-baselines.md`. Check a guard

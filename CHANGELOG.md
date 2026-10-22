@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-10-22 — tokens revoked, upstream issue filed, five repos get remotes
+
+- **Gitea:** 15 one-shot access tokens deleted from `gitea.db` (ids 5–15, 17, 18, 21, 35) after
+  `.backup` + `integrity_check`; backup removed. Stack token verified working afterwards.
+- **Upstream:** dwarvesf/claude-guardrails#20 (escalation grep reads its pattern as an option).
+- **Remotes:** private Gitea repos created for larder, patentengine, reciepts, tao-intel and
+  jaredrhod; local history imported by PR #1 in each (jaredrhod PR #2 updates its CLAUDE.md note).
+
 ## 2026-10-22 — justfiles in 18 repos; mirror-wiped work restored; branches archived
 
 - **Justfiles** merged via Gitea PRs in mafski, debian-howto-guides, bizengine, Klarheit,
