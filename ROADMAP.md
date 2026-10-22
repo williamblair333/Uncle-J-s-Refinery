@@ -117,13 +117,6 @@ Completed items age out after ~4 weeks.
   network inspection only in the developer preset. Notes:
   `review/2026-10-19-browser-automation-no-microsoft.md`. Resume: "trial the firefox browser".
 
-- **Trial Qwen3.6-35B-A3B Heretic as the `ask_local` backend** (opened 2026-10-17). It's
-  downloaded to `/opt/models/gguf/qwen3.6-35b-a3b-heretic/`.
-  - **Runtime:** it needs `llama-server --n-cpu-moe` rather than Ollama.
-  - **Test:** measure tok/s and quality against `qwen3.5:9b`.
-  - **If it wins:** add an OpenAI-compatible backend to `scripts/ask_local/server.py`.
-  - **Background:** the vault note `13 - Resources/Local Models and AI Game Buddies.md`.
-
 - **Review `state/ask_local.jsonl`** after about 2 weeks of use (opened 2026-10-04). Does
   offloading save Claude tokens without wrong results acted on? If not, the standing test
   says remove it.
@@ -239,6 +232,14 @@ Completed items age out after ~4 weeks.
   `openai-compatible` is not in `_EMBED_AUTO_DETECT_ORDER` and is never auto-selected.
   Corrected in SECURITY.md with the evidence. If the narrower version is worth tracking,
   it needs its own issue.
+## Recently completed (2026-10-22 — ask_local on the abliterated model)
+
+- **Qwen3.6-35B-A3B Heretic is this host's `ask_local` model.** It runs on llama-server
+  (`docker/llama-heretic/compose.yaml`, `just heretic up -d`) at about 40 tok/s with 4.8 GB of
+  VRAM. Against `qwen3.5:9b` it got 5/5 vs 4/5 on classification, tied on extraction and code,
+  and answered a lock-picking prompt that the 9B model refused. `ask_local` gained an `openai`
+  backend; the repo default stays Ollama.
+
 ## Recently completed (2026-10-22 — the "work I can just do" sweep)
 
 - **Guards:** grep-guard resolves symlinks and judges each path; push-guard follows bash quoting

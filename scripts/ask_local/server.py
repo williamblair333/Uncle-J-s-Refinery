@@ -1,4 +1,4 @@
-"""ask_local — MCP server that hands bounded subtasks to a local Ollama model.
+"""ask_local — MCP server that hands bounded subtasks to a local model.
 
 Claude stays the orchestrator. This server only answers prompts, summarizes
 and extracts; it has no shell, writes no files, and reads a file only when a
@@ -8,9 +8,16 @@ Every call appends one line to the measurement log (tool, model, token counts,
 latency, ok/error) and never the prompt or the answer, so whether offloading
 pays for itself can be measured rather than assumed.
 
-Env: ASK_LOCAL_URL (default http://127.0.0.1:11434), ASK_LOCAL_MODEL
-(default qwen3.5:9b), ASK_LOCAL_TIMEOUT seconds (default 300),
-ASK_LOCAL_LOG (default <repo>/state/ask_local.jsonl; empty string disables).
+Env: ASK_LOCAL_BACKEND (ollama | openai, default ollama), ASK_LOCAL_URL
+(default http://127.0.0.1:11434), ASK_LOCAL_MODEL (default qwen3.5:9b),
+ASK_LOCAL_TIMEOUT seconds (default 300), ASK_LOCAL_LOG (default
+<repo>/state/ask_local.jsonl; empty string disables).
+
+`openai` speaks llama-server's /v1/chat/completions, for models Ollama runs
+badly (MoE with experts in RAM: docker/llama-heretic/compose.yaml). A host
+opts in at registration:
+  claude mcp add -s user ask_local -e ASK_LOCAL_BACKEND=openai \
+    -e ASK_LOCAL_URL=http://127.0.0.1:8090 -e ASK_LOCAL_MODEL=heretic -- <python> <this file>
 """
 from __future__ import annotations
 
@@ -24,6 +31,8 @@ import httpx
 
 _REPO = Path(__file__).resolve().parents[2]
 
+BACKEND = os.environ.get("ASK_LOCAL_BACKEND", "ollama")
+BACKENDS = ("ollama", "openai")
 OLLAMA_URL = os.environ.get("ASK_LOCAL_URL", "http://127.0.0.1:11434").rstrip("/")
 DEFAULT_MODEL = os.environ.get("ASK_LOCAL_MODEL", "qwen3.5:9b")
 TIMEOUT_S = float(os.environ.get("ASK_LOCAL_TIMEOUT", "300"))
@@ -37,13 +46,16 @@ def _clean(d: dict) -> dict:
 
 
 class LocalClient:
-    """Ollama HTTP client plus the measurement log. `http` is injectable for tests."""
+    """Ollama or llama-server HTTP client plus the measurement log. `http` is injectable for tests."""
 
     def __init__(self, http: httpx.Client, model: str = DEFAULT_MODEL,
-                 log_path: Path | None = LOG_PATH):
+                 log_path: Path | None = LOG_PATH, backend: str = BACKEND):
+        if backend not in BACKENDS:
+            raise ValueError(f"ASK_LOCAL_BACKEND must be one of {BACKENDS}, not {backend!r}")
         self.http = http
         self.model = model
         self.log_path = log_path
+        self.backend = backend
 
     def _log(self, rec: dict) -> None:
         if self.log_path is None:
@@ -63,16 +75,27 @@ class LocalClient:
         model = model or self.model
         messages = ([{"role": "system", "content": system}] if system else [])
         messages.append({"role": "user", "content": prompt})
-        options = {"num_predict": max_tokens}
-        if temperature is not None:
-            options["temperature"] = temperature
-        body = {"model": model, "messages": messages, "stream": False,
-                "think": False, "options": options}
-        if fmt is not None:
-            body["format"] = fmt
+        if self.backend == "openai":
+            body = {"model": model, "messages": messages, "stream": False,
+                    "max_tokens": max_tokens,
+                    "chat_template_kwargs": {"enable_thinking": False}}
+            if temperature is not None:
+                body["temperature"] = temperature
+            if fmt is not None:
+                body["response_format"] = {"type": "json_schema",
+                                           "json_schema": {"name": tool, "schema": fmt}}
+        else:
+            options = {"num_predict": max_tokens}
+            if temperature is not None:
+                options["temperature"] = temperature
+            body = {"model": model, "messages": messages, "stream": False,
+                    "think": False, "options": options}
+            if fmt is not None:
+                body["format"] = fmt
 
         start = time.monotonic()
-        result = self._post_chat(body, model)
+        result = (self._post_openai(body, model) if self.backend == "openai"
+                  else self._post_chat(body, model))
         seconds = round(time.monotonic() - start, 2)
         result.update(seconds=seconds, input_chars=input_chars)
         self._log({"tool": tool, "model": model, "ok": "error" not in result,
@@ -98,12 +121,30 @@ class LocalClient:
                 "tokens_in": data.get("prompt_eval_count"),
                 "tokens_out": data.get("eval_count")}
 
+    def _post_openai(self, body: dict, model: str) -> dict:
+        try:
+            r = self.http.post("/v1/chat/completions", json=body, timeout=TIMEOUT_S)
+        except httpx.TimeoutException as e:
+            return {"error": "timeout", "detail": f"no reply within {TIMEOUT_S:.0f}s ({e})"}
+        except httpx.HTTPError as e:
+            return {"error": "backend_unreachable", "detail": f"{OLLAMA_URL}: {e}"}
+        if r.status_code >= 400:
+            return {"error": "backend_error", "detail": f"HTTP {r.status_code}: {_err_text(r)}"}
+        data = r.json()
+        usage = data.get("usage") or {}
+        choice = (data.get("choices") or [{}])[0]
+        return {"model": data.get("model", model),
+                "text": (choice.get("message") or {}).get("content", ""),
+                "tokens_in": usage.get("prompt_tokens"),
+                "tokens_out": usage.get("completion_tokens")}
+
 
 def _err_text(r: httpx.Response) -> str:
     try:
-        return str(r.json().get("error", ""))
+        err = r.json().get("error", "")
     except ValueError:
         return r.text[:200]
+    return str(err.get("message", err) if isinstance(err, dict) else err)
 
 
 # This server reads files outside Claude Code's permission rules, so it refuses
@@ -194,6 +235,13 @@ def extract(client: LocalClient, instruction: str, schema: dict, path: str | Non
 
 
 def status(client: LocalClient) -> dict:
+    if client.backend == "openai":
+        try:
+            served = client.http.get("/v1/models", timeout=5).json().get("data", [])
+        except (httpx.HTTPError, ValueError) as e:
+            return {"error": "backend_unreachable", "detail": f"{OLLAMA_URL}: {e}"}
+        return _clean({"backend": "openai", "url": OLLAMA_URL, "default_model": client.model,
+                       "models": [{"name": m.get("id")} for m in served]})
     try:
         version = client.http.get("/api/version", timeout=5).json().get("version")
         tags = client.http.get("/api/tags", timeout=5).json().get("models", [])
@@ -216,12 +264,12 @@ def build_server():
     mcp = FastMCP("ask_local", log_level="WARNING", instructions=(
         "Hand bounded, low-stakes subtasks to a local model on this machine: bulk "
         "summarizing, first drafts, classification, structured extraction. Results are "
-        "from a ~9B model — verify anything that matters. Prefer path= over pasting "
+        "from a small local model — verify anything that matters. Prefer path= over pasting "
         "large text, so the content stays out of your context."))
 
     @mcp.tool(name="local_status")
     def _status() -> dict:
-        """Is the local Ollama up, and which models are installed."""
+        """Is the local model backend up, and which models it has."""
         return status(client)
 
     @mcp.tool(name="ask_local")

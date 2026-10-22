@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 (main host, later still) — ask_local now runs Qwen3.6 Heretic
+
+**Most important:** on this host `ask_local` is registered with `ASK_LOCAL_BACKEND=openai`,
+`ASK_LOCAL_URL=http://127.0.0.1:8090`, `ASK_LOCAL_MODEL=heretic`. That env lives only in
+`~/.claude.json`. `install.sh` re-adds ask_local **without** it, so a reinstall silently goes back
+to qwen3.5:9b on Ollama. Re-run the `claude mcp add` line in the `server.py` docstring after one.
+
+- Service: `just heretic up -d` (container `llama-heretic`, restart unless-stopped). It sleeps
+  after 10 idle minutes and gives the VRAM back; the first call after that takes about 3 s more.
+- Ollama stays installed and serves `model="qwen3.5:9b"` on request. If Ollama, lc0 and a
+  waking Heretic all want the GPU at once, the wake fails and `ask_local` returns `backend_error`.
+- Long inputs are slow: a 16k-token summarize took 53 s (prefill with experts on CPU). One
+  registration reaches one backend, so going back to the faster 9B for bulk work means
+  re-registering ask_local without the env.
+- The vision projector (`mmproj-…gguf`) isn't loaded; add `--mmproj` when image input is needed.
+- **Next:** the overdue `state/ask_local.jsonl` review. It now covers two models.
+
 ## 2026-10-22 (main host, later) — vintage-pulp-fantasy-style skill merged (#163)
 
 - New prompt-template skill `vintage-pulp-fantasy-style`, merged and linked. Markdown only, no CI.

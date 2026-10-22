@@ -1,0 +1,47 @@
+# llama-server for ask_local's openai backend (scripts/ask_local/server.py).
+# Qwen3.6-35B-A3B Abliterated Heretic, Q4_K_M. Start it with `just heretic up -d`.
+#
+# Loopback only, like Ollama. Measured 2026-10-22 on the RTX 3060 (12 GB) + 46 GB RAM:
+#   --n-cpu-moe 36 → ~40 tok/s, 4.8 GB VRAM, which leaves room for lc0 (~5.4 GB).
+#   --n-cpu-moe 24 → ~49 tok/s but 11.5 GB VRAM; 20 does not fit.
+# --sleep-idle-seconds frees the VRAM when idle; the next request wakes it in ~3 s.
+# -np 1: one slot gets the whole 32k context (auto slots would split it).
+# cuda12 image: the cuda13 builds need driver CUDA >= 13.4 (this host: 13.0).
+services:
+  llama-heretic:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda12-b11459
+    container_name: llama-heretic   # healthcheck.sh addresses it by name
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - /opt/models/gguf/qwen3.6-35b-a3b-heretic:/models:ro
+    command:
+      - -m
+      - /models/Qwen3.6-35B-A3B-Abliterated-Heretic-Q4_K_M/Qwen3.6-35B-A3B-Abliterated-Heretic-Q4_K_M.gguf
+      - --alias
+      - heretic
+      - -ngl
+      - "999"
+      - --n-cpu-moe
+      - "36"
+      - -c
+      - "32768"
+      - -np
+      - "1"
+      - --jinja
+      - -fa
+      - "on"
+      - --sleep-idle-seconds
+      - "600"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

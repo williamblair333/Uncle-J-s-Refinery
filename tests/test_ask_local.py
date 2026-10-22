@@ -271,6 +271,92 @@ def test_results_strip_null_fields(tmp_path):
     assert "tokens_in" not in out
 
 
+# --- openai backend (llama-server) -----------------------------------------
+
+def _oai_reply(content, prompt_tokens=40, out_tokens=12):
+    return {
+        "model": "heretic",
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": content}}],
+        "usage": {"prompt_tokens": prompt_tokens, "completion_tokens": out_tokens},
+    }
+
+
+def _oai_client(handler, tmp_path):
+    http = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://llama.test")
+    return server.LocalClient(http=http, model="heretic", log_path=tmp_path / "ask_local.jsonl",
+                              backend="openai")
+
+
+def test_openai_backend_posts_chat_completions_without_thinking(tmp_path):
+    seen = {}
+
+    def handler(request):
+        seen["path"] = request.url.path
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json=_oai_reply("Paris"))
+
+    out = server.ask(_oai_client(handler, tmp_path), "Capital of France?", system="Be terse.",
+                     max_tokens=64)
+
+    assert out["text"] == "Paris"
+    assert out["model"] == "heretic"
+    assert out["tokens_in"] == 40 and out["tokens_out"] == 12
+    assert seen["path"] == "/v1/chat/completions"
+    body = seen["body"]
+    assert body["stream"] is False
+    assert body["max_tokens"] == 64
+    assert body["chat_template_kwargs"] == {"enable_thinking": False}
+    assert body["messages"][0] == {"role": "system", "content": "Be terse."}
+
+
+def test_openai_backend_constrains_extract_with_json_schema(tmp_path):
+    seen = {}
+
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json=_oai_reply('{"name": "Ada", "age": 36}'))
+
+    out = server.extract(_oai_client(handler, tmp_path), "Get the person.", SCHEMA,
+                         text="Ada Lovelace was 36.")
+    assert out["data"] == {"name": "Ada", "age": 36}
+    assert seen["body"]["response_format"] == {
+        "type": "json_schema", "json_schema": {"name": "extract", "schema": SCHEMA}}
+    assert seen["body"]["temperature"] == 0
+
+
+def test_openai_backend_error_text_is_reported(tmp_path):
+    def handler(request):
+        return httpx.Response(500, json={"error": {"message": "context overflow"}})
+
+    out = server.ask(_oai_client(handler, tmp_path), "hi")
+    assert out["error"] == "backend_error"
+    assert "context overflow" in out["detail"]
+
+
+def test_openai_backend_unreachable_is_a_structured_error(tmp_path):
+    def handler(request):
+        raise httpx.ConnectError("refused", request=request)
+
+    out = server.ask(_oai_client(handler, tmp_path), "hi")
+    assert out["error"] == "backend_unreachable"
+
+
+def test_openai_backend_status_lists_served_models(tmp_path):
+    def handler(request):
+        assert request.url.path == "/v1/models"
+        return httpx.Response(200, json={"data": [{"id": "heretic"}]})
+
+    out = server.status(_oai_client(handler, tmp_path))
+    assert out["backend"] == "openai"
+    assert out["default_model"] == "heretic"
+    assert [m["name"] for m in out["models"]] == ["heretic"]
+
+
+def test_unknown_backend_is_refused():
+    with pytest.raises(ValueError):
+        server.LocalClient(http=httpx.Client(), backend="vllm")
+
+
 # --- live smoke test -------------------------------------------------------
 
 def _ollama_up():
