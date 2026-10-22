@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-22 — local model lineup decided
+
+- **Added** `docs/proposals/2026-10-22-local-model-lineup.md` (PR #166) and a ROADMAP Planned
+  entry: Heretic, an image model, Wan 2.2, Whisper, Chatterbox; Ollama and the 9B retired after
+  four listed steps. Licenses checked for commercial use (FLUX.1-dev ruled out).
+- **Fixed** HANDOFF claim that Ollama still serves `model=` calls on this host.
+
 ## 2026-10-22 — ask_local runs the abliterated Qwen3.6 Heretic
 
 - **Added** `ASK_LOCAL_BACKEND=openai` in `scripts/ask_local/server.py`: llama-server's

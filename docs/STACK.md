@@ -204,8 +204,15 @@ is fine: calls return `ollama_unreachable`, and `healthcheck.sh` reports it with
 **Measuring it.** `state/ask_local.jsonl` gets one line per call, with counts and latency but
 never content. Use it to decide whether ask_local earns its place.
 
-**Config.** Optional environment variables: `ASK_LOCAL_URL`, `ASK_LOCAL_MODEL`,
-`ASK_LOCAL_TIMEOUT` (default 300 s), `ASK_LOCAL_LOG` (set it to empty to disable the log).
+**Config.** Optional environment variables: `ASK_LOCAL_BACKEND` (`ollama`, the default, or
+`openai` for llama-server), `ASK_LOCAL_URL`, `ASK_LOCAL_MODEL`, `ASK_LOCAL_TIMEOUT` (default
+300 s), `ASK_LOCAL_LOG` (set it to empty to disable the log).
+
+**llama-server backend.** The main host runs Qwen3.6-35B-A3B Heretic this way:
+`just heretic up -d` starts `docker/llama-heretic/compose.yaml` on 127.0.0.1:8090, and
+ask_local is registered with `ASK_LOCAL_BACKEND=openai ASK_LOCAL_URL=http://127.0.0.1:8090
+ASK_LOCAL_MODEL=heretic`. `install.sh` registers without those variables, so re-run the
+`claude mcp add` line from the `server.py` docstring after a reinstall.
 
 ---
 
