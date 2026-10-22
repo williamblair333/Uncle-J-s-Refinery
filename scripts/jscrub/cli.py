@@ -558,7 +558,7 @@ examples:
   jscrub check-vendor
 
   # Also: has upstream moved on since we vendored it?
-  jscrub check-vendor ../review/watermarks-remover
+  jscrub check-vendor ../reviewed/watermarks-remover
 
 notes:
   * inspect reports bidi controls that clean preserves by default — bidi marks

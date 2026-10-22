@@ -825,6 +825,24 @@ check_jcodemunch_index_fresh() {
     fi
 }
 
+# ----- 9i2. local main has nothing the remote lacks -------------------------
+# Warn, never fail: unpushed commits lose nothing yet, but they ride into the next
+# branch. The 03:00 auto-maintain agent is the usual source (it commits, never pushes).
+check_local_main_unpushed() {
+    step "git — local main has no commits origin lacks"
+    local out rc
+    out=$(bash "$REPO_ROOT/scripts/check-local-main-unpushed.sh" "$REPO_ROOT" 2>/dev/null)
+    rc=$?
+    if [[ $rc -eq 1 ]]; then
+        warn "unpushed local main: ${out#AHEAD * }"
+        hint "check: git -C $REPO_ROOT log --oneline origin/main..main ; land them via branch -> PR -> merge, never a direct push to main"
+    elif [[ "$out" == SKIP* ]]; then
+        warn "unpushed-main check skipped: ${out#SKIP }"
+    else
+        ok "${out#OK }"
+    fi
+}
+
 # ----- 9j. no untracked global-skills files --------------------------------
 check_untracked_skills() {
     step "global-skills — no untracked SKILL.md files"
@@ -1230,11 +1248,17 @@ check_repo_scout() {
         ok "repo scout cron not installed (skipped)"
         return
     fi
-    local log="$REPO_ROOT/state/scout.log"
-    if [ -f "$log" ] && [ -n "$(find "$log" -mmin -2160 2>/dev/null)" ]; then
-        ok "repo scout ran in the last 36 h"
+    # A finished run ends with "[YYYY-MM-DD HH:MM:SS] run done" (scripts/scout/run.py).
+    # The log's mtime proved nothing: a crash, a lock skip or a dry run all touch it.
+    local log="$REPO_ROOT/state/scout.log" last_done age
+    last_done=$(grep -E '^\[[0-9-]+ [0-9:]+\] run done$' "$log" 2>/dev/null | tail -n 1 | cut -c2-20)
+    age=$(python3 -c 'import datetime,sys
+try: print(int((datetime.datetime.now()-datetime.datetime.strptime(sys.argv[1],"%Y-%m-%d %H:%M:%S")).total_seconds()))
+except ValueError: print(-1)' "$last_done" 2>/dev/null)
+    if [[ "${age:--1}" =~ ^[0-9]+$ ]] && [ "$age" -le 129600 ]; then
+        ok "repo scout finished a run in the last 36 h"
     else
-        warn "repo scout cron installed but no run logged in 36 h"
+        warn "repo scout cron installed but no finished run (\"run done\") in 36 h"
         hint "check: tail $log; run by hand: just scout --dry-run"
     fi
 }
@@ -1284,6 +1308,7 @@ check_docmunch_indexed
 check_secrets
 check_clean_room_wall
 check_jcodemunch_index_fresh
+check_local_main_unpushed
 check_untracked_skills
 check_skills_portability
 check_auto_maintain_cron

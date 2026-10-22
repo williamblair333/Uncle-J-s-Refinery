@@ -94,7 +94,13 @@ Check `state/hook-blocks.log`. If the file is non-empty:
 ```bash
 wc -l /opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log
 tail -20 /opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log
+ls /opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log.2*   # rotated archives
 ```
+
+Past 1 MiB the guards rename the log to `hook-blocks.log.YYYYMMDD` and start a new
+one, so a week's entries can span the archive and the live file. Search both, with
+`grep -a`: archives from before 2026-10-22 contain NUL bytes, and without `-a` grep
+prints nothing on them, which reads as "no blocks".
 
 Review BLOCKED entries since last session. Ask:
 - Are the same patterns being blocked repeatedly? → The rule is working; no action.

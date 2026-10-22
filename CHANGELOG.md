@@ -2,6 +2,43 @@
 
 ---
 
+## 2026-10-22 — guard precision (grep/push/credential)
+
+- **grep-guard:** paths are resolved (`realpath -m`) before the in-repo and allowed-location
+  tests, so symlinked or `..`-hopped repo source is denied; rg/ag/ack and recursive grep judge
+  each operand. **push-guard:** new lexer blocks pushes bash would execute (`"$(…)"`, `bash -c`,
+  `eval`, newlines, wrappers) and allows single-quoted / commit-message text.
+  **auto-maintain** prompt routes package checks through jcodemunch `index_dependency`.
+  **Windows:** credential-guard dispatched and wired.
+
+## 2026-10-22 — surface-write-guard gaps and hook-blocks log
+
+- `surface-write-guard.sh`: end-of-command targets, GNU `sed -i` (every form) and `>|`/`>&`
+  now blocked; `cp` inside `mcp` no longer is. Strict xfails are passing tests.
+- `hook-blocks.log`: grep/edit-surface/surface-write guards write text only and archive the
+  log past 1 MiB (never truncate); `collect_benefits.py` reads the archives.
+
+## 2026-10-22 — automation reliability
+
+- Unpushed local main is now detected via `git ls-remote` (`scripts/check-local-main-unpushed.sh`),
+  shown as a healthcheck W line and a session-start warning. Detection only, never pushes.
+- `post-merge-hook.sh` re-indexes before the "nothing actionable" exit, so code-only merges re-index.
+- `healthcheck-notify.sh` (07:00) re-indexes a stale jcodemunch index and re-checks before reporting.
+- Commit doc gate moved to `scripts/commit_doc_guard.py`: real `git commit` in this repo only;
+  policy read from `.session-end.yml`. `tests/test_skills.py` reads SKILL.md as UTF-8.
+
+## 2026-10-22 — install/doctor coverage and scout minors
+
+- jdocmunch-watch `--no-ai-summaries` drop-in: `scripts/jdocmunch-watch-dropin.sh`, provisioned by `install-reliability.sh`, restored by `refinery-doctor --fix` (check `jdocmunch-watch-dropin`).
+- Doctor `jcodemunch-scope` → `mcp-scope`: all five stack servers, via `claude mcp get` (the old `mcp list` grep could never match). Old name still works.
+- Scout: sent-marker so a Telegram timeout is never resent, one message per calendar day, `flock` run lock, `run done` line that healthcheck now reads instead of log mtime, library finds evaluated with `library-backend-adoption-eval`, gh facts behind each message logged (spec §10).
+- `just install-gate`: real `install.sh` in a fresh container with a `claude` shim; first run passed (65 s install).
+
+## 2026-10-22 — pysqlite3 wheel, jscrub wiring
+
+- Vendored pysqlite3 wheel rebuilt in manylinux2014 (glibc 2.17); imports with SQLite 3.51.3 on
+  Debian 11. `just audit` + CI job `test-jscrub` run jscrub read-only.
+
 ## 2026-10-21 — n8n ideas parked
 
 - `docs/proposals/2026-10-21-n8n-ideas.md`: where n8n would help across current projects,

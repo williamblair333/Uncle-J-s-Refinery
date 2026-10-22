@@ -9,12 +9,16 @@ stops the next one. Nothing is cloned or installed: repo content comes through `
 """
 import argparse
 import datetime
+import fcntl
+import http.client
 import json
 import os
 import re
 import shutil
+import socket
 import sys
 import tempfile
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,6 +29,17 @@ from scout import gh, judge, message, store  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EVAL_SKILL = REPO_ROOT / "global-skills" / "agent-harness-backend-adoption-eval" / "SKILL.md"
+LIBRARY_EVAL_SKILL = REPO_ROOT / "global-skills" / "library-backend-adoption-eval" / "SKILL.md"
+# Words in a find's gh description/topics marking it as a library or backend (a store,
+# index, cache, queue, SDK) rather than an agent harness or framework. Counted, not
+# matched once: "agent memory library" has one of each and stays with the harness method.
+_LIBRARY_WORDS = ("library", "libraries", "lib", "sdk", "database", "db", "vector",
+                  "index", "indexing", "cache", "caching", "queue", "storage", "store",
+                  "embedding", "embeddings", "backend", "parser", "client", "engine", "search")
+_HARNESS_WORDS = ("agent", "agents", "harness", "framework", "assistant", "copilot",
+                  "autonomous", "orchestration", "orchestrator", "workflow", "workflows",
+                  "multi-agent", "ide")
+SEND_UNCERTAIN = "uncertain"  # send() result: request went out, delivery unknown
 COVERED_RECHECK = datetime.timedelta(days=30)
 STATUS_RANK = {"blank": 0, "thin": 1, "covered": 2}
 SOURCE_RANK = {"eval": 0, "inbox": 1, "watchlist": 2, "discovered": 3, "top100": 3}
@@ -51,6 +66,7 @@ class Deps:
     now: datetime.datetime
     latest_release: Callable = None
     top: Callable = None
+    dry_run: bool = False
 
 
 def _ts(now: datetime.datetime) -> str:
@@ -194,8 +210,16 @@ def _queued_ids(queue: list, pending) -> set:
     return ids
 
 
+def pick_eval_skill(facts) -> Path:
+    """library-backend-adoption-eval for a library/backend find, else the harness method.
+    Decided from gh facts (description + topics), never from model output."""
+    words = re.findall(r"[a-z0-9-]+", f"{facts.description} {' '.join(facts.topics)}".lower())
+    lib = sum(w in _LIBRARY_WORDS for w in words)
+    harness = sum(w in _HARNESS_WORDS for w in words)
+    return LIBRARY_EVAL_SKILL if lib > harness else EVAL_SKILL
+
+
 def step_evaluate(paths, deps, inv, answers, queue):
-    skill = EVAL_SKILL.read_text(encoding="utf-8") if EVAL_SKILL.exists() else ""
     for key, e in answers["finds"].items():
         if e.get("rung") != 1 or e.get("answer") != "yes" or e.get("evaluated"):
             continue
@@ -203,6 +227,9 @@ def step_evaluate(paths, deps, inv, answers, queue):
         if facts is None:
             store.log(paths, f"evaluate: gh facts unavailable for {e.get('full_name')}")
             continue
+        skill_path = pick_eval_skill(facts)
+        skill = skill_path.read_text(encoding="utf-8") if skill_path.exists() else ""
+        store.log(paths, f"evaluate: {facts.full_name} using {skill_path.parent.name}")
         ev = deps.ask(judge.eval_prompt(inv, facts, deps.readme(facts.full_name), skill),
                       judge.validate_eval)
         if ev is None:
@@ -373,11 +400,40 @@ def step_top(paths, deps, inv, answers, queue, pending):
     store.log(paths, f"top: {len(cands)} judged, queued {chosen.full_name}")
 
 
+def _today(now: datetime.datetime) -> str:
+    return now.astimezone().strftime("%Y-%m-%d")
+
+
+def _uncertain_pending(marker: dict) -> dict:
+    return {"message_id": 0, "repo_id": marker["repo_id"], "full_name": marker["full_name"],
+            "rung": marker["rung"], "sent_at": marker["at"], "uncertain": True}
+
+
 def step_send(paths, deps, queue, pending, dry_run, out):
+    """Send at most one message per calendar day, never the same find twice.
+
+    A sent-marker (state/scout-sent.json) is written before the Telegram call. If the
+    call times out, or the run dies mid-send, the marker says the message may have gone
+    out: the find leaves the queue as a pending message with no message_id, which a tap
+    on it clears or the 48 h expiry turns into 'maybe'. It is never resent."""
     if pending:
         store.log(paths, f"send: message for {pending.get('full_name')} still pending")
         return pending
+    marker = store.load_json(paths.sent, None) or {}
+    if marker.get("state") == "sending":
+        # A previous run died between the send and recording it: delivery unknown.
+        marker["state"] = SEND_UNCERTAIN
+        store.save_json(paths.sent, marker)
+        queue[:] = [q for q in queue if not (q["repo_id"] == marker["repo_id"]
+                                             and q["rung"] == marker["rung"])]
+        store.log(paths, f"send: {marker['full_name']} may have gone out in an interrupted "
+                         "run; not resending")
+        return _uncertain_pending(marker)
     if not queue:
+        return None
+    if marker.get("date") == _today(deps.now) and not deps.dry_run:
+        store.log(paths, f"send: already sent today ({marker.get('full_name')}); "
+                         "next message tomorrow")
         return None
     queue.sort(key=lambda q: SOURCE_RANK[q["source"]])
     item = queue[0]
@@ -385,6 +441,12 @@ def step_send(paths, deps, queue, pending, dry_run, out):
     if facts is None:
         store.log(paths, f"send: gh facts unavailable for {item['full_name']}; kept queued")
         return None
+    # Spec §10: every number and URL in a sent message matches a gh response logged in
+    # the same run. These are the fields the message renders.
+    store.log(paths, "send: gh facts used: " + json.dumps(
+        {"id": facts.id, "full_name": facts.full_name, "html_url": facts.html_url,
+         "stars": facts.stars, "license": facts.license, "pushed_at": facts.pushed_at},
+        sort_keys=True))
     if item["rung"] == 2:
         text, kb = message.render_eval(facts, item["judgment"]), message.keyboard_eval(facts.id)
     else:
@@ -395,10 +457,26 @@ def step_send(paths, deps, queue, pending, dry_run, out):
         out(text)
         out(kb)
         return None
+    marker = {"date": _today(deps.now), "at": _ts(deps.now), "repo_id": facts.id,
+              "full_name": facts.full_name, "rung": item["rung"], "state": "sending"}
+    if not deps.dry_run:
+        store.save_json(paths.sent, marker)
     msg_id = deps.send(text, kb)
+    if deps.dry_run:
+        return None
+    if msg_id == SEND_UNCERTAIN:
+        marker["state"] = SEND_UNCERTAIN
+        store.save_json(paths.sent, marker)
+        queue.pop(0)
+        store.log(paths, f"send: Telegram timed out for {facts.full_name}; delivery unknown, "
+                         "not retrying (a tap clears it, else 'maybe' in 48 h)")
+        return _uncertain_pending(marker)
     if not msg_id:
+        paths.sent.unlink(missing_ok=True)  # definitely not delivered: safe to try again
         store.log(paths, f"send: Telegram send failed for {facts.full_name}; kept queued")
         return None
+    marker.update({"state": "sent", "message_id": int(msg_id)})
+    store.save_json(paths.sent, marker)
     queue.pop(0)
     store.log(paths, f"send: sent {facts.full_name} rung {item['rung']} (message {msg_id})")
     return {"message_id": int(msg_id), "repo_id": facts.id, "full_name": facts.full_name,
@@ -419,7 +497,7 @@ def run_once(paths: store.Paths, deps: Deps, inv: str, dry_run=False, out=print)
                 out(keyboard)
                 return None
 
-            preview = Deps(**{**deps.__dict__, "send": show})
+            preview = Deps(**{**deps.__dict__, "send": show, "dry_run": True})
             _run(store.Paths(Path(td)), preview, inv)
         return
     _run(paths, deps, inv)
@@ -526,11 +604,26 @@ def _telegram_send(root: Path):
         req = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage",
                                      data=body, headers={"Content-Type": "application/json"},
                                      method="POST")
+        # No exception detail is ever logged: a traceback could carry the token URL.
         try:
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                return int(json.loads(resp.read())["result"]["message_id"])
-        except Exception:  # noqa: BLE001 — never let the token reach a log via a traceback
+            resp = urllib.request.urlopen(req, timeout=20)
+        except urllib.error.HTTPError:
+            return None  # Telegram answered with an error: nothing was delivered
+        except urllib.error.URLError as e:
+            # A timeout may fire after Telegram accepted the message; DNS failure or a
+            # refused connection means it never left.
+            timed_out = isinstance(e.reason, (TimeoutError, socket.timeout))
+            return SEND_UNCERTAIN if timed_out else None
+        except (TimeoutError, socket.timeout, ConnectionResetError,
+                http.client.RemoteDisconnected):
+            return SEND_UNCERTAIN
+        except Exception:  # noqa: BLE001
             return None
+        try:
+            with resp:
+                return int(json.loads(resp.read())["result"]["message_id"])
+        except Exception:  # noqa: BLE001 — accepted (2xx) but the reply was lost or odd
+            return SEND_UNCERTAIN
     return send
 
 
@@ -555,6 +648,23 @@ def _top_lists():
     return merged
 
 
+_lock_handle = None
+
+
+def acquire_lock(paths: store.Paths) -> bool:
+    """flock on state/scout-run.lock, held until the process exits. False if taken."""
+    global _lock_handle
+    paths.lock.parent.mkdir(parents=True, exist_ok=True)
+    fh = open(paths.lock, "w")
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        fh.close()
+        return False
+    _lock_handle = fh
+    return True
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("cmd", choices=("seed", "run", "status"))
@@ -566,6 +676,11 @@ def main(argv=None) -> int:
     if a.cmd == "status":
         status(paths, datetime.datetime.now(datetime.timezone.utc))
         return 0
+    # One run at a time: cron and a hand-run `just scout` overlapping would both send.
+    if not acquire_lock(paths):
+        store.log(paths, f"{a.cmd} skipped: another scout run holds {paths.lock.name}")
+        print("another scout run is in progress", file=sys.stderr)
+        return 1
     deps = real_deps(paths.root)
     inv = judge.inventory(REPO_ROOT)
     store.log(paths, f"{a.cmd} start{' (dry run)' if a.dry_run else ''}")
@@ -575,7 +690,9 @@ def main(argv=None) -> int:
               f"{paths.log}")
         return 0 if ok else 1
     run_once(paths, deps, inv, dry_run=a.dry_run)
-    store.log(paths, "run done")
+    # healthcheck.sh looks for a line ending in exactly "run done"; a dry run must not
+    # stand in for the nightly run.
+    store.log(paths, "run done (dry run)" if a.dry_run else "run done")
     return 0
 
 

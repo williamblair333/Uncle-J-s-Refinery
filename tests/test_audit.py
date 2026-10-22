@@ -118,6 +118,19 @@ def test_count_hook_blocks():
     assert counts["edit-surface-guard"] == 1
     assert counts["_unparsed"] == 1           # BLOCKED but no recognisable guard name
 
+def test_block_log_files_include_archives_not_bak(tmp_path):
+    for name in ["hook-blocks.log", "hook-blocks.log.20261022",
+                 "hook-blocks.log.20261022-101500-4242", "hook-blocks.log.bak-2026-10-16"]:
+        (tmp_path / name).write_text("x\n")
+    (tmp_path / "hook-blocks.log.rotate.lock").mkdir()
+    names = [p.name for p in collect_benefits.block_log_files(tmp_path)]
+    assert names == ["hook-blocks.log.20261022", "hook-blocks.log.20261022-101500-4242",
+                     "hook-blocks.log"]
+
+def test_block_log_files_archives_only(tmp_path):
+    (tmp_path / "hook-blocks.log.20261022").write_text("x\n")
+    assert [p.name for p in collect_benefits.block_log_files(tmp_path)] == ["hook-blocks.log.20261022"]
+
 def test_mempalace_counts_missing_db(tmp_path):
     assert collect_benefits.mempalace_counts(tmp_path / "nope.sqlite3") is None
 

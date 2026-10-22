@@ -122,9 +122,13 @@ jscrub check-vendor
 ```
 
 The first check compares against `UPSTREAM_BODY_SHA256` in `cli.py`, so it runs
-anywhere — in CI, and after `review/` is emptied. That matters: `review/` is a
-queue, and this item will eventually move to `reviewed/`, at which point the
-checkout form stops working by default.
+anywhere, CI included. The upstream checkout now lives in the main checkout at
+`reviewed/watermarks-remover` (gitignored), so pass that path for the second.
+
+`just audit` (`scripts/jscrub/audit-repo.sh`) runs `check-vendor` plus `audit`
+over git-tracked text files, and CI job `test-jscrub` runs the unit tests and
+then the same script. Both are read-only. `clean`, `--in-place` and
+`--follow-symlinks` are deliberately not wired into any automation.
 
 The pinned digest was recorded while a byte comparison against the real
 upstream checkout passed, so it is anchored to upstream's bytes rather than

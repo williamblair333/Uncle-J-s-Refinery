@@ -235,7 +235,7 @@ dependencies = [
     { name = "jdatamunch-mcp" },
     { name = "jdocmunch-mcp" },
     { name = "pysqlite3", version = "0.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12' or platform_machine != 'x86_64' or sys_platform != 'linux'" },
-    { name = "pysqlite3", version = "0.6.0", source = { path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl" }, marker = "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "pysqlite3", version = "0.6.0", source = { path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl" }, marker = "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "uv" },
 ]
 
@@ -268,7 +268,7 @@ requires-dist = [
     { name = "jdatamunch-mcp", git = "https://github.com/jgravelle/jdatamunch-mcp.git" },
     { name = "jdocmunch-mcp", git = "https://github.com/jgravelle/jdocmunch-mcp.git" },
     { name = "pysqlite3", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'linux'", specifier = ">=0.6.0" },
-    { name = "pysqlite3", marker = "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'linux'", path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl" },
+    { name = "pysqlite3", marker = "python_full_version == '3.11.*' and platform_machine == 'x86_64' and sys_platform == 'linux'", path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl" },
     { name = "uv", specifier = ">=0.5" },
 ]
 provides-extras = ["anthropic", "openai", "gemini", "groq"]
@@ -1286,12 +1286,12 @@ wheels = [
 [[package]]
 name = "pysqlite3"
 version = "0.6.0"
-source = { path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl" }
+source = { path = "vendor/wheels/pysqlite3-0.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl" }
 resolution-markers = [
     "python_full_version < '3.12' and platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
 wheels = [
-    { filename = "pysqlite3-0.6.0-cp311-cp311-linux_x86_64.whl", hash = "sha256:9c9f2e54a8daf9902b6a70a5a47baf7d1af0cdd5f9d8cb9a7c82ef737d2918b5" },
+    { filename = "pysqlite3-0.6.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e27b868a48d56043331189c9d683acef596afa5dc5be69686d7e74edb2222865" },
 ]
 
 [[package]]

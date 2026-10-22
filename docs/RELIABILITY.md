@@ -17,6 +17,7 @@ makes sure Claude *actually uses them correctly*. Four components:
 | Ralph Wiggum plugin           | /ralph slash command (Anthropic official version)                 | --                          |
 | outcomes skill (--rubric)     | Rubric-aware grader in fresh context after each Ralph iteration   | when not using --rubric flag |
 | refinery-doctor.sh            | Config drift detection: env key renames, stale MCP scopes, CLAUDE.md sync, placeholder values; `--fix` applies atomic migrations | after fresh install confirms all green |
+| commit doc gate (`scripts/commit-doc-guard.sh`) | PreToolUse(Bash): blocks a real `git commit` in this repo (or a linked worktree) until `.session-end.yml` mandatory docs are staged; ignores read-only git calls and nested independent clones | never; fails open on bad input |
 | Telegram multi-agent routing  | `/work <msg>` → project-context Claude (proj_root cwd, CLAUDE.md loaded); unqualified → restricted default (cwd=/tmp, disclosure ban); config in `config/telegram-agents.toml`; hardcoded fallback if TOML missing | never; missing TOML = safe restricted-only mode |
 | ralph / Telegram billing      | Strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env so `claude -p` uses OAuth subscription auth (Agent SDK credit, effective 2026-06-15: Pro=$20/mo, Max5x=$100/mo, Max20x=$200/mo); `--use-api` flag restores API billing for heavy parallel runs | never strip before 2026-06-15 |
 | session-status-briefing skill | Step 3 runs `git fetch origin main && git log HEAD..origin/main` — reports if local is behind remote before any work starts (stale-code detection); fetch failure is surfaced via 2>&1, not swallowed | never; offline-safe (fetch error shown, briefing continues) |
@@ -390,6 +391,11 @@ The SessionStart staleness check scans `MEMORY.md` for stale tracking entries (`
 
 `session-end-check.sh` behaviour is covered by `tests/test_session_end_check.py` (10 tests, job 5 in `ci.yml`).
 
+`install-reliability.sh` also provisions the jdocmunch-watch `--no-ai-summaries` systemd
+drop-in (`scripts/jdocmunch-watch-dropin.sh`; workaround for upstream jdocmunch-mcp#120), and
+`refinery-doctor.sh --fix` restores it (check `jdocmunch-watch-dropin`). It's skipped where
+the watcher unit isn't installed. A drop-in that already sets the flag is never replaced.
+
 (memweave memory operational details — freshness, store layout, recovery — are in the "memweave memory freshness" section above. mempalace was decommissioned 2026-06-13; with it gone, the `chromadb==1.5.8` HNSW-corruption-workaround pin + `chroma-hnswlib` dep were also removed from `pyproject.toml` — chromadb was a mempalace-only transitive dependency.)
 
 ### Guards that fail *open* (found during the 2026-07-30 Windows port)
@@ -455,9 +461,26 @@ Two properties follow, and both are worth preserving in any new guard that write
   over the log reports malformed lines directly; a plain `wc -l` silently counts the
   corruption as data.
 
-Note that `surface-write-guard.sh` lives under `~/.claude/hooks/pre-mortem-guard/` as a
-real file rather than a symlink into this repo, so it is not covered by `install.sh` or
-`refinery-doctor --fix` and cannot be repaired through version control.
+- **Text only, or grep goes silent.** GNU grep treats a file holding one NUL byte or
+  one invalid UTF-8 sequence as binary: `grep -c DATE` prints nothing and exits 1. The
+  live log carried a run of 209 NULs (one contiguous block at byte 20047, between a
+  2026-06-02 20:02 and a 2026-06-03 07:21 record: the zero-fill an unclean shutdown
+  leaves, not hook output) and two lines where `head -c` had cut a multibyte character.
+- **Rotation archives, never truncates.** The log is not reconstructible.
+
+Since 2026-10-22 every hook that writes the log does it through one inline function,
+`hook_log_append`, byte-identical in `grep-guard.sh`, `edit-surface-guard.sh` and
+`surface-write-guard.sh` (`tests/test_hook_log.py` pins the copies). It turns every C0
+control byte and DEL into a space, drops invalid UTF-8, and past 1 MiB
+(`HOOK_LOG_MAX_BYTES`) renames the log to `hook-blocks.log.YYYYMMDD` (or
+`.YYYYMMDD-HHMMSS-PID` if that exists) under a `mkdir` lock, with `mv -n` so no archive
+is ever overwritten. Readers must cover the archives: `collect_benefits.py` does
+(`block_log_files`). Archives written before 2026-10-22 can still hold NULs, so read
+those with `grep -a`.
+
+`credential-guard.sh` still appends directly. Its fields are a fixed tool name, a
+regex match of path characters and the session id, so it can't emit the bytes above,
+but it does not rotate the log.
 
 ### Path guards must be spelling-independent
 

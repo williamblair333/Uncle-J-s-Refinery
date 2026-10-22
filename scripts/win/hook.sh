@@ -52,6 +52,14 @@ case "${1:-}" in
     edit-surface-guard)
         exec bash "$ROOT/hooks/discipline/edit-surface-guard.sh"
         ;;
+    # Every tool (matcher "*"). A deny is JSON on stdout with exit 0; `|| exit 1`
+    # turns every other outcome (a syntax error's 2, which would mean "block")
+    # into a non-blocking error — the same fail-open-and-loud posture as the
+    # Linux wiring in install-reliability.sh, so a broken guard can't lock every
+    # tool, Edit included, out of a session.
+    credential-guard)
+        bash "$ROOT/hooks/discipline/credential-guard.sh" || exit 1
+        ;;
     unpushed-warn)
         exec bash "$ROOT/hooks/discipline/unpushed-warn.sh"
         ;;

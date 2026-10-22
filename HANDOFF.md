@@ -1,5 +1,24 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 — surface-write-guard gaps, hook log (branch fix/surface-guard-gaps-and-log-hygiene)
+
+- Committed, not pushed. The live log (1.6 MB, 209 NULs) is archived intact on the first block after merge.
+
+## 2026-10-22 — automation reliability (branch fix/automation-reliability)
+
+- Five ROADMAP automation fixes committed on the branch, not pushed. See CHANGELOG 2026-10-22.
+- Commit doc gate now follows `.session-end.yml` (CHANGELOG + HANDOFF); docs/RELIABILITY.md is no longer required.
+
+## 2026-10-22 — install/doctor/scout (branch fix/install-doctor-scout)
+
+- Doctor restores the jdocmunch-watch drop-in and checks all five stack servers' scope; scout send is idempotent, once a day, locked, and healthcheck reads its `run done` line.
+- `just install-gate` runs the real install.sh in a container (claude shimmed); passed once. Branch not pushed.
+
+## 2026-10-22 — pysqlite3 wheel, jscrub (branch chore/wheel-jscrub-watermarks)
+
+- Vendored pysqlite3 wheel is now manylinux2014; verified SQLite 3.51.3 on Debian 11. Run `uv sync --inexact` after merge.
+- `just audit` + CI `test-jscrub` run jscrub read-only; `reviewed/watermarks-remover` was already moved before this branch.
+
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
 
 - #154 merged. GitHub mirrors from Gitea on commit (checked: no error, `47e94bd` on both).

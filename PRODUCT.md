@@ -59,10 +59,13 @@ prove the full `install.sh` path, because that registers MCP servers into a
 Claude Code installation that does not exist inside a container, and pulls the
 three jMunch packages plus the ONNX encoder from git.
 
-That gap is a known limitation, not a pass. Closing it needs a stub Claude
-config and a cached wheel set; until then, `healthcheck.sh` remains the only
-evidence for the full stack, and it runs on the host rather than on a clean
-machine.
+That gap is a known limitation, not a pass, for the block below. The full path
+has its own gate since 2026-10-22: `just install-gate` runs the real
+`./install.sh --non-interactive --skip-optional` in a fresh `debian:bookworm-slim`
+container with a `claude` shim that records every `mcp add`, and a host-mounted uv
+cache as the wheel set (`scripts/clean-install-gate.sh`). It needs Docker and
+network, takes minutes, and doesn't prove the servers connect (no real Claude
+Code) or that plugins install; `healthcheck.sh` on the host still owns that.
 
 The core task below is not a `--help` call: it validates a real brief end to end
 — parsing, expectation adequacy, and README drift — and writes its verdict to a

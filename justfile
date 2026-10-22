@@ -13,9 +13,17 @@ setup *args:
 test *args:
     .venv/bin/python -m pytest -q tests {{args}}
 
+# invisible-Unicode sweep of tracked files + vendored-engine drift check (read-only)
+audit:
+    ./scripts/jscrub/audit-repo.sh
+
 # stack health: servers, indexes, crons, skills (quick; --full adds a ~30 s smoke test)
 health *args:
     ./healthcheck.sh {{args}}
+
+# real ./install.sh in a fresh container, claude shimmed (~10 min; --worktree for uncommitted)
+install-gate *args:
+    ./scripts/clean-install-gate.sh {{args}}
 
 # find and fix drift (CLAUDE.md deploy, hooks, scopes); `just doctor --fix` applies
 doctor *args:
