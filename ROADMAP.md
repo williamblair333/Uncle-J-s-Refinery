@@ -30,7 +30,7 @@ Completed items age out after ~4 weeks.
 - **Justfiles: the remaining repos** (rollout done 2026-10-22 for 18 repos). Left: aquarius
   (markdown only), immortality (docs only), write_well and deal-finder (big uncommitted trees),
   plus the five remote-less repos. Recipe names stay shared: setup, test, run, start, stop,
-  status, doctor. free-energy's `just test` didn't finish within 10 minutes (it probably collects
+  status, doctor. The five formerly remote-less repos can get theirs now. free-energy's `just test` didn't finish within 10 minutes (it probably collects
   `accel/tests`); worth a look.
 - **Dictation follow-ups** (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
@@ -51,24 +51,14 @@ Completed items age out after ~4 weeks.
 - **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
   (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
   touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
-- **Revoke 15 one-shot Gitea tokens — needs Bill to acknowledge 3 MEDIUMs** (re-checked
-  2026-10-22). Ids 5–15, 17, 18, 21, 35: each was used only in its creation minute, and most
-  carry `write:user`. Keep 1 `automation`, 4 `claude-routine-push`, 27 `ha-01S`, 2 `Partikus`.
-  The pre-mortem is a MEDIUM bundle: concurrent writer, whole-instance DB integrity, the backup
-  being a hash dump. Say "revoke the tokens, I accept the three MEDIUMs" and it runs
-  `.backup` (chmod 600), then a single DELETE by exact id+name, then `integrity_check`, then
-  deletes the backup. Or delete them in the UI: `/user/settings/applications`.
-- **Five repos have no remote at all** (found 2026-10-22): `jaredrhod` (vault working root,
-  deliberately remote-less per its CLAUDE.md), `larder`, `patentengine`, `reciepts`, `tao-intel`.
-  Their history exists only on this disk. Creating private Gitea repos needs a `write:user`
-  token. patentengine may hold invention work: private Gitea only, or stay local? Bill decides.
 - **grep-guard false positive on an unexpanded glob** (found 2026-10-22). `grep -rn X docs/*.md
   README.md SECURITY.md` was blocked: the hook sees the literal `docs/*.md`, which isn't a real
   path, so it can't tell the targets are markdown. Expand globs, or judge a glob by its
   extension, before deciding. Needs its own adversarial pass (a `*.py` glob must stay denied).
-- **File the claude-guardrails grep bug upstream?** Draft:
-  `docs/proposals/2026-10-22-upstream-guardrails-grep-issue.md`. Public post, so it needs Bill's OK.
-  The local repair is already live (`scripts/fix-guardrails-grep.sh`).
+- **Track upstream issue [dwarvesf/claude-guardrails#20](https://github.com/dwarvesf/claude-guardrails/issues/20)**
+  (filed 2026-10-22): the escalation hook's grep reads its `--…` pattern as an option. If they
+  say "PR welcome", send the `-e` fix. Until it lands, `scripts/fix-guardrails-grep.sh` (run by
+  `install-guardrails.sh`) keeps the local copy repaired.
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
@@ -268,6 +258,12 @@ Completed items age out after ~4 weeks.
   library finds routed to `library-backend-adoption-eval`, §10 gh facts logged.
 - **pysqlite3 wheel** rebuilt manylinux2014 (imports on Debian 11 / glibc 2.31).
 - **anatomy-lab** gets a private GitHub push mirror (Bill's call).
+- **Gitea tokens:** 15 one-shot tokens (ids 5–15, 17, 18, 21, 35) revoked after Bill accepted
+  the 3 MEDIUMs. Backup taken, `integrity_check` ok before and after, backup deleted. Kept:
+  1, 2, 4, 27.
+- **Remote-less repos:** larder, patentengine, reciepts, tao-intel and jaredrhod now have
+  private Gitea repos, with no GitHub mirror. Local history was imported by PR.
+- **Upstream:** dwarvesf/claude-guardrails#20 filed.
 
 ## Recently completed (2026-10-17 — repo scout and skill library)
 
