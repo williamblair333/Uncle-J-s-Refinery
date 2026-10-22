@@ -98,6 +98,12 @@ def main():
             flags.append(f"{ahead} commit(s) on main not on origin (last fetch)")
         if dirty_n:
             flags.append(f"{dirty_n} uncommitted file(s)")
+        origin = git(repo, "remote", "get-url", "origin") or ""
+        if not (git(repo, "remote") or ""):
+            flags.append("no remote: only on this disk")
+        elif "github.com" in origin and "williamblair333/" in origin:
+            # Gitea-first: Gitea mirrors into GitHub, so work merged on GitHub gets overwritten.
+            flags.append("origin is GitHub; repoint to Gitea")
         sections = []
         if recent:
             with open(handoff, encoding="utf-8", errors="replace") as fh:

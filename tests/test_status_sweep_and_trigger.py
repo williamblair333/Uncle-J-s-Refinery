@@ -51,6 +51,13 @@ def test_hook_output_shape(tmp_path):
     assert "just-do-it" in out["hookSpecificOutput"]["additionalContext"]
 
 
+def test_notifications_are_not_bill():
+    note = "<system-reminder>\n[SYSTEM NOTIFICATION - NOT USER INPUT]\n<task-notification>... pre-mortem ..."
+    assert not trigger.is_from_bill(note)
+    assert not trigger.is_from_bill("<task-notification>\n<task-id>x</task-id> just-do-it")
+    assert trigger.is_from_bill("just-do-it the rest")
+
+
 def test_hook_silent_on_garbage():
     p = subprocess.run([sys.executable, str(ROOT / "features/prompt-triggers/skill_name_trigger.py")],
                        input="not json", capture_output=True, text=True)

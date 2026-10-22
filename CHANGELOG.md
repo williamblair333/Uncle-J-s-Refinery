@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-10-22 — justfiles in 18 repos; mirror-wiped work restored; branches archived
+
+- **Justfiles** merged via Gitea PRs in mafski, debian-howto-guides, bizengine, Klarheit,
+  free-energy, foc, proj-marketing-kit, neraas, magicians-almanac, lc0, moneymaker, wine,
+  qr-forge, paved, magicians-almanac-web, hermetic_magic, gitea-infra, faserip-100.
+- **Mirror-wipe trap:** nine clones had `origin` = GitHub while Gitea push-mirrors into it, so
+  GitHub merges were overwritten. Restored by fast-forward PRs on Gitea: immortality PR #2,
+  2026-09-20 merges in wine/qr-forge/paved/magicians-almanac-web/hermetic_magic, faserip's
+  justfile. All clones repointed (`origin`=Gitea, `github`=GitHub). `just waiting` flags any
+  GitHub origin and any repo with no remote.
+- **Gitea branches:** the six with unique May–June work are tagged `archive/<name>` and deleted;
+  `main` is the only branch left.
+- **Skill-name trigger** ignores task/system notifications (it fired on agent output).
+
 ## 2026-10-22 — status sweeps every project; skill-name trigger; doc gate stops ending turns
 
 - **`just waiting`** (`scripts/waiting_sweep.py`): every `/opt/proj` repo's HANDOFF waiting/next
