@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-10-22 — healthcheck catches munch processes running pre-upgrade code
+
+- **Added** healthcheck `jcodemunch/jdocmunch — running processes match the installed
+  version`: a watcher or MCP server that started before its package's dist-info mtime still
+  runs the old code (the sqlite_future_version class of skew). Warn only, with the restart
+  that fixes it. Skipped where there's no systemctl or `ps -o etimes`.
+  `tests/test_healthcheck_stale_procs.py` covers the comparison.
+- First run: `jcodemunch-watch` had been running 36 h, across the 03:00 upgrade to
+  1.108.391. Restarted. A mafski session's server (26 h) is still on old code until that
+  session restarts.
+
 ## 2026-10-22 — Heretic reads images; partikus moved; Klarheit blocks retiring Ollama
 
 - **Changed** `docker/llama-heretic/compose.yaml`: `--mmproj … --no-mmproj-offload`. Images

@@ -6,6 +6,9 @@
 `klarheit-m12` timers run pre-set trials on that exact model, pinned by digest, about 15 calls
 an hour. Lineup step 6 records it; Bill decides whether that arm ends or moves.
 
+- New healthcheck row flags jcodemunch/jdocmunch processes older than their installed
+  package. It found the watcher on pre-upgrade code (restarted) and the mafski session's
+  server (pid 2375556, open 26 h): restart that session.
 - Heretic now reads images (projector on CPU, no VRAM, ~42 s per first image). partikus #45
   added backend `"llama"` that uses it. Photo → script was only tried on a GUI screenshot;
   try a real part photo.

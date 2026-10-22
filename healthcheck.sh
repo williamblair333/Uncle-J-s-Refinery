@@ -1035,6 +1035,57 @@ check_jcodemunch_watch() {
     esac
 }
 
+# ----- 9m-1. munch processes older than the installed package (version skew) --
+# An upgrade (`uv sync`, auto-maintain) replaces the package on disk, but a running
+# watcher or MCP server keeps the old code in memory. A newer writer with an older
+# reader is how sqlite_future_version broke every query (2026-07-06). This compares
+# each process's start time with the package's dist-info mtime. Warn only: another
+# session's server isn't this session's to restart.
+
+# Reads "pid start_epoch" lines; prints the PIDs that started before $1.
+stale_pids_since() {
+    local since="$1" pid start
+    while read -r pid start; do
+        [[ -n "$pid" && -n "$start" && "$start" -lt "$since" ]] && printf '%s\n' "$pid"
+    done
+    return 0
+}
+
+check_munch_process_skew() {
+    step "jcodemunch/jdocmunch — running processes match the installed version"
+    if ! command -v systemctl >/dev/null 2>&1 || ! ps -o etimes= -p $$ >/dev/null 2>&1; then
+        na "no systemctl or ps etimes on this host — skipped"
+        return
+    fi
+    local now pkg dist installed version pids pid e lines stale kind any=""
+    now="$(date +%s)"
+    for pkg in jcodemunch jdocmunch; do
+        dist="$(ls -d "$REPO_ROOT"/.venv/lib/python*/site-packages/"${pkg}"_mcp-*.dist-info 2>/dev/null | head -1)"
+        [[ -n "$dist" ]] || continue
+        installed="$(stat -c %Y "$dist")"
+        version="${dist##*_mcp-}"; version="${version%.dist-info}"
+        pids="$(pgrep -af "${pkg}[-_]mcp" 2>/dev/null | grep -F "$REPO_ROOT/.venv/" | awk '{print $1}' || true)"
+        lines=""
+        for pid in $pids; do
+            e="$(ps -o etimes= -p "$pid" 2>/dev/null | tr -d ' ')"
+            [[ -n "$e" ]] && lines+="$pid $((now - e))"$'\n'
+        done
+        stale="$(printf '%s' "$lines" | stale_pids_since "$installed")"
+        for pid in $stale; do
+            any=1
+            e="$(ps -o etimes= -p "$pid" 2>/dev/null | tr -d ' ')"
+            if ps -o args= -p "$pid" 2>/dev/null | grep -q 'watch'; then kind=watcher; else kind="MCP server"; fi
+            warn "$pkg $version installed $(( (now - installed) / 3600 ))h ago; $kind PID $pid started $(( ${e:-0} / 3600 ))h ago and runs older code"
+            if [[ "$kind" == watcher ]]; then
+                hint "run: systemctl --user restart ${pkg}-watch"
+            else
+                hint "restart the Claude Code session that owns PID $pid"
+            fi
+        done
+    done
+    [[ -n "$any" ]] || ok "every running jcodemunch/jdocmunch process started after its package was installed"
+}
+
 # ----- 9m-2. jdocmunch doc watcher indexes local-only corpora offline -------
 # Closes the gap SECURITY.md documents but nothing enforced: the cron path's
 # LOCAL_ONLY_REPOS allowlist is in-repo and reviewable, but the WATCHER path
@@ -1410,6 +1461,7 @@ check_skills_portability
 check_auto_maintain_cron
 check_embedding_canary
 check_jcodemunch_watch
+check_munch_process_skew
 check_jdocmunch_watch_posture
 check_vault_hook_registered
 check_memweave_fresh
