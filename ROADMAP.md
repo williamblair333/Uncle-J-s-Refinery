@@ -136,7 +136,15 @@ Completed items age out after ~4 weeks.
   the smaller output doesn't drop content that matters, and measure tokens against WebFetch
   on a real task. Verdict and numbers: `review/2026-10-19-firecrawl.md` (main host).
   Resume: "build the trafilatura crawler".
-- **Trial firefox-devtools-mcp for browser control** (opened 2026-10-19). It's Mozilla's, with
+- **Trial firefox-devtools-mcp for browser control** — trial run 2026-10-22, **not adopted yet**.
+  It's `@mozilla/firefox-devtools-mcp` now (the old name is deprecated); 0.10.4 works headless
+  with system Firefox 150, 34 tools, snapshots 0.4–4.8K chars. But Firefox itself contacts
+  Mozilla (detectportal, remote settings, content-signature) besides the target. 19 quieting
+  prefs cut that from 7 destinations to 3, not 0. The connect()-only capture also missed
+  HTTP/3 (UDP). Next: tcpdump/nft capture, HTTP/3 off, the remaining remote-settings and
+  blocklist prefs as a user.js profile; then per-session registration. Notes: the "Trial run"
+  section in `review/2026-10-19-browser-automation-no-microsoft.md` (main host).
+  Original: (opened 2026-10-19). It's Mozilla's, with
   no Google or Microsoft code at runtime. Snapshots measured 10–40× smaller than
   chrome-devtools-mcp's (~4–23K vs ~186K chars per page); Bill avoids Microsoft, so
   playwright-mcp is out. Plan: register it for sessions that need it only, set

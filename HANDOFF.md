@@ -6,6 +6,8 @@
 `klarheit-m12` timers run pre-set trials on that exact model, pinned by digest, about 15 calls
 an hour. Lineup step 6 records it; Bill decides whether that arm ends or moves.
 
+- firefox-devtools-mcp trial: works, but Firefox phones Mozilla even with 19 quieting prefs
+  (3 destinations left). Not registered. The next steps are in the ROADMAP item.
 - `just web2md URL --out DIR` saves pages as markdown for jdocmunch. It's good for prose and
   weak for code docs (unfenced, some tabbed code lost); use context7 for library APIs.
 - grep-guard still splits on spaces without honouring quotes, so `grep -e 'uv run example.py' f.md`
