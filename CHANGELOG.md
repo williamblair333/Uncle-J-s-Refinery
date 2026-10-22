@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-10-22 — web search for the chat page; dcup fixed
+
+- **Added** a "Search the web" checkbox to `scripts/local_chat/`: the page queries SearXNG
+  (`SEARXNG_URL`, default `http://127.0.0.1:8086`, JSON) and gives the top 5 results to the
+  chosen model, which cites them as [n]. Sources are saved with the answer and listed under it.
+  If SearXNG is down, the page shows that error and the question stays saved for a retry.
+- **Changed** the page's Start button runs `dcup up` when dcup is installed.
+- **Changed** (outside the repo) `/opt/docker/searnx`: bound to `127.0.0.1:8086` (was every
+  interface), image pinned to `2026.9.30-a9d990033` (was `:latest`), started through `dcup`.
+- **Fixed** (outside the repo) `/opt/lib/docker-port-registry/dcup`: finds `compose.yaml`;
+  takes the project name from the compose file's directory as Compose does (it used `$PWD`,
+  so the inline reconcile deleted a project's own claims); `scan` skips review/orig/old/
+  superseded copies. `dcup scan /opt/proj /opt/docker` added 9 claims (heretic, ollama, searnx…).
+- **Corrected** the entry below: the dcup DB had 73 claims, not only portainer's. That came from
+  a grep-filtered `dcup list`.
+
 ## 2026-10-22 — port registry found to be split; dcup not used by Uncle J
 
 - **Changed** (outside the repo) `/opt/proj/.port-registry` gained 8090 (heretic), 8091 (chat
