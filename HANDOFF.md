@@ -18,7 +18,14 @@ bizengine's HANDOFF. That gap is closed.
   escalation block never fired. `scripts/fix-guardrails-grep.sh` repairs it (run from
   `install-guardrails.sh`). Now live, it blocks any Bash command whose text contains that flag.
   Upstream issue **not filed** — public, needs Bill's OK.
-- Gitea: 16 fully-merged branches deleted. anatomy-lab now has a private GitHub push mirror.
+- Gitea: 16 fully-merged branches deleted; the other 6 archived as `archive/*` tags. anatomy-lab
+  now has a private GitHub push mirror.
+- Justfiles in 18 repos (CHANGELOG). **Mirror-wipe trap fixed in 9 clones**: never merge on
+  GitHub for a mirrored repo; land on Gitea.
+- **Waiting on Bill:** acknowledge the 3 MEDIUMs to revoke 15 one-shot Gitea tokens; OK to file
+  the guardrails issue (draft in docs/proposals); remotes for the 5 remote-less repos; the
+  bizengine accounts (Etsy dev app first, then Cults3D, Slant 3D) and its 4 open questions.
+- Blocked: the f3a7ed9 clone (tc-vmh-03 timed out; the Pi isn't resolvable from here).
 - Doc gate follows `.session-end.yml` (CHANGELOG + HANDOFF); docs/RELIABILITY.md no longer required.
 
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged

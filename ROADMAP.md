@@ -27,9 +27,11 @@ Completed items age out after ~4 weeks.
   - Langfuse traces for what each agent saw, said and did.
   - A per-agent lane view needs work in the vendored viewer.
   - Blocked on Bill naming the game and engine.
-- **Roll out justfiles** (opened 2026-10-16). Each repo gets one when it's next worked on;
-  the Refinery and voice-line are done. Keep recipe names shared: setup, test, run, start,
-  stop, status, doctor.
+- **Justfiles: the remaining repos** (rollout done 2026-10-22 for 18 repos). Left: aquarius
+  (markdown only), immortality (docs only), write_well and deal-finder (big uncommitted trees),
+  plus the five remote-less repos. Recipe names stay shared: setup, test, run, start, stop,
+  status, doctor. free-energy's `just test` didn't finish within 10 minutes (it probably collects
+  `accel/tests`); worth a look.
 - **Dictation follow-ups** (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
   (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
@@ -49,14 +51,20 @@ Completed items age out after ~4 weeks.
 - **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
   (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
   touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
-- **Old one-shot Gitea tokens** (opened 2026-10-12). `access_token` ids 5–21 (voice-line,
-  moneymaker, chesslab, mkit, free-energy) are still live. Bill to decide which to revoke.
-  Method: back up `gitea.db`, then delete by exact id and name, as done for 22–24.
-- **Six old Gitea branches hold work not in `main`** (pruned 2026-10-22: 16 fully-contained
-  branches deleted, shas in the session scratchpad). Left: `feat/pre-mortem-skill`,
-  `docs/session-end-2026-05-24`, `fix/skill-link-global-coverage`,
-  `fix/fts5-guard-repair-coordination`, `fix/healthcheck-fts5-sqlite-version`, `feat/phase2-bench`.
-  Likely superseded (mempalace era); Bill to say delete or keep.
+- **Revoke 15 one-shot Gitea tokens — needs Bill to acknowledge 3 MEDIUMs** (re-checked
+  2026-10-22). Ids 5–15, 17, 18, 21, 35: each was used only in its creation minute, and most
+  carry `write:user`. Keep 1 `automation`, 4 `claude-routine-push`, 27 `ha-01S`, 2 `Partikus`.
+  The pre-mortem is a MEDIUM bundle: concurrent writer, whole-instance DB integrity, the backup
+  being a hash dump. Say "revoke the tokens, I accept the three MEDIUMs" and it runs
+  `.backup` (chmod 600), then a single DELETE by exact id+name, then `integrity_check`, then
+  deletes the backup. Or delete them in the UI: `/user/settings/applications`.
+- **Five repos have no remote at all** (found 2026-10-22): `jaredrhod` (vault working root,
+  deliberately remote-less per its CLAUDE.md), `larder`, `patentengine`, `reciepts`, `tao-intel`.
+  Their history exists only on this disk. Creating private Gitea repos needs a `write:user`
+  token. patentengine may hold invention work: private Gitea only, or stay local? Bill decides.
+- **File the claude-guardrails grep bug upstream?** Draft:
+  `docs/proposals/2026-10-22-upstream-guardrails-grep-issue.md`. Public post, so it needs Bill's OK.
+  The local repair is already live (`scripts/fix-guardrails-grep.sh`).
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
@@ -183,7 +191,10 @@ Completed items age out after ~4 weeks.
 - **Fast-forward the second clone off `f3a7ed9`.** Its `main` is still pinned there, and
   the ruleset now *rejects* its push rather than letting it destroy `main`. Until someone
   fixes it, expect a confusing push failure on that machine — that failure is the control
-  working. Needs access to the other box.
+  working. Needs access to the other box. Tried 2026-10-22: tc-vmh-03 (Tailscale
+  100.94.95.50) timed out on :22, and the Pi has no resolvable name from this host. Next time
+  one is up: `git -C <clone> fetch origin && git -C <clone> reset --hard origin/main`, but
+  only after checking that `git log origin/main..main` there is empty or already pushed.
 - **[DONE 2026-08-21] Ground-truth the jdocmunch v1.126.0 confidence rescale.** Verified against
   installed 1.133.0 (`retrieval/confidence.py:1-45`, `retrieval/verdict.py:37`), and the finding
   contradicts what we had written. The scale was **always 0–1** — nothing was renumbered. The bug

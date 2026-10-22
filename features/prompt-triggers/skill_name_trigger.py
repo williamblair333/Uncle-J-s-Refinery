@@ -43,10 +43,19 @@ def named_skills(prompt, skills):
     return sorted(set(found))
 
 
+def is_from_bill(prompt):
+    """Background-task notifications also arrive as prompts; their text is agent output."""
+    head = prompt.lstrip()[:400]
+    return not (head.startswith("<task-notification") or "<task-notification>" in head
+                or "[SYSTEM NOTIFICATION" in head or head.startswith("<system-reminder>"))
+
+
 def main():
     try:
         data = json.load(sys.stdin)
         prompt = data.get("prompt") or ""
+        if not is_from_bill(prompt):
+            return 0
         names = named_skills(prompt, installed_skills())
     except Exception:
         return 0
