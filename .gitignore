@@ -125,3 +125,6 @@ reviewed/
 
 # Machine-local MCP registration (Windows copies scripts/win/mcp.json here)
 /.mcp.json
+
+# Host-local ask_local backend settings (scripts/ask_local/server.py reads them)
+config/ask_local.env

@@ -32,8 +32,9 @@ users as possible. Commercial use must be allowed.
   voice cloning, and llama.cpp speech output is unverified.
 - **Retire qwen3.5:9b, granite4.2:8b and the Ollama container.** First:
   1. Test Heretic prefill with `-b 2048 -ub 2048`. A 16k-token summarize took 53 s at defaults.
-  2. Move ask_local's backend settings to a host-local file that `install.sh` reads, so a
-     reinstall can't revert to Ollama. Doctor flags a mismatch.
+  2. ~~Move ask_local's backend settings to a host-local file, so a reinstall can't revert
+     to Ollama. Doctor flags a mismatch.~~ Done: `config/ask_local.env`, read by the
+     server itself; healthcheck `ask_local — settings source` flags a mismatch.
   3. Rework `install.sh`, `healthcheck.sh` and `scripts/ollama-up.sh` around llama-server.
      Other hosts (Pi, tc-vmh-03) need a small llama-server model instead of Ollama.
   4. Check whether Sinkpoint's Bannerlord mod accepts an OpenAI-style URL. It speaks Ollama.
