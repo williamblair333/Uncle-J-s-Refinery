@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 74 repo, 1 workflows.
+Totals: 75 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -95,6 +95,7 @@ Totals: 74 repo, 1 workflows.
 | `verifiable-task` | Use when about to delegate work to another agent or model — a subagent, agy (ask_agy), the local model (ask_local), Codex, a background job — or when about to… | auto | Refinery stack | repo |
 | `verify-handoff-claims` | Before repeating any "outstanding" or "not yet done" item from a handoff doc, cross-check it against the actual source. | auto | Refinery stack | repo |
 | `verify-pr-branch-before-resolve` | Before resolving a PR's merge conflicts, verify which branch the PR actually targets — avoids wasted work on the wrong branch | auto | any agent | repo |
+| `vintage-pulp-fantasy-style` | Use when writing an image-generation prompt (Midjourney, Stable Diffusion, Flux, DALL-E) for art in the style of 1980s classic fantasy oil painting, pulp illus… | auto | any agent | repo |
 | `wait-what` | Stop. That last message did not land: re-pitch it. | you | any agent | vendored: mattpocock/skills |
 | `wizard` | Generate an interactive bash wizard that walks a human through steps only they can perform. | auto | any agent | vendored: mattpocock/skills |
 | `writing-for-agents` | Writing documents agents consume. | auto | Claude Code | vendored: mattpocock/skills |
