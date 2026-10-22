@@ -78,6 +78,10 @@ preview *args:
 chat *args:
     .venv/bin/python scripts/local_chat/server.py {{args}}
 
+# web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
+web2md *args:
+    uv run -q --script scripts/web2md.py {{args}}
+
 # start whichever backend config/ask_local.env names (heretic, or Ollama + its model)
 ask-local-up:
     ./scripts/ask-local-up.sh
