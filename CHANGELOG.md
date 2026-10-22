@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-10-22 — status sweeps every project; skill-name trigger; doc gate stops ending turns
+
+- **`just waiting`** (`scripts/waiting_sweep.py`): every `/opt/proj` repo's HANDOFF waiting/next
+  sections plus unpushed/dirty flags; the status skill runs it first.
+- **Skill-name trigger** (`features/prompt-triggers/`): UserPromptSubmit hook; a named skill
+  (`just-do-it`, `/judge`) makes Claude invoke it. Single-word names need the `/` form.
+- **Commit doc gate** returns a per-call `deny` instead of `{"continue": false}` (which ended
+  subagent turns), and denies `--no-verify` / `-n` unless the message is `chk:`.
+- **`scripts/fix-guardrails-grep.sh`**: repairs upstream claude-guardrails' grep that took its
+  `--…` pattern as an option, so the permission-escalation block never fired.
+
 ## 2026-10-22 — guard precision (grep/push/credential)
 
 - **grep-guard:** paths are resolved (`realpath -m`) before the in-repo and allowed-location

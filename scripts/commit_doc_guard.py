@@ -2,7 +2,7 @@
 """PreToolUse(Bash) doc gate: block a `git commit` in THIS repo until the docs
 .session-end.yml declares mandatory are staged.
 
-Reads the hook payload on stdin. Prints a {"continue": false, ...} decision to
+Reads the hook payload on stdin. Prints a PreToolUse "deny" decision to
 block; prints nothing to allow. Always exits 0 and fails open: a broken guard
 must never wedge a commit (git's own pre-commit hook, session-end-check.sh, is
 the second gate).
@@ -158,6 +158,30 @@ def commit_flags(args: list[str]) -> tuple[bool, list[str]]:
     return all_flag, messages
 
 
+def skips_hooks(args: list[str]) -> bool:
+    """True for `--no-verify` or a short cluster carrying `n` before any arg-taking flag."""
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--":
+            return False
+        if a == "--no-verify":
+            return True
+        if a.startswith("--"):
+            if a in COMMIT_OPTS_WITH_ARG:
+                i += 1
+        elif a.startswith("-") and len(a) > 1:
+            for ch in a[1:]:
+                if ch == "n":
+                    return True
+                if ch in SHORT_WITH_ARG:
+                    if a.endswith(ch):
+                        i += 1  # value is the next arg
+                    break
+        i += 1
+    return False
+
+
 def _git(cwd: str, *args: str) -> str | None:
     try:
         r = subprocess.run(["git", "-C", cwd, *args], capture_output=True,
@@ -219,6 +243,9 @@ def decide(command: str, cwd: str, repo_root: str) -> str | None:
         all_flag, messages = commit_flags(call.args)
         if any(m.startswith("chk:") for m in messages):
             continue  # checkpoint commits are exempt
+        if skips_hooks(call.args):
+            return ("Commit blocked - --no-verify/-n skips the doc gate. Stage the missing "
+                    "docs instead (CHANGELOG.md, HANDOFF.md, ...), or use a chk: message.")
         if all_flag or staged_earlier:
             # The index is not final yet at PreToolUse time; git's own pre-commit
             # hook (session-end-check.sh) judges the real staged set.
@@ -246,7 +273,12 @@ def main() -> int:
     except Exception:
         return 0  # fail open
     if reason:
-        print(json.dumps({"continue": False, "stopReason": reason}))
+        # Deny this one tool call. {"continue": false} would end the whole turn, which is
+        # how four subagents stopped mid-task on 2026-10-22 instead of fixing their docs.
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason}}))
     return 0
 
 

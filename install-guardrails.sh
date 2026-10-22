@@ -77,6 +77,11 @@ else
     exit 1
 fi
 
+# Upstream full/settings.json passes a "--…" pattern to grep without -e, so the
+# permission-escalation block never fires. Repair it after every merge.
+step "Repairing upstream grep patterns"
+bash "$STACK_ROOT/scripts/fix-guardrails-grep.sh"
+
 step "Guardrails installed"
 cat <<EOF
 

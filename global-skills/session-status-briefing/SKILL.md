@@ -71,7 +71,17 @@ transcript; do not block the briefing.
 ### 4b. What's waiting — mandatory, every status
 
 Bill shouldn't have to ask "what else?". The latest HANDOFF entry is only the newest slice;
-older open work lives elsewhere. Sweep all of these, every time:
+older open work lives elsewhere — and so do other projects. Start with the cross-project sweep;
+it reads every `/opt/proj/*/HANDOFF.md` ("Waiting on Bill", "Next session", "Blocked", open
+questions) and flags unpushed or uncommitted repos:
+
+```bash
+just waiting          # = python3 scripts/waiting_sweep.py  (--days N, --max-lines N)
+```
+
+Every project it prints with a "Waiting on Bill" / "Blocked" / open-questions section goes in
+**needs Bill**, by name (e.g. bizengine's Etsy/Cults3D/Slant accounts). Projects with only a
+"Next session" section go in one line each under **other projects**. Then sweep this repo:
 
 | Source | What to pull |
 | --- | --- |
