@@ -9,8 +9,16 @@ to qwen3.5:9b on Ollama. Re-run the `claude mcp add` line in the `server.py` doc
 
 - Service: `just heretic up -d` (container `llama-heretic`, restart unless-stopped). It sleeps
   after 10 idle minutes and gives the VRAM back; the first call after that takes about 3 s more.
-- Ollama stays installed and serves `model="qwen3.5:9b"` on request. If Ollama, lc0 and a
-  waking Heretic all want the GPU at once, the wake fails and `ask_local` returns `backend_error`.
+- Ollama is still installed but nothing on this host calls it now (ask_local's `model=` goes to
+  llama-server). If Ollama, lc0 and a waking Heretic all want the GPU at once, the wake fails and
+  `ask_local` returns `backend_error`.
+- **Decided later the same day (PR #166):** fewest models for every goal — Heretic, an image
+  model, Wan 2.2, Whisper, Chatterbox (cloned voices); Ollama, qwen3.5:9b and granite retire.
+  Revenue-capped licenses are fine until Bill makes $5M+; lc0 may be stopped for GPU jobs. Not
+  started; Bill prioritizes it. Plan and the four pre-retirement steps:
+  `docs/proposals/2026-10-22-local-model-lineup.md`.
+- **This session still used the old ask_local process.** The Heretic registration takes effect
+  after Claude Code restarts.
 - Long inputs are slow: a 16k-token summarize took 53 s (prefill with experts on CPU). One
   registration reaches one backend, so going back to the faster 9B for bulk work means
   re-registering ask_local without the env.
