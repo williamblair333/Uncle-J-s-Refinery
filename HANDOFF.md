@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 (main host, later) — vintage-pulp-fantasy-style skill merged (#163)
+
+- New prompt-template skill `vintage-pulp-fantasy-style`, merged and linked. Markdown only, no CI.
+- Done in a worktree because another process was in the main checkout. If it opens PRs that add
+  skills, `docs/SKILLS.md`'s `Totals:` line will conflict: merge origin/main, rerun `just skills`.
+- **Next session:** unchanged from the entry below.
+
 ## 2026-10-22 (main host) — "work I can just do" sweep merged (#158); status covers every project
 
 **Most important:** status now runs `just waiting` (scripts/waiting_sweep.py), which reads every
