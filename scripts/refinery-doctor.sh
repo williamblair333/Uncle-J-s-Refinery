@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # refinery-doctor.sh — config schema drift detection and repair.
 #
-# Checks for .env key renames, stale MCP scopes, a missing jcodemunch
-# compaction-restore hook, CLAUDE.md drift, and placeholder values. Distinct from healthcheck.sh (runtime health).
+# Checks for .env key renames, stack MCP servers shadowed by a
+# local/project scope, a missing jcodemunch compaction-restore hook, the
+# jdocmunch-watch summaries-off drop-in, CLAUDE.md drift, and placeholder values. Distinct from healthcheck.sh (runtime health).
 #
 # Usage:
 #   bash scripts/refinery-doctor.sh            # dry-run: report only
@@ -66,6 +67,8 @@ atomic_env_write() {
 
 run_check() {
     local name="$1"
+    # jcodemunch-scope was generalised to mcp-scope; keep the old name working.
+    [[ "$ONLY_CHECK" == jcodemunch-scope ]] && ONLY_CHECK=mcp-scope
     [[ -n "$ONLY_CHECK" && "$ONLY_CHECK" != "$name" ]] && return
     "check_${name//-/_}"
 }
@@ -100,40 +103,74 @@ check_embed_model() {
     fi
 }
 
-check_jcodemunch_scope() {
-    step "jcodemunch-scope — MCP registration scope"
+# A local- or project-scope entry for a stack server shadows the user-scope one for
+# that project (local > project > user), so a stale copy silently runs an old command
+# or a dead path there. `claude mcp list` prints no scope (the old jcodemunch-only
+# grep for "local" in it could never match); `claude mcp get <name>` prints the
+# winning one ("Scope: Local config ..."), so ask it per server, from the stack repo
+# and from the directory the doctor was run in.
+STACK_MCP_SERVERS="jcodemunch jdatamunch jdocmunch serena duckdb"
+
+check_mcp_scope() {
+    step "mcp-scope — stack servers registered only at user scope"
     if ! command -v claude &>/dev/null; then
         info "claude binary not found — skipping"
         return
     fi
-    local mcp_list
-    mcp_list=$(claude mcp list 2>/dev/null) || { info "claude mcp list failed — skipping"; return; }
-
-    local stale_scopes=()
-    for scope in local project; do
-        if echo "$mcp_list" | grep -qiE "jcodemunch.*\b${scope}\b"; then
-            stale_scopes+=("$scope")
-        fi
+    local dirs=("$REPO_ROOT") found="" dir name scope out
+    [[ "$PWD" != "$REPO_ROOT" ]] && dirs+=("$PWD")
+    for dir in "${dirs[@]}"; do
+        for name in $STACK_MCP_SERVERS; do
+            out=$(cd "$dir" && claude mcp get "$name" 2>/dev/null) || continue
+            scope=$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*Scope:[[:space:]]*(Local|Project).*/\1/p' | head -n 1)
+            [[ -n "$scope" ]] && found+="${scope,,}"$'\t'"$dir"$'\t'"$name"$'\n'
+        done
     done
+    found="${found%$'\n'}"
 
-    if [[ "${#stale_scopes[@]}" -eq 0 ]]; then
-        ok "jcodemunch not registered at local/project scope"
+    if [[ -z "$found" ]]; then
+        ok "no local/project entry shadows a stack server ($STACK_MCP_SERVERS)"
         return
     fi
 
-    migration "jcodemunch registered at stale scope(s): ${stale_scopes[*]}"
-    for scope in "${stale_scopes[@]}"; do
-        suggest "run: claude mcp remove jcodemunch -s $scope"
-    done
-    record_migration "jcodemunch-scope"
+    while IFS=$'\t' read -r scope dir name; do
+        migration "$name registered at $scope scope in $dir (shadows user scope there)"
+        suggest "run: (cd '$dir' && claude mcp remove $name -s $scope)"
+    done <<< "$found"
+    record_migration "mcp-scope"
 
     if [[ "$FIX_MODE" == true ]]; then
-        for scope in "${stale_scopes[@]}"; do
-            claude mcp remove jcodemunch -s "$scope" 2>/dev/null \
-                && fixed "removed jcodemunch from $scope scope" \
-                || info "claude mcp remove jcodemunch -s $scope exited non-zero"
-        done
+        while IFS=$'\t' read -r scope dir name; do
+            (cd "$dir" && claude mcp remove "$name" -s "$scope" >/dev/null 2>&1) \
+                && fixed "removed $name from $scope scope in $dir" \
+                || info "claude mcp remove $name -s $scope (in $dir) exited non-zero"
+        done <<< "$found"
     fi
+}
+
+# jdocmunch-watch summaries-off drop-in (upstream jdocmunch-mcp#120). healthcheck.sh
+# asserts the effective ExecStart; this restores the file. Not applicable (ok) when the
+# watcher unit isn't installed.
+check_jdocmunch_watch_dropin() {
+    step "jdocmunch-watch-dropin — watcher runs with --no-ai-summaries"
+    local helper="$SCRIPT_DIR/jdocmunch-watch-dropin.sh" state
+    state=$(bash "$helper" check 2>/dev/null | tail -n 1)
+    case "$state" in
+        no-unit) info "jdocmunch-watch unit not installed — skipping" ;;
+        present) ok "--no-ai-summaries set for jdocmunch-watch" ;;
+        missing)
+            migration "jdocmunch-watch drop-in missing — watcher reindex would send local-only corpora to a remote summarizer"
+            suggest "run: $0 --fix   # or: bash $helper install"
+            record_migration "jdocmunch-watch-dropin"
+            if [[ "$FIX_MODE" == true ]]; then
+                state=$(bash "$helper" install | tail -n 1)
+                [[ "$state" == installed ]] \
+                    && fixed "wrote jdocmunch-watch drop-in, reloaded systemd" \
+                    || info "drop-in install returned '${state:-nothing}'"
+            fi
+            ;;
+        *) info "check failed (helper output: ${state:-none}) — skipping" ;;
+    esac
 }
 
 # jcodemunch's compaction restore is two hooks: hook-precompact (registered by older
@@ -315,8 +352,9 @@ check_env_placeholders() {
 # ── run ──────────────────────────────────────────────────────────────────────
 
 run_check embed-model
-run_check jcodemunch-scope
+run_check mcp-scope
 run_check jcodemunch-sessionstart
+run_check jdocmunch-watch-dropin
 run_check claude-md-sync
 run_check env-placeholders
 

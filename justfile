@@ -17,6 +17,10 @@ test *args:
 health *args:
     ./healthcheck.sh {{args}}
 
+# real ./install.sh in a fresh container, claude shimmed (~10 min; --worktree for uncommitted)
+install-gate *args:
+    ./scripts/clean-install-gate.sh {{args}}
+
 # find and fix drift (CLAUDE.md deploy, hooks, scopes); `just doctor --fix` applies
 doctor *args:
     ./scripts/refinery-doctor.sh {{args}}

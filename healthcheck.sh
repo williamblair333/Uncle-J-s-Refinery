@@ -1248,11 +1248,17 @@ check_repo_scout() {
         ok "repo scout cron not installed (skipped)"
         return
     fi
-    local log="$REPO_ROOT/state/scout.log"
-    if [ -f "$log" ] && [ -n "$(find "$log" -mmin -2160 2>/dev/null)" ]; then
-        ok "repo scout ran in the last 36 h"
+    # A finished run ends with "[YYYY-MM-DD HH:MM:SS] run done" (scripts/scout/run.py).
+    # The log's mtime proved nothing: a crash, a lock skip or a dry run all touch it.
+    local log="$REPO_ROOT/state/scout.log" last_done age
+    last_done=$(grep -E '^\[[0-9-]+ [0-9:]+\] run done$' "$log" 2>/dev/null | tail -n 1 | cut -c2-20)
+    age=$(python3 -c 'import datetime,sys
+try: print(int((datetime.datetime.now()-datetime.datetime.strptime(sys.argv[1],"%Y-%m-%d %H:%M:%S")).total_seconds()))
+except ValueError: print(-1)' "$last_done" 2>/dev/null)
+    if [[ "${age:--1}" =~ ^[0-9]+$ ]] && [ "$age" -le 129600 ]; then
+        ok "repo scout finished a run in the last 36 h"
     else
-        warn "repo scout cron installed but no run logged in 36 h"
+        warn "repo scout cron installed but no finished run (\"run done\") in 36 h"
         hint "check: tail $log; run by hand: just scout --dry-run"
     fi
 }
