@@ -37,9 +37,14 @@ users as possible. Commercial use must be allowed.
   2. ~~Move ask_local's backend settings to a host-local file, so a reinstall can't revert
      to Ollama. Doctor flags a mismatch.~~ Done: `config/ask_local.env`, read by the
      server itself; healthcheck `ask_local — settings source` flags a mismatch.
-  3. Rework `install.sh`, `healthcheck.sh` and `scripts/ollama-up.sh` around llama-server.
-     Other hosts (Pi, tc-vmh-03) need a small llama-server model instead of Ollama.
+  3. ~~Rework `install.sh`, `healthcheck.sh` and `scripts/ollama-up.sh` around llama-server.~~
+     Done on hosts with `config/ask_local.env`: `scripts/ask-local-up.sh` (`just ask-local-up`)
+     starts the configured backend, and install.sh calls it. **Still open:** other hosts (Pi,
+     tc-vmh-03) have no config and stay on Ollama until a small llama-server model is picked
+     for them.
   4. Check whether Sinkpoint's Bannerlord mod accepts an OpenAI-style URL. It speaks Ollama.
+  5. Move partikus off Ollama: `partikus.ai`'s `"ollama"` mode calls `qwen3.5:9b`
+     (partikus HANDOFF). Point it at llama-server or drop that mode.
 
 ## GPU handoff
 

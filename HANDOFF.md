@@ -2,15 +2,17 @@
 
 ## 2026-10-22 (main host, latest) — Heretic prefill 2.5× faster; open PRs cleared
 
+- `just ask-local-up` starts whatever `config/ask_local.env` names; `install.sh` uses it, so a
+  reinstall here no longer starts Ollama or pulls the 9B. Ollama itself still runs (started
+  earlier, restart unless-stopped). Retiring it waits on lineup step 4 (Sinkpoint), step 5
+  (partikus's `ollama` AI mode) and a small llama-server model for the Pi / tc-vmh-03.
 - `llama-heretic` now runs `-b 2048 -ub 2048` (live, recreated): an 18.7k-token prefill takes
-  24 s, down from 61 s. Generation is still ~40 tok/s, total GPU 6.05 GB awake. Lineup steps
-  left: 3 (install/healthcheck/ollama-up.sh around llama-server) and 4 (Sinkpoint mod URL).
+  24 s, down from 61 s. Generation is still ~40 tok/s, total GPU 6.05 GB awake.
+- partikus #44: `run_tests.sh` defaults `QT_QPA_PLATFORM=offscreen`; headless `just test` passes.
 - Port 8091 belongs to the chat page's `scripts/local_chat/server.py` (not Docker, so dcup
   doesn't know it). A bench container trying 8091 failed on bind.
 - Cleared stale Gitea PRs: partikus #40 (9V battery box) merged after resolving doc conflicts
   (1092 tests pass); hearth #15 closed, its content was already on main. 0 open PRs anywhere.
-- partikus `run_tests.sh` aborts in a shell with no display (`test_gui_loader` needs Qt);
-  `QT_QPA_PLATFORM=offscreen` makes it pass. Not fixed yet.
 
 ## 2026-10-22 (main host, later) — heretic can search the web; dcup fixed
 
