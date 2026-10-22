@@ -85,7 +85,39 @@ if echo "$CHANGED" | grep -qE '^(global-skills/|install-reliability\.sh)'; then
 fi
 
 # ------------------------------------------------------------------
-# Nothing actionable
+# Auto re-index jdocmunch / jcodemunch. Silent (logged to post-merge.log).
+# These MUST run before the "nothing actionable" early exit below: ACTIONS only
+# holds things a human has to do, and a pull that changed nothing but, say,
+# scripts/auto-maintain.sh produces no ACTIONS. They used to sit after that exit,
+# so such a merge logged "maintenance/docs only" and left the index stale.
+# ------------------------------------------------------------------
+if echo "$CHANGED" | grep -qE '\.md$'; then
+    JDOCMUNCH="$PROJ_ROOT/.venv/bin/jdocmunch-mcp"
+    if [[ -x "$JDOCMUNCH" ]]; then
+        log "post-merge: markdown changed — re-indexing jdocmunch docs..."
+        "$JDOCMUNCH" index-local --path "$PROJ_ROOT" >> "$LOG" 2>&1 && \
+            log "post-merge: jdocmunch re-index complete" || \
+            log "post-merge: jdocmunch re-index failed (non-fatal)"
+    fi
+fi
+
+# Code = anything under scripts/, hooks/, lib/, features/, or a source/config
+# extension anywhere.
+CODE_RE='^(scripts|hooks|lib|features)/|\.(py|sh|bash|ps1|ts|tsx|js|mjs|cjs|json|toml|ya?ml)$'
+if echo "$CHANGED" | grep -qE "$CODE_RE"; then
+    REINDEX="$PROJ_ROOT/scripts/jcodemunch-reindex.sh"
+    if [[ -f "$REINDEX" ]]; then
+        log "post-merge: code files changed — re-indexing jcodemunch..."
+        bash "$REINDEX" >> "$LOG" 2>&1 && \
+            log "post-merge: jcodemunch re-index complete" || \
+            log "post-merge: jcodemunch re-index failed (non-fatal)"
+    else
+        log "post-merge: code files changed but $REINDEX is missing — index left stale"
+    fi
+fi
+
+# ------------------------------------------------------------------
+# Nothing actionable (for a human — re-indexing above already ran)
 # ------------------------------------------------------------------
 if [[ ${#ACTIONS[@]} -eq 0 ]]; then
   log "post-merge: no actionable changes (maintenance/docs only)."
@@ -107,32 +139,6 @@ FULL_MSG="${HEADER}"$'\n\n'"${BODY}"
 
 log "post-merge actions:"
 for action in "${ACTIONS[@]}"; do log "  $action"; done
-
-# ------------------------------------------------------------------
-# Auto re-index jdocmunch when any markdown doc changed
-# (silent — no user action needed; logged to post-merge.log)
-# ------------------------------------------------------------------
-if echo "$CHANGED" | grep -qE '\.md$'; then
-    JDOCMUNCH="$PROJ_ROOT/.venv/bin/jdocmunch-mcp"
-    if [[ -x "$JDOCMUNCH" ]]; then
-        log "post-merge: markdown changed — re-indexing jdocmunch docs..."
-        "$JDOCMUNCH" index-local --path "$PROJ_ROOT" >> "$LOG" 2>&1 && \
-            log "post-merge: jdocmunch re-index complete" || \
-            log "post-merge: jdocmunch re-index failed (non-fatal)"
-    fi
-fi
-
-# Auto re-index jcodemunch when source files changed
-# (silent — no user action needed; logged to post-merge.log)
-if echo "$CHANGED" | grep -qE '\.(py|sh|ts|tsx|js|json|toml)$'; then
-    REINDEX="$PROJ_ROOT/scripts/jcodemunch-reindex.sh"
-    if [[ -x "$REINDEX" ]]; then
-        log "post-merge: code files changed — re-indexing jcodemunch..."
-        bash "$REINDEX" && \
-            log "post-merge: jcodemunch re-index complete" || \
-            log "post-merge: jcodemunch re-index failed (non-fatal)"
-    fi
-fi
 
 # ------------------------------------------------------------------
 # Deliver: Telegram if configured, terminal otherwise

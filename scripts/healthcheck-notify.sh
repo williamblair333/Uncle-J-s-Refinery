@@ -24,6 +24,21 @@ log "Running healthcheck..."
 # Capture stdout+stderr merged; healthcheck exits 1 on failure
 FULL_OUTPUT=$(bash "$PROJ_ROOT/healthcheck.sh" 2>&1) && HC_EXIT=0 || HC_EXIT=$?
 
+# A stale jcodemunch index is the one failure this job can fix itself. A direct
+# commit to main after the 03:10 reindex cron, with no session or merge since,
+# leaves the stamp behind HEAD — the session-start and post-merge routes never
+# fire. Reindex and re-check once before telling anyone.
+if [[ "$HC_EXIT" -ne 0 ]] && printf '%s\n' "$FULL_OUTPUT" \
+        | grep -qE 'X +jcodemunch index (is [0-9?]+ commit\(s\) stale|has never been stamped)'; then
+    log "jcodemunch index stale — reindexing before reporting"
+    if bash "$PROJ_ROOT/scripts/jcodemunch-reindex.sh" >> "$LOG" 2>&1; then
+        log "jcodemunch reindex OK — re-running healthcheck"
+        FULL_OUTPUT=$(bash "$PROJ_ROOT/healthcheck.sh" 2>&1) && HC_EXIT=0 || HC_EXIT=$?
+    else
+        log "jcodemunch reindex FAILED — reporting original result"
+    fi
+fi
+
 if [[ "$HC_EXIT" -eq 0 ]]; then
     log "Healthcheck passed — no notification sent."
     exit 0

@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 — automation reliability (branch fix/automation-reliability)
+
+- Five ROADMAP automation fixes committed on the branch, not pushed. See CHANGELOG 2026-10-22.
+- Commit doc gate now follows `.session-end.yml` (CHANGELOG + HANDOFF); docs/RELIABILITY.md is no longer required.
+
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
 
 - #154 merged. GitHub mirrors from Gitea on commit (checked: no error, `47e94bd` on both).

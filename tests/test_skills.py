@@ -39,7 +39,7 @@ def parse_frontmatter(skill_file: Path):
     Returns (frontmatter_dict, body_text) or raises ValueError.
     Tolerates a leading blank line before the opening ---.
     """
-    text = skill_file.read_text().lstrip("\n")
+    text = skill_file.read_text(encoding="utf-8").lstrip("\n")
     if not text.startswith("---"):
         raise ValueError("no frontmatter opening '---'")
     end = text.find("\n---", 3)
@@ -61,7 +61,7 @@ class TestSkillFrontmatter:
     def test_frontmatter_opens_on_line_one(self, skill_dir):
         # Claude Code tolerates a leading blank line; Gemini CLI / Antigravity (agentskills.io
         # spec) silently skip the skill. Keep the strict form so every harness loads it.
-        first = (skill_dir / "SKILL.md").read_text().split("\n", 1)[0]
+        first = (skill_dir / "SKILL.md").read_text(encoding="utf-8").split("\n", 1)[0]
         assert first.rstrip("\r") == "---", f"line 1 must be '---', got {first!r}"
 
     def test_frontmatter_is_valid_yaml(self, skill_dir):

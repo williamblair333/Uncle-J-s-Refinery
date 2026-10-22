@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-22 — automation reliability
+
+- Unpushed local main is now detected via `git ls-remote` (`scripts/check-local-main-unpushed.sh`),
+  shown as a healthcheck W line and a session-start warning. Detection only, never pushes.
+- `post-merge-hook.sh` re-indexes before the "nothing actionable" exit, so code-only merges re-index.
+- `healthcheck-notify.sh` (07:00) re-indexes a stale jcodemunch index and re-checks before reporting.
+- Commit doc gate moved to `scripts/commit_doc_guard.py`: real `git commit` in this repo only;
+  policy read from `.session-end.yml`. `tests/test_skills.py` reads SKILL.md as UTF-8.
+
 ## 2026-10-21 — n8n ideas parked
 
 - `docs/proposals/2026-10-21-n8n-ideas.md`: where n8n would help across current projects,

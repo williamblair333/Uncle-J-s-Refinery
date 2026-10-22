@@ -825,6 +825,24 @@ check_jcodemunch_index_fresh() {
     fi
 }
 
+# ----- 9i2. local main has nothing the remote lacks -------------------------
+# Warn, never fail: unpushed commits lose nothing yet, but they ride into the next
+# branch. The 03:00 auto-maintain agent is the usual source (it commits, never pushes).
+check_local_main_unpushed() {
+    step "git — local main has no commits origin lacks"
+    local out rc
+    out=$(bash "$REPO_ROOT/scripts/check-local-main-unpushed.sh" "$REPO_ROOT" 2>/dev/null)
+    rc=$?
+    if [[ $rc -eq 1 ]]; then
+        warn "unpushed local main: ${out#AHEAD * }"
+        hint "check: git -C $REPO_ROOT log --oneline origin/main..main ; land them via branch -> PR -> merge, never a direct push to main"
+    elif [[ "$out" == SKIP* ]]; then
+        warn "unpushed-main check skipped: ${out#SKIP }"
+    else
+        ok "${out#OK }"
+    fi
+}
+
 # ----- 9j. no untracked global-skills files --------------------------------
 check_untracked_skills() {
     step "global-skills — no untracked SKILL.md files"
@@ -1284,6 +1302,7 @@ check_docmunch_indexed
 check_secrets
 check_clean_room_wall
 check_jcodemunch_index_fresh
+check_local_main_unpushed
 check_untracked_skills
 check_skills_portability
 check_auto_maintain_cron

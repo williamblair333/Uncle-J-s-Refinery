@@ -56,6 +56,18 @@ if [[ $REG_RC -ne 0 ]]; then
     printf '%s\n' "$REG_OUT"
 fi
 
+# ── 1c. local main ahead of the remote ───────────────────────────────────────
+# The 03:00 auto-maintain agent commits to local main and never pushes; the
+# commits then ride into the next branch unnoticed. Shown in the banner, loudly,
+# because the healthcheck tail below would cut a W line off. Detection only.
+UNP_OUT=$(bash "$REPO_ROOT/scripts/check-local-main-unpushed.sh" "$REPO_ROOT" 2>/dev/null)
+UNP_RC=$?
+log "unpushed-main check: $UNP_OUT"
+if [[ $UNP_RC -eq 1 ]]; then
+    printf '    !! WARN     %s\n' "${UNP_OUT#AHEAD * }"
+    printf '                Land them via branch -> PR -> merge (git log --oneline origin/main..main)\n'
+fi
+
 # ── 2. Run healthcheck once — capture output for display + stack detection ────
 HEALTH_OUT=$(CHROMA_API_IMPL=chromadb.api.segment.SegmentAPI \
     bash "$REPO_ROOT/healthcheck.sh" --quick 2>&1 || true)
