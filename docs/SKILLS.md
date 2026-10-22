@@ -76,7 +76,7 @@ Totals: 74 repo, 1 workflows.
 | `retro` | Conduct a retrospective on a coding session. | you | Claude Code | vendored: mattpocock/skills |
 | `review-queue-triage` | Audit _review/ items, classify by completion signals (status: resolved, REPO-ASSESSMENT + landing commit), auto-move resolved items to _reviewed/, leave uncert… | auto | any agent | repo |
 | `session-end-checklist` | Session wrap-up checklist — updates CHANGELOG, HANDOFF, considers ROADMAP/README, then commits. | auto | Refinery stack | repo |
-| `session-status-briefing` | Produce a comprehensive session-start status report combining git state, HANDOFF, code health metrics, risk surface, dead code candidates, and retrieval-stack… | auto | Refinery stack | repo |
+| `session-status-briefing` | Produce a comprehensive session-start status report combining git state, HANDOFF, every open ROADMAP/memory/scout item waiting to be done, code health metrics,… | auto | Refinery stack | repo |
 | `smart-review` | Auto-classifying code review router — rules floor + shadow classifier → dispatches code-review (low/medium/high) or adversarial-review (critical). | auto | Refinery stack | repo |
 | `stack-not-at-head-remediation` | Remediate a HEALTHCHECK fail on stack-not-at-head — upgrade uv packages, re-index, pin embedding canary, run post-upgrade integration, update docs, commit, sna… | auto | Refinery stack | repo |
 | `stale-lock-diagnosis` | Diagnose and fix stale lock directories blocking background automation scripts (mine, index, sync jobs). | auto | Refinery stack | repo |

@@ -1,6 +1,6 @@
 ---
 name: session-status-briefing
-description: Produce a comprehensive session-start status report combining git state, HANDOFF, code health metrics, risk surface, dead code candidates, and retrieval-stack health. Invoke at the start of any session to orient quickly without re-reading files.
+description: Produce a comprehensive session-start status report combining git state, HANDOFF, every open ROADMAP/memory/scout item waiting to be done, code health metrics, risk surface, dead code candidates, and retrieval-stack health. Invoke at the start of any session to orient quickly without re-reading files.
 metadata:
   type: feedback
 ---
@@ -68,6 +68,25 @@ BM25 over `~/.uncle-j-memory`; read-only, no MCP server, no reconnect step):
 A missing/empty store exits nonzero with a clear message — note it and fall back to the session
 transcript; do not block the briefing.
 
+### 4b. What's waiting — mandatory, every status
+
+Bill shouldn't have to ask "what else?". The latest HANDOFF entry is only the newest slice;
+older open work lives elsewhere. Sweep all of these, every time:
+
+| Source | What to pull |
+| --- | --- |
+| `ROADMAP.md` | `## In Progress` and every `## Planned` item (headings and bold `- **` bullets) |
+| `HANDOFF.md`, **all entries** | "Bill to", "awaiting", "next session", "pick up", "verify after", "resume" |
+| Auto-memory `project_*.md` | Top-priority and parked projects (e.g. anatomy-lab, local models) — then check their live state |
+| Other repos named in memory | `git status` / `git ls-remote` in each (e.g. `/opt/proj/anatomy-lab`) |
+| `scout/inbox.md`, `scout/finds/` | Unanswered entries, untracked finds |
+| `review/*.md` | Verdicts awaiting Bill's go |
+| `state/focus-check.log` | Latest focus-test score (one line) |
+| `git log origin/main..HEAD` + `git status` | Unpushed commits, uncommitted files |
+
+Report it grouped: **in progress**, **needs Bill**, **reviews due**, **Claude can just do**,
+**other hosts/projects**. One line per item. Never stop at the latest HANDOFF entry.
+
 ### 5. Risk surface (if doing code work)
 
 Call `mcp__jcodemunch__get_hotspots` (top 5) for complexity × churn scores.
@@ -89,6 +108,8 @@ Only include candidates where `is_referenced: false` after this check.
 ## Output format
 
 **HANDOFF summary:** <one sentence from HANDOFF — the most important thing>
+
+**Waiting:** (step 4b — grouped, one line per item, never omitted)
 
 **Health:** `HEALTHCHECK: ok` | `HEALTHCHECK: fail (N) -- <reason>`  
 (If fail: list CRIT items and attempted fixes before continuing)
