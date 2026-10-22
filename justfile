@@ -73,3 +73,7 @@ scout-status:
 [positional-arguments]
 preview *args:
     cd "{{invocation_directory()}}" && "{{justfile_directory()}}/.venv/bin/python" "{{justfile_directory()}}/scripts/live_preview/cli.py" "$@"
+
+# ask_local's abliterated model (llama-server, 127.0.0.1:8090): just heretic up -d | down | logs
+heretic *args:
+    docker compose -f docker/llama-heretic/compose.yaml {{args}}

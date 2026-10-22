@@ -1184,6 +1184,30 @@ check_ask_local_backend() {
     fi
 }
 
+# ----- 9n-3. ask_local openai backend: llama-heretic answering -------------
+# Opt-in per host (docker/llama-heretic/compose.yaml), so no container is n/a.
+# /health answers 200 while the server sleeps, so an idle model still passes.
+check_llama_heretic_backend() {
+    step "ask_local — llama-heretic backend"
+    local running
+    running="$(docker inspect -f '{{.State.Running}}' llama-heretic 2>/dev/null)" || running=missing
+    if [[ "$running" == "missing" ]]; then
+        na "no llama-heretic container on this host"
+        return
+    fi
+    if [[ "$running" == "false" ]]; then
+        na "llama-heretic stopped — an openai-backend ask_local returns backend_unreachable"
+        return
+    fi
+    if curl -sf --max-time 3 http://127.0.0.1:8090/health >/dev/null 2>&1; then
+        ok "llama-heretic up on 127.0.0.1:8090"
+    else
+        bad "llama-heretic running but 127.0.0.1:8090/health does not answer (still loading?)"
+        hint "run: docker logs --tail 20 llama-heretic"
+        record_fail "ask-local-heretic-down"
+    fi
+}
+
 # ----- 9o. dreaming last-run freshness (>36h = cron failing) ---------------
 check_dreaming_runtime() {
     step "dreaming — runtime health (last-run freshness)"
@@ -1318,6 +1342,7 @@ check_jdocmunch_watch_posture
 check_vault_hook_registered
 check_memweave_fresh
 check_ask_local_backend
+check_llama_heretic_backend
 check_dreaming_runtime
 check_auto_maintain_runtime
 check_repo_scout

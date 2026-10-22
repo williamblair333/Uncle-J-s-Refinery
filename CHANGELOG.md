@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-22 — ask_local runs the abliterated Qwen3.6 Heretic
+
+- **Added** `ASK_LOCAL_BACKEND=openai` in `scripts/ask_local/server.py`: llama-server's
+  `/v1/chat/completions`, thinking off, JSON-schema `response_format` for extract,
+  `backend_unreachable` / `backend_error` errors. The Ollama path is unchanged and still the default.
+  Six new tests in `tests/test_ask_local.py`.
+- **Added** `docker/llama-heretic/compose.yaml` (llama.cpp `server-cuda12-b11459`, loopback
+  :8090, `--n-cpu-moe 36`, `-np 1`, 32k context, 10-min idle sleep) and `just heretic`.
+- **Added** a `healthcheck.sh` probe for the `llama-heretic` container (n/a when absent).
+- Measured: 40 tok/s at 4.8 GB VRAM (49.5 at `--n-cpu-moe 24` / 11.5 GB); wake from sleep 2.9 s;
+  a 16k-token summarize takes about 53 s (prefill with experts on CPU).
+
 ## 2026-10-22 — vintage-pulp-fantasy-style skill
 
 - **Added** `global-skills/vintage-pulp-fantasy-style/SKILL.md`: image-prompt template for 1980s
