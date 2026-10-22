@@ -4,8 +4,10 @@
 
 - `just ask-local-up` starts whatever `config/ask_local.env` names; `install.sh` uses it, so a
   reinstall here no longer starts Ollama or pulls the 9B. Ollama itself still runs (started
-  earlier, restart unless-stopped). Retiring it waits on lineup step 4 (Sinkpoint), step 5
-  (partikus's `ollama` AI mode) and a small llama-server model for the Pi / tc-vmh-03.
+  earlier, restart unless-stopped). Retiring it waits on step 5 (partikus's `ollama` AI mode)
+  and a small llama-server model for the Pi / tc-vmh-03. Step 4 is answered: Sinkpoint has an
+  `"openai"` provider. If Bannerlord runs on another PC, Heretic needs a LAN bind (Bill's
+  call: it's loopback-only by design).
 - `llama-heretic` now runs `-b 2048 -ub 2048` (live, recreated): an 18.7k-token prefill takes
   24 s, down from 61 s. Generation is still ~40 tok/s, total GPU 6.05 GB awake.
 - partikus #44: `run_tests.sh` defaults `QT_QPA_PLATFORM=offscreen`; headless `just test` passes.

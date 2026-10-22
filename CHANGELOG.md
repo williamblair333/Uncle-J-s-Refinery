@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-22 — lineup step 4 answered: Sinkpoint speaks OpenAI-style APIs
+
+- **Docs** lineup proposal: Sinkpoint's AI Dialogue has an `"openai"` provider type
+  (`/chat/completions`), so it can use Heretic instead of Ollama. A game on another PC needs
+  llama-heretic bound to the LAN (it's 127.0.0.1 now). Key names unread: the mod isn't
+  installed on this host.
+
 ## 2026-10-22 — install starts the backend the host's config names
 
 - **Added** `scripts/ask-local-up.sh` (`just ask-local-up`): reads ASK_LOCAL_BACKEND the way

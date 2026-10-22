@@ -42,7 +42,13 @@ users as possible. Commercial use must be allowed.
      starts the configured backend, and install.sh calls it. **Still open:** other hosts (Pi,
      tc-vmh-03) have no config and stay on Ollama until a small llama-server model is picked
      for them.
-  4. Check whether Sinkpoint's Bannerlord mod accepts an OpenAI-style URL. It speaks Ollama.
+  4. ~~Check whether Sinkpoint's Bannerlord mod accepts an OpenAI-style URL.~~ Yes, per the
+     author's "LLM support and configuration" article (Nexus, mountandblade2bannerlord
+     articles/1674): `Modules/SpLLM/config.json` picks a `"provider"` from `"providers"`, and
+     type `"openai"` POSTs `/chat/completions`. Point it at Heretic (`http://<this host>:8090/v1`,
+     model `heretic`) — but llama-heretic binds 127.0.0.1, so a game on another PC needs a LAN
+     bind first. The exact URL/model key names are in `config.default.json`; read them when
+     the mod is installed (it isn't on this host).
   5. Move partikus off Ollama: `partikus.ai`'s `"ollama"` mode calls `qwen3.5:9b`
      (partikus HANDOFF). Point it at llama-server or drop that mode.
 
