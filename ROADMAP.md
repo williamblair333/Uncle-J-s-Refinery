@@ -601,7 +601,11 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
 
-- **jcodemunch skew probe** — the *alignment* half of this item is **done**, and was already
+- **[DONE 2026-10-22] jcodemunch skew probe** — healthcheck `running processes match the
+  installed version` warns on any jcodemunch/jdocmunch watcher or MCP server that started
+  before its package's dist-info was written. First run caught the watcher on pre-03:00 code
+  (restarted) and a 26 h mafski session's server. Original entry follows.
+  The *alignment* half of this item is **done**, and was already
   done when this entry was last read. Verified 2026-08-21: `~/.claude.json` points
   `jcodemunch.command` at `/opt/proj/Uncle-J-s-Refinery/.venv/bin/jcodemunch-mcp`, the same
   binary the reindex writes with (1.108.287), so writer == reader and the
