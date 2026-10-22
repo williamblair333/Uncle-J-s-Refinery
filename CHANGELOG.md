@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-22 — Heretic prefill 2.5× faster
+
+- **Changed** `docker/llama-heretic/compose.yaml`: `-b 2048 -ub 2048`. An 18.7k-token prompt
+  prefills in 24 s instead of 61 s (306 → 775 tok/s); VRAM +0.2 GB, generation unchanged
+  (~40 tok/s). `-ub 4096` (17 s, +0.8 GB) was rejected: it leaves no room for lc0. Lineup
+  step 1 of 4; bench numbers are in the compose comment.
+
 ## 2026-10-22 — web search for the chat page; dcup fixed
 
 - **Added** a "Search the web" checkbox to `scripts/local_chat/`: the page queries SearXNG

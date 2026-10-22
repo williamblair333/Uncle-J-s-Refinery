@@ -31,7 +31,9 @@ users as possible. Commercial use must be allowed.
 - **Qwen3-Omni-30B-A3B rejected:** it hears and speaks, but it's a second LLM with no
   voice cloning, and llama.cpp speech output is unverified.
 - **Retire qwen3.5:9b, granite4.2:8b and the Ollama container.** First:
-  1. Test Heretic prefill with `-b 2048 -ub 2048`. A 16k-token summarize took 53 s at defaults.
+  1. ~~Test Heretic prefill with `-b 2048 -ub 2048`.~~ Done: an 18.7k-token prefill went
+     from 61 s to 24 s (306 → 775 tok/s) for +0.2 GB VRAM; generation unchanged at ~40 tok/s.
+     4096 is faster (17 s) but crowds out lc0. Numbers in `docker/llama-heretic/compose.yaml`.
   2. ~~Move ask_local's backend settings to a host-local file, so a reinstall can't revert
      to Ollama. Doctor flags a mismatch.~~ Done: `config/ask_local.env`, read by the
      server itself; healthcheck `ask_local — settings source` flags a mismatch.
