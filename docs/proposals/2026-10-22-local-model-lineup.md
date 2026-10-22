@@ -49,8 +49,13 @@ users as possible. Commercial use must be allowed.
      model `heretic`) — but llama-heretic binds 127.0.0.1, so a game on another PC needs a LAN
      bind first. The exact URL/model key names are in `config.default.json`; read them when
      the mod is installed (it isn't on this host).
-  5. Move partikus off Ollama: `partikus.ai`'s `"ollama"` mode calls `qwen3.5:9b`
-     (partikus HANDOFF). Point it at llama-server or drop that mode.
+  5. ~~Move partikus off Ollama.~~ Done (partikus #45): backend `"llama"` uses Heretic;
+     integration 7/7 in ~49 s. `"ollama"` stays for hosts that still have it.
+  6. **Blocker found 2026-10-22: Klarheit.** Its hourly trials (`klarheit-rv`, `klarheit-m12`
+     timers) run `qwen3.5:9b` through Ollama, pinned by digest (`src/klarheit/rv/viewer.py`,
+     `methods.json` "M11-local"). About 15 calls an hour, 972 in 72 h. Swapping the model breaks
+     those trials' protocol, so Ollama and the 9B stay until Klarheit's local arm ends or Bill
+     re-registers it on another model. granite4.2:8b is unused and can go now.
 
 ## GPU handoff
 
@@ -62,5 +67,6 @@ ComfyUI job and say so if it can't.
 
 - FLUX.3 Klein came out 2026-10-15; it clears the two-week version rule on 2026-10-29.
   Its best results need a prompt upsampler that wants about 28 GB, which this host lacks.
-- Load Heretic's vision file (`--mmproj`) when image input is needed.
+- ~~Load Heretic's vision file (`--mmproj`) when image input is needed.~~ Loaded on CPU
+  (`--no-mmproj-offload`): no VRAM, 42 s per first image. Numbers in the compose file.
 - Let ask_local ask for thinking per call; the word-problem test ran out of tokens with it off.

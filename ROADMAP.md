@@ -22,10 +22,13 @@ Completed items age out after ~4 weeks.
   `just heretic` to it (the chat page's Start already uses it). Unverified: a past session said
   its hook is already wired in `~/.claude/settings.json`.
 
-- **Local model lineup: fewest models for every goal** (decided 2026-10-22, not started).
-  Heretic for text, Wan 2.2 for video (and stills if they pass), an image model, Whisper,
-  Chatterbox for cloned voices; Ollama and the 9B retired. Full plan and the four steps before
-  retiring Ollama: `docs/proposals/2026-10-22-local-model-lineup.md`.
+- **Local model lineup: fewest models for every goal** (decided 2026-10-22; text side under
+  way). Heretic for text and images, Wan 2.2 for video (and stills if they pass), an image
+  model, Whisper, Chatterbox for cloned voices; Ollama and the 9B retired. Steps 1–5 are done
+  (faster prefill, host config file, `ask-local-up`, Sinkpoint answered, partikus moved).
+  Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Also left: a small
+  llama-server model for the Pi / tc-vmh-03, then image, video and speech models. Plan:
+  `docs/proposals/2026-10-22-local-model-lineup.md`.
 
 - **n8n ideas, parked for review** (opened 2026-10-21). n8n would run beside Uncle J for
   webhooks and OAuth SaaS flows. The full list is ranked by project, with traps and four
@@ -132,7 +135,8 @@ Completed items age out after ~4 weeks.
 
 - **Review `state/ask_local.jsonl`** after about 2 weeks of use (opened 2026-10-04). Does
   offloading save Claude tokens without wrong results acted on? If not, the standing test
-  says remove it.
+  says remove it. Checked 2026-10-22: no data. The log didn't exist until that day's test
+  calls, so sessions weren't routing anything through ask_local. Re-check once they do.
 
 - **Codex MCP — GPT through the ChatGPT subscription** (opened 2026-10-04). Second of the three
   Hermes-replacement pieces (`ask_local` and the memweave MCP shipped). Codex CLI has an
