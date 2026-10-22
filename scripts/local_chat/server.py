@@ -13,15 +13,21 @@ state/local_chat/, one file per conversation. Backends:
 
 Claude and agy get the conversation as one transcript prompt, so any of them can pick
 up where another left off.
+
+"Search the web" queries SearXNG (SEARXNG_URL, default http://127.0.0.1:8086, JSON format
+enabled) with your message and hands the top results to whichever backend answers.
+Start uses `dcup up` when dcup is installed, so heretic's port is claimed in the registry.
 """
 import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,8 +39,13 @@ import ask_agy  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 CHATS = ROOT / "state" / "local_chat"
-COMPOSE = ["docker", "compose", "-f", str(ROOT / "docker" / "llama-heretic" / "compose.yaml")]
+COMPOSE_FILE = str(ROOT / "docker" / "llama-heretic" / "compose.yaml")
+COMPOSE = ["docker", "compose", "-f", COMPOSE_FILE]
+DCUP = shutil.which("dcup") or next(
+    (p for p in ["/opt/lib/docker-port-registry/dcup"] if os.access(p, os.X_OK)), None)
 LLAMA_URL = os.environ.get("ASK_LOCAL_URL", "http://127.0.0.1:8090").rstrip("/")
+SEARX_URL = os.environ.get("SEARXNG_URL", "http://127.0.0.1:8086").rstrip("/")
+SEARCH_RESULTS = 5
 CHAT_ID = re.compile(r"^[0-9a-f]{32}$")
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")  # compose logs keep line-erase codes despite --no-color
 TIMEOUT = 600
@@ -64,6 +75,27 @@ def server_status():
     except (urllib.error.URLError, OSError):
         healthy = False
     return {"container": r["output"] or "not created", "healthy": healthy, "url": LLAMA_URL}
+
+
+def web_search(query):
+    url = f"{SEARX_URL}/search?" + urllib.parse.urlencode({"q": query[:400], "format": "json"})
+    try:
+        with urllib.request.urlopen(url, timeout=30) as resp:
+            data = json.load(resp)
+    except (urllib.error.URLError, OSError, json.JSONDecodeError) as e:
+        return {"ok": False, "error": f"SearXNG unreachable at {SEARX_URL}: {e}"}
+    hits = [{"title": r.get("title", ""), "url": r.get("url", ""),
+             "snippet": (r.get("content") or "")[:300]}
+            for r in data.get("results", [])[:SEARCH_RESULTS]]
+    return {"ok": True, "results": hits}
+
+
+def with_sources(question, hits):
+    lines = [f"[{i}] {h['title']} — {h['url']}\n{h['snippet']}" for i, h in enumerate(hits, 1)]
+    return (f"{question}\n\n---\nWeb search results (today is {time.strftime('%Y-%m-%d')}):\n\n"
+            + "\n\n".join(lines)
+            + "\n\nUse these where they're relevant and cite them as [n]. If they don't answer "
+              "the question, say so.")
 
 
 def transcript(messages):
@@ -160,11 +192,24 @@ def chat(body):
             messages[-1]["content"] += f"\n\n[another answer, from {m.get('backend', '?')}]\n{m['content']}"
         else:
             messages.append({"role": m["role"], "content": m["content"]})
+    sources = None
+    if body.get("web"):
+        # Results go only into what the backend sees this turn; the saved question stays clean.
+        found = web_search(messages[-1]["content"])
+        if not found["ok"]:
+            return {"ok": False, "error": found["error"], "chat_id": chat_id}
+        sources = found["results"]
+        if sources:
+            messages[-1]["content"] = with_sources(messages[-1]["content"], sources)
     started = time.time()
     out = BACKENDS[backend](messages)
     if out["ok"]:
-        append_chat(chat_id, {"role": "assistant", "content": out["text"], "backend": backend,
-                              "seconds": round(time.time() - started, 1), "ts": time.time()})
+        entry = {"role": "assistant", "content": out["text"], "backend": backend,
+                 "seconds": round(time.time() - started, 1), "ts": time.time()}
+        if sources is not None:
+            entry["sources"] = sources
+        append_chat(chat_id, entry)
+        out["sources"] = sources
     out["chat_id"] = chat_id
     out["backend"] = backend
     return out
@@ -222,7 +267,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(400, {"error": "bad json"})
         try:
             if self.path == "/api/start":
-                return self._send(200, _run(COMPOSE + ["up", "-d"], timeout=300))
+                up = [DCUP, "-f", COMPOSE_FILE, "up", "-d"] if DCUP else COMPOSE + ["up", "-d"]
+                return self._send(200, _run(up, timeout=300))
             if self.path == "/api/stop":
                 return self._send(200, _run(COMPOSE + ["down"], timeout=120))
             if self.path == "/api/send":

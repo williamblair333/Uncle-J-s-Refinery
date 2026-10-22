@@ -1,5 +1,25 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 (main host, later) — heretic can search the web; dcup fixed
+
+**Most important:** the chat page's "Search the web" box works end to end (SearXNG →
+heretic, sources listed), but heretic can misread its sources. In testing it cited the
+right pages and still gave Debian 13's date as June 6, 2025; the real date is August 9.
+Check its citations.
+
+- SearXNG: `/opt/docker/searnx`, `127.0.0.1:8086`, pinned image, restart unless-stopped.
+  Backup of the old compose: `docker-compose.yml.bak.2026-10-22` next to it.
+- dcup edits (no git there; the edit guard blocked a `cp` backup of the script, but
+  `dcup.bak.2026-06-13` is the previous version): added `_default_compose` and `_project_of`
+  after `_sql_escape`; `cmd_up`/`cmd_check_only` use them (project from `-p`, else the compose
+  file's dir); `cmd_scan` uses `_project_of`, finds `*.yaml`, and skips
+  `/(_?review|reviewed|orig|old|__not-in-use|__to_review|__in_progress)/` and `superseded`.
+  DB backup before the scan: `ports.db.bak.2026-10-22`.
+- **Correction:** the dcup DB was never "only portainer". It had 73 claims from June; now 82.
+  Pre-existing conflicts the scan reports (not from today): 3000/2222 claimed by `git` vs
+  `gitea`, 11434 by `open-webui` vs `ollama`, 9002 by `lila-docker` vs langfuse, 8000/9000 by
+  `docker-portainer` vs `portainer`. Releasing the stale side is Bill's call.
+
 ## 2026-10-22 (main host, late night) — dcup is the port registry; Uncle J bypasses it
 
 **Most important:** the port registry is **`dcup`** (`/opt/lib/docker-port-registry/`), not the

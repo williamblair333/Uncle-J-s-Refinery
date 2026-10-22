@@ -43,6 +43,8 @@ button:disabled { opacity: .5; cursor: default; }
 .msg.assistant { border-left: 3px solid var(--line); padding-left: 12px; }
 .msg.error { color: var(--bad); }
 .meta { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.sources { font-size: 12px; color: var(--muted); margin-top: 6px; white-space: normal; }
+.sources a { color: var(--accent); }
 .offload { font-size: 12px; color: var(--muted); }
 .offload button { font-size: 12px; padding: 2px 8px; }
 form { border-top: 1px solid var(--line); padding: 12px clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
@@ -86,6 +88,7 @@ textarea { width: 100%; min-height: 72px; resize: vertical; border: 1px solid va
         <option value="claude">Claude (your subscription)</option>
         <option value="agy">agy (Antigravity)</option>
       </select>
+      <label><input type="checkbox" id="web"> Search the web</label>
       <button class="primary" id="send" type="submit">Send</button>
       <span id="busy" class="offload" hidden>thinking…</span>
     </div>
@@ -132,10 +135,24 @@ function addMsg(m) {
   if (m.role === "assistant" && !m.error) {
     const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = (NAMES[m.backend] || m.backend || "") + (m.seconds ? " · " + m.seconds + "s" : "");
+    meta.textContent = (NAMES[m.backend] || m.backend || "") + (m.sources ? " · web" : "") + (m.seconds ? " · " + m.seconds + "s" : "");
     div.append(meta);
   }
   div.append(document.createTextNode(m.content));
+  if (m.sources && m.sources.length) {
+    const src = document.createElement("ol");
+    src.className = "sources";
+    for (const h of m.sources) {
+      const li = document.createElement("li"), a = document.createElement("a");
+      a.href = h.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = h.title || h.url;
+      li.append(a); src.append(li);
+    }
+    div.append(src);
+  } else if (m.sources) {
+    const none = document.createElement("div");
+    none.className = "sources"; none.textContent = "web search: no results";
+    div.append(none);
+  }
   $("log").append(div);
   $("log").scrollTop = $("log").scrollHeight;
   return div;
@@ -180,13 +197,14 @@ async function openChat(id) {
 async function send(text, backend) {
   if (busy) return;
   busy = true; $("send").disabled = true; $("busy").hidden = false;
-  $("busy").textContent = NAMES[backend] + " is thinking…";
+  $("busy").textContent = ($("web").checked ? "searching, then " : "") + NAMES[backend] + " is thinking…";
   document.querySelectorAll(".offload.bar button").forEach(b => b.disabled = true);
   if (text) addMsg({ role: "user", content: text });
   try {
-    const r = await api("/api/send", { chat_id: chatId, text, backend });
+    const web = $("web").checked;
+    const r = await api("/api/send", { chat_id: chatId, text, backend, web });
     chatId = r.chat_id || chatId;
-    if (r.ok) addMsg({ role: "assistant", content: r.text, backend: r.backend });
+    if (r.ok) addMsg({ role: "assistant", content: r.text, backend: r.backend, sources: r.sources });
     else alertBox(NAMES[backend] + " failed: " + r.error);
   } catch (e) { alertBox("request failed: " + e); }
   busy = false; $("send").disabled = false; $("busy").hidden = true;
