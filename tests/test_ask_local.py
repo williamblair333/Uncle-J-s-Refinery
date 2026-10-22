@@ -14,6 +14,8 @@ import pytest
 
 _REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO / "scripts" / "ask_local"))
+# This host's config/ask_local.env would change the defaults the tests assume.
+os.environ["ASK_LOCAL_CONFIG"] = ""
 
 import server  # noqa: E402
 
@@ -355,6 +357,60 @@ def test_openai_backend_status_lists_served_models(tmp_path):
 def test_unknown_backend_is_refused():
     with pytest.raises(ValueError):
         server.LocalClient(http=httpx.Client(), backend="vllm")
+
+
+# --- host-local config -----------------------------------------------------
+
+def test_host_config_reads_ask_local_keys_only(tmp_path):
+    cfg = tmp_path / "ask_local.env"
+    cfg.write_text("# heretic on this host\nASK_LOCAL_BACKEND=openai\n"
+                   "ASK_LOCAL_URL = \"http://127.0.0.1:8090\"\n"
+                   "#ASK_LOCAL_MODEL=commented\nPATH=/evil\nnot a setting\n")
+    assert server.read_host_config(cfg) == {
+        "ASK_LOCAL_BACKEND": "openai", "ASK_LOCAL_URL": "http://127.0.0.1:8090"}
+
+
+def test_host_config_missing_or_disabled_is_empty(tmp_path):
+    assert server.read_host_config(tmp_path / "nope.env") == {}
+    assert server.read_host_config(None) == {}
+
+
+def test_host_config_sets_defaults_and_env_wins(tmp_path):
+    import subprocess
+    cfg = tmp_path / "ask_local.env"
+    cfg.write_text("ASK_LOCAL_BACKEND=openai\nASK_LOCAL_MODEL=heretic\n")
+    probe = "import server; print(server.BACKEND, server.DEFAULT_MODEL)"
+    env = {k: v for k, v in os.environ.items() if not k.startswith("ASK_LOCAL_")}
+    env["ASK_LOCAL_CONFIG"] = str(cfg)
+
+    def run(e):
+        return subprocess.run([sys.executable, "-c", probe], env=e, text=True,
+                              capture_output=True, check=True,
+                              cwd=_REPO / "scripts" / "ask_local").stdout.split()
+
+    assert run(env) == ["openai", "heretic"]
+    assert run({**env, "ASK_LOCAL_MODEL": "qwen3.5:9b"}) == ["openai", "qwen3.5:9b"]
+
+
+def test_healthcheck_resolves_settings_like_the_server(tmp_path):
+    """healthcheck.sh's grep helpers: registration env, then the file (last line wins), then default."""
+    import re
+    import subprocess
+    hc = (_REPO / "healthcheck.sh").read_text(encoding="utf-8")
+    helpers = "\n".join(
+        re.search(rf"^{name}\(\) {{\n.*?^}}\n", hc, re.S | re.M).group(0)
+        for name in ("ask_local_registered_env", "ask_local_file_setting", "ask_local_setting"))
+    (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": {"ask_local": {
+        "command": "python", "env": {"ASK_LOCAL_MODEL": "from-registration"}}}}, indent=2))
+    cfg = tmp_path / "ask_local.env"
+    cfg.write_text("ASK_LOCAL_BACKEND = 'stale'\nASK_LOCAL_BACKEND=\"openai\"\nASK_LOCAL_MODEL=from-file\n")
+    script = (f'HOME="{tmp_path}"; ASK_LOCAL_CONFIG_FILE="{cfg}"\n{helpers}\n'
+              "ask_local_setting ASK_LOCAL_BACKEND ollama; echo\n"
+              "ask_local_setting ASK_LOCAL_MODEL qwen3.5:9b; echo\n"
+              "ask_local_setting ASK_LOCAL_URL http://127.0.0.1:11434; echo\n")
+    out = subprocess.run(["bash", "-c", script], text=True, capture_output=True,
+                         check=True).stdout.splitlines()
+    assert out == ["openai", "from-registration", "http://127.0.0.1:11434"]
 
 
 # --- live smoke test -------------------------------------------------------

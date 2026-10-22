@@ -1136,6 +1136,65 @@ check_memweave_fresh() {
     fi
 }
 
+# ----- 9n-1. ask_local settings: where the server's backend comes from --------
+# The server reads each ASK_LOCAL_* key from its process env (the `claude mcp add
+# -e` registration), then config/ask_local.env, then a default. This mirrors that
+# order with grep alone — no python, so it runs in Git Bash too. Only ask_local
+# uses ASK_LOCAL_* keys, so a match anywhere in ~/.claude.json is its env.
+ASK_LOCAL_CONFIG_FILE="$REPO_ROOT/config/ask_local.env"
+
+ask_local_registered_env() {
+    grep -o "\"$1\": *\"[^\"]*\"" "$HOME/.claude.json" 2>/dev/null | head -1 \
+        | sed -E 's/.*: *"(.*)"$/\1/'
+}
+
+ask_local_file_setting() {
+    grep -E "^[[:space:]]*$1[[:space:]]*=" "$ASK_LOCAL_CONFIG_FILE" 2>/dev/null | tail -1 \
+        | cut -d= -f2- | sed -E "s/^[[:space:]]*//; s/[[:space:]]*\$//; s/^[\"']//; s/[\"']\$//"
+}
+
+# Effective value of an ASK_LOCAL_* key, as the server would see it.
+ask_local_setting() {
+    local v
+    v="$(ask_local_registered_env "$1")"
+    [[ -n "$v" ]] || v="$(ask_local_file_setting "$1")"
+    printf '%s' "${v:-$2}"
+}
+
+check_ask_local_config() {
+    step "ask_local — settings source"
+    if ! grep -q '"ask_local"' "$HOME/.claude.json" 2>/dev/null; then
+        na "ask_local not registered on this host"
+        return
+    fi
+    local backend
+    backend="$(ask_local_setting ASK_LOCAL_BACKEND ollama)"
+    if [[ "$backend" != "ollama" && "$backend" != "openai" ]]; then
+        bad "ASK_LOCAL_BACKEND=$backend — the server refuses to start (ollama | openai)"
+        hint "fix ASK_LOCAL_BACKEND in $ASK_LOCAL_CONFIG_FILE"
+        record_fail "ask-local-bad-backend"
+        return
+    fi
+    local key reg file in_reg="" differs=""
+    for key in ASK_LOCAL_BACKEND ASK_LOCAL_URL ASK_LOCAL_MODEL ASK_LOCAL_TIMEOUT ASK_LOCAL_LOG; do
+        reg="$(ask_local_registered_env "$key")"
+        [[ -n "$reg" ]] || continue
+        in_reg+=" $key"
+        file="$(ask_local_file_setting "$key")"
+        [[ "$reg" == "$file" ]] || differs+=" $key"
+    done
+    if [[ -n "$differs" ]]; then
+        warn "registration env overrides $ASK_LOCAL_CONFIG_FILE for:$differs — a reinstall drops the registration's values"
+        hint "put the values in $ASK_LOCAL_CONFIG_FILE, then re-register ask_local without -e"
+    elif [[ -n "$in_reg" ]]; then
+        warn "registration env repeats$in_reg — harmless, but drop it so the file is the one source"
+    elif [[ -f "$ASK_LOCAL_CONFIG_FILE" ]]; then
+        ok "backend $backend, from $ASK_LOCAL_CONFIG_FILE"
+    else
+        ok "backend $backend (defaults; no $ASK_LOCAL_CONFIG_FILE)"
+    fi
+}
+
 # ----- 9n-2. ask_local backend: Ollama answering, default model present ------
 # Only meaningful when ask_local is registered. A STOPPED container is a choice
 # (Bill stops it to free VRAM for other GPU work) and is reported, not failed —
@@ -1147,8 +1206,13 @@ check_ask_local_backend() {
         na "ask_local not registered on this host"
         return
     fi
-    local url="${ASK_LOCAL_URL:-http://127.0.0.1:11434}"
-    local model="${ASK_LOCAL_MODEL:-qwen3.5:9b}"
+    if [[ "$(ask_local_setting ASK_LOCAL_BACKEND ollama)" != "ollama" ]]; then
+        na "ask_local uses the openai backend here — Ollama not needed"
+        return
+    fi
+    local url model
+    url="$(ask_local_setting ASK_LOCAL_URL http://127.0.0.1:11434)"
+    model="$(ask_local_setting ASK_LOCAL_MODEL qwen3.5:9b)"
     local running
     # Not `$(… || echo missing)`: on a missing container docker inspect still prints a
     # blank line to stdout, yielding "\nmissing", which never equals "missing".
@@ -1171,7 +1235,7 @@ check_ask_local_backend() {
         else
             bad "ollama container running but $url/api/version does not answer"
         fi
-        hint "run: docker compose -f $compose up -d"
+        hint "run: bash $REPO_ROOT/scripts/ollama-up.sh"
         record_fail "ask-local-ollama-down"
         return
     fi
@@ -1341,6 +1405,7 @@ check_jcodemunch_watch
 check_jdocmunch_watch_posture
 check_vault_hook_registered
 check_memweave_fresh
+check_ask_local_config
 check_ask_local_backend
 check_llama_heretic_backend
 check_dreaming_runtime

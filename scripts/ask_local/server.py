@@ -8,16 +8,23 @@ Every call appends one line to the measurement log (tool, model, token counts,
 latency, ok/error) and never the prompt or the answer, so whether offloading
 pays for itself can be measured rather than assumed.
 
-Env: ASK_LOCAL_BACKEND (ollama | openai, default ollama), ASK_LOCAL_URL
+Settings: ASK_LOCAL_BACKEND (ollama | openai, default ollama), ASK_LOCAL_URL
 (default http://127.0.0.1:11434), ASK_LOCAL_MODEL (default qwen3.5:9b),
 ASK_LOCAL_TIMEOUT seconds (default 300), ASK_LOCAL_LOG (default
 <repo>/state/ask_local.jsonl; empty string disables).
 
+Each is read from the process env first, then from the host-local file
+<repo>/config/ask_local.env (KEY=VALUE lines, gitignored; ASK_LOCAL_CONFIG
+moves it, empty string disables). Keep host choices in that file, not in the
+`claude mcp add -e` registration: install.sh re-registers without env, and a
+reinstall would silently fall back to the defaults.
+
 `openai` speaks llama-server's /v1/chat/completions, for models Ollama runs
 badly (MoE with experts in RAM: docker/llama-heretic/compose.yaml). A host
-opts in at registration:
-  claude mcp add -s user ask_local -e ASK_LOCAL_BACKEND=openai \
-    -e ASK_LOCAL_URL=http://127.0.0.1:8090 -e ASK_LOCAL_MODEL=heretic -- <python> <this file>
+opts in with config/ask_local.env:
+  ASK_LOCAL_BACKEND=openai
+  ASK_LOCAL_URL=http://127.0.0.1:8090
+  ASK_LOCAL_MODEL=heretic
 """
 from __future__ import annotations
 
@@ -31,12 +38,39 @@ import httpx
 
 _REPO = Path(__file__).resolve().parents[2]
 
-BACKEND = os.environ.get("ASK_LOCAL_BACKEND", "ollama")
+
+def read_host_config(path: Path | None) -> dict[str, str]:
+    """ASK_LOCAL_* KEY=VALUE lines from the host-local file; a missing file is {}."""
+    if path is None:
+        return {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return {}
+    out = {}
+    for line in lines:
+        key, sep, value = line.strip().partition("=")
+        key = key.strip()
+        if sep and key.startswith("ASK_LOCAL_"):
+            out[key] = value.strip().strip("\"'")
+    return out
+
+
+_config_env = os.environ.get("ASK_LOCAL_CONFIG")
+CONFIG_PATH = None if _config_env == "" else Path(_config_env or _REPO / "config" / "ask_local.env")
+_HOST_CONFIG = read_host_config(CONFIG_PATH)
+
+
+def _setting(key: str, default: str | None = None) -> str | None:
+    return os.environ.get(key, _HOST_CONFIG.get(key, default))
+
+
+BACKEND = _setting("ASK_LOCAL_BACKEND", "ollama")
 BACKENDS = ("ollama", "openai")
-OLLAMA_URL = os.environ.get("ASK_LOCAL_URL", "http://127.0.0.1:11434").rstrip("/")
-DEFAULT_MODEL = os.environ.get("ASK_LOCAL_MODEL", "qwen3.5:9b")
-TIMEOUT_S = float(os.environ.get("ASK_LOCAL_TIMEOUT", "300"))
-_log_env = os.environ.get("ASK_LOCAL_LOG")
+OLLAMA_URL = _setting("ASK_LOCAL_URL", "http://127.0.0.1:11434").rstrip("/")
+DEFAULT_MODEL = _setting("ASK_LOCAL_MODEL", "qwen3.5:9b")
+TIMEOUT_S = float(_setting("ASK_LOCAL_TIMEOUT", "300"))
+_log_env = _setting("ASK_LOCAL_LOG")
 LOG_PATH = None if _log_env == "" else Path(_log_env or _REPO / "state" / "ask_local.jsonl")
 MAX_INPUT_BYTES = 256_000  # ~64k tokens; above that a 16k-context model truncates
 

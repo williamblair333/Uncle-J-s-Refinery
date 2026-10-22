@@ -1,11 +1,23 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 (main host, evening) — ask_local settings moved to a host file
+
+**Most important:** ask_local's backend now lives in gitignored `config/ask_local.env` on each
+host (here: openai / 127.0.0.1:8090 / heretic). The registration carries no `-e` env any more,
+so a reinstall no longer reverts to Ollama. The healthcheck reports `ask_local — settings source`.
+Verified: an env-less server import resolves to heretic; `just health` OK; 1891 tests pass.
+
+- The `state/ask_local.jsonl` review found **no data**: the file didn't exist until a test call
+  today, so ask_local had never been called in a real session. Logging works. The review only
+  means something once sessions actually route skim-reads through it.
+- Lineup steps left: 1 (prefill `-b/-ub 2048` test), 3 (install/healthcheck/ollama-up.sh around
+  llama-server; install.sh still starts Ollama and pulls the 9B), 4 (Sinkpoint mod URL).
+- Pi / tc-vmh-03 have no `config/ask_local.env` and keep the Ollama defaults, unchanged.
+
 ## 2026-10-22 (main host, later still) — ask_local now runs Qwen3.6 Heretic
 
-**Most important:** on this host `ask_local` is registered with `ASK_LOCAL_BACKEND=openai`,
-`ASK_LOCAL_URL=http://127.0.0.1:8090`, `ASK_LOCAL_MODEL=heretic`. That env lives only in
-`~/.claude.json`. `install.sh` re-adds ask_local **without** it, so a reinstall silently goes back
-to qwen3.5:9b on Ollama. Re-run the `claude mcp add` line in the `server.py` docstring after one.
+**Superseded (see the entry above):** the backend env used to live only in the `claude mcp add`
+registration, and a reinstall reverted it. It's in `config/ask_local.env` now.
 
 - Service: `just heretic up -d` (container `llama-heretic`, restart unless-stopped). It sleeps
   after 10 idle minutes and gives the VRAM back; the first call after that takes about 3 s more.

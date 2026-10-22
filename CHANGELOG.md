@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-10-22 — ask_local settings survive a reinstall
+
+- **Changed** `scripts/ask_local/server.py` reads ASK_LOCAL_* from the process env, then the
+  gitignored host-local `config/ask_local.env`, then defaults. `install.sh`'s env-less
+  re-registration can no longer revert a host to Ollama. Lineup step 2 of 4.
+- **Added** healthcheck `ask_local — settings source`: reports where the backend comes from,
+  fails on an invalid backend, warns when registration env overrides or repeats the file.
+- **Fixed** the Ollama check no longer runs (or fails) when the backend is openai, and reads
+  the server's real URL/model instead of the healthcheck shell's env. Its down-hint referenced
+  an undefined `$compose`; it now points at `scripts/ollama-up.sh`.
+- This host: `config/ask_local.env` holds openai/8090/heretic; ask_local re-registered
+  without `-e`.
+
 ## 2026-10-22 — local model lineup decided
 
 - **Added** `docs/proposals/2026-10-22-local-model-lineup.md` (PR #166) and a ROADMAP Planned
