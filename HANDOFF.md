@@ -1,5 +1,21 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 (main host, late night) — dcup is the port registry; Uncle J bypasses it
+
+**Most important:** the port registry is **`dcup`** (`/opt/lib/docker-port-registry/`), not the
+flat `/opt/proj/.port-registry` a 2026-08-21 session made after failing to find it. Nothing
+here uses dcup: `just heretic` and the chat page's Start run plain `docker compose`. Bill asked
+for a hook forcing dcup and shipping it with Uncle J, then **paused it before any change** to
+check nothing would break. Nothing was changed for it. Plan is in ROADMAP Planned.
+
+- Before building: confirm whether `dcup-pretooluse-hook.sh` is already wired in
+  `~/.claude/settings.json` (a past session says yes; this session's read was denied). Fix
+  `dcup scan` missing `compose.yaml` first, or heretic never registers.
+- Unknown listeners with no registry row: 8712 (python3, pid 1649 on 0.0.0.0) and
+  24282–24285 (127.0.0.1). Ask Bill whose they are.
+- The leftover test chat server on 8092 was killed. Main's uncommitted REA status edit to
+  this file rode along in this commit.
+
 ## 2026-10-22 (main host, night) — local chat page
 
 **Most important:** `just chat` serves `http://127.0.0.1:8091`: Start/Stop/Logs for heretic,
@@ -517,9 +533,9 @@ and the `referee`, `media-teardown` and `verifiable-task` skills (PR #123). Deta
   no-reply author `60581672+williamblair333@users.noreply.github.com`.
 - Run `gttp` whenever Bill asks why something is needed.
 
-**Filed upstream, awaiting maintainers:** issue morluto/rea#2187 (design for
-`setup --scope local`) and docs PR morluto/rea#2188, from fork `williamblair333/rea`, branch
-`docs/limit-rea-scope`. Only oxfmt ran. REA's `docs:check`/`docs:build` need Node ≥22.19,
+**Filed upstream:** docs PR morluto/rea#2188 (fork `williamblair333/rea`, branch
+`docs/limit-rea-scope`) **merged 2026-10-14**. Issue morluto/rea#2187 (design for
+`setup --scope local`) is still open (checked 2026-10-22). Only oxfmt ran. REA's `docs:check`/`docs:build` need Node ≥22.19,
 and this host has 20.19. If the maintainer says "PR welcome", the touched modules are listed in
 the issue.
 

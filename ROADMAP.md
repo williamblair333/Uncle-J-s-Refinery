@@ -14,6 +14,15 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Ship `dcup` with Uncle J and enforce it** (opened 2026-10-22, paused by Bill before any
+  change). `dcup` (Docker port registry, SQLite) lives only in `/opt/lib/docker-port-registry/`,
+  outside any repo, so new users don't get it. Its DB holds only portainer (8000, 9000); the flat
+  `/opt/proj/.port-registry` grew up beside it. Plan: vendor it, install it from `install.sh`,
+  ship a PreToolUse hook that blocks `docker compose up` / `docker run -p` that bypass it, and
+  switch `just heretic` and the chat page's Start button to `dcup up`. Known bug: `dcup scan`
+  ignores `compose.yaml`. Unverified: a past session said its hook is already wired in
+  `~/.claude/settings.json`.
+
 - **Local model lineup: fewest models for every goal** (decided 2026-10-22, not started).
   Heretic for text, Wan 2.2 for video (and stills if they pass), an image model, Whisper,
   Chatterbox for cloned voices; Ollama and the 9B retired. Full plan and the four steps before
@@ -237,6 +246,11 @@ Completed items age out after ~4 weeks.
   `openai-compatible` is not in `_EMBED_AUTO_DETECT_ORDER` and is never auto-selected.
   Corrected in SECURITY.md with the evidence. If the narrower version is worth tracking,
   it needs its own issue.
+## Recently completed (2026-10-22 — local chat page)
+
+- **`just chat`** serves `http://127.0.0.1:8091` (PR #169): Start/Stop/Logs for heretic, chat,
+  and one-click second opinions from Claude (`claude -p`, hooks disabled) or agy.
+
 ## Recently completed (2026-10-22 — ask_local on the abliterated model)
 
 - **Qwen3.6-35B-A3B Heretic is this host's `ask_local` model.** It runs on llama-server

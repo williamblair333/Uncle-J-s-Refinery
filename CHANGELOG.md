@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-22 — port registry found to be split; dcup not used by Uncle J
+
+- **Changed** (outside the repo) `/opt/proj/.port-registry` gained 8090 (heretic), 8091 (chat
+  page) and 11434 (Ollama), all Uncle J ports that had no row.
+- **Found** the real registry is `dcup` (`/opt/lib/docker-port-registry/`, SQLite). Nothing in
+  Uncle J calls it, nothing loaded at session start names it (install.sh wiped the global
+  CLAUDE.md section), and its DB holds only portainer. Shipping and enforcing it is a ROADMAP
+  Planned item; no code changed.
+
 ## 2026-10-22 — local chat page (`just chat`)
 
 - **Added** `scripts/local_chat/` (stdlib only): a page at `http://127.0.0.1:8091` that starts,
