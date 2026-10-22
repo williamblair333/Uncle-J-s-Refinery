@@ -1,5 +1,17 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 (main host, night) — local chat page
+
+**Most important:** `just chat` serves `http://127.0.0.1:8091`: Start/Stop/Logs for heretic,
+chat, and one-click "ask the same question to" heretic / Claude / agy. Verified end to end:
+heretic answered and followed up, Claude gave a second opinion, and rebinding/cross-origin
+requests got 403.
+
+- **agy isn't logged in on this host**: `agy -p` stops at a Google OAuth prompt. Run `agy` once
+  interactively; until then the page shows the agy error with that hint.
+- `just agy` with an unquoted multi-word prompt fails (`*args` splits it); quote the prompt.
+  Not fixed here.
+
 ## 2026-10-22 (main host, evening) — ask_local settings moved to a host file
 
 **Most important:** ask_local's backend now lives in gitignored `config/ask_local.env` on each

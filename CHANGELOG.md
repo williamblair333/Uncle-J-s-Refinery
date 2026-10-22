@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-22 — local chat page (`just chat`)
+
+- **Added** `scripts/local_chat/` (stdlib only): a page at `http://127.0.0.1:8091` that starts,
+  stops and shows logs for `llama-heretic`, chats with it, and hands any question to Claude
+  (`claude -p` with hooks disabled, no tools, no saved session) or agy. A send with no text
+  asks the chosen model your last question again (second opinion). Conversations are JSONL
+  in gitignored `state/local_chat/`.
+- Requests need a `127.0.0.1`/`localhost` Host header and a same-origin Origin, which blocks
+  DNS rebinding and cross-site POSTs.
+- `--bare` would also skip hooks but refuses subscription logins, so the page passes
+  `disableAllHooks` instead.
+
 ## 2026-10-22 — ask_local settings survive a reinstall
 
 - **Changed** `scripts/ask_local/server.py` reads ASK_LOCAL_* from the process env, then the
