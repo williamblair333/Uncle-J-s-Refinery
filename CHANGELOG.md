@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-22 — install/doctor coverage and scout minors
+
+- jdocmunch-watch `--no-ai-summaries` drop-in: `scripts/jdocmunch-watch-dropin.sh`, provisioned by `install-reliability.sh`, restored by `refinery-doctor --fix` (check `jdocmunch-watch-dropin`).
+- Doctor `jcodemunch-scope` → `mcp-scope`: all five stack servers, via `claude mcp get` (the old `mcp list` grep could never match). Old name still works.
+- Scout: sent-marker so a Telegram timeout is never resent, one message per calendar day, `flock` run lock, `run done` line that healthcheck now reads instead of log mtime, library finds evaluated with `library-backend-adoption-eval`, gh facts behind each message logged (spec §10).
+- `just install-gate`: real `install.sh` in a fresh container with a `claude` shim; first run passed (65 s install).
+
 ## 2026-10-21 — n8n ideas parked
 
 - `docs/proposals/2026-10-21-n8n-ideas.md`: where n8n would help across current projects,

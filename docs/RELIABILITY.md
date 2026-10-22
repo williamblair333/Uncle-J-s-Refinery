@@ -390,6 +390,11 @@ The SessionStart staleness check scans `MEMORY.md` for stale tracking entries (`
 
 `session-end-check.sh` behaviour is covered by `tests/test_session_end_check.py` (10 tests, job 5 in `ci.yml`).
 
+`install-reliability.sh` also provisions the jdocmunch-watch `--no-ai-summaries` systemd
+drop-in (`scripts/jdocmunch-watch-dropin.sh`; workaround for upstream jdocmunch-mcp#120), and
+`refinery-doctor.sh --fix` restores it (check `jdocmunch-watch-dropin`). It's skipped where
+the watcher unit isn't installed. A drop-in that already sets the flag is never replaced.
+
 (memweave memory operational details — freshness, store layout, recovery — are in the "memweave memory freshness" section above. mempalace was decommissioned 2026-06-13; with it gone, the `chromadb==1.5.8` HNSW-corruption-workaround pin + `chroma-hnswlib` dep were also removed from `pyproject.toml` — chromadb was a mempalace-only transitive dependency.)
 
 ### Guards that fail *open* (found during the 2026-07-30 Windows port)

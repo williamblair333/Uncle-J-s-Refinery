@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 — install/doctor/scout (branch fix/install-doctor-scout)
+
+- Doctor restores the jdocmunch-watch drop-in and checks all five stack servers' scope; scout send is idempotent, once a day, locked, and healthcheck reads its `run done` line.
+- `just install-gate` runs the real install.sh in a container (claude shimmed); passed once. Branch not pushed.
+
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
 
 - #154 merged. GitHub mirrors from Gitea on commit (checked: no error, `47e94bd` on both).

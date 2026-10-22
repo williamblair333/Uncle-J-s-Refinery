@@ -58,6 +58,14 @@ class Paths:
         return self.root / "state" / "scout-top100.json"
 
     @property
+    def sent(self) -> Path:
+        return self.root / "state" / "scout-sent.json"
+
+    @property
+    def lock(self) -> Path:
+        return self.root / "state" / "scout-run.lock"
+
+    @property
     def log(self) -> Path:
         return self.root / "state" / "scout.log"
 
@@ -200,7 +208,10 @@ def apply_callbacks(paths: Paths, answers: dict, pending, now: datetime.datetime
             record_answer(answers, repo_id, name, rung, answer, None, now)
             finds[key].pop("expired", None)
             finds[key].pop("rewatch", None)
-        if pending and pending.get("message_id") == message_id:
+        if pending and (pending.get("message_id") == message_id
+                        # a send whose delivery is unknown has no message_id to match;
+                        # any tap on that find shows it arrived
+                        or pending.get("uncertain") and pending.get("repo_id") == repo_id):
             pending = None
     if pending and now - _parse_ts(pending["sent_at"]) > EXPIRY:
         entry = finds.get(str(pending["repo_id"]))

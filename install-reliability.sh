@@ -234,6 +234,20 @@ else
     fi
 fi
 
+# ── jdocmunch-watch summaries-off drop-in ────────────────────────────────
+# Lives outside the repo in ~/.config/systemd/user/jdocmunch-watch.service.d/, so a
+# machine rebuild lost it with nothing to restore it (healthcheck only reported it).
+# Not applicable until the watcher unit exists; never replaces an existing drop-in
+# that already sets the flag. refinery-doctor --fix restores it the same way.
+step "Ensuring jdocmunch-watch runs with --no-ai-summaries"
+_dropin_state=$(bash "$STACK_ROOT/scripts/jdocmunch-watch-dropin.sh" install | tail -n 1) || _dropin_state="error"
+case "$_dropin_state" in
+    no-unit)   ok "jdocmunch-watch unit not installed — nothing to do" ;;
+    present)   ok "jdocmunch-watch drop-in already present" ;;
+    installed) ok "jdocmunch-watch drop-in written, systemd reloaded" ;;
+    *)         warn "jdocmunch-watch drop-in install failed ($_dropin_state) — run: bash scripts/jdocmunch-watch-dropin.sh install" ;;
+esac
+
 # ── Clone dwarvesf/claude-guardrails ─────────────────────────────────────
 step "Installing dwarvesf/claude-guardrails"
 if [ -d "$STACK_ROOT/claude-guardrails" ]; then
