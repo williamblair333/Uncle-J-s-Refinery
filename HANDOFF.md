@@ -11,6 +11,7 @@
   ai-job-search: not a harness capability.
 - n8n ideas parked in `docs/proposals/2026-10-21-n8n-ideas.md` for Bill to review (ROADMAP).
 - Advisory: auto-maintain commits upgrade syncs without `uv.lock` and never pushes.
+- **jcodemunch-mcp breaking change**: `resolve_repo` on a linked worktree nested inside an indexed checkout now returns `indexed: false` (with `canonical_candidates`) instead of the checkout's index, and lexical search ranks test-file symbols ×0.25 unless the query mentions tests — callers must `index_folder` nested worktrees and put "test" in queries meant to find test code.
 
 ## 2026-10-19 (main host) — focus check live; front-door plan on ROADMAP
 

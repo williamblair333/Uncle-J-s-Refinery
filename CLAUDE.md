@@ -81,7 +81,10 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 
 **Setup & orientation**
 - `list_repos` / `resolve_repo` before any search; on a miss `index_folder`. `resolve_repo`
-  stops at a nested independent clone — pass `repo` explicitly for the outer one.
+  stops at a nested independent clone — pass `repo` explicitly for the outer one. A linked
+  git worktree nested in an indexed checkout (`.claude/worktrees/<name>`) now resolves
+  `indexed: false` with `canonical_candidates` — the checkout's index is another branch;
+  `index_folder` the worktree rather than borrowing it.
   `CODE_INDEX_PATH` moves the whole index root; an index built under another value is
   simply not found (`degraded`, never `absent`).
 - Two repo ids that sanitise to one `<owner>-<name>` slot (`foo-bar/baz`, `foo/bar-baz`) no
@@ -120,6 +123,9 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 **Reading results**
 - `identity_type` grades `exact` / `normalized` / `prefix` / `segment` — accept `normalized`
   too; filtering on `exact` drops real hits.
+- Lexical ranking scores test-file symbols ×0.25 unless the query mentions tests, fixtures
+  or mocks. To find test code, say "test" in the query. Confidence and absence verdicts
+  use the unreduced score.
 - `kind` enum: `function`, `class`, `method`, `constant`, `type`, `template`, `import`,
   `field`, `property`, `variable`. Mutable state is `variable`/`property`/`field`, not
   `constant`.
