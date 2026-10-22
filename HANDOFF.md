@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-22 — surface-write-guard gaps, hook log (branch fix/surface-guard-gaps-and-log-hygiene)
+
+- Committed, not pushed. The live log (1.6 MB, 209 NULs) is archived intact on the first block after merge.
+
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
 
 - #154 merged. GitHub mirrors from Gitea on commit (checked: no error, `47e94bd` on both).

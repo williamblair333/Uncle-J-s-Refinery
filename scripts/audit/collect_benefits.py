@@ -3,7 +3,7 @@
 is listed in `missing` — explicit gaps, no guesses.
 
 Sources:
-  1. state/hook-blocks.log                  -> guard catches (guardrails-discipline)
+  1. state/hook-blocks.log (+ archives)     -> guard catches (guardrails-discipline)
   2. ~/.code-index/**/*.json scanned for the maximum tokens_saved value
   3. MemPalace SQLite (~/.mempalace/palace/chroma.sqlite3) -> embedding row count (read-only)
 """
@@ -38,6 +38,25 @@ def count_blocks(text):
     return counts
 
 
+ARCHIVE_RE = re.compile(r"hook-blocks\.log\.\d{8}(-\d{6}-\d+)?")
+
+
+def block_log_files(state_dir):
+    """The live hook-blocks.log plus its rotated archives, oldest first.
+
+    The guards archive the log to hook-blocks.log.YYYYMMDD[-HHMMSS-PID] past 1 MiB
+    (hook_log_append, 2026-10-22). Hand-made copies such as `.bak-2026-10-16`
+    duplicate the live log and are excluded.
+    """
+    state_dir = Path(state_dir)
+    files = sorted(p for p in state_dir.glob("hook-blocks.log.*")
+                   if ARCHIVE_RE.fullmatch(p.name) and p.is_file())
+    live = state_dir / "hook-blocks.log"
+    if live.is_file():
+        files.append(live)
+    return files
+
+
 def jcodemunch_saved_tokens():
     """Best-effort scan of ~/.code-index for a persisted tokens_saved figure."""
     best = None
@@ -69,12 +88,13 @@ def mempalace_counts(db_path):
 def main():
     missing, result = [], {"components": {}}
 
-    blocks_path = REPO / "state/hook-blocks.log"
-    if blocks_path.exists():
+    block_logs = block_log_files(REPO / "state")
+    if block_logs:
+        text = "".join(p.read_text(errors="replace") for p in block_logs)
         result["components"]["guardrails-discipline"] = {
-            "hook_blocks": count_blocks(blocks_path.read_text(errors="replace"))}
+            "hook_blocks": count_blocks(text), "log_files": len(block_logs)}
     else:
-        missing.append(str(blocks_path))
+        missing.append(str(REPO / "state/hook-blocks.log"))
 
     saved = jcodemunch_saved_tokens()
     if saved is not None:

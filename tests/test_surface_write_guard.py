@@ -6,7 +6,7 @@ narrowed detection would trade a cosmetic bug for a real false negative.
 
 So the bulk of this file asserts that every detection pattern still denies, and
 one case asserts the regex block is byte-identical to the live installed copy
-when that copy is present.
+when that copy is a real file rather than a symlink into the repo.
 
 The logging cases pin the actual defect: a multi-line command must produce
 exactly ONE physical log line carrying `session=`. Before the fix, `head -c`
@@ -91,33 +91,16 @@ def test_surface_writes_are_blocked(name, cmd, tmp_path):
     assert blocked(res), f"{name}: NOT blocked — false negative.\ncmd={cmd}\nstdout={res.stdout}"
 
 
-# ── KNOWN GAPS — pre-existing false negatives, pinned not fixed ──────────────
-# Verified 2026-08-15 to behave IDENTICALLY in the live installed guard, so these
-# are not regressions from versioning. They are NOT fixed here on purpose: this
-# PR's job is the logging defect, and widening a write-guard's detection is a
-# separate change whose risk is false positives blocking legitimate work.
-#
-# Two root causes:
-#   * REDIR_RE's SURF_EXT and SURF_FILE branches both end in [[:space:];|&$"'],
-#     a REQUIRED trailing delimiter. At end-of-command there is no trailing
-#     character, so the match fails. `> setup.sh` at the end of a line is missed;
-#     `> setup.sh && echo done` is caught.
-#   * SED_RE and PERL_RE allow only [[:space:]a-zA-Z0-9='"] between the flag and
-#     the filename. Neither `/` nor `.` is in that class, so the match dies at
-#     the first slash of `s/a/b/` or the dot of `-i.bak`.
-#
-# SED_RE is the worst of these and deserves calling out: probing every common
-# form found that it fires ONLY on `sed -i "" file.sh`, the macOS empty-suffix
-# spelling. `sed -i 's/a/b/' f.sh`, `sed -i.bak … f.yml` and `sed -i -e … f.sh`
-# — i.e. essentially all GNU sed usage — are allowed through. The one passing
-# BLOCK case above is therefore not representative, and is kept only to prove
-# the pattern is not entirely dead.
-#
-# strict=True on purpose: when these are closed, the xfail turns into an
-# unexpected pass and CI fails, forcing this list to be updated rather than
-# silently rotting. Tracked in ROADMAP.
+# ── Former KNOWN GAPS, closed 2026-10-22 ─────────────────────────────────────
+# Pinned as strict xfails from 2026-08-15 until fixed. Two root causes:
+#   * REDIR_RE's SURF_EXT and SURF_FILE branches (and PERL/RUBY/NODE_RE's) ended in
+#     a REQUIRED trailing delimiter, so a target at end-of-command was missed.
+#     End of line now counts (SURF_END).
+#   * SED_RE allowed only [[:space:]a-zA-Z0-9='"] between the flag and the file, so
+#     it fired on nothing but macOS `sed -i "" f.sh`. It is now matched per command
+#     segment: an in-place flag anywhere plus a surface target in the same segment.
 
-KNOWN_GAPS = [
+CLOSED_GAPS = [
     ("append-to-sh-eol",       "echo 'x' >> setup.sh"),
     ("redirect-settings-eol",  "echo '{}' > settings.json"),
     ("redirect-claude-md-eol", "echo hi > CLAUDE.md"),
@@ -127,12 +110,86 @@ KNOWN_GAPS = [
     ("perl-inplace-slashes",   "perl -pi -e 's/a/b/' deploy.sh"),
 ]
 
+# Adversarial variants tried while closing them (2026-10-22). Each was allowed by
+# the guard before this change.
+ADVERSARIAL_BLOCK = [
+    ("subshell-paren",         "(echo x > a.sh)"),
+    ("no-space-redirect-eol",  "echo x >a.sh"),
+    ("noclobber-override",     "echo x >| a.sh"),
+    ("amp-redirect",           "echo x &>a.sh"),
+    ("redirect-ampersand-word", "echo x >& a.sh"),
+    ("exec-redirect",          "exec > a.sh"),
+    ("backtick-dir",           "echo x > `pwd`/a.sh"),
+    ("redirect-continuation",  "echo x > \\\n f.sh"),
+    ("sed-flag-after-script",  "sed -e 's/a/b/' -i build.sh"),
+    ("sed-flag-last",          "sed 's/a/b/' build.sh -i"),
+    ("sed-long-in-place",      "sed --in-place 's/a/b/' x.py"),
+    ("sed-long-in-place-suf",  "sed --in-place=.orig 's/a/b/' x.py"),
+    ("sed-combined-Ei",        "sed -Ei 's/a/b/' x.toml"),
+    ("sed-combined-ni",        "sed -ni 's/a/b/p' x.cfg"),
+    ("sed-separate-s-i",       "sed -s -i 's/a/b/' f.sh"),
+    ("sed-empty-suffix-glued", "sed -i'' 's/a/b/' f.sh"),
+    ("sed-pipe-delimiter",     "sed -i 's|a|b|' f.sh"),
+    ("sed-semicolon-in-script", "sed -i 's/a;b/c/' f.sh"),
+    ("sed-amp-in-script",      'sed -i "s/a&b/c/" f.sh'),
+    ("sed-redirect-amp-between", "sed -i 2>&1 's/a/b/' f.sh"),
+    ("sed-quoted-target",      "sed -i 's/a/b/' \"my file.sh\""),
+    ("sed-claude-md",          "sed -i 's/a/b/' CLAUDE.md"),
+    ("sed-settings-json",      "sed -i 's/a/b/' ~/.claude/settings.json"),
+    ("sed-hooks-dir-any-ext",  "sed -i 's/a/b/' /opt/proj/x/hooks/foo.txt"),
+    ("sed-abs-path",           "/bin/sed -i 's/a/b/' f.sh"),
+    ("gsed",                   "gsed -i 's/a/b/' f.sh"),
+    ("sed-quoted-name",        "\"sed\" -i 's/a/b/' f.sh"),
+    ("sudo-sed",               "sudo sed -i 's/a/b/' f.sh"),
+    ("sed-glob",               "sed -i 's/a/b/' *.sh"),
+    ("find-exec-sed",          "find . -name '*.sh' -exec sed -i 's/a/b/' {} +"),
+    ("find-xargs-sed",         "find . -name '*.sh' | xargs sed -i 's/a/b/'"),
+    ("sed-continuation",       "sed -i \\\n 's/a/b/' f.sh"),
+    ("ruby-inplace-eol",       "ruby -pi -e 'x' deploy.sh"),
+    # cp/mv word boundary must still see real copies
+    ("cp-after-semicolon",     "true;cp a b c.sh"),
+    ("cp-in-subst",            "x=$(cp a b c.sh)"),
+    ("cp-in-backticks",        "echo `cp a b c.sh`"),
+    ("cp-abs-path",            "/bin/cp a b/c.sh d/e.sh"),
+    ("cp-to-scripts-sh",       "cp x scripts/y.sh"),
+    ("mv-to-scripts-sh",       "mv x scripts/y.sh"),
+    ("cp-then-and",            "cp x y.sh && echo"),
+]
 
-@pytest.mark.parametrize("name,cmd", KNOWN_GAPS, ids=[c[0] for c in KNOWN_GAPS])
-@pytest.mark.xfail(strict=True, reason="known pre-existing detection gap; see ROADMAP")
-def test_known_detection_gaps(name, cmd, tmp_path):
+
+@pytest.mark.parametrize("name,cmd", CLOSED_GAPS + ADVERSARIAL_BLOCK,
+                         ids=[c[0] for c in CLOSED_GAPS + ADVERSARIAL_BLOCK])
+def test_closed_gaps_and_adversarial_variants_blocked(name, cmd, tmp_path):
     res = run_guard(cmd, tmp_path)
-    assert blocked(res), f"{name}: not blocked"
+    assert blocked(res), f"{name}: NOT blocked — false negative.\ncmd={cmd!r}"
+
+
+# The widening must not block ordinary work: `cp` inside `mcp`, sed that doesn't
+# edit in place or doesn't touch a surface file, near-miss filenames.
+WIDENING_ALLOW = [
+    ("claude-mcp-add",         "claude mcp add foo -- python scripts/server.py"),
+    ("claude-mcp-add-abs",     "claude mcp add partikus -- uv run /opt/proj/partikus/scripts/mcp_server.py"),
+    ("partikus-mcp",           "partikus_mcp tests/x.py"),
+    ("python-m-partikus-mcp",  "python -m partikus_mcp -v tests/x.py"),
+    ("uv-run-partikus-mcp",    "uv run partikus_mcp --check tests/x.py tests/y.py"),
+    ("sed-print-only",         "sed -n 's/a/b/p' build.sh"),
+    ("sed-stdout-to-txt",      "sed 's/a/b/' build.sh > out.txt"),
+    ("sed-inplace-txt",        "sed -i 's/a/b/' notes.txt"),
+    ("sed-inplace-txt-then-py", "sed -i 's/a/b/' notes.txt && cat x.py"),
+    ("sed-inplace-md-then-py", "sed -i 's/a/b/' README.md; python3 tests/foo.py"),
+    ("sed-slash-i-in-pattern", "sed -n '/-i/p' f.sh"),
+    ("redirect-sh-dot-txt",    "echo hi > notes.sh.txt"),
+    ("redirect-claude-md-bak", "echo hi > CLAUDE.md.bak"),
+    ("redirect-shell-ext",     "echo hi > a.shell"),
+    ("stderr-to-stdout-pipe",  "uv run pytest tests/test_x.py -q 2>&1 | tail -5"),
+    ("ls-glob",                "ls scripts/*.sh"),
+]
+
+
+@pytest.mark.parametrize("name,cmd", WIDENING_ALLOW, ids=[c[0] for c in WIDENING_ALLOW])
+def test_widening_does_not_block_ordinary_work(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert not blocked(res), f"{name}: false positive.\ncmd={cmd!r}"
 
 
 # ── ALLOW matrix: the guard must not block ordinary work ─────────────────────
@@ -356,10 +413,15 @@ def test_all_regex_definitions_present():
 
 
 @pytest.mark.skipif(not LIVE_GUARD.exists(), reason="live guard not installed on this machine")
+@pytest.mark.skipif(LIVE_GUARD.is_symlink(),
+                    reason="live guard is a symlink into a checkout of this file: comparing "
+                           "it compares two branches, and every detection change differs by design")
 def test_regexes_byte_identical_to_live_guard():
-    """The versioned copy must detect exactly what the live one detects.
+    """A live guard that is a REAL FILE must detect what the versioned one does.
 
-    Only the jq check and the log line were allowed to change.
+    This guarded the 2026-08-15 move from an unversioned live copy into the repo.
+    Since the installer symlinks the live path to the repo, it only still fires on a
+    machine where a stale real-file copy shadows the repo version.
     """
     repo_defs = _extract_regex_lines(GUARD)
     live_defs = _extract_regex_lines(LIVE_GUARD)

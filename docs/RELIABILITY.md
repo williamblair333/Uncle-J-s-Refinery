@@ -455,9 +455,26 @@ Two properties follow, and both are worth preserving in any new guard that write
   over the log reports malformed lines directly; a plain `wc -l` silently counts the
   corruption as data.
 
-Note that `surface-write-guard.sh` lives under `~/.claude/hooks/pre-mortem-guard/` as a
-real file rather than a symlink into this repo, so it is not covered by `install.sh` or
-`refinery-doctor --fix` and cannot be repaired through version control.
+- **Text only, or grep goes silent.** GNU grep treats a file holding one NUL byte or
+  one invalid UTF-8 sequence as binary: `grep -c DATE` prints nothing and exits 1. The
+  live log carried a run of 209 NULs (one contiguous block at byte 20047, between a
+  2026-06-02 20:02 and a 2026-06-03 07:21 record: the zero-fill an unclean shutdown
+  leaves, not hook output) and two lines where `head -c` had cut a multibyte character.
+- **Rotation archives, never truncates.** The log is not reconstructible.
+
+Since 2026-10-22 every hook that writes the log does it through one inline function,
+`hook_log_append`, byte-identical in `grep-guard.sh`, `edit-surface-guard.sh` and
+`surface-write-guard.sh` (`tests/test_hook_log.py` pins the copies). It turns every C0
+control byte and DEL into a space, drops invalid UTF-8, and past 1 MiB
+(`HOOK_LOG_MAX_BYTES`) renames the log to `hook-blocks.log.YYYYMMDD` (or
+`.YYYYMMDD-HHMMSS-PID` if that exists) under a `mkdir` lock, with `mv -n` so no archive
+is ever overwritten. Readers must cover the archives: `collect_benefits.py` does
+(`block_log_files`). Archives written before 2026-10-22 can still hold NULs, so read
+those with `grep -a`.
+
+`credential-guard.sh` still appends directly. Its fields are a fixed tool name, a
+regex match of path characters and the session id, so it can't emit the bytes above,
+but it does not rotate the log.
 
 ### Path guards must be spelling-independent
 
