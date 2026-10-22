@@ -82,6 +82,6 @@ chat *args:
 ask-local-up:
     ./scripts/ask-local-up.sh
 
-# ask_local's abliterated model (llama-server, 127.0.0.1:8090): just heretic up -d | down | logs
+# ask_local's abliterated model (llama-server, 127.0.0.1:8090): just heretic up -d | down | logs (up via dcup)
 heretic *args:
-    docker compose -f docker/llama-heretic/compose.yaml {{args}}
+    ./scripts/heretic.sh {{args}}
