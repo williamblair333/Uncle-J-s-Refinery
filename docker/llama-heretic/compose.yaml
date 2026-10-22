@@ -6,6 +6,10 @@
 #   --n-cpu-moe 24 → ~49 tok/s but 11.5 GB VRAM; 20 does not fit.
 # --sleep-idle-seconds frees the VRAM when idle; the next request wakes it in ~3 s.
 # -np 1: one slot gets the whole 32k context (auto slots would split it).
+# -b/-ub 2048: prefill of an 18.7k-token prompt, total GPU in use while awake:
+#   ub 512 (default) 61 s, 306 tok/s, 5.86 GB · ub 1024 37 s, 5.92 GB
+#   ub 2048 24 s, 775 tok/s, 6.05 GB · b/ub 4096 17 s, 1094 tok/s, 6.64 GB
+#   4096 leaves too little for lc0 beside it (~12.0 of 12.3 GB), so 2048.
 # cuda12 image: the cuda13 builds need driver CUDA >= 13.4 (this host: 13.0).
 services:
   llama-heretic:
@@ -29,6 +33,10 @@ services:
       - "32768"
       - -np
       - "1"
+      - -b
+      - "2048"
+      - -ub
+      - "2048"
       - --jinja
       - -fa
       - "on"
