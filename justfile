@@ -21,6 +21,10 @@ audit:
 health *args:
     ./healthcheck.sh {{args}}
 
+# what's waiting in every /opt/proj HANDOFF, plus unpushed/uncommitted repos
+waiting *args:
+    python3 scripts/waiting_sweep.py {{args}}
+
 # real ./install.sh in a fresh container, claude shimmed (~10 min; --worktree for uncommitted)
 install-gate *args:
     ./scripts/clean-install-gate.sh {{args}}

@@ -1,23 +1,25 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-10-22 — surface-write-guard gaps, hook log (branch fix/surface-guard-gaps-and-log-hygiene)
+## 2026-10-22 (main host) — "work I can just do" sweep merged (#158); status covers every project
 
-- Committed, not pushed. The live log (1.6 MB, 209 NULs) is archived intact on the first block after merge.
+**Most important:** status now runs `just waiting` (scripts/waiting_sweep.py), which reads every
+`/opt/proj/*/HANDOFF.md` for "Waiting on Bill" / "Next session" / "Blocked" and flags unpushed or
+dirty repos. Bill was never reminded of bizengine's automation pipeline because it lived only in
+bizengine's HANDOFF. That gap is closed.
 
-## 2026-10-22 — automation reliability (branch fix/automation-reliability)
-
-- Five ROADMAP automation fixes committed on the branch, not pushed. See CHANGELOG 2026-10-22.
-- Commit doc gate now follows `.session-end.yml` (CHANGELOG + HANDOFF); docs/RELIABILITY.md is no longer required.
-
-## 2026-10-22 — install/doctor/scout (branch fix/install-doctor-scout)
-
-- Doctor restores the jdocmunch-watch drop-in and checks all five stack servers' scope; scout send is idempotent, once a day, locked, and healthcheck reads its `run done` line.
-- `just install-gate` runs the real install.sh in a container (claude shimmed); passed once. Branch not pushed.
-
-## 2026-10-22 — pysqlite3 wheel, jscrub (branch chore/wheel-jscrub-watermarks)
-
-- Vendored pysqlite3 wheel is now manylinux2014; verified SQLite 3.51.3 on Debian 11. Run `uv sync --inexact` after merge.
-- `just audit` + CI `test-jscrub` run jscrub read-only; `reviewed/watermarks-remover` was already moved before this branch.
+- PR #158: guards (grep symlinks, push-guard lexer, surface-write gaps, Windows credential-guard),
+  hook-blocks.log text-only + archive rotation, automation fixes, install/doctor/scout, manylinux
+  pysqlite3 wheel (`uv sync --inexact` done on this host), jscrub read-only in `just audit` + CI.
+- Commit doc gate now **denies the one call** instead of `{"continue": false}`; that shape ended
+  subagents' turns mid-task (4 of 5 on 2026-10-22). `git commit --no-verify` / `-n` is denied too.
+- Skill-name trigger: a global UserPromptSubmit hook (`features/prompt-triggers/install.sh`) makes
+  Claude invoke a skill Bill names (`just-do-it`, `/judge`). Not yet re-applied by install/doctor.
+- Upstream claude-guardrails bug: its grep for `--dangerously-skip-permissions` reads the pattern as an option, so the
+  escalation block never fired. `scripts/fix-guardrails-grep.sh` repairs it (run from
+  `install-guardrails.sh`). Now live, it blocks any Bash command whose text contains that flag.
+  Upstream issue **not filed** — public, needs Bill's OK.
+- Gitea: 16 fully-merged branches deleted. anatomy-lab now has a private GitHub push mirror.
+- Doc gate follows `.session-end.yml` (CHANGELOG + HANDOFF); docs/RELIABILITY.md no longer required.
 
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
 

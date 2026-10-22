@@ -286,8 +286,39 @@ def _guard(command, cwd, root):
 def test_gate_blocks_real_commit_missing_docs(gated):
     repo, _, _ = gated
     out = _guard("git commit -m 'feat: x'", repo, repo)
-    assert out and out["continue"] is False
-    assert "CHANGELOG.md" in out["stopReason"] and "HANDOFF.md" in out["stopReason"]
+    reason = _denied(out)
+    assert "CHANGELOG.md" in reason and "HANDOFF.md" in reason
+
+
+def _denied(out):
+    # A per-call deny, never {"continue": false}: that ends the whole turn (subagents stopped mid-task).
+    assert out and "continue" not in out
+    hso = out["hookSpecificOutput"]
+    assert hso["hookEventName"] == "PreToolUse" and hso["permissionDecision"] == "deny"
+    return hso["permissionDecisionReason"]
+
+
+@pytest.mark.parametrize("cmd", [
+    "git commit --no-verify -m 'feat: x'",
+    "git commit -n -m 'feat: x'",
+    "git commit -nm 'feat: x'",
+    "git commit -am x --no-verify",
+])
+def test_gate_blocks_no_verify(gated, cmd):
+    repo, _, _ = gated
+    assert "--no-verify" in _denied(_guard(cmd, repo, repo))
+
+
+@pytest.mark.parametrize("cmd", [
+    "git commit -m 'chk: wip' --no-verify",
+    "git commit -m 'note: -n is a flag'",
+])
+def test_gate_no_verify_exemptions(gated, cmd):
+    repo, _, _ = gated
+    for f in ("CHANGELOG.md", "HANDOFF.md"):
+        (repo / f).write_text("updated\n")
+        _git(repo, "add", f)
+    assert _guard(cmd, repo, repo) is None
 
 
 def test_gate_passes_when_docs_staged(gated):
@@ -318,8 +349,7 @@ def test_gate_ignores_nested_independent_clone(gated):
 
 def test_gate_applies_to_linked_worktree(gated):
     repo, _, wt = gated
-    out = _guard("git commit -m x", wt, repo)
-    assert out and out["continue"] is False
+    _denied(_guard("git commit -m x", wt, repo))
 
 
 def test_gate_exempts_checkpoint_and_defers_when_staging_inline(gated):
