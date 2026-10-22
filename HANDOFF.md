@@ -1,41 +1,41 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-10-22 (main host, latest) — Heretic prefill 2.5× faster; open PRs cleared
+## 2026-10-22 (main host, session end) — lineup steps 1–5, guard + healthcheck fixes, 7 tools/fixes
 
 **Most important:** don't retire Ollama or `qwen3.5:9b`. Klarheit's `klarheit-rv` /
 `klarheit-m12` timers run pre-set trials on that exact model, pinned by digest, about 15 calls
 an hour. Lineup step 6 records it; Bill decides whether that arm ends or moves.
 
-- firefox-devtools-mcp trial: works, but Firefox phones Mozilla even with 19 quieting prefs
-  (3 destinations left). Not registered. The next steps are in the ROADMAP item.
-- `just web2md URL --out DIR` saves pages as markdown for jdocmunch. It's good for prose and
-  weak for code docs (unfenced, some tabbed code lost); use context7 for library APIs.
-- grep-guard still splits on spaces without honouring quotes, so `grep -e 'uv run example.py' f.md`
-  reads `example.py'` as a source file and denies. That's a follow-up (it needs a quote-aware
-  tokenizer and its own audit pass).
-- `just heretic up` goes through dcup now (`scripts/heretic.sh`); down/logs are plain compose.
-- grep-guard now expands glob operands: `grep -rn X docs/*.md README.md` is allowed,
-  `cat scripts/*` is denied. Baseline in `~/.uncle-j-memory/memory/audit-baselines.md`.
-- New healthcheck row flags jcodemunch/jdocmunch processes older than their installed
-  package. It found the watcher on pre-upgrade code (restarted) and the mafski session's
-  server (pid 2375556, open 26 h): restart that session.
-- Heretic now reads images (projector on CPU, no VRAM, ~42 s per first image). partikus #45
-  added backend `"llama"` that uses it. Photo → script was only tried on a GUI screenshot;
-  try a real part photo.
+**Done this session (Refinery #168, #172–#180; partikus #40, #44, #45; free-energy #32; justfile
+PRs in 7 docs repos).** 0 open PRs anywhere at the end.
+- Local model: ask_local's backend lives in `config/ask_local.env`, and `just ask-local-up` /
+  `install.sh` start whichever backend it names. Heretic runs `-b/-ub 2048` (prefill 61 s →
+  24 s) and reads images with the projector on CPU (42 s, 0 VRAM). partikus has a `"llama"`
+  backend. Sinkpoint can use Heretic through its `"openai"` provider, but Bannerlord on another
+  PC needs a LAN bind (Bill's call). `just heretic up` goes through dcup.
+- grep-guard judges glob operands by their matches (`cat scripts/*` now denied). The baseline
+  is in `~/.uncle-j-memory/memory/audit-baselines.md`.
+- Healthcheck flags jcodemunch/jdocmunch processes older than their installed package. It
+  found the watcher on pre-upgrade code (restarted) and the mafski session's server: restart
+  that session.
+- `just web2md URL --out DIR`: pages → markdown for jdocmunch. Good for prose, weak for code
+  docs. firefox-devtools-mcp was trialled and not adopted (Firefox still contacts Mozilla; see
+  the ROADMAP item).
+- free-energy `just test` takes about 2 min now (`just test-all` for everything). partikus
+  tests run headless.
 
-- `just ask-local-up` starts whatever `config/ask_local.env` names; `install.sh` uses it, so a
-  reinstall here no longer starts Ollama or pulls the 9B. Ollama itself still runs (started
-  earlier, restart unless-stopped). Retiring it waits on step 5 (partikus's `ollama` AI mode)
-  and a small llama-server model for the Pi / tc-vmh-03. Step 4 is answered: Sinkpoint has an
-  `"openai"` provider. If Bannerlord runs on another PC, Heretic needs a LAN bind (Bill's
-  call: it's loopback-only by design).
-- `llama-heretic` now runs `-b 2048 -ub 2048` (live, recreated): an 18.7k-token prefill takes
-  24 s, down from 61 s. Generation is still ~40 tok/s, total GPU 6.05 GB awake.
-- partikus #44: `run_tests.sh` defaults `QT_QPA_PLATFORM=offscreen`; headless `just test` passes.
-- Port 8091 belongs to the chat page's `scripts/local_chat/server.py` (not Docker, so dcup
-  doesn't know it). A bench container trying 8091 failed on bind.
-- Cleared stale Gitea PRs: partikus #40 (9V battery box) merged after resolving doc conflicts
-  (1092 tests pass); hearth #15 closed, its content was already on main. 0 open PRs anywhere.
+**Open / next:**
+- grep-guard splits on spaces without honouring quotes, so `grep -e 'uv run example.py' f.md`
+  reads `example.py'` as a source file and denies. It needs a quote-aware tokenizer and its own
+  audit pass.
+- grep-guard can't see a `cd` inside the command: relative paths are judged against the
+  session cwd. Use absolute paths after a `cd`.
+- Lineup: a small llama-server model for the Pi / tc-vmh-03 (hosts must be reachable), then the
+  image, video and speech models. granite4.2:8b is unused (removing it is Bill's call).
+- Photo → script on Heretic was only tried on a GUI screenshot; try a real part photo.
+- Port 8091 is the chat page's `scripts/local_chat/server.py` (not Docker, so dcup doesn't know it).
+- Bill's: Klarheit's 9B arm, granite removal, Heretic LAN bind, dcup stale claims, unknown
+  listeners 8712 / 24282–5, the paused dcup hook, upstream filings.
 
 ## 2026-10-22 (main host, later) — heretic can search the web; dcup fixed
 

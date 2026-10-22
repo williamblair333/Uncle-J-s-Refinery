@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-22 — session end: lineup steps 1–5, guard and healthcheck fixes
+
+- **Docs** HANDOFF: one session-end entry replaces this session's running notes. README:
+  ask_local's backend is now per host (`config/ask_local.env`, `just ask-local-up`), not
+  "needs Ollama".
+
 ## 2026-10-22 — firefox-devtools-mcp trialled, not adopted yet
 
 - **Docs** ROADMAP: `@mozilla/firefox-devtools-mcp` 0.10.4 works headless (34 tools, small

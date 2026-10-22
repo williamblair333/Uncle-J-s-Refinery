@@ -115,7 +115,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | **Retrieval — docs** | jDocMunch | Your project docs, section-precise |
 | | Context7 | Third-party library docs, version-pinned |
 | **Retrieval — memory** | memweave | Offline cross-project memory: markdown corpus + local semantic search. MCP server (`memory_search`, `memory_read` — `scripts/memweave/mw_mcp.py`) plus the `mw_search.py` CLI |
-| **Local model** | ask_local | MCP server handing bounded grunt work (summarize, extract JSON, drafts) to a local Ollama model on your GPU — `scripts/ask_local/server.py`; needs Ollama (see `docs/STACK.md`) |
+| **Local model** | ask_local | MCP server handing bounded grunt work (summarize, extract JSON, drafts) to a local model on your GPU — `scripts/ask_local/server.py`; Ollama by default, or llama-server per host via `config/ask_local.env`; `just ask-local-up` starts it (see `docs/STACK.md`) |
 | **Local chat page** | `just chat` | Web page at `http://127.0.0.1:8091`: start/stop/logs for the local llama-server, chat with it, and send any question to Claude (`claude -p`, your login, no tools or hooks) or agy for a second opinion; a "Search the web" checkbox feeds SearXNG results (`SEARXNG_URL`, default `127.0.0.1:8086`) to any of them; conversations saved in `state/local_chat/` — `scripts/local_chat/` |
 | **Live view** | live_preview | Watch any build step by step in a browser: a project publishes one image per step, and a localhost page shows the newest frame and the step history. MCP server (`preview_publish`/`preview_watch`) plus `just preview …`, from any project — `scripts/live_preview/` (viewer vendored from CLI-Anything, Apache-2.0) |
 | **Efficiency — output** | jOutputMunch | System-prompt rules that cut output tokens 25–40% |
@@ -141,7 +141,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
 
-All 9 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically. (`ask_local` is optional — skipped by `--skip-optional`, and useful only with a local Ollama.)
+All 9 MCP servers register at **user scope**, so they're live in every Claude Code project on this machine automatically. (`ask_local` is optional — skipped by `--skip-optional`, and useful only with a local model backend: Ollama, or llama-server via `config/ask_local.env`.)
 
 ---
 
