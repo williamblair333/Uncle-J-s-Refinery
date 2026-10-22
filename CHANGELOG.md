@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-22 — firefox-devtools-mcp trialled, not adopted yet
+
+- **Docs** ROADMAP: `@mozilla/firefox-devtools-mcp` 0.10.4 works headless (34 tools, small
+  snapshots). Firefox also contacts Mozilla's services: 7 destinations with default prefs, 3
+  with 19 quieting prefs. The connect()-only capture can't see HTTP/3, so it can't certify
+  "target only" yet. Nothing is registered with Claude Code.
+
 ## 2026-10-22 — `just web2md`: web pages to local markdown
 
 - **Added** `scripts/web2md.py` (`just web2md URL --out DIR [--sitemap|--crawl] [--max N]`):
