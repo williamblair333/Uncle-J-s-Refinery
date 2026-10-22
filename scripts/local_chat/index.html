@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local Chat</title>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a65; --line: #e2e0da;
+  --accent: #2f6f4f; --accent-ink: #ffffff; --user: #e8f0eb; --bad: #a33a2b; --good: #2f6f4f;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615; --panel: #1f1f1d; --ink: #e9e7e1; --muted: #9a988f; --line: #33322e;
+    --accent: #6fb38f; --accent-ink: #10130f; --user: #23302a; --bad: #e07a68; --good: #6fb38f;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif;
+       height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+aside { border-right: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 16px;
+        overflow: auto; background: var(--panel); }
+main { display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; }
+button, select, textarea { font: inherit; color: inherit; }
+button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+#status { font-size: 13px; color: var(--muted); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--bad); }
+.dot.up { background: var(--good); }
+#chats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+#chats li { padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chats li:hover, #chats li.active { background: var(--user); }
+#log { flex: 1; overflow: auto; padding: 24px clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 14px; }
+.msg { max-width: 760px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.user { align-self: flex-end; background: var(--user); padding: 10px 14px; border-radius: 12px; }
+.msg.assistant { border-left: 3px solid var(--line); padding-left: 12px; }
+.msg.error { color: var(--bad); }
+.meta { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.offload { font-size: 12px; color: var(--muted); }
+.offload button { font-size: 12px; padding: 2px 8px; }
+form { border-top: 1px solid var(--line); padding: 12px clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
+textarea { width: 100%; min-height: 72px; resize: vertical; border: 1px solid var(--line); border-radius: 8px;
+           padding: 10px; background: var(--bg); }
+#logs { position: fixed; inset: 5vh 5vw; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+        padding: 16px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+#logs pre { flex: 1; overflow: auto; margin: 0; font-size: 12px; background: var(--bg); padding: 10px; border-radius: 6px; }
+[hidden] { display: none !important; }
+@media (max-width: 700px) {
+  body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: auto; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); }
+  main { height: 80vh; }
+}
+</style>
+</head>
+<body>
+<aside>
+  <section>
+    <h2>Local model server</h2>
+    <div id="status"><span class="dot"></span>checking…</div>
+    <div class="row" style="margin-top:8px">
+      <button id="start">Start</button>
+      <button id="stop">Stop</button>
+      <button id="showlogs">Logs</button>
+    </div>
+  </section>
+  <section>
+    <div class="row" style="justify-content:space-between"><h2>Conversations</h2><button id="new">New</button></div>
+    <ul id="chats"></ul>
+  </section>
+</aside>
+<main>
+  <div id="log"></div>
+  <form id="form">
+    <textarea id="text" placeholder="Ask something…  (Ctrl+Enter to send)"></textarea>
+    <div class="row">
+      <label for="backend">Model</label>
+      <select id="backend">
+        <option value="heretic">heretic (local, free)</option>
+        <option value="claude">Claude (your subscription)</option>
+        <option value="agy">agy (Antigravity)</option>
+      </select>
+      <button class="primary" id="send" type="submit">Send</button>
+      <span id="busy" class="offload" hidden>thinking…</span>
+    </div>
+  </form>
+</main>
+<div id="logs" hidden>
+  <div class="row" style="justify-content:space-between"><h2>Server logs (last 200 lines)</h2>
+    <div class="row"><button id="refreshlogs">Refresh</button><button id="closelogs">Close</button></div></div>
+  <pre id="logtext"></pre>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const NAMES = { heretic: "heretic", claude: "Claude", agy: "agy" };
+let chatId = null, busy = false;
+
+async function api(path, body) {
+  const opts = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opts);
+  return r.json();
+}
+
+async function refreshStatus() {
+  try {
+    const s = await api("/api/status");
+    $("status").innerHTML = "";
+    const dot = document.createElement("span");
+    dot.className = "dot" + (s.healthy ? " up" : "");
+    $("status").append(dot, (s.healthy ? "ready" : "not ready") + " · " + s.container);
+  } catch { $("status").textContent = "chat server unreachable"; }
+}
+
+async function serverAction(which) {
+  $("status").textContent = which === "start" ? "starting… (loading the model takes a while)" : "stopping…";
+  const r = await api("/api/" + which, {});
+  if (!r.ok) alertBox(r.output);
+  refreshStatus();
+}
+
+function alertBox(text) { addMsg({ role: "assistant", content: text, error: true }); }
+
+function addMsg(m) {
+  const div = document.createElement("div");
+  div.className = "msg " + m.role + (m.error ? " error" : "");
+  if (m.role === "assistant" && !m.error) {
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = (NAMES[m.backend] || m.backend || "") + (m.seconds ? " · " + m.seconds + "s" : "");
+    div.append(meta);
+  }
+  div.append(document.createTextNode(m.content));
+  $("log").append(div);
+  $("log").scrollTop = $("log").scrollHeight;
+  return div;
+}
+
+function addOffload() {
+  document.querySelectorAll(".offload.bar").forEach(e => e.remove());
+  if (!chatId) return;
+  const bar = document.createElement("div");
+  bar.className = "offload bar row";
+  bar.append("Ask the same question to:");
+  for (const b of ["heretic", "claude", "agy"]) {
+    const btn = document.createElement("button");
+    btn.textContent = NAMES[b];
+    btn.onclick = () => send("", b);
+    bar.append(btn);
+  }
+  $("log").append(bar);
+}
+
+async function loadChats() {
+  const chats = await api("/api/chats");
+  $("chats").innerHTML = "";
+  for (const c of chats) {
+    const li = document.createElement("li");
+    li.textContent = c.title || "(empty)";
+    li.title = new Date(c.mtime * 1000).toLocaleString();
+    if (c.id === chatId) li.className = "active";
+    li.onclick = () => openChat(c.id);
+    $("chats").append(li);
+  }
+}
+
+async function openChat(id) {
+  chatId = id;
+  $("log").innerHTML = "";
+  for (const m of await api("/api/chat?id=" + id)) addMsg(m);
+  addOffload();
+  loadChats();
+}
+
+async function send(text, backend) {
+  if (busy) return;
+  busy = true; $("send").disabled = true; $("busy").hidden = false;
+  $("busy").textContent = NAMES[backend] + " is thinking…";
+  document.querySelectorAll(".offload.bar button").forEach(b => b.disabled = true);
+  if (text) addMsg({ role: "user", content: text });
+  try {
+    const r = await api("/api/send", { chat_id: chatId, text, backend });
+    chatId = r.chat_id || chatId;
+    if (r.ok) addMsg({ role: "assistant", content: r.text, backend: r.backend });
+    else alertBox(NAMES[backend] + " failed: " + r.error);
+  } catch (e) { alertBox("request failed: " + e); }
+  busy = false; $("send").disabled = false; $("busy").hidden = true;
+  addOffload();
+  loadChats();
+}
+
+$("form").onsubmit = e => {
+  e.preventDefault();
+  const text = $("text").value.trim();
+  if (!text) return;
+  $("text").value = "";
+  send(text, $("backend").value);
+};
+$("text").onkeydown = e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("form").requestSubmit(); };
+$("new").onclick = () => { chatId = null; $("log").innerHTML = ""; loadChats(); $("text").focus(); };
+$("start").onclick = () => serverAction("start");
+$("stop").onclick = () => serverAction("stop");
+async function showLogs() { $("logs").hidden = false; $("logtext").textContent = "loading…"; $("logtext").textContent = (await api("/api/logs")).output; $("logtext").scrollTop = 1e9; }
+$("showlogs").onclick = showLogs;
+$("refreshlogs").onclick = showLogs;
+$("closelogs").onclick = () => $("logs").hidden = true;
+
+refreshStatus(); loadChats();
+setInterval(refreshStatus, 10000);
+</script>
+</body>
+</html>
