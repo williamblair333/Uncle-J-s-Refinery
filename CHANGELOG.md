@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-10-22 — Heretic reads images; partikus moved; Klarheit blocks retiring Ollama
+
+- **Changed** `docker/llama-heretic/compose.yaml`: `--mmproj … --no-mmproj-offload`. Images
+  work with the projector on CPU: no VRAM (6.05 GB awake), 42 s for a first image, text
+  prefill unchanged. On GPU it was 19 s but +1.2 GB, which leaves no room for lc0. Live: a
+  partikus render was named correctly as a standoff.
+- partikus #45 adds an `ai` backend `"llama"` (Heretic): integration 7/7 in ~49 s.
+- **Found** Klarheit's hourly trials pin Ollama's `qwen3.5:9b` by digest (~15 calls an hour).
+  Recorded as lineup step 6; Ollama stays. ROADMAP: lineup and the `ask_local.jsonl` review
+  refreshed.
+
 ## 2026-10-22 — lineup step 4 answered: Sinkpoint speaks OpenAI-style APIs
 
 - **Docs** lineup proposal: Sinkpoint's AI Dialogue has an `"openai"` provider type

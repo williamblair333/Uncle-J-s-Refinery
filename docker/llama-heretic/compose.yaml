@@ -10,6 +10,9 @@
 #   ub 512 (default) 61 s, 306 tok/s, 5.86 GB · ub 1024 37 s, 5.92 GB
 #   ub 2048 24 s, 775 tok/s, 6.05 GB · b/ub 4096 17 s, 1094 tok/s, 6.64 GB
 #   4096 leaves too little for lc0 beside it (~12.0 of 12.3 GB), so 2048.
+# --mmproj + --no-mmproj-offload: images work (partikus photo → script), projector on CPU.
+#   On GPU it costs +1.2 GB (7.24 GB, no room for lc0) for a 19 s first image; on CPU it
+#   costs no VRAM, the first image takes 42 s, and text prefill is unchanged (23.8 s).
 # cuda12 image: the cuda13 builds need driver CUDA >= 13.4 (this host: 13.0).
 services:
   llama-heretic:
@@ -37,6 +40,9 @@ services:
       - "2048"
       - -ub
       - "2048"
+      - --mmproj
+      - /models/mmproj-Qwen3.6-35B-A3B-Abliterated-Heretic.gguf
+      - --no-mmproj-offload
       - --jinja
       - -fa
       - "on"

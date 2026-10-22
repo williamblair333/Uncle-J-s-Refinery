@@ -2,6 +2,14 @@
 
 ## 2026-10-22 (main host, latest) — Heretic prefill 2.5× faster; open PRs cleared
 
+**Most important:** don't retire Ollama or `qwen3.5:9b`. Klarheit's `klarheit-rv` /
+`klarheit-m12` timers run pre-set trials on that exact model, pinned by digest, about 15 calls
+an hour. Lineup step 6 records it; Bill decides whether that arm ends or moves.
+
+- Heretic now reads images (projector on CPU, no VRAM, ~42 s per first image). partikus #45
+  added backend `"llama"` that uses it. Photo → script was only tried on a GUI screenshot;
+  try a real part photo.
+
 - `just ask-local-up` starts whatever `config/ask_local.env` names; `install.sh` uses it, so a
   reinstall here no longer starts Ollama or pulls the 9B. Ollama itself still runs (started
   earlier, restart unless-stopped). Retiring it waits on step 5 (partikus's `ollama` AI mode)
