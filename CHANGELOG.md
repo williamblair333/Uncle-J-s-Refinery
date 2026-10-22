@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-10-22 — `just web2md`: web pages to local markdown
+
+- **Added** `scripts/web2md.py` (`just web2md URL --out DIR [--sitemap|--crawl] [--max N]`):
+  trafilatura 2.0.0 as a uv inline-deps script, so the stack venv is untouched. One `.md` per
+  page under `DIR/<host>/`, front matter with source and date, ready for jdocmunch
+  `index_local`. Output paths are confined to `--out`; only http(s); a crawl stays on one host.
+- Measured: prose is good. Code-heavy docs lose some content (2 of 8 commands on the uv scripts
+  guide), and code comes out unfenced. Headings that trafilatura turns into anchor links are
+  repaired. `tests/test_web2md.py` (12).
+- ROADMAP: the crawler, the `.summary` 0-sections item (resolved 2026-10-05 by `cb45dae`) and
+  the remaining-justfiles item are updated. Justfiles were added to 7 docs repos, and
+  free-energy's `just test` went from about 10 minutes to about 2.
+
 ## 2026-10-22 — `just heretic up` goes through dcup
 
 - **Changed** `just heretic` runs `scripts/heretic.sh`: `up` goes through dcup when it's

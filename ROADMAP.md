@@ -43,7 +43,10 @@ Completed items age out after ~4 weeks.
   - Langfuse traces for what each agent saw, said and did.
   - A per-agent lane view needs work in the vendored viewer.
   - Blocked on Bill naming the game and engine.
-- **Justfiles: the remaining repos** (rollout done 2026-10-22 for 18 repos). Left: aquarius
+- **Justfiles** — 2026-10-22 late: aquarius, immortality, larder, patentengine, reciepts,
+  tao-intel and jaredrhod done (status, recall); free-energy's slow `just test` fixed (`slow`
+  marker, ~2 min; `just test-all` for everything; free-energy #32). Left: write_well and
+  deal-finder (big uncommitted trees). Original: (rollout done 2026-10-22 for 18 repos). Left: aquarius
   (markdown only), immortality (docs only), write_well and deal-finder (big uncommitted trees),
   plus the five remote-less repos. Recipe names stay shared: setup, test, run, start, stop,
   status, doctor. The five formerly remote-less repos can get theirs now. free-energy's `just test` didn't finish within 10 minutes (it probably collects
@@ -118,7 +121,14 @@ Completed items age out after ~4 weeks.
      clients, which removes the manual sync instead of automating it. Decide which host, and
      what remote access it needs.
 
-- **Build a trafilatura web-to-markdown crawler** (opened 2026-10-19, from the scout review).
+- **[DONE 2026-10-22] trafilatura web-to-markdown crawler** — `just web2md` (scripts/web2md.py,
+  a uv inline-deps script, so the stack venv is untouched). The open question is answered,
+  partly no: it keeps prose well, but on docs.astral.sh it lost 2 of 8 commands (tabbed code),
+  emits code unfenced, and turns headings into anchor links (repaired in post-processing;
+  trafilatura's XML keeps the levels but drops code blocks entirely). Use it for prose, context7
+  for library API docs. The token comparison with WebFetch wasn't run: WebFetch returns a model
+  summary, not page text, so the two aren't comparable. Original entry follows.
+  **Build a trafilatura web-to-markdown crawler** (opened 2026-10-19, from the scout review).
   It replaces firecrawl, which was rejected: 7 services, 3.4 GiB, and a Playwright browser
   path. trafilatura (Apache-2.0, no Playwright) gave about half the markdown on the same pages
   in 1–2 s. Shape: a script that takes a URL, sitemap or crawl and writes markdown files to a
@@ -592,7 +602,10 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **Agent harness competitive analysis** — skill exists; full analysis not yet run
 
-- **jdocmunch `.summary` sub-indexes report 0 sections** (surfaced 2026-07-23) — healthcheck
+- **[RESOLVED, closed 2026-10-22] jdocmunch `.summary` sub-indexes report 0 sections** — not
+  indexes at all: `.summary.json` is a jdocmunch sidecar that the healthcheck read as a repo.
+  `cb45dae` (2026-10-05) added it to the sidecar list (healthcheck.sh SIDECARS); no warning since.
+  Original: (surfaced 2026-07-23) — healthcheck
   warns for both `Uncle-J-s-Refinery.summary` and `proj-fog-of-chess.summary`. Non-blocking.
   Determine whether the summary index is genuinely unpopulated or the count is misreported;
   the latter would be the same class of counting bug as the 2026-07-19 `ls | wc -l` fix

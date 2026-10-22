@@ -6,6 +6,11 @@
 `klarheit-m12` timers run pre-set trials on that exact model, pinned by digest, about 15 calls
 an hour. Lineup step 6 records it; Bill decides whether that arm ends or moves.
 
+- `just web2md URL --out DIR` saves pages as markdown for jdocmunch. It's good for prose and
+  weak for code docs (unfenced, some tabbed code lost); use context7 for library APIs.
+- grep-guard still splits on spaces without honouring quotes, so `grep -e 'uv run example.py' f.md`
+  reads `example.py'` as a source file and denies. That's a follow-up (it needs a quote-aware
+  tokenizer and its own audit pass).
 - `just heretic up` goes through dcup now (`scripts/heretic.sh`); down/logs are plain compose.
 - grep-guard now expands glob operands: `grep -rn X docs/*.md README.md` is allowed,
   `cat scripts/*` is denied. Baseline in `~/.uncle-j-memory/memory/audit-baselines.md`.
