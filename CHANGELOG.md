@@ -15,6 +15,8 @@
 - **Gitea branches:** the six with unique May–June work are tagged `archive/<name>` and deleted;
   `main` is the only branch left.
 - **Skill-name trigger** ignores task/system notifications (it fired on agent output).
+- **Session end:** README gains §24 prompt triggers and the new `just` recipes; ROADMAP logs a
+  grep-guard glob false positive; audit baselines for five hardened guards written to memweave.
 
 ## 2026-10-22 — status sweeps every project; skill-name trigger; doc gate stops ending turns
 

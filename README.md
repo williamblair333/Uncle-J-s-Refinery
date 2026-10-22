@@ -654,6 +654,17 @@ Discovery stays off until you set `reviewed: true` in `scout/map.md`. Repos you 
 never pitched again. Needs `gh` logged in and the Telegram setup from section 10 or 13.
 Design: `docs/superpowers/specs/2026-10-17-repo-scout-design.md`.
 
+### 24. Prompt triggers — naming a skill invokes it (optional)
+
+Skills are model-invoked, so typing a skill's name doesn't guarantee it loads. This
+UserPromptSubmit hook spots a skill name in your message (`just-do-it`, `pre-mortem`, or any
+name as `/name`) and tells Claude to invoke it first. Task and system notifications are ignored.
+
+```bash
+bash features/prompt-triggers/install.sh              # registers it in ~/.claude/settings.json
+bash features/prompt-triggers/install.sh --uninstall
+```
+
 ---
 
 ## Daily usage
@@ -661,7 +672,9 @@ Design: `docs/superpowers/specs/2026-10-17-repo-scout-design.md`.
 Just use Claude Code normally. The stack is global — every project, every session, the routing policy and hooks apply automatically.
 
 For upkeep, run `just` in this repo to see the commands: `just health`, `just test`,
-`just doctor --fix`, `just reindex`, `just recall "…"`, `just referee "…" --diff main`.
+`just doctor --fix`, `just reindex`, `just recall "…"`, `just referee "…" --diff main`,
+`just waiting` (what's waiting on you in every `/opt/proj` project, plus unpushed or
+remote-less repos), `just audit`, `just install-gate`.
 `just` is the entry point in every repo, and CLAUDE.md §0 tells agents to use it.
 
 **Signs it's working:**

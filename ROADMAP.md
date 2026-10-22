@@ -62,6 +62,10 @@ Completed items age out after ~4 weeks.
   deliberately remote-less per its CLAUDE.md), `larder`, `patentengine`, `reciepts`, `tao-intel`.
   Their history exists only on this disk. Creating private Gitea repos needs a `write:user`
   token. patentengine may hold invention work: private Gitea only, or stay local? Bill decides.
+- **grep-guard false positive on an unexpanded glob** (found 2026-10-22). `grep -rn X docs/*.md
+  README.md SECURITY.md` was blocked: the hook sees the literal `docs/*.md`, which isn't a real
+  path, so it can't tell the targets are markdown. Expand globs, or judge a glob by its
+  extension, before deciding. Needs its own adversarial pass (a `*.py` glob must stay denied).
 - **File the claude-guardrails grep bug upstream?** Draft:
   `docs/proposals/2026-10-22-upstream-guardrails-grep-issue.md`. Public post, so it needs Bill's OK.
   The local repair is already live (`scripts/fix-guardrails-grep.sh`).

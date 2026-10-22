@@ -26,6 +26,11 @@ bizengine's HANDOFF. That gap is closed.
   the guardrails issue (draft in docs/proposals); remotes for the 5 remote-less repos; the
   bizengine accounts (Etsy dev app first, then Cults3D, Slant 3D) and its 4 open questions.
 - Blocked: the f3a7ed9 clone (tc-vmh-03 timed out; the Pi isn't resolvable from here).
+- Audit baselines for push-guard, grep-guard, surface-write-guard, the commit doc gate and the
+  guardrails escalation hook are in `~/.uncle-j-memory/memory/audit-baselines.md`. Check a guard
+  change against them before merging it.
+- **Next session:** run status (it now covers every project). The cheapest real progress on the
+  business pipeline is the account-free Phase 1 pieces (3MF export + renders in partikus).
 - Doc gate follows `.session-end.yml` (CHANGELOG + HANDOFF); docs/RELIABILITY.md no longer required.
 
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
