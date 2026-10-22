@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-22 — vintage-pulp-fantasy-style skill
+
+- **Added** `global-skills/vintage-pulp-fantasy-style/SKILL.md`: image-prompt template for 1980s
+  fantasy oil painting / pulp / RPG-rulebook art (prompt, keyword table, SD negative prompt).
+  `docs/SKILLS.md` regenerated (75 skills). PR #163; linked into `~/.claude/skills`.
+
 ## 2026-10-22 — tokens revoked, upstream issue filed, five repos get remotes
 
 - **Gitea:** 15 one-shot access tokens deleted from `gitea.db` (ids 5–15, 17, 18, 21, 35) after
