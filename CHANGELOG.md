@@ -11,6 +11,13 @@
   **auto-maintain** prompt routes package checks through jcodemunch `index_dependency`.
   **Windows:** credential-guard dispatched and wired.
 
+## 2026-10-22 — surface-write-guard gaps and hook-blocks log
+
+- `surface-write-guard.sh`: end-of-command targets, GNU `sed -i` (every form) and `>|`/`>&`
+  now blocked; `cp` inside `mcp` no longer is. Strict xfails are passing tests.
+- `hook-blocks.log`: grep/edit-surface/surface-write guards write text only and archive the
+  log past 1 MiB (never truncate); `collect_benefits.py` reads the archives.
+
 ## 2026-10-21 — n8n ideas parked
 
 - `docs/proposals/2026-10-21-n8n-ideas.md`: where n8n would help across current projects,

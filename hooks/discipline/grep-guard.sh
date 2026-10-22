@@ -108,6 +108,45 @@ for _cand in $PROJ_ROOTS; do
 done
 LOG="$LOG_ROOT/Uncle-J-s-Refinery/state/hook-blocks.log"
 
+# >>> hook_log_append — keep byte-identical in every hook that writes hook-blocks.log
+#     (tests/test_hook_log.py compares the copies). Inline, not sourced: a hook whose
+#     library went missing would fail open.
+# One record per line, and text only: GNU grep treats a file holding a NUL byte or
+# invalid UTF-8 as binary and prints nothing, so a reviewer reads silence as "no
+# blocks". Every C0 control byte and DEL becomes a space; invalid UTF-8 (`head -c`
+# cutting a multibyte character) is dropped. Past HOOK_LOG_MAX_BYTES the log is
+# ARCHIVED to <log>.YYYYMMDD, never truncated: it is not reconstructible. The rename
+# is atomic, a writer still holding the old file lands in the archive, `mv -n` never
+# overwrites one, and a mkdir lock (broken after 60 s) keeps rotations single-file.
+hook_log_append() {
+  local log=$1 rec=$2 max=${HOOK_LOG_MAX_BYTES:-1048576} clean size lock arch
+  rec=$(printf '%s' "$rec" | LC_ALL=C tr '\000-\037\177' ' ')
+  if command -v iconv >/dev/null 2>&1; then
+    clean=$(printf '%s' "$rec" | iconv -c -f UTF-8 -t UTF-8 2>/dev/null)
+    [[ -n "$clean" ]] && rec=$clean
+  fi
+  if [[ -f "$log" ]]; then
+    size=$(wc -c < "$log" 2>/dev/null | tr -dc '0-9')
+    if [[ -n "$size" && "$size" -gt "$max" ]]; then
+      lock="$log.rotate.lock"
+      if [[ -d "$lock" && -n "$(find "$lock" -maxdepth 0 -mmin +1 2>/dev/null)" ]]; then
+        rmdir "$lock" 2>/dev/null
+      fi
+      if mkdir "$lock" 2>/dev/null; then
+        size=$(wc -c < "$log" 2>/dev/null | tr -dc '0-9')
+        if [[ -n "$size" && "$size" -gt "$max" ]]; then
+          arch="$log.$(date +%Y%m%d)"
+          [[ -e "$arch" ]] && arch="$log.$(date +%Y%m%d-%H%M%S)-$$"
+          [[ -e "$arch" ]] || mv -n -- "$log" "$arch" 2>/dev/null
+        fi
+        rmdir "$lock" 2>/dev/null
+      fi
+    fi
+  fi
+  printf '%s\n' "$rec" >> "$log" 2>/dev/null || true
+}
+# <<< hook_log_append
+
 # jq is required. Without it the parse below yields an empty CMD and the guard
 # exits 0 — allowing every command it exists to screen. Fail loudly instead.
 if ! command -v jq >/dev/null 2>&1; then
@@ -153,7 +192,7 @@ if [[ -n "$_cwd" && -d "$_cwd" ]]; then
 fi
 unset _cwd _r
 
-log_entry() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG" 2>/dev/null || true; }
+log_entry() { hook_log_append "$LOG" "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
 
 [[ -z "${CMD:-}" ]] && exit 0
 
