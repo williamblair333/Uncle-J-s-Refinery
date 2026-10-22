@@ -14,6 +14,11 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Local model lineup: fewest models for every goal** (decided 2026-10-22, not started).
+  Heretic for text, Wan 2.2 for video (and stills if they pass), an image model, Whisper,
+  Chatterbox for cloned voices; Ollama and the 9B retired. Full plan and the four steps before
+  retiring Ollama: `docs/proposals/2026-10-22-local-model-lineup.md`.
+
 - **n8n ideas, parked for review** (opened 2026-10-21). n8n would run beside Uncle J for
   webhooks and OAuth SaaS flows. The full list is ranked by project, with traps and four
   decisions for Bill: `docs/proposals/2026-10-21-n8n-ideas.md`. The top picks are bizengine,
