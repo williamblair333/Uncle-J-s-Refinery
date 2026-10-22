@@ -14,6 +14,11 @@
 - Doctor restores the jdocmunch-watch drop-in and checks all five stack servers' scope; scout send is idempotent, once a day, locked, and healthcheck reads its `run done` line.
 - `just install-gate` runs the real install.sh in a container (claude shimmed); passed once. Branch not pushed.
 
+## 2026-10-22 — pysqlite3 wheel, jscrub (branch chore/wheel-jscrub-watermarks)
+
+- Vendored pysqlite3 wheel is now manylinux2014; verified SQLite 3.51.3 on Debian 11. Run `uv sync --inexact` after merge.
+- `just audit` + CI `test-jscrub` run jscrub read-only; `reviewed/watermarks-remover` was already moved before this branch.
+
 ## 2026-10-21 (main host) — upgrade sync merged; scout finds triaged
 
 - #154 merged. GitHub mirrors from Gitea on commit (checked: no error, `47e94bd` on both).
