@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-22 — guard precision (grep/push/credential)
+
+- **grep-guard:** paths are resolved (`realpath -m`) before the in-repo and allowed-location
+  tests, so symlinked or `..`-hopped repo source is denied; rg/ag/ack and recursive grep judge
+  each operand. **push-guard:** new lexer blocks pushes bash would execute (`"$(…)"`, `bash -c`,
+  `eval`, newlines, wrappers) and allows single-quoted / commit-message text.
+  **auto-maintain** prompt routes package checks through jcodemunch `index_dependency`.
+  **Windows:** credential-guard dispatched and wired.
+
 ## 2026-10-21 — n8n ideas parked
 
 - `docs/proposals/2026-10-21-n8n-ideas.md`: where n8n would help across current projects,

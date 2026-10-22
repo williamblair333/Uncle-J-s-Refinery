@@ -311,8 +311,12 @@ Your tasks — do all that apply, nothing else:
    renamed or removed argument, a response shape that changed. Do this whether or
    not the keyword hint fired — it usually will not. Subject lines here rarely say
    'breaking'; the last real one read 'X stops riding every Y response'. Where the
-   log is ambiguous, check the installed package under $PROJ_ROOT/.venv rather than
-   guessing from the subject.
+   log is ambiguous, read the installed source rather than guessing from the
+   subject — through jcodemunch, not the shell (grep-guard denies cat/grep/sed on
+   source under $PROJ_ROOT, .venv included): mcp__jcodemunch__resolve_repo(path=
+   \"$PROJ_ROOT\") for the repo id, then mcp__jcodemunch__index_dependency(repo=<id>,
+   package=\"${pkg//-/_}\") — the import name, not the distribution name — then
+   search_symbols / search_text / get_symbol_source on the repo id it returns.
 2. If new tools or routing changes are needed: update $PROJ_ROOT/CLAUDE.md. Keep
    existing formatting and section structure. Do NOT edit ~/.claude/CLAUDE.md — on
    this host it does not exist; the repo copy is the only one, and install.sh is
