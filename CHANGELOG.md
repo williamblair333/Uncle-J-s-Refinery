@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-10-22 — grep-guard judges glob operands by what they match
+
+- **Fixed** false positive: `grep -rn X docs/*.md README.md` was denied (the raw glob
+  names no file, and under `-r` every relative operand counted as the repo). Globs now
+  expand against the session cwd; under `-r` a plain non-source file is read alone.
+- **Fixed** false negative: `cat scripts/*` was allowed because the literal has no
+  source extension. Now denied. Also denied: a `.md` symlink to repo `.py` reached
+  through a glob, a directory named `*.md` under `-r`, and globs past 200 matches.
+- 13 new cases in `tests/test_grep_guard.py` (105 total). Audit baseline appended.
+
 ## 2026-10-22 — healthcheck catches munch processes running pre-upgrade code
 
 - **Added** healthcheck `jcodemunch/jdocmunch — running processes match the installed

@@ -101,6 +101,44 @@ allowed_loc() {
   printf '%s' "$rel" | grep -qE "$ALLOWED_RE"
 }
 
+# The guard sees the RAW command, so a glob operand (`docs/*.md`) arrives as a
+# literal that names no file. Expand it against the session cwd, one absolute match
+# per line. Prints nothing for a non-glob, an unknown cwd or no match (callers then
+# use the literal rule, which is never looser). Returns 2 past GLOB_CAP matches:
+# callers fail closed rather than walk a huge expansion.
+GLOB_CAP=200
+glob_matches() {
+  local t="$1" a m n=0 out=""
+  case "$t" in *[\*\?\[]*) ;; *) return 0 ;; esac
+  a=$(abs_of "$t"); [[ -z "$a" ]] && return 0
+  set +f
+  while IFS= read -r m; do
+    n=$((n + 1))
+    [[ $n -gt $GLOB_CAP ]] && { set -f; return 2; }
+    out+="$m"$'\n'
+  done < <(compgen -G "$a" 2>/dev/null)
+  set -f
+  printf '%s' "$out"
+  return 0
+}
+
+# True when an absolute path a read tool would open is repo source: in the repo
+# (literal or resolved) with a source extension on either spelling, and not in an
+# allowed location. With $2 = recursive, a directory (or anything that isn't a
+# regular file) inside or above the repo counts too, since -r walks it.
+reads_repo_source() {
+  local p="$1" mode="${2:-}" rp
+  allowed_loc "$p" && return 1
+  rp=$(resolve_path "$p")
+  if [[ -f "$rp" ]]; then
+    { printf '%s' "$p" | grep -qE "$SRC_EXT" || printf '%s' "$rp" | grep -qE "$SRC_EXT"; } || return 1
+    in_repo "$p" || in_repo "$rp"
+    return
+  fi
+  [[ "$mode" == recursive ]] || return 1
+  in_repo "$p" || in_repo "$rp" || is_repo_ancestor "$p"
+}
+
 # LOG must point at a directory that exists, so pick the root actually present.
 LOG_ROOT=/opt/proj
 for _cand in $PROJ_ROOTS; do
@@ -276,6 +314,26 @@ while IFS= read -r seg; do
         echo "$tok" | grep -qE '^[0-9]+$' && continue
         has_path=1
         allowed_loc "$tok" && continue
+        # A glob is judged by what it matches; past the cap, fail closed in the repo.
+        gm=$(glob_matches "$tok"); grc=$?
+        if [[ $grc -eq 2 ]]; then
+          probe=$(abs_of "$tok")
+          if [[ -z "$probe" ]] || in_repo "$probe" || is_repo_ancestor "$probe"; then repo_path=1; fi
+          continue
+        fi
+        if [[ -n "$gm" ]]; then
+          while IFS= read -r g; do
+            [[ -n "$g" ]] && reads_repo_source "$g" recursive && repo_path=1
+          done <<< "$gm"
+          continue
+        fi
+        # A plain file is read alone (-r only matters for directories), so judge it
+        # like a non-recursive operand: denied only when it is repo source.
+        probe=$(abs_of "$tok")
+        if [[ -n "$probe" && -f "$(resolve_path "$probe")" ]]; then
+          reads_repo_source "$probe" recursive && repo_path=1
+          continue
+        fi
         case "$tok" in
           /*|"~"|"~"/*)
             probe=$(abs_of "$tok")
@@ -302,6 +360,24 @@ while IFS= read -r seg; do
     if [[ "$tok" == -* ]]; then prev="$tok"; continue; fi
     if [[ $pattern_pending -eq 1 && "$tok" != ">"* && "$prev" != ">" && "$prev" != ">>" ]]; then
       pattern_pending=0; prev="$tok"; continue
+    fi
+    # A glob operand reads every match: deny if any match is repo source (`cat
+    # scripts/*` hid source behind an extensionless literal). Past the cap, fail
+    # closed when the glob is in the repo. No match falls through to the literal rule.
+    if [[ "$tok" != ">"* && "$prev" != ">" && "$prev" != ">>" ]]; then
+      gm=$(glob_matches "$tok"); grc=$?
+      if [[ $grc -eq 2 ]]; then
+        probe=$(abs_of "$tok")
+        if [[ -z "$probe" ]] || in_repo "$probe"; then deny=1; break; fi
+        prev="$tok"; continue
+      fi
+      if [[ -n "$gm" ]]; then
+        while IFS= read -r g; do
+          [[ -n "$g" ]] && reads_repo_source "$g" && deny=1
+        done <<< "$gm"
+        [[ $deny -eq 1 ]] && break
+        prev="$tok"; continue
+      fi
     fi
     # A token is source when its literal spelling has a source extension, OR when it
     # resolves (symlink) into the repo onto a file that has one — `cat /tmp/notes.txt`

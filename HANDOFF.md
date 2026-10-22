@@ -6,6 +6,8 @@
 `klarheit-m12` timers run pre-set trials on that exact model, pinned by digest, about 15 calls
 an hour. Lineup step 6 records it; Bill decides whether that arm ends or moves.
 
+- grep-guard now expands glob operands: `grep -rn X docs/*.md README.md` is allowed,
+  `cat scripts/*` is denied. Baseline in `~/.uncle-j-memory/memory/audit-baselines.md`.
 - New healthcheck row flags jcodemunch/jdocmunch processes older than their installed
   package. It found the watcher on pre-upgrade code (restarted) and the mafski session's
   server (pid 2375556, open 26 h): restart that session.

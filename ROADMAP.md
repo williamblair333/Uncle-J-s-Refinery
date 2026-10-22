@@ -67,7 +67,10 @@ Completed items age out after ~4 weeks.
 - **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
   (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
   touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
-- **grep-guard false positive on an unexpanded glob** (found 2026-10-22). `grep -rn X docs/*.md
+- **[DONE 2026-10-22] grep-guard false positive on an unexpanded glob** — globs now expand
+  against the session cwd and each match is judged; `-r` on a plain non-source file is
+  allowed; `cat scripts/*` (which hid source) is now denied. Baseline in audit-baselines.md.
+  Original: (found 2026-10-22). `grep -rn X docs/*.md
   README.md SECURITY.md` was blocked: the hook sees the literal `docs/*.md`, which isn't a real
   path, so it can't tell the targets are markdown. Expand globs, or judge a glob by its
   extension, before deciding. Needs its own adversarial pass (a `*.py` glob must stay denied).
