@@ -18,8 +18,8 @@ Completed items age out after ~4 weeks.
   SQLite, 80+ claims) lives only in `/opt/lib/docker-port-registry/`, outside any repo, so new
   users don't get it. Fixed in place 2026-10-22: compose.yaml discovery, Compose-style project
   names, `scan` skipping parked copies. Left: vendor it, install it from `install.sh`, ship a
-  PreToolUse hook that blocks `docker compose up` / `docker run -p` that bypass it, and switch
-  `just heretic` to it (the chat page's Start already uses it). Unverified: a past session said
+  PreToolUse hook that blocks `docker compose up` / `docker run -p` that bypass it. (`just
+  heretic up`, `ask-local-up` and the chat page's Start already go through it, 2026-10-22.) Unverified: a past session said
   its hook is already wired in `~/.claude/settings.json`.
 
 - **Local model lineup: fewest models for every goal** (decided 2026-10-22; text side under

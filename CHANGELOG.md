@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-22 — `just heretic up` goes through dcup
+
+- **Changed** `just heretic` runs `scripts/heretic.sh`: `up` goes through dcup when it's
+  installed (port 8090 claimed in the registry), everything else is `docker compose`.
+  `tests/test_heretic_sh.py` (3, stubbed).
+
 ## 2026-10-22 — grep-guard judges glob operands by what they match
 
 - **Fixed** false positive: `grep -rn X docs/*.md README.md` was denied (the raw glob
