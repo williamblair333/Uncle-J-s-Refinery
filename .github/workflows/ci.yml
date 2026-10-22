@@ -375,3 +375,26 @@ jobs:
 
       - name: pytest tests/test_ask_local.py
         run: python -m pytest tests/test_ask_local.py -v -rs
+
+  # ── 19. jscrub: unit tests + read-only repo audit ────────────────────────
+  # The repo carries no live positive (the two intentional fixtures are
+  # excluded by path), so the audit step passing says nothing about whether
+  # the detector works — the unit tests are the only guard on that. Exit 1
+  # (hits) and 2 (unscannable file) both fail the job. Read-only: clean /
+  # --in-place / --follow-symlinks are deliberately not wired here.
+  test-jscrub:
+    name: jscrub tests + audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: jscrub unit tests
+        run: python scripts/jscrub/test_cli.py
+
+      - name: jscrub check-vendor + audit
+        run: ./scripts/jscrub/audit-repo.sh

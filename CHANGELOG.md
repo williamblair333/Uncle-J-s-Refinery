@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-10-22 — pysqlite3 wheel, jscrub wiring
+
+- Vendored pysqlite3 wheel rebuilt in manylinux2014 (glibc 2.17); imports with SQLite 3.51.3 on
+  Debian 11. `just audit` + CI job `test-jscrub` run jscrub read-only.
+
 ## 2026-10-21 — n8n ideas parked
 
 - `docs/proposals/2026-10-21-n8n-ideas.md`: where n8n would help across current projects,
