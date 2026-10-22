@@ -27,12 +27,6 @@ Completed items age out after ~4 weeks.
   - Langfuse traces for what each agent saw, said and did.
   - A per-agent lane view needs work in the vendored viewer.
   - Blocked on Bill naming the game and engine.
-- **credential-guard on Windows** (opened 2026-10-17). `scripts/win/hook.sh` has no
-  `credential-guard` case, and the Windows settings don't wire it.
-- **surface-write-guard: `cp` inside `mcp`** (opened 2026-10-17). `CP_RE` matches the "cp"
-  in `claude mcp add … scripts/…` and in `partikus_mcp tests/x.py`. Twice today the
-  workaround was quoting `"mcp"` or `git add -A`. Fix: require a word boundary before
-  `cp|mv`. The guard is a hardening surface, so it needs an adversarial pass.
 - **Roll out justfiles** (opened 2026-10-16). Each repo gets one when it's next worked on;
   the Refinery and voice-line are done. Keep recipe names shared: setup, test, run, start,
   stop, status, doctor.
@@ -52,24 +46,17 @@ Completed items age out after ~4 weeks.
   files. That's low harm, because the block only lists files and searches. Decide whether to
   file it with jgravelle/jcodemunch-mcp. A custom snapshot hook (tasks, decisions, prompts) is
   **not** planned: Claude Code's compaction summary already carries those.
-- **Pre-commit doc gate fired on a read-only Bash call** (opened 2026-10-05). A `git rev-parse` /
-  `ls-remote` / `gh api` command got "Commit blocked — update CHANGELOG.md HANDOFF.md
-  docs/RELIABILITY.md" after it ran. Find which PreToolUse hook matches it and narrow it to
-  real `git commit` invocations. Seen again 2026-10-12 on a commit inside the nested,
-  gitignored `review/rea` clone, a different repo the gate shouldn't police.
 - **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
   (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
   touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
 - **Old one-shot Gitea tokens** (opened 2026-10-12). `access_token` ids 5–21 (voice-line,
   moneymaker, chesslab, mkit, free-energy) are still live. Bill to decide which to revoke.
   Method: back up `gitea.db`, then delete by exact id and name, as done for 22–24.
-- **Prune stale Gitea branches** (opened 2026-10-05). About 20 merged-era branches from May to
-  July 2026 are still on Gitea and get mirrored to GitHub.
-- **Rebuild the vendored pysqlite3 wheel on an older glibc** (opened 2026-10-05). The wheel in
-  `vendor/wheels/` needs glibc ≥ 2.33 and won't import on Debian 11 (2.31). Harmless today:
-  the uv CPython's own SQLite is 3.53.1, and `install.sh` skips the build. If a future Python
-  ships an SQLite older than 3.51.3, glibc 2.31 hosts would silently lose the WAL fix. Build it
-  in a manylinux container (`scripts/build-vendored-pysqlite3.sh`).
+- **Six old Gitea branches hold work not in `main`** (pruned 2026-10-22: 16 fully-contained
+  branches deleted, shas in the session scratchpad). Left: `feat/pre-mortem-skill`,
+  `docs/session-end-2026-05-24`, `fix/skill-link-global-coverage`,
+  `fix/fts5-guard-repair-coordination`, `fix/healthcheck-fts5-sqlite-version`, `feat/phase2-bench`.
+  Likely superseded (mempalace era); Bill to say delete or keep.
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
@@ -154,12 +141,6 @@ Completed items age out after ~4 weeks.
   every project, since the description drives selection globally. Needs a call on which error is
   cheaper. Body was amended without touching it.
 
-- **The Refinery's own gate covers a subsystem, not `install.sh`** (opened 2026-09-20).
-  `PRODUCT.md`'s `verify:` block exercises the product-quality tooling, because the real install
-  path registers MCP servers into a Claude Code installation that does not exist inside a
-  container. Closing it needs a stub Claude config plus a cached wheel set. Until then
-  `healthcheck.sh` on the host is the only evidence for the full stack, and it is not
-  clean-machine evidence.
 - **`CampaignGenerator` has no reachable remote** (opened 2026-09-20). `git ls-remote` returns
   "Repository not found", so its draft brief could not be landed as a PR and sits untracked in
   the working tree. It also needs its Anthropic API key variable documented and an offline mode
@@ -171,44 +152,13 @@ Completed items age out after ~4 weeks.
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
   in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.
-- **`jscrub` is not wired into anything** (opened 2026-09-03). No hook, no cron, no CI job; nothing
-  imports it. Two open decisions, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
+- **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
+  `just audit` + CI job). Still open, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
   gate — `--in-place` and `--follow-symlinks` are the flags to think hardest about before automating
   a tool that rewrites files; (b) `check-vendor` in CI, which now works with no checkout so it can
   actually run there. Also unresolved: with the test fixtures escaped, the repo contains no live
   positive, so a broken detector would not surface via `jscrub audit` — the unit tests are the only
   guard.
-- **`review/watermarks-remover` is reviewed but not moved** (opened 2026-09-03). The assessment is
-  done (see CHANGELOG 09-01) and `jscrub check-vendor` no longer depends on the path, so the
-  `review-queue-triage` move to `reviewed/` is unblocked — left for Bill rather than reorganising a
-  working directory unprompted.
-- **The nightly agent commits to local `main` and never pushes** (found 2026-08-28). `git ls-remote`
-  showed remote `main` at `1f0f262` while local was at `47286d7` — `9b52594`, `c6f79d8` and
-  `47286d7` had been local-only since 08-23. The usual freshness check
-  `git log --oneline HEAD..origin/main` cannot see this: it only detects being *behind*, so an
-  unpushed backlog accumulates silently and rides along in whatever branch is cut next (it rode
-  into PR #136). Decide whether `auto-maintain.sh` should push its own commits, or whether the
-  session-start check should compare `git rev-parse main` against `git ls-remote`.
-- **The 03:00 agent is instructed to read installed packages and the grep-guard blocks it.**
-  `auto-maintain.sh`'s eval prompt says *"check the installed package under `$PROJ_ROOT/.venv`
-  rather than guessing from the subject"*; the grep-guard denies exactly that. Six blocks between
-  03:00:50 and 03:06:29 on 2026-08-28 alone, all on
-  `.venv/lib/python3.11/site-packages/{jcodemunch,jdocmunch}_mcp/…`. Installed third-party
-  packages are not repo source and the routing policy has no jcodemunch index for them unless
-  `index_dependency` has been run. Either narrow the guard to exclude `.venv/`, or change the
-  prompt to route through `index_dependency` — but the two must stop contradicting each other.
-  Seen again 2026-10-12, in an interactive session reading `jcodemunch_mcp/cli/hooks/snapshot.py`.
-  `index_dependency(package="jcodemunch_mcp")` then worked first try, which favours the
-  prompt-side fix.
-- **`post-merge-hook.sh` skipped the reindex on a commit that changed two scripts.** On the PR #136
-  merge it logged *"no actionable changes (maintenance/docs only)"* despite
-  `scripts/auto-maintain.sh` and `scripts/healthcheck-notify.sh` being in the diff; the index had
-  to be refreshed by hand. Same failure class as the cron-ordering bug just fixed — a reindex that
-  does not fire on a change that needs one — in a different code path.
-- **Residual on the cron-ordering fix**: `auto-maintain.sh` now reindexes after its own commits,
-  but a direct commit to `main` between 03:10 and 07:00 with no session afterwards still trips the
-  07:00 check. `session-start-autofix.sh:38` and `post-merge-hook.sh:128` cover the session and
-  merge routes. Narrow, but it is the remaining hole.
 - **[READY TO FILE — needs Bill's sign-off, do not open unattended] Upstream: `get_watch_status`
   reports `any_stale: false` without measuring anything** (`jgravelle/jcodemunch-mcp`, verified
   against installed 1.108.288). Staleness is read from `get_reindex_status`, which is **in-process,
@@ -225,56 +175,6 @@ Completed items age out after ~4 weeks.
   tri-state was written to replace. **Routing already corrected in CLAUDE.md §1.**
   This resolves the prior "one narrow scan, not an answer" entry: the tri-state exists, the parked
   note attached it to the wrong tool, and the repo-wide re-scan (110 files) found where it lives.
-- **`tests/test_skills.py` reads `SKILL.md` without `encoding=`** — same cp1252
-  defect fixed in the memweave scripts, 77 local failures on Windows. (The
-  `Skill frontmatter regression` half of this item is **done** — PR #107 recategorised
-  `occams-razor`; CI has carried signal since, and ran 8/8 green on 2026-08-14.)
-- **`state/hook-blocks.log` has no rotation** — 492K and unbroken since 2026-05-25.
-  The weekly review has to scan the whole file to find one session's entries. Needs a
-  rotation policy that does not break the review (the log is gitignored session history
-  and is NOT reconstructible, so rotation must archive rather than truncate).
-- **`state/hook-blocks.log` is binary to `grep`, and the weekly review reads it with `grep`**
-  (found 2026-08-21 while running that review). `file` reports **`data`**, not text: the log
-  carries **209 NUL bytes**, so GNU grep classifies it as binary, prints nothing, and exits 1.
-  `grep -c '2026-08-21' state/hook-blocks.log` returns **no output** on a file holding 89 entries
-  from that date; `LC_ALL=C grep -ac` returns 89. **A reviewer following the documented step
-  concludes "no blocks this session" from a silent empty result** — the same read-silence-as-success
-  shape as the nightly-eval bug, applied to the log that is supposed to be the evidence for
-  discipline enforcement. Fix at the write side (strip control bytes before appending in the guard
-  hooks) rather than by teaching every reader `-a`; the log is a durable evidence sink and should
-  be text. Pairs with the rotation item above — do both in one pass.
-  *Not a bug:* the 383 `session=test` rows are legacy, oldest 2026-05-25 (`session=test123`).
-  `test_surface_write_guard.py:39` redirects via `SURFACE_GUARD_LOG` and `test_grep_guard.py:131`
-  writes under a tmp root, so current tests do not pollute the real log.
-- **Close `surface-write-guard.sh`'s detection gaps** (measured 2026-08-15, pinned as
-  strict xfails in `tests/test_surface_write_guard.py`). Versioning the guard made these
-  reachable; they are **pre-existing** and were verified to behave identically in the live
-  installed copy, so they are not regressions. Two root causes:
-  - `REDIR_RE`'s `SURF_EXT` and `SURF_FILE` branches both end in a **required** trailing
-    delimiter `[[:space:];|&$"']`. At end-of-command there is no trailing character, so
-    `echo x >> setup.sh`, `echo '{}' > settings.json` and `echo hi > CLAUDE.md` are all
-    allowed — while the same redirect followed by `&& echo done` is blocked.
-  - `SED_RE` / `PERL_RE` permit only `[[:space:]a-zA-Z0-9='"]` between the flag and the
-    filename; neither `/` nor `.` is in that class. **`SED_RE` fires only on
-    `sed -i "" file.sh`** (the macOS empty-suffix form) — `sed -i 's/a/b/' f.sh`,
-    `sed -i.bak … f.yml` and `sed -i -e … f.sh`, i.e. essentially all GNU sed usage,
-    pass straight through.
-
-    Closing these **widens** a security control, so it needs its own change and its own
-    adversarial pass: the failure mode of a careless fix is a false positive that blocks
-    legitimate work, and of a sloppy one a false negative, which is worse. Deliberately not
-    bundled with the logging fix.
-- **Resolve symlinks in `grep-guard.sh::in_repo()`** — it is a literal string-prefix
-  test, so repo source reachable through a home-dir symlink
-  (`~/.claude/hooks/discipline/grep-guard.sh` → this repo) is allowed by *either*
-  spelling. Pre-existing and unchanged by PR #106. Closing it needs `realpath` plus its
-  own test pass, since it newly denies reads that work today.
-- **push-guard has no notion of *which* command is running.** It matches raw command
-  text, so a `git commit` whose message quotes a subshell-wrapped push is blocked as
-  though it were the push — hit while committing the push-guard fix itself. Present in
-  both the upstream and fixed versions. Closing it needs quote/word awareness, which is
-  a real change to a security control: a sloppy attempt risks a false **negative**,
-  strictly worse than the false positive. Workaround today: `git commit -F -`.
 - **Track upstream issue [dwarvesf/claude-guardrails#17](https://github.com/dwarvesf/claude-guardrails/issues/17)**
   (filed 2026-08-15). Until it lands, **re-running `install-guardrails.sh` re-merges the
   buggy template and restores the bug** over `hooks/discipline/push-guard.sh`. If they
@@ -334,21 +234,25 @@ Completed items age out after ~4 weeks.
   `openai-compatible` is not in `_EMBED_AUTO_DETECT_ORDER` and is never auto-selected.
   Corrected in SECURITY.md with the evidence. If the narrower version is worth tracking,
   it needs its own issue.
-- **The drop-in is still not covered by `install.sh` / `refinery-doctor --fix`.** Detection
-  landed (`check_jdocmunch_watch_posture`, below in Completed), so its absence is now *caught*
-  — but nothing *restores* it, so a machine rebuild produces a red healthcheck that a human
-  must fix by hand. Provisioning the drop-in belongs in `install-reliability.sh` alongside the
-  hook symlinks.
-- **Extend `refinery-doctor.sh check_jcodemunch_scope` to all five stack servers**
-  (jdatamunch, jdocmunch, serena, duckdb) — a reappearing local/project scope is
-  currently caught for jcodemunch only. Companion: consider `scripts/win/hook.sh
-  autofix` re-asserting the `.mcp.json` copy on Windows (PR #105 follow-ups).
-- **Scout minors from the 2026-10-17 review** (deferred, none blocking):
-  - Make the Telegram send idempotent; a timeout after delivery can send twice.
-  - Add a run lock, plus a one-message-per-calendar-day guard.
-  - Have the healthcheck look for a "run done" line, not the log's mtime.
-  - Pick the library eval skill for library finds.
-  - Log the gh responses a message used (spec §10).
+## Recently completed (2026-10-22 — the "work I can just do" sweep)
+
+- **Guards:** grep-guard resolves symlinks and judges each path; push-guard follows bash quoting
+  (what bash would execute, incl. `"$(git push)"`, `bash -c`, `eval`, pipes into a shell);
+  surface-write-guard catches end-of-command redirects and GNU `sed -i`, and `cp` inside `mcp`
+  no longer false-matches; credential-guard is wired on Windows.
+- **Hook log:** guards write `state/hook-blocks.log` as text (control bytes stripped) and archive
+  it past 1 MiB, never truncating.
+- **Automation:** healthcheck + session start flag local `main` commits the remote lacks;
+  post-merge reindexes on any code change; the 07:00 check reindexes once before reporting
+  stale; the doc gate fires only on real `git commit` in this repo; the 03:00 agent reads
+  installed packages via `index_dependency`; `test_skills.py` reads UTF-8.
+- **Install:** jdocmunch-watch drop-in provisioned by `install-reliability.sh` and doctor
+  `--fix`; doctor `mcp-scope` covers all five servers; `just install-gate` runs the real
+  `install.sh` in a clean Debian container with a stub `claude`.
+- **Scout:** idempotent Telegram send, run lock, one message a day, `run done` health line,
+  library finds routed to `library-backend-adoption-eval`, §10 gh facts logged.
+- **pysqlite3 wheel** rebuilt manylinux2014 (imports on Debian 11 / glibc 2.31).
+- **anatomy-lab** gets a private GitHub push mirror (Bill's call).
 
 ## Recently completed (2026-10-17 — repo scout and skill library)
 
