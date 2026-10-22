@@ -371,3 +371,60 @@ def test_missing_realpath_degrades_to_literal_not_open(tmp_path):
     assert _run(f"cat {REPO}/scripts/referee.py", REPO, env) is True
     assert _run("grep -rn foo scripts/", REPO, env) is True
     assert _run("crontab -l | grep x", REPO, env) is False
+
+
+# --- glob operands (2026-10-22) ---------------------------------------------------
+# The guard sees the RAW command, so `docs/*.md` arrived as a literal path that
+# isn't a file: recursive grep denied it (and every relative operand, README.md
+# included), while a non-recursive `cat scripts/*` slipped through because the
+# literal token has no source extension. Globs now expand against the session cwd
+# and each match is judged; a plain non-source file under -r is read alone.
+
+@pytest.fixture
+def glob_repo(tmp_path):
+    """A throwaway git repo: docs/*.md, scripts/*.py, a README, and bypass bait."""
+    r = tmp_path / "repo"
+    (r / "docs").mkdir(parents=True)
+    (r / "scripts").mkdir()
+    (r / "docs" / "a.md").write_text("x")
+    (r / "docs" / "b.md").write_text("x")
+    (r / "scripts" / "tool.py").write_text("x")
+    (r / "README.md").write_text("x")
+    (r / "notes").mkdir()
+    (r / "notes" / "sneaky.md").symlink_to(r / "scripts" / "tool.py")   # .md -> .py
+    (r / "dir.md").mkdir()                                              # a dir named *.md
+    (r / "dir.md" / "inner.py").write_text("x")
+    (r / "many").mkdir()
+    for i in range(205):
+        (r / "many" / f"f{i}.txt").write_text("x")
+    subprocess.run(["git", "init", "-q", str(r)], check=True)
+    return r
+
+
+GLOB_ALLOW = [
+    "grep -rn foo docs/*.md README.md",      # the original false positive
+    "grep -rn foo README.md",                # -r on a plain non-source file
+    "grep -n foo docs/*.md",
+    "cat docs/*",
+]
+GLOB_DENY = [
+    "grep -rn foo scripts/*.py",             # glob of source
+    "cat scripts/*",                         # glob hiding source (was allowed)
+    "grep -rn foo docs/*.md scripts/",       # mixed: a dir still walks the tree
+    "grep -n foo notes/*.md",                # .md symlink resolving to repo .py
+    "grep -rn foo *.md",                     # matches dir.md/, a directory under -r
+    "grep -rn foo many/*",                   # over the 200-match cap: fail closed
+    "grep -rn foo scripts/tool.py",          # a source file named directly under -r
+    "grep -rn foo .",                        # the cwd itself
+    "grep -rn foo nomatch/*.md",             # no match: the literal rule, never looser
+]
+
+
+@pytest.mark.parametrize("cmd", GLOB_ALLOW)
+def test_glob_operands_allowed(glob_repo, cmd):
+    assert _run(cmd, glob_repo) is False
+
+
+@pytest.mark.parametrize("cmd", GLOB_DENY)
+def test_glob_operands_denied(glob_repo, cmd):
+    assert _run(cmd, glob_repo) is True
