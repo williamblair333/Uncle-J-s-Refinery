@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-22 — install starts the backend the host's config names
+
+- **Added** `scripts/ask-local-up.sh` (`just ask-local-up`): reads ASK_LOCAL_BACKEND the way
+  the server does (env, then `config/ask_local.env`, never sourced). openai → llama-heretic via
+  dcup (else `docker compose`), refusing if no GGUF is on disk; anything else → `ollama-up.sh`
+  with the configured URL and model exported. `tests/test_ask_local_up.py` (7, stubbed docker).
+- **Changed** `install.sh` 5a-2 calls it, so this host no longer starts Ollama or pulls the 9B
+  on reinstall. Hosts without a config file get exactly the old Ollama path.
+- **Changed** healthcheck: a missing llama-heretic container fails when ask_local uses openai
+  (it was n/a); Ollama hints point at `ask-local-up.sh`.
+- Lineup step 3 done for configured hosts; partikus's `ollama` AI mode added as step 5.
+
 ## 2026-10-22 — Heretic prefill 2.5× faster
 
 - **Changed** `docker/llama-heretic/compose.yaml`: `-b 2048 -ub 2048`. An 18.7k-token prompt

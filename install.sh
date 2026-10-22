@@ -458,7 +458,7 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     mcp_add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant
     [ "$SKIP_CONTEXT7" -eq 0 ] && mcp_add context7 -- npx -y "@upstash/context7-mcp"
     [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add duckdb -- uvx mcp-server-motherduck --db-path :memory: --read-write --allow-switch-databases
-    # Needs a local Ollama on 127.0.0.1:11434; without one every call returns ollama_unreachable.
+    # No -e env: the backend is per host, in config/ask_local.env (default Ollama on :11434).
     [ "$SKIP_OPTIONAL" -eq 0 ] && mcp_add ask_local -- "$VENV_BIN/python" "$STACK_ROOT/scripts/ask_local/server.py"
     mcp_add memweave -- "$STACK_ROOT/.venv-memweave/bin/python" "$STACK_ROOT/scripts/memweave/mw_mcp.py"
     # Stdlib + mcp only; writes under ~/.live-preview, serves on 127.0.0.1.
@@ -466,16 +466,17 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     ok "Registered. Verify with: claude mcp list"
 fi
 
-# --- 5a-2. ask_local backend: Ollama container + default model ---------------
+# --- 5a-2. ask_local backend: whichever config/ask_local.env names -----------
+# openai → llama-heretic; otherwise Ollama + its default model (first run pulls several GB).
 if [ "$SKIP_OPTIONAL" -eq 0 ] && has docker; then
-    step "Starting Ollama backend for ask_local (first run pulls several GB)"
-    if bash "$STACK_ROOT/scripts/ollama-up.sh"; then
-        ok "Ollama up — ask_local backend ready"
+    step "Starting ask_local's backend (config/ask_local.env; default Ollama)"
+    if bash "$STACK_ROOT/scripts/ask-local-up.sh"; then
+        ok "ask_local backend ready"
     else
-        warn "Ollama backend not ready (non-fatal) — re-run: bash $STACK_ROOT/scripts/ollama-up.sh"
+        warn "ask_local backend not ready (non-fatal) — re-run: bash $STACK_ROOT/scripts/ask-local-up.sh"
     fi
 elif [ "$SKIP_OPTIONAL" -eq 0 ]; then
-    warn "docker not found — ask_local is registered but has no backend until Ollama runs on 127.0.0.1:11434"
+    warn "docker not found — ask_local is registered but has no backend until one runs (scripts/ask-local-up.sh)"
 fi
 
 # --- 5b. MCP server startup timeout ----------------------------------------

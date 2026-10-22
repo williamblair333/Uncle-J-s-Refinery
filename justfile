@@ -78,6 +78,10 @@ preview *args:
 chat *args:
     .venv/bin/python scripts/local_chat/server.py {{args}}
 
+# start whichever backend config/ask_local.env names (heretic, or Ollama + its model)
+ask-local-up:
+    ./scripts/ask-local-up.sh
+
 # ask_local's abliterated model (llama-server, 127.0.0.1:8090): just heretic up -d | down | logs
 heretic *args:
     docker compose -f docker/llama-heretic/compose.yaml {{args}}

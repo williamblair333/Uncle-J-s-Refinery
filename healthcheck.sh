@@ -1235,7 +1235,7 @@ check_ask_local_backend() {
         else
             bad "ollama container running but $url/api/version does not answer"
         fi
-        hint "run: bash $REPO_ROOT/scripts/ollama-up.sh"
+        hint "run: bash $REPO_ROOT/scripts/ask-local-up.sh"
         record_fail "ask-local-ollama-down"
         return
     fi
@@ -1243,20 +1243,28 @@ check_ask_local_backend() {
         ok "ollama $(printf '%s' "$version" | grep -o '[0-9][0-9.]*' | head -1) up; default model $model present"
     else
         bad "ollama up but default model $model is not pulled"
-        hint "run: bash $REPO_ROOT/scripts/ollama-up.sh"
+        hint "run: bash $REPO_ROOT/scripts/ask-local-up.sh"
         record_fail "ask-local-model-missing"
     fi
 }
 
 # ----- 9n-3. ask_local openai backend: llama-heretic answering -------------
-# Opt-in per host (docker/llama-heretic/compose.yaml), so no container is n/a.
+# Opt-in per host (docker/llama-heretic/compose.yaml): no container is n/a, unless
+# this host's ask_local uses the openai backend, where it's a real fault.
 # /health answers 200 while the server sleeps, so an idle model still passes.
 check_llama_heretic_backend() {
     step "ask_local — llama-heretic backend"
     local running
     running="$(docker inspect -f '{{.State.Running}}' llama-heretic 2>/dev/null)" || running=missing
     if [[ "$running" == "missing" ]]; then
-        na "no llama-heretic container on this host"
+        if grep -q '"ask_local"' "$HOME/.claude.json" 2>/dev/null \
+                && [[ "$(ask_local_setting ASK_LOCAL_BACKEND ollama)" == "openai" ]]; then
+            bad "ask_local uses the openai backend but no llama-heretic container exists"
+            hint "run: bash $REPO_ROOT/scripts/ask-local-up.sh"
+            record_fail "ask-local-heretic-missing"
+        else
+            na "no llama-heretic container on this host"
+        fi
         return
     fi
     if [[ "$running" == "false" ]]; then
