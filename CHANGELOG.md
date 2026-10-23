@@ -24,7 +24,7 @@
 - **Added** Telegram chat history (`scripts/lib/tg_history.py`). The gateway logs each exchange
   after output redaction and prefixes the last few turns (bounded, re-redacted) to the next
   message. The nightly `sync_memory.sh --all` writes local-model daily summaries into the
-  memweave corpus: summaries only, at most 3 days a run, non-fatal. Gateway diff: one import
+  memweave corpus: summaries only, at most 2 days and 120 s a call per run, non-fatal. Gateway diff: one import
   and two call sites. Tests: `tests/test_tg_history.py`.
 
 ## 2026-10-23 — competitive analysis

@@ -12,7 +12,7 @@
   hash in `state/local-rail-cache/`. Delete that dir to force fresh calls.
 - Telegram history: `state/telegram-history.jsonl`, and `python scripts/lib/tg_history.py show`
   prints what the next message gets. Daily summaries land as
-  `~/.uncle-j-memory/memory/telegram-*.md` (02:30 sync). The gateway diff is 3 lines, kept small
+  `~/.uncle-j-memory/memory/telegram-*.md` (02:30 sync; at most 2 days and 120 s a call per run). The gateway diff is 3 lines, kept small
   because another agent was editing gateway security in parallel.
 - Agents: only `code-reviewer` ships now. The other five links in `~/.claude/agents/` go dangling
   on pull, and the post-merge run of `install-reliability.sh` prunes them.
