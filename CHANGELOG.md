@@ -27,6 +27,14 @@
   memweave corpus: summaries only, at most 3 days a run, non-fatal. Gateway diff: one import
   and two call sites. Tests: `tests/test_tg_history.py`.
 
+## 2026-10-23 — competitive analysis
+
+- **Docs** `docs/2026-10-23-competitive-analysis.md`: Refinery against ECC (most direct),
+  superpowers, Hermes Agent, ruflo and the plugin marketplaces, from their READMEs and the
+  GitHub API that day. Moats: retrieval per modality with an absence contract, guards tested
+  in CI, rebuildable local memory. Gaps: install reach, multi-host, chat surfaces. A summary
+  note went to the memweave corpus.
+
 ## 2026-10-23 — ECC agents evaluated: one kept
 
 - **Removed** five of the six imported ECC agents (`planner`, `architect`, `tdd-guide`,

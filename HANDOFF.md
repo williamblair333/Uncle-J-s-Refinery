@@ -16,6 +16,8 @@
   because another agent was editing gateway security in parallel.
 - Agents: only `code-reviewer` ships now. The other five links in `~/.claude/agents/` go dangling
   on pull, and the post-merge run of `install-reliability.sh` prunes them.
+- Competitive analysis: `docs/2026-10-23-competitive-analysis.md`. Its gaps (plugin packaging,
+  multi-host) aren't on the ROADMAP as new items. Bill decides whether they are.
 
 ## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
 

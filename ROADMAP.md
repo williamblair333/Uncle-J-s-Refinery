@@ -656,7 +656,9 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   gateway, tests in `tests/test_tg_history.py`. SQLite was skipped: JSONL plus the memweave
   corpus already cover it.
 
-- **Agent harness competitive analysis** — skill exists; full analysis not yet run
+- **[DONE 2026-10-23] Agent harness competitive analysis** — `docs/2026-10-23-competitive-analysis.md`
+  (ECC, superpowers, Hermes, ruflo, plugin marketplaces; stars and claims as of that day). Open
+  gaps it names: install reach (plugin packaging), multi-host, one chat surface.
 
 - **[RESOLVED, closed 2026-10-22] jdocmunch `.summary` sub-indexes report 0 sections** — not
   indexes at all: `.summary.json` is a jdocmunch sidecar that the healthcheck read as a repo.
