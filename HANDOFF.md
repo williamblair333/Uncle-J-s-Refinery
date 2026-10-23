@@ -14,6 +14,8 @@
   prints what the next message gets. Daily summaries land as
   `~/.uncle-j-memory/memory/telegram-*.md` (02:30 sync). The gateway diff is 3 lines, kept small
   because another agent was editing gateway security in parallel.
+- Agents: only `code-reviewer` ships now. The other five links in `~/.claude/agents/` go dangling
+  on pull, and the post-merge run of `install-reliability.sh` prunes them.
 
 ## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
 

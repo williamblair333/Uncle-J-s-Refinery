@@ -27,6 +27,15 @@
   memweave corpus: summaries only, at most 3 days a run, non-fatal. Gateway diff: one import
   and two call sites. Tests: `tests/test_tg_history.py`.
 
+## 2026-10-23 — ECC agents evaluated: one kept
+
+- **Removed** five of the six imported ECC agents (`planner`, `architect`, `tdd-guide`,
+  `security-reviewer`, `silent-failure-hunter`). **Changed** `code-reviewer`: it absorbs the
+  silent-failure checklist and shell/Python/subprocess patterns, drops the React/Next.js/Node
+  sections, and can call read-only jcodemunch tools. `install-reliability.sh` removes dangling
+  `~/.claude/agents` links into `global-agents/`. `healthcheck.sh` checks the agents that ship
+  instead of a fixed list. Reasons per agent: `docs/RELIABILITY.md`.
+
 ## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
 
 - **Changed** `run_index_local()` calls the jdocmunch CLI only (moved to

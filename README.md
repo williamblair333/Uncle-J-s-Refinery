@@ -137,7 +137,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
 | | Auto-skill | Stop hook — analyzes session transcript; drafts a SKILL.md to `state/skill-drafts/`; pitches via Telegram for approval |
 | | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start, and `global-skills/` into `~/.agents/skills/` (Codex, Copilot CLI) and `~/.gemini/skills/` (Antigravity CLI) so other agents see the same skills. Full list: [`docs/SKILLS.md`](docs/SKILLS.md). Whole third-party collections sit in a **skill library** beside the repo (`../skill-library`, loaded by nothing, so they cost no tokens): `just skill-lib sync`, `just skill-lib list [filter]`, `just skill-lib add <skill>` (scans with cisco-ai-skill-scanner, then vendors it with `LICENSE` + `UPSTREAM`; run `just skills` after) |
-| | Agent library | 6 specialist subagents in `global-agents/` — planner, code-reviewer, security-reviewer, architect, tdd-guide, silent-failure-hunter — symlinked to `~/.claude/agents/` |
+| | Agent library | `code-reviewer` in `global-agents/` (silent failures and shell security merged in; five other ECC agents dropped 2026-10-23, see docs/RELIABILITY.md), symlinked to `~/.claude/agents/` |
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
 
@@ -968,12 +968,7 @@ Uncle-J-s-Refinery/
 │       └── install.sh                  ← Stop hook: Telegram notification on session end
 │
 ├── global-agents/                      ← specialist subagents, symlinked to ~/.claude/agents/
-│   ├── architect.md
-│   ├── code-reviewer.md
-│   ├── planner.md
-│   ├── security-reviewer.md
-│   ├── silent-failure-hunter.md
-│   └── tdd-guide.md
+│   └── code-reviewer.md
 │
 ├── global-skills/                      ← project-agnostic skills, symlinked to ~/.claude/skills/
 │   ├── deep-repo-analysis/

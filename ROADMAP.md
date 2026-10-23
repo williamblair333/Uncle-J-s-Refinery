@@ -666,8 +666,12 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   Determine whether the summary index is genuinely unpopulated or the count is misreported;
   the latter would be the same class of counting bug as the 2026-07-19 `ls | wc -l` fix
 
-- **ECC specialist agents** — 6 agents imported; evaluate and integrate into
-  active workflows
+- **[DONE 2026-10-23] ECC specialist agents** — evaluated: keep `code-reviewer` (with
+  `silent-failure-hunter` merged in, shell/subprocess patterns added, JS-only sections cut,
+  read-only jcodemunch tools granted). Dropped `planner`, `architect`, `tdd-guide` and
+  `security-reviewer` (they duplicate superpowers skills or red-team/blue-team, carry a JS/SaaS
+  stack, and the reviewer had Write/Edit). One line each in `docs/RELIABILITY.md`.
+  install-reliability prunes the dangling links; healthcheck checks whatever ships.
 
 - **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
 

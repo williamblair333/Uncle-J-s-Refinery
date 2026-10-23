@@ -85,6 +85,15 @@ else
         ln -sfn "$src" "$dst"
         ok "agent installed: $agent_name"
     done
+    # Prune links to agents dropped from global-agents/ (five were, 2026-10-23).
+    # Only dangling symlinks that point into global-agents/ are touched; a user's
+    # own agent files and links elsewhere are left alone.
+    for dst in "$CLAUDE_DIR/agents"/*.md; do
+        [ -L "$dst" ] && [ ! -e "$dst" ] || continue
+        case "$(readlink "$dst")" in
+            "$STACK_ROOT/global-agents/"*) rm -f "$dst"; ok "agent removed (dropped upstream): $(basename "$dst")" ;;
+        esac
+    done
 fi
 
 # ── Workflows ────────────────────────────────────────────────────────────────
