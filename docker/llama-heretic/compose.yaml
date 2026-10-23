@@ -1,9 +1,12 @@
 # llama-server for ask_local's openai backend (scripts/ask_local/server.py).
 # Qwen3.6-35B-A3B Abliterated Heretic, Q4_K_M. Start it with `just heretic up -d`.
 #
-# Loopback only, like Ollama. Measured 2026-10-22 on the RTX 3060 (12 GB) + 46 GB RAM:
-#   --n-cpu-moe 36 → ~40 tok/s, 4.8 GB VRAM, which leaves room for lc0 (~5.4 GB).
-#   --n-cpu-moe 24 → ~49 tok/s but 11.5 GB VRAM; 20 does not fit.
+# Loopback only, like Ollama.
+# GPU split: llama.cpp's auto-fit (no -ngl / --n-cpu-moe) with --fit-target 7300, so Heretic
+# leaves 7.3 GB free for Klarheit's pinned Ollama qwen3.5:9b (6.9 GB at 16k ctx). Measured
+# 2026-10-23: GPU free → 2.9 GB, 27.7 tok/s; 9B already loaded → 0.8 GB, 14.0 tok/s. The old
+# fixed split (-ngl 999 --n-cpu-moe 36: 4.8 GB, ~40 tok/s) crash-looped on CUDA OOM whenever
+# Heretic woke from sleep with the 9B on the GPU (68 restarts on 2026-10-23).
 # --sleep-idle-seconds frees the VRAM when idle; the next request wakes it in ~3 s.
 # -np 1: one slot gets the whole 32k context (auto slots would split it).
 # -b/-ub 2048: prefill of an 18.7k-token prompt, total GPU in use while awake:
@@ -28,10 +31,8 @@ services:
       - /models/Qwen3.6-35B-A3B-Abliterated-Heretic-Q4_K_M/Qwen3.6-35B-A3B-Abliterated-Heretic-Q4_K_M.gguf
       - --alias
       - heretic
-      - -ngl
-      - "999"
-      - --n-cpu-moe
-      - "36"
+      - --fit-target
+      - "7300"
       - -c
       - "32768"
       - -np
