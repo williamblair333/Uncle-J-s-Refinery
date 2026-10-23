@@ -1,4 +1,8 @@
 {
+  "claudeMdExcludes": [
+    "**/Uncle-J-s-Refinery/CLAUDE.md",
+    "**/Uncle-J-s-Refinery/.claude/worktrees/*/CLAUDE.md"
+  ],
   "env": {
     "CHROMA_API_IMPL": "chromadb.api.segment.SegmentAPI"
   },

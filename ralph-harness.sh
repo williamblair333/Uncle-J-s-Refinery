@@ -79,6 +79,13 @@ PRD_PATH="$(cd "$(dirname "$PRD_PATH")" && pwd)/$(basename "$PRD_PATH")"
 REPO_PATH="$(cd "$REPO_PATH" && pwd)"
 
 step "Ralph harness starting"
+# Usage counter for the Phase 4 D3 decision (scripts/audit/collect_benefits.py reads
+# it). One line per real run; dry runs don't count. A failed write never stops ralph.
+if [ "$DRY_RUN" -eq 0 ]; then
+    { mkdir -p "$PROJ_ROOT/state" &&
+      printf '%s start repo=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$REPO_PATH" \
+          >> "$PROJ_ROOT/state/ralph-runs.log"; } 2>/dev/null || true
+fi
 ok "PRD        : $PRD_PATH"
 ok "Repo       : $REPO_PATH"
 ok "MaxIter    : $MAX_ITERATIONS"

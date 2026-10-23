@@ -5,6 +5,9 @@
 - Guide benchmark built but **not run to completion**: Heretic generated ~0.6 tok/s (load avg
   17–22, CI containers). Re-run `.venv/bin/python scripts/guide_bench/bench.py --out
   state/guide-bench.json` on an idle host, then decide on filing the compact patch upstream.
+- **This repo's sessions now read only `~/.claude/CLAUDE.md`** (claudeMdExcludes). After any
+  CLAUDE.md edit here, run `just doctor --fix`, or these sessions keep the old policy.
+- Ralph wasn't removed (D3): there was no usage data. `state/ralph-runs.log` starts now.
 
 ## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
 

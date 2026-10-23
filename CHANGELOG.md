@@ -8,6 +8,15 @@
   jcodemunch guide, the local model as router) and an upstream-ready `compact` patch for
   `jcodemunch_guide` (`docs/proposals/2026-10-23-*`). The guide is 2,804 chars now, 76% of it
   the tool catalogue. The benchmark didn't finish: Heretic ran at ~0.6 tok/s under host load.
+- **Changed** sessions in this repo no longer load the routing policy twice:
+  `.claude/settings.json` sets `claudeMdExcludes` for the repo's own `CLAUDE.md` (and
+  worktree copies), so only `~/.claude/CLAUDE.md` loads (~5.1k tokens a session). The repo
+  copy stays the source that install.sh and refinery-doctor deploy, so no content moved and
+  the global Dreaming Notes tail is untouched. Doctor's drift message now says these sessions
+  run on the installed copy. Tests: `tests/test_claude_md_dedup.py`.
+- **Added** a ralph usage counter (`state/ralph-runs.log`, read by
+  `scripts/audit/collect_benefits.py`). Phase 4's D3 (remove ralph if idle) couldn't be
+  decided: the Phase 2 counter never measured ralph. Ralph stays.
 
 ## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
 

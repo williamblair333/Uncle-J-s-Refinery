@@ -290,3 +290,9 @@ instructions. This file is deployed to `~/.claude/CLAUDE.md` by `install.sh` and
 re-synced by `scripts/refinery-doctor.sh --fix`, both of which compare against
 the repo copy and overwrite the deployed one. **Edit the repo copy. Edits made
 only to `~/.claude/CLAUDE.md` are reverted on the next install or doctor run.***
+
+<!-- Sessions inside this repo do NOT auto-load this file: .claude/settings.json lists it
+     in claudeMdExcludes, so they read only the deployed ~/.claude/CLAUDE.md and the policy
+     isn't paid for twice (~5k tokens). After editing here, run `just doctor --fix` or this
+     repo's own sessions keep the old policy. (HTML comments are stripped from context.) -->
+

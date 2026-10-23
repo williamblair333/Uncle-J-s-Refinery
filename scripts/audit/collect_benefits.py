@@ -6,6 +6,7 @@ Sources:
   1. state/hook-blocks.log (+ archives)     -> guard catches (guardrails-discipline)
   2. ~/.code-index/**/*.json scanned for the maximum tokens_saved value
   3. MemPalace SQLite (~/.mempalace/palace/chroma.sqlite3) -> embedding row count (read-only)
+  4. state/ralph-runs.log (one line per ralph-harness run) -> run count, last run
 """
 import re
 import sqlite3
@@ -85,6 +86,16 @@ def mempalace_counts(db_path):
     return {"embeddings_rows": n}
 
 
+def ralph_runs(log_path):
+    """{'runs': N, 'last_run': ISO} from state/ralph-runs.log; None if absent/unreadable."""
+    try:
+        lines = [ln for ln in Path(log_path).read_text(errors="replace").splitlines()
+                 if " start " in ln]
+    except OSError:
+        return None
+    return {"runs": len(lines), "last_run": lines[-1].split(" ", 1)[0] if lines else None}
+
+
 def main():
     missing, result = [], {"components": {}}
 
@@ -112,8 +123,17 @@ def main():
     else:
         missing.append(str(db))
 
+    # ralph: the Phase 4 D3 gate ("remove only if the usage counter confirms idle").
+    # ralph-harness.sh appends one line per real run since 2026-10-23; no file means
+    # "not measured", never "idle".
+    rr = ralph_runs(REPO / "state/ralph-runs.log")
+    if rr is not None:
+        result["components"]["ralph"] = rr
+    else:
+        missing.append(str(REPO / "state/ralph-runs.log"))
+
     result["missing"] = missing
-    out = audit_lib.write_json(REPO / "state/payoff-audit/benefits.json", result)
+    out =audit_lib.write_json(REPO / "state/payoff-audit/benefits.json", result)
     print(f"benefits: {out} (missing: {len(missing)})")
 
 

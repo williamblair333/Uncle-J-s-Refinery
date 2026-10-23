@@ -301,6 +301,10 @@ check_claude_md_sync() {
 
     migration "~/.claude/CLAUDE.md routing policy differs from repo (repo: ${repo_sum:0:12}… installed: ${installed_sum:0:12}…)"
     suggest "run: $0 --fix   # replaces policy prefix, preserves Dreaming Notes"
+    # .claude/settings.json excludes the repo copy from auto-load (claudeMdExcludes) so
+    # sessions here don't pay for the policy twice. They therefore run on the
+    # INSTALLED copy: drift here means this repo's own sessions are on the old policy.
+    info "sessions in this repo load only ~/.claude/CLAUDE.md (claudeMdExcludes) — fix the drift"
     record_migration "claude-md-sync"
 
     if [[ "$FIX_MODE" == true ]]; then
