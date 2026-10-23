@@ -23,6 +23,12 @@
   `reviewed/`. ROADMAP gains the REA-in-Docker and bigprint items (both waiting for Bill) and a
   corrected REA upstream line (#2188 merged 2026-10-14).
 
+## 2026-10-23 — justfiles for write_well and deal-finder
+
+- **Added** justfiles in write_well (#5: status, recall) and deal-finder (#1: setup, run,
+  status, recall), each through a scratch worktree so neither repo's uncommitted tree
+  (61 and 2,838 files) was touched. That finishes the justfile rollout ROADMAP item.
+
 ## 2026-10-23 — backlog sweep B: guide benchmark, CLAUDE.md de-dup, local rail
 
 - **Added** `scripts/guide_bench/` (20 routing queries; full vs compact vs LLM-compressed
