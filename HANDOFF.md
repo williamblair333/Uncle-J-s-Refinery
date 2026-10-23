@@ -1,5 +1,26 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host, afternoon) — Bill's decisions recorded; small model ready for the Pi
+
+**Open / next:**
+- Deploy the small model when the hosts are reachable: copy
+  `/opt/models/gguf/qwen3.5-2b-heretic/` to the Pi and `qwen3.5-4b-heretic/` to tc-vmh-03, then
+  `just small up -d` (4B: `SMALL_MODEL=qwen3.5-4b-heretic SMALL_GGUF=Qwen3.5-4B-Heretic-Q4_K_M.gguf`).
+  Measured here (x86 CPU): 2B 18.4 tok/s, 2.1 GB RAM. The Pi number is still to measure.
+- Photo → script on Heretic, real part photo (public-domain pipe-coupling photo): runs end to end
+  in 151 s and the STL exports, but the shapes are wrong (round bell as a hollow box, an unused
+  frustum, the flange unioned twice). The analyzer prompt needs work in partikus.
+- Run the anatomy-lab A/B (`/opt/proj/anatomy-lab/docs/ab-2026-10-23.md`) in a quiet session: it
+  was refused while 20 subagents ran.
+- After the parallel agents land: `scripts/refinery-doctor.sh --fix` (deployed CLAUDE.md is
+  behind) and restart Claude Code (dcup guard hook, PR #186).
+- Bill's: open-webui's 0.0.0.0:11434 dcup claim (keep?), kanka-ce's 8 stopped containers.
+
+**Decided (Bill, 2026-10-23):** partikus private on Gitea (done); granite4.2:8b removed (done);
+Heretic stays local-only; Klarheit keeps Ollama + qwen3.5:9b until its pre-registered trials end;
+occams-razor description widened; CampaignGenerator and campaign-forge abandoned; n8n not now;
+Codex, Jarvis track, front door later; dictation discuss later; opt-out markers look later.
+
 ## 2026-10-23 (main host) — dcup vendored + guard hook; stale claims released
 
 **Most important:** the dcup guard runs only after `bash features/dcup/install.sh` is run from

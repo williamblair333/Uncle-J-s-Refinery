@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-23 — small CPU model for the Pi / tc-vmh-03; sweep stale matches; Bill's decisions
+
+- **Added** `docker/llama-small/compose.yaml` + `just small` (CPU llama-server, 127.0.0.1:8096,
+  multi-arch image). Models: Qwen3.5-2B / 4B Heretic Q4_K_M (Apache-2.0, sha256 checked) in
+  `/opt/models/gguf/`. 2B on this host's CPU: 18.4 tok/s, 2.1 GB RAM.
+- **Fixed** `just waiting`: "awaiting" no longer matches "waiting", and bold labels count only in
+  a HANDOFF's newest entry (old "**Needs Bill:**" lists from finished work were resurfacing).
+- **Changed** `occams-razor` also fires when explaining why something is named, built or chosen
+  the way it is.
+- **Docs** ROADMAP records Bill's 2026-10-23 decisions (Klarheit keeps the 9B, granite removed,
+  Heretic local-only, CampaignGenerator/campaign-forge abandoned, deferrals).
+
 ## 2026-10-23 — dcup ships with Uncle J; a hook makes Claude use it
 
 - **Added** `features/dcup/`: `dcup` (the Docker port registry wrapper) vendored from
