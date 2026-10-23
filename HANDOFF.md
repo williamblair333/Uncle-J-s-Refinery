@@ -1,5 +1,48 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host, session end) — Bill's "fix all these": 14 agents, ~30 PRs across 18 repos
+
+**Most important:** restart Claude Code. The dcup guard hook (PR #186) loads only at startup.
+Then `just waiting` lists every open item below by repo.
+
+**Merged today (Refinery):** #182 docs, #183 sweep, #184 upstream, #185/#189/#190 backlog,
+#186 dcup, #187 decisions + small model, #188 hook hardening, #191 reviews/scout/firefox,
+#192 speech, #193 image/video. Other repos: anatomy-lab #2 #3, partikus #46, bizengine #9,
+patentengine #3, Klarheit #81, lc0 #64, fog-of-chess #250 #251, hearth #22, larder #3, dfir #7
++ casebook #3, marketing-kit #4, immortality #4, magicians-almanac #14, -web #3, gambling #6,
+moneymaker #8, channelengine #3, voice-line #12, write_well #5, deal-finder #1.
+
+**Open / next:**
+- Local lineup is complete on this host (text, image, video, STT, cloned voice). Left: deploy
+  `just small` to the Pi / tc-vmh-03 when reachable; Wan-stills vs Z-Image test; image MCP
+  wrapper (Jarvis track); add whisper/tts/comfy to `healthcheck.sh`.
+- GPU load order: if llama-heretic restarts while Ollama holds the 9B fully on GPU, Heretic
+  crash-loops on OOM until Ollama idles out (seen 15:4x). Don't stop Heretic for GPU tests.
+- anatomy-lab A/B: marginal (lib arm 18.4% fewer tokens). Close the 4 catalogue gaps, rerun.
+- jcodemunch guide: plain cut = 184 tokens, same 18/20 routing as the 738-token full guide.
+- Photo → script on Heretic picks wrong primitives (partikus analyzer prompt).
+- surface-write-guard can't resolve `$VAR` paths (43 false positives since 10-16).
+
+**Waiting on Bill (one line each; details in each repo's HANDOFF):**
+- Klarheit: M12 calibration ~2026-10-24 21:00 EDT if 3 more dry slots run clean; sign off
+  SO2/SO3/DO1/LG1 drafts; Picture Draw proposal; E9 v4 (<120-day rhythms only)?
+- patentengine/bizengine: `patent_hold` on `bunn_flip_lid` before it's listed.
+- moneymaker: `just mm init` once (jobs refuse until it exists); payout wallet + keys.
+- fog-of-chess: set `ENGINE_THREADS=4` in its `.env` (write-denied to Claude); itch/Steam.
+- lc0: back up the corpus, `just build && just start`; lichess token for `fetch-lichess`.
+- dfir: Splunk `.env` + licence (due 11-15); rewrite gmail in casebook history before public.
+- hearth: TV by voice, service password, `just apply` for Kitchen/Bedroom, rooms for devices.
+- larder: change Grocy's admin/admin; backup cron?; Kroger app redirect port.
+- channelengine: buy pcafterlife.com, claim handles.
+- magicians-almanac: OAuth apps + keys; confirm OAuth disables a matching password login.
+- immortality: Jism Asli source; Bardon Step X reading; Chia/Monroe/Dzogchen books.
+- voice-line: plug in a wired mic, swap the pinned device, run checks 2/4/7 by voice.
+- gambling: TrackMaster quote for chart history.
+- Gitea tokens to delete (needs your password): 2 mkit tokens, 1 channelengine token.
+- dcup: open-webui's 0.0.0.0:11434 claim; kanka-ce's 8 stopped containers.
+- REA-in-Docker and luban rebuild wait on "build it" / "go".
+- jcodemunch guide patch upstream: file it or not.
+
 ## 2026-10-23 (main host) — image and video generation running (lineup #2, #3)
 
 **Most important:** run `just comfy down` when you're done generating. ComfyUI unloads its

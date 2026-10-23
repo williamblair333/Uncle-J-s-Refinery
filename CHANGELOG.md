@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-10-23 — session end: guide benchmark result, README for the new local services
+
+- **Measured** `scripts/guide_bench/` on an idle host (20 routing queries, Heretic): full guide
+  738 tokens 18/20, compact 184 tokens 18/20, LLM-compressed 660 tokens 18/20. ROADMAP item
+  closed; LLM compression dropped.
+- **Docs** README "What's in the box" lists local speech, image & video, the small CPU model and
+  the quiet browser. HANDOFF has one consolidated "Waiting on Bill" list for all 18 repos.
+
 ## 2026-10-23 — local image and video generation (ComfyUI, Z-Image-Turbo, Wan 2.2)
 
 - **Added** `docker/comfyui/`: ComfyUI v0.39.0 built from the pinned upstream commit plus

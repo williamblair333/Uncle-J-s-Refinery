@@ -656,7 +656,11 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
 - **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. **[2026-10-23] Not removed:** the Phase 2 counter never measured ralph (`benefits.json` lists it under `missing`), so it can't confirm idle. No ralph cron is installed. Added the counter: `ralph-harness.sh` now appends to `state/ralph-runs.log` and `collect_benefits.py` reports it; decide after a few weeks of data. **[DONE 2026-10-23] CLAUDE.md de-dup:** `.claude/settings.json` `claudeMdExcludes` skips the repo copy (and worktree copies) here, so sessions load the policy once from `~/.claude/CLAUDE.md` (~5.1k tokens saved per session). The repo copy stays the deploy source; install.sh/doctor are unchanged, so the global Dreaming Notes tail is preserved. Original: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
 
-- **[PARTIAL 2026-10-23] Compressed `jcodemunch_guide`** — measured: the guide is now 2,804
+- **[DONE 2026-10-23] Compressed `jcodemunch_guide`** — benchmark run on an idle host, 20
+  routing queries on Heretic: full 738 tokens 18/20, compact 184 tokens 18/20, LLM-compressed
+  660 tokens 18/20. The plain cut wins (75% fewer tokens, same accuracy); LLM compression is
+  dropped. Filing the upstream patch is Bill's call (it's a public PR on jgravelle's repo).
+  Earlier note: measured: the guide is now 2,804
   chars (the 4.6–5.1k-token estimate is stale) and nothing here loads it per session. The
   catalogue is 76% of it and duplicates the MCP tool list, so a deterministic `compact` cut
   (680 chars) beats LLM compression. Built `scripts/guide_bench/` (20 routing queries, local
