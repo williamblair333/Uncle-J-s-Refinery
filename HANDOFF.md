@@ -1,5 +1,16 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
+
+**Most important:** jdocmunch's CLI exits 0 when it fails (`{"success": false}`); anything
+that shells out to `jdocmunch-mcp index-local` must read the JSON, not the exit code.
+
+- `run_index_local()` is CLI-only now (`scripts/lib/jdocmunch-index-local.sh`).
+- ralph-harness and the Telegram gateway no longer pass Anthropic API keys to `claude`.
+- jscrub pre-commit gate + audit canary. **The live hook still points at
+  `session-end-check.sh`** until `install.sh` (or `just setup`) runs on the main checkout; then
+  `.git/hooks/pre-commit` → `scripts/pre-commit.sh`.
+
 ## 2026-10-23 (main host) — upstream filings, jcodemunch backlog cleared
 
 **Most important:** the 8 `jcodemunch_upgrade_*_unanalyzed` memories were false alarms. The

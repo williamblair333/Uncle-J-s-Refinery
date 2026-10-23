@@ -190,7 +190,13 @@ Completed items age out after ~4 weeks.
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
   in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.
-- **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
+- **[DONE 2026-10-23] `jscrub` automation** — (b) `check-vendor` was already in CI via
+  `audit-repo.sh`; that script now also runs a live-positive canary (a temp file with a ZWSP must
+  hit, else exit 3), so a broken detector fails `just audit` and CI. (a) shipped as a pre-commit
+  gate only, report-only: `scripts/jscrub/precommit-scan.sh` scans staged blobs and blocks on a
+  hit; nothing runs `clean`/`--in-place`. No PostToolUse hook. Wired by `install.sh` through
+  `scripts/pre-commit.sh` (session-end check + jscrub). Tests: `tests/test_jscrub_gates.py`.
+  Original: **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
   `just audit` + CI job). Still open, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
   gate — `--in-place` and `--follow-symlinks` are the flags to think hardest about before automating
   a tool that rewrites files; (b) `check-vendor` in CI, which now works with no checkout so it can
@@ -253,7 +259,11 @@ Completed items age out after ~4 weeks.
   `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`
   then `diff` against the installed copy. Better than reading `.venv/` when the question is
   whether the *local install* has drifted from upstream, rather than what the installed code does.
-- **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
+- **[DONE 2026-10-23] Dropped the Python-API call for the plain CLI in `run_index_local()`.**
+  Now in `scripts/lib/jdocmunch-index-local.sh`, CLI only, tested with a stub CLI. Found on the
+  way: the CLI exits 0 on `{"success": false}` (1.149.0), so the old fallback counted a failed
+  refresh as reindexed; the verdict is now read from the JSON. Original entry follows.
+  **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
   reason it exists — "the CLI exposes no way to pass ignore patterns" — stopped being true
   when upstream #108 added `--extra-ignore-pattern`, `--no-ai-summaries` and `--embeddings`.
   The CLI is already the fallback and already carries all three. The API still buys
@@ -619,7 +629,9 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
-- **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
+- **[DONE 2026-10-23] ralph-harness env-strip** — `ralph-harness.sh` unsets both keys after its
+  CLI check; the Telegram gateway passes a filtered `env=` to its `claude` subprocess. Tests:
+  `tests/test_env_strip.py`. Original: **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
 
 - **Telegram chat history persistence** — skill exists (`telegram-chat-history-persistence`)
   but implementation not yet started; would allow querying past bot conversations
