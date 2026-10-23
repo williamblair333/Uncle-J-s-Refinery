@@ -18,6 +18,20 @@
   detected); file selection moved to `scripts/jscrub/pathspec.sh` so both gates agree. CI's
   jscrub job also runs `tests/test_jscrub_gates.py`.
 
+## 2026-10-23 — upstream filings and the jcodemunch "unanalyzed" backlog
+
+- **Filed** [jdocmunch-mcp#196](https://github.com/jgravelle/jdocmunch-mcp/issues/196):
+  `index_local` accepts a repo name ending in a sidecar suffix. `X.summary` crashes with
+  `KeyError 'owner'`; `X.related` silently overwrites X's sidecar. Reproduced on 1.149.0 in a
+  scratch `DOC_INDEX_PATH`; duplicate-checked.
+- **Not filed:** the `get_watch_status` `any_stale` write-up. It duplicates
+  jcodemunch-mcp#565, fixed in v1.108.315, and re-verified on installed 1.108.391.
+- **Docs** ROADMAP: both items marked. REA #2188 merged and #2187 open with no maintainer reply.
+  claude-guardrails #17/#20 have no replies.
+- **Reviewed** the 8 jcodemunch ranges the 03:00 cron left "unanalyzed" (edc59ad→d56f459).
+  Every installed range was already covered by a post-upgrade sync commit. Only
+  7f3acbc→d56f459 (1.108.392–.395, not installed) is pending. No CLAUDE.md change.
+
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 
 - **Fixed** the status sweep (`scripts/waiting_sweep.py`) missed most open work: it read only
