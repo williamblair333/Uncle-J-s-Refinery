@@ -83,7 +83,13 @@ ok "TELEGRAM_CHAT_ID present"
 
 # ── Validate bot token via getMe ──────────────────────────────────────────────
 step "Validating bot token via Telegram getMe"
-GETME_RESP=$(curl -sf "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" 2>/dev/null || echo '{"ok":false}')
+# Token as curl config on stdin, never argv (/proc/<pid>/cmdline is world-readable).
+if [[ ! "$TELEGRAM_BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
+  warn "TELEGRAM_BOT_TOKEN in $ENV_FILE is not <digits>:<token> — fix it and re-run."
+  exit 1
+fi
+GETME_RESP=$(printf 'url = "https://api.telegram.org/bot%s/getMe"\n' "$TELEGRAM_BOT_TOKEN" \
+  | curl -sf -K - 2>/dev/null || echo '{"ok":false}')
 if ! echo "$GETME_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('ok') else 1)" 2>/dev/null; then
   warn "Telegram getMe failed — check TELEGRAM_BOT_TOKEN in $ENV_FILE."
   warn "Response: $GETME_RESP"

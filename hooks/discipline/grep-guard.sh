@@ -234,15 +234,1150 @@ log_entry() { hook_log_append "$LOG" "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
 
 [[ -z "${CMD:-}" ]] && exit 0
 
+ALLOWED_RE='(/tmp/|/proc/|/var/log/|(^|[^[:alnum:]_])state/|\.log([^[:alnum:]]|$)|\.code-index|hook-blocks)'
+SRC_EXT='\.(py|sh|bash|js|mjs|cjs|jsx|ts|tsx|go|rs|rb|php|java|c|h|cpp|hpp|swift|kt|lua|pl)([^[:alnum:]]|$)'
+
+# ── Prefilter ─────────────────────────────────────────────────────────────────
+# PreToolUse fires on EVERY Bash call; python3 startup (~15 ms) is paid only when the
+# command could read something. Quotes, backslashes and newlines are deleted first
+# (bash reads `c'a't`, `c\at` and a `ca\<newline>t` continuation as `cat`), and `$`,
+# backticks and `<` skip the shortcut: `$(echo cat)`, `$X` and `done < x.py` produce
+# or perform a read the raw text does not spell. Pure bash — no external binary whose
+# absence could read as "no match".
+case "$CMD" in
+  *'$'*|*'`'*|*'<'*) ;;
+  *)
+    _flat=${CMD//[\\\"\']/}; _flat=${_flat//$'\n'/}
+    if ! [[ "$_flat" =~ (^|[^[:alnum:]_])(e?grep|fgrep|cat|tac|nl|less|more|bat|batcat|head|tail|sed|rg|ag|ack)([^[:alnum:]_]|$) ]]; then
+      exit 0
+    fi ;;
+esac
+
+# ── THE ANALYZER (2026-10-23) ─────────────────────────────────────────────────
+# The legacy scan below split the RAW command on spaces and on & | ; with no idea of
+# quoting or of where the shell actually is. Two classes of error followed:
+#   * false positives — `grep -e 'uv run example.py' f.md` read `example.py'` as a
+#     file; `cd /tmp/x && cat a.py` judged a.py against the SESSION cwd;
+#     `S=/tmp/…; cat $S/a.py` could not see that $S is /tmp
+#   * false negatives — `cat "scripts/x.py"`-style tricks were caught only by luck,
+#     and `echo "$(cat x.py)"`, `sudo cat x.py`, `bash -c 'cat x.py'`,
+#     `eval cat x.py`, `grep -ex x.py` (pattern given by -e, x.py the FILE),
+#     `grep -d recurse foo .`, `cat < x.py` and `ls | rg foo scripts/` were allowed,
+#     and any command holding `<<` was allowed outright (`cat x.py; : <<X`).
+# The analyzer lexes the command the way bash does (quoting, escapes, $( ), ` `,
+# <( ), heredocs, comments), follows cd/pushd/subshells/literal VAR=value
+# assignments, unwraps sudo/env/xargs/timeout/… and sh -c / eval / heredoc-fed
+# shells, parses grep/sed/head/tail/cat/rg option syntax, and prints one record per
+# path a read tool would open:
+#     F <cwd> <path>   read as a file           R <cwd> <path>   walked recursively
+#     C <cwd>          the cwd itself walked    D <why>          deny outright
+# <cwd> is one POSSIBLE working directory (empty = unknown); a path that is unsafe
+# under ANY possible cwd is denied. The bash helpers above judge each record, so
+# symlink/`..`/glob/allowed-location handling is shared with the legacy path.
+# Where the shell's state can't be known the analyzer assumes the worst: a cd that
+# may fail leaves BOTH directories possible; a variable it can't resolve makes the
+# word dynamic, and a dynamic word with a source extension is denied.
+# Exit 0 = records printed (possibly none). Anything else — python3 absent, a parse
+# failure (exit 3), a crash — falls back to the legacy scan, after the analyzer's
+# own whole-text check for an unparseable command (exit 2 = deny).
+# RESIDUAL (accepted; this is a token-routing guard, not a sandbox): interpreters
+# (`python3 -c "open('x.py')"`, awk, less, nl, …), git show/grep, a command held in
+# a variable or array, code produced at run time (base64 | bash), and an xargs/find
+# whose file list arrives on stdin from outside the repo but is judged by cwd.
+IFS= read -r -d '' GG_PROG <<'PY' || true
+import codecs, os, posixpath, re, sys
+
+cmd = sys.stdin.buffer.read().decode("utf-8", "surrogateescape")
+SESSION_CWD = sys.argv[1] if len(sys.argv) > 1 else ""
+HOME = os.environ.get("HOME", "")
+
+DYN = "\x00"                       # text bash computes at run time
+VO, VC = "\x01", "\x02"            # \x01NAME\x02 = an unresolved $NAME
+MAX_DEPTH = 8
+CAT_LIKE = {"cat", "tac", "nl", "less", "more", "bat", "batcat"}
+READ_TOOLS = {"grep", "egrep", "fgrep", "head", "tail", "sed", "rg", "ag", "ack"} | CAT_LIKE
+SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "ash", "mksh", "yash", "busybox"}
+OPEN_KW = {"if", "while", "until", "for", "case", "select"}
+CLOSE_KW = {"fi", "done", "esac"}
+SKIP_KW = {"then", "else", "elif", "do", "!", "{", "}", "time", "coproc", "in"}
+SRC_EXT = re.compile(r"\.(py|sh|bash|js|mjs|cjs|jsx|ts|tsx|go|rs|rb|php|java|c|h|cpp|hpp|swift|kt|lua|pl)([^A-Za-z0-9]|$)")
+ALLOWED = re.compile(r"(/tmp/|/proc/|/var/log/|(^|[^A-Za-z0-9_])state/|\.log([^A-Za-z0-9]|$)|\.code-index|hook-blocks)")
+ASSIGN = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\+?=(.*)$", re.S)
+LOOSE_TOOL = re.compile(r"(^|[^A-Za-z0-9_])(e?grep|fgrep|cat|tac|nl|less|more|bat|batcat|head|tail|sed|rg|ag|ack)([^A-Za-z0-9_]|$)")
+
+
+class Unparseable(Exception):
+    pass
+
+
+class TooDeep(Exception):
+    pass
+
+
+def loose(text):
+    """A read tool and a source-looking name anywhere in the text — the fail-closed
+    check for text whose execution the lexer cannot see."""
+    flat = re.sub(r"[\\\"'\n]", "", text)
+    return bool(LOOSE_TOOL.search(flat) and SRC_EXT.search(flat))
+
+
+def base(word):
+    b = word.replace("\\", "/").rsplit("/", 1)[-1]
+    return b[:-4] if b.lower().endswith(".exe") else b
+
+
+# ── Lexer (bash quoting; shared shape with push-guard.sh's) ────────────────────
+class Lexer:
+    """Produces a flat item list: ("cmd", rec) | ("op", ";"|"&&"|"||"|"|"|"&")
+    | ("open",) | ("close",). rec = {"words", "in", "stdin"}. Substitution bodies
+    appear as open … close around their commands, before the command using them."""
+
+    def __init__(self, s, depth):
+        if depth > MAX_DEPTH:
+            raise TooDeep()
+        self.s, self.n, self.depth = s, len(s), depth
+        self.items = []
+        self.nest = 0
+        self.funcdef = False
+
+    def run(self):
+        self.parse(0, None)
+        return self.items
+
+    def sub(self, i):
+        self.nest += 1
+        if self.nest > 64:
+            raise TooDeep()
+        self.items.append(("open",))
+        try:
+            j = self.parse(i, ")")
+        finally:
+            self.nest -= 1
+        self.items.append(("close",))
+        return j
+
+    def backtick(self, i, buf):
+        s, n, out = self.s, self.n, []
+        while i < n:
+            c = s[i]
+            if c == "\\" and i + 1 < n and s[i + 1] in "`$\\":
+                out.append(s[i + 1]); i += 2; continue
+            if c == "`":
+                inner = Lexer("".join(out), self.depth + 1)
+                self.items.append(("open",))
+                self.items.extend(inner.run())
+                self.items.append(("close",))
+                self.funcdef = self.funcdef or inner.funcdef
+                buf.append(DYN)
+                return i + 1
+            out.append(c); i += 1
+        raise Unparseable()
+
+    def var(self, i, buf):
+        """At s[i] == '$' (not $( $' $"); returns new i."""
+        s, n = self.s, self.n
+        j = i + 1
+        if j < n and (s[j].isalpha() or s[j] == "_"):
+            k = j
+            while k < n and (s[k].isalnum() or s[k] == "_"):
+                k += 1
+            buf.append(VO + s[j:k] + VC)
+            return k
+        if j < n and (s[j].isdigit() or s[j] in "@*#?$!-"):
+            buf.append(DYN)
+            return j + 1
+        if j < n and s[j] == "{":
+            m = re.match(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", s[j:])
+            if m:
+                buf.append(VO + m.group(1) + VC)
+                return j + m.end()
+            k = self.dq(j + 1, [], "}")
+            buf.append(DYN)
+            return k
+        buf.append("$")
+        return j
+
+    def dq(self, i, buf, stop, end=None):
+        s = self.s
+        n = self.n if end is None else end
+        while i < n:
+            c = s[i]
+            if stop is not None and c == stop:
+                return i + 1
+            if c == "\\" and i + 1 < n:
+                nx = s[i + 1]
+                if nx in '$`"\\\n':
+                    if nx != "\n":
+                        buf.append(nx)
+                    i += 2; continue
+                buf.append(c); i += 1; continue
+            if c == "$" and i + 1 < n and s[i + 1] == "(":
+                i = self.sub(i + 2); buf.append(DYN); continue
+            if c == "$":
+                i = self.var(i, buf); continue
+            if c == "`":
+                i = self.backtick(i + 1, buf); continue
+            buf.append(c); i += 1
+        if stop is not None:
+            raise Unparseable()
+        return i
+
+    def heredoc(self, i, rec, delim, quoted, strip):
+        s, n, start = self.s, self.n, i
+        body_end = n
+        while i < n:
+            j = s.find("\n", i)
+            line_end = n if j < 0 else j
+            line = s[i:line_end]
+            if (line.lstrip("\t") if strip else line) == delim:
+                body_end = i
+                i = n if j < 0 else j + 1
+                break
+            i = n if j < 0 else j + 1
+        if not quoted:
+            self.dq(start, [], None, body_end)     # $( ) and backticks in the body run
+        rec["stdin"].append(s[start:body_end])
+        return i
+
+    def parse(self, i, term):
+        s, n = self.s, self.n
+        rec = {"words": [], "in": [], "stdin": []}
+        st = {"buf": [], "inword": False, "quoted": False, "redir": None, "here": None,
+              "lead_q": False}
+        pending = []
+        paren = 0
+
+        def endword():
+            if not st["inword"]:
+                return
+            w = "".join(st["buf"])
+            here = st["here"]
+            if here == "string":
+                rec["stdin"].append(w)
+            elif here is not None:
+                pending.append((rec, w, st["quoted"], here == "strip"))
+            elif st["redir"] == "in":
+                rec["in"].append(w)
+            elif st["redir"] is None:
+                # A quoted leading ~ is literal: `cat "~/x.py"` reads ./~/x.py.
+                if st["lead_q"] and w.startswith("~"):
+                    w = "./" + w
+                rec["words"].append(w)
+            st.update(buf=[], inword=False, quoted=False, redir=None, here=None, lead_q=False)
+
+        def endcmd():
+            nonlocal rec
+            endword()
+            if rec["words"] or rec["stdin"] or rec["in"]:
+                self.items.append(("cmd", rec))
+            rec = {"words": [], "in": [], "stdin": []}
+
+        def word(text, quoted=False):
+            if not st["inword"] and quoted:
+                st["lead_q"] = True
+            st["buf"].append(text); st["inword"] = True
+            if quoted:
+                st["quoted"] = True
+
+        def op(o):
+            endcmd()
+            self.items.append(("op", o))
+
+        while i < n:
+            c = s[i]
+            if c == "\\":
+                if i + 1 < n and s[i + 1] == "\n":
+                    i += 2; continue
+                word(s[i + 1] if i + 1 < n else "\\", True); i += 2; continue
+            if c == "'":
+                j = s.find("'", i + 1)
+                if j < 0:
+                    raise Unparseable()
+                word(s[i + 1:j], True); i = j + 1; continue
+            if c == "$" and s.startswith("$'", i):
+                j, raw = i + 2, []
+                while j < n and s[j] != "'":
+                    if s[j] == "\\" and j + 1 < n:
+                        raw.append(s[j:j + 2]); j += 2
+                    else:
+                        raw.append(s[j]); j += 1
+                if j >= n:
+                    raise Unparseable()
+                try:
+                    txt = codecs.decode("".join(raw), "unicode_escape")
+                except Exception:
+                    txt = DYN
+                word(txt, True); i = j + 1; continue
+            if c == '"' or (c == "$" and s.startswith('$"', i)):
+                if not st["inword"]:
+                    st["lead_q"] = True
+                i += 1 if c == '"' else 2
+                st["inword"] = True; st["quoted"] = True
+                i = self.dq(i, st["buf"], '"'); continue
+            if c == "$" and s.startswith("$(", i):
+                i = self.sub(i + 2); word(DYN); continue
+            if c == "$":
+                st["inword"] = True
+                i = self.var(i, st["buf"]); continue
+            if c == "`":
+                st["inword"] = True
+                i = self.backtick(i + 1, st["buf"]); continue
+            if c in "<>" and i + 1 < n and s[i + 1] == "(":
+                endword()
+                i = self.sub(i + 2); word(DYN); continue
+            if c == "#" and not st["inword"]:
+                j = s.find("\n", i)
+                i = n if j < 0 else j
+                continue
+            if c in " \t\r":
+                endword(); i += 1; continue
+            if c == "\n":
+                endword(); i += 1
+                for (r, delim, quoted, strip) in pending:
+                    i = self.heredoc(i, r, delim, quoted, strip)
+                pending.clear()
+                op(";"); continue
+            if c == "&" and s.startswith("&>", i):
+                endword(); st["redir"] = "out"; i += 2
+                if i < n and s[i] == ">":
+                    i += 1
+                continue
+            if c in ";&|":
+                j = i
+                while j < n and s[j] in ";&|":
+                    j += 1
+                run = s[i:j]
+                if "||" in run:
+                    o = "||"
+                elif "&&" in run:
+                    o = "&&"
+                elif "|" in run:
+                    o = "|"
+                elif run == "&":
+                    o = "&"
+                else:
+                    o = ";"
+                op(o); i = j; continue
+            if c == "(":
+                # `name()` / `name ()` is a function definition: its body runs only
+                # when called, by a name the guard can't follow. Flag it.
+                if s.startswith("()", i) or re.match(r"\(\s*\)", s[i:]):
+                    self.funcdef = True
+                op(";"); self.items.append(("open",)); paren += 1; i += 1; continue
+            if c == ")":
+                endcmd()
+                if paren == 0:
+                    if term == ")":
+                        return i + 1
+                    self.items.append(("close",))      # stray ')' (case pattern)
+                    i += 1; continue
+                self.items.append(("close",))
+                paren -= 1; i += 1; continue
+            if c in "<>":
+                fd_in = c == "<"
+                if st["inword"] and not st["quoted"] and "".join(st["buf"]).isdigit():
+                    st.update(buf=[], inword=False)          # fd number: 2>&1
+                else:
+                    endword()
+                if s.startswith("<<<", i):
+                    st["here"] = "string"; i += 3; continue
+                if s.startswith("<<", i):
+                    i += 2
+                    strip = i < n and s[i] == "-"
+                    if strip:
+                        i += 1
+                    st["here"] = "strip" if strip else "doc"; continue
+                j = i + 1
+                while j < n and s[j] in ">|&":
+                    j += 1
+                if fd_in and s[i + 1:j].endswith("&"):
+                    fd_in = False                            # <&3 duplicates an fd
+                i = j
+                st["redir"] = "in" if fd_in else "out"; continue
+            word(c); i += 1
+        if term is not None:
+            raise Unparseable()
+        endword()
+        endcmd()
+        return n
+
+
+# ── State: possible working directories and literal variables ─────────────────
+RISKY = ("RISKY",)    # a variable that may hold a file name read from somewhere
+
+
+class State:
+    def __init__(self, cwds, vars_):
+        self.cwds = set(cwds)          # "" = unknown
+        self.vars = dict(vars_)        # name -> literal value, or None = unknown
+
+    def copy(self):
+        return State(self.cwds, self.vars)
+
+    def merge(self, other):
+        out = State(self.cwds | other.cwds, {})
+        for k in set(self.vars) | set(other.vars):
+            a, b = self.vars.get(k, None), other.vars.get(k, None)
+            if a is RISKY or b is RISKY:
+                out.vars[k] = RISKY
+            else:
+                out.vars[k] = a if (k in self.vars and k in other.vars and a == b) else None
+        return out
+
+
+def expand(word, state):
+    """Replace \x01NAME\x02 by the variable's literal value, or DYN when unknown."""
+    def rep(m):
+        name = m.group(1)
+        if name in state.vars:
+            v = state.vars[name]
+            if v is RISKY:
+                return DYN + ".py"         # may name source: judged as source
+            return DYN if v is None else v
+        if name == "HOME" and HOME:
+            return HOME
+        return DYN
+    # bash expands ~ from $HOME, which the command itself may have reassigned.
+    if (word == "~" or word.startswith("~/")) and "HOME" in state.vars:
+        h = state.vars["HOME"]
+        word = (DYN if (h is None or h is RISKY) else h) + word[1:]
+    return re.sub("\x01([A-Za-z_][A-Za-z0-9_]*)\x02", rep, word)
+
+
+def brace_expand(word, cap=64):
+    """bash brace expansion (`{cat,x.py}`, `a{b,c}d`), capped; a word without a
+    comma inside braces is returned unchanged."""
+    m = re.search(r"\{([^{}]*,[^{}]*)\}", word)
+    if not m:
+        return [word]
+    out = []
+    for alt in m.group(1).split(","):
+        for w in brace_expand(word[:m.start()] + alt + word[m.end():], cap):
+            out.append(w)
+            if len(out) >= cap:
+                return out
+    return out
+
+
+def cd_target(state, args, home_ok=True):
+    """The set of cwds after `cd ARGS` succeeds."""
+    phys = False
+    rest = []
+    for a in args:
+        if not rest and a.startswith("-") and a not in ("-", "--") and len(a) > 1:
+            phys = phys or "P" in a
+            continue
+        if not rest and a == "--":
+            continue
+        rest.append(a)
+    if not rest:
+        if "HOME" in state.vars:
+            h = state.vars["HOME"]
+            return {""} if (h is None or h is RISKY or not h.startswith("/")) else {posixpath.normpath(h)}
+        return {HOME} if (HOME and home_ok) else {""}
+    t = rest[0]
+    if DYN in t or t == "-" or t.startswith("+"):
+        return {""}
+    if t == "~" or t.startswith("~/"):
+        if not HOME:
+            return {""}
+        t = HOME + t[1:]
+    elif t.startswith("~"):
+        return {""}
+    if phys and ".." in t.split("/"):
+        return {""}
+    if t.startswith("/"):
+        return {posixpath.normpath(t)}
+    if os.environ.get("CDPATH") or "CDPATH" in state.vars:
+        return {""}                      # a relative cd may land anywhere on CDPATH
+    out = set()
+    for c in state.cwds:
+        out.add("" if not c else posixpath.normpath(posixpath.join(c, t)))
+    return out
+
+
+# ── Per-tool option parsing → operands ────────────────────────────────────────
+def short_cluster(tok, with_arg, words, k):
+    """Walk a short-option cluster. Returns (letters, value, next_k): the letter whose
+    value was consumed (attached or next word), or None."""
+    letters = []
+    for idx, ch in enumerate(tok[1:], start=1):
+        if ch in with_arg:
+            rest = tok[idx + 1:]
+            if rest:
+                return letters + [ch], (ch, rest), k + 1
+            if k + 1 < len(words):
+                return letters + [ch], (ch, words[k + 1]), k + 2
+            return letters + [ch], (ch, ""), k + 1
+        letters.append(ch)
+    return letters, None, k + 1
+
+
+def parse_grep(words):
+    """-> dict(recursive, operands, pattern_files, includes)."""
+    out = {"recursive": False, "operands": [], "pattern_files": [], "includes": []}
+    pattern_given = False
+    pos = []
+    k = 0
+    with_arg = "efABCmdD"
+    long_arg = {"--regexp", "--file", "--after-context", "--before-context", "--context",
+                "--max-count", "--directories", "--devices", "--include", "--exclude",
+                "--exclude-dir", "--exclude-from", "--label", "--binary-files",
+                "--group-separator"}
+    while k < len(words):
+        t = words[k]
+        if t == "--":
+            pos.extend(words[k + 1:]); break
+        if t.startswith("--"):
+            name, eq, val = t.partition("=")
+            if name in long_arg and not eq:
+                val = words[k + 1] if k + 1 < len(words) else ""
+                k += 2
+            else:
+                k += 1
+            if name in ("--recursive", "--dereference-recursive"):
+                out["recursive"] = True
+            elif name == "--directories" and val == "recurse":
+                out["recursive"] = True
+            elif name == "--regexp":
+                pattern_given = True
+            elif name == "--file":
+                pattern_given = True; out["pattern_files"].append(val)
+            elif name == "--include":
+                out["includes"].append(val)
+            continue
+        if t.startswith("-") and len(t) > 1:
+            letters, val, k = short_cluster(t, with_arg, words, k)
+            if "r" in letters or "R" in letters:
+                out["recursive"] = True
+            if val:
+                ch, v = val
+                if ch == "e":
+                    pattern_given = True
+                elif ch == "f":
+                    pattern_given = True; out["pattern_files"].append(v)
+                elif ch == "d" and v == "recurse":
+                    out["recursive"] = True
+            continue
+        pos.append(t); k += 1
+    out["operands"] = pos if pattern_given else pos[1:]
+    return out
+
+
+def parse_sed(words):
+    """-> (in_place, operands, script_files)."""
+    pos, files, script_given, k = [], [], False, 0
+    while k < len(words):
+        t = words[k]
+        if t == "--":
+            pos.extend(words[k + 1:]); break
+        if t.startswith("--"):
+            name, eq, val = t.partition("=")
+            if name == "--in-place":
+                return True, [], []
+            if name in ("--expression", "--file", "--line-length") and not eq:
+                val = words[k + 1] if k + 1 < len(words) else ""
+                k += 2
+            else:
+                k += 1
+            if name == "--expression":
+                script_given = True
+            elif name == "--file":
+                script_given = True; files.append(val)
+            continue
+        if t.startswith("-") and len(t) > 1:
+            letters, val, k = short_cluster(t, "efl", words, k)
+            if "i" in letters:
+                return True, [], []
+            if val and val[0] == "e":
+                script_given = True
+            elif val and val[0] == "f":
+                script_given = True; files.append(val[1])
+            continue
+        pos.append(t); k += 1
+    return False, (pos if script_given else pos[1:]), files
+
+
+def parse_plain(words, with_arg="", long_arg=()):
+    """cat/head/tail: every non-option word is a file."""
+    pos, k = [], 0
+    while k < len(words):
+        t = words[k]
+        if t == "--":
+            pos.extend(words[k + 1:]); break
+        if t.startswith("--"):
+            name, eq, _ = t.partition("=")
+            k += 2 if (name in long_arg and not eq) else 1
+            continue
+        if t.startswith("-") and len(t) > 1:
+            _, _, k = short_cluster(t, with_arg, words, k)
+            continue
+        pos.append(t); k += 1
+    return [p for p in pos if p != "-"]
+
+
+def parse_rg(words, tool):
+    """-> (paths, globs, files_mode, pattern_files)."""
+    pattern_given, files_mode = False, False
+    pos, globs, pfiles, k = [], [], [], 0
+    val_opts = {"-t", "-T", "--type", "--type-not", "-A", "-B", "-C", "-m", "--max-count",
+                "-j", "--threads", "-M", "--max-columns", "--max-depth", "-d", "--depth",
+                "--ignore-file", "--pre", "-E", "--encoding", "--sort", "--sortr",
+                "--context", "--after-context", "--before-context", "-r", "--replace"}
+    if tool != "rg":
+        val_opts -= {"-r", "--replace", "-d"}
+    while k < len(words):
+        t = words[k]
+        if t == "--":
+            pos.extend(words[k + 1:]); break
+        nxt = words[k + 1] if k + 1 < len(words) else ""
+        if t in ("-g", "--glob", "--iglob", "-G"):
+            globs.append(nxt); k += 2; continue
+        if t.startswith(("--glob=", "--iglob=")):
+            globs.append(t.split("=", 1)[1]); k += 1; continue
+        if t in ("-e", "--regexp"):
+            pattern_given = True; k += 2; continue
+        if t in ("-f", "--file"):
+            pattern_given = True; pfiles.append(nxt); k += 2; continue
+        if t.startswith(("--regexp=",)):
+            pattern_given = True; k += 1; continue
+        if t.startswith("--file="):
+            pattern_given = True; pfiles.append(t.split("=", 1)[1]); k += 1; continue
+        if t == "--files":
+            files_mode = True; k += 1; continue
+        if t in val_opts:
+            k += 2; continue
+        if t.startswith("-") and len(t) > 1:
+            k += 1; continue
+        pos.append(t); k += 1
+    paths = pos if (pattern_given or files_mode) else pos[1:]
+    return paths, globs, pfiles
+
+
+# ── Wrappers ──────────────────────────────────────────────────────────────────
+def unwrap(words, cmd_cwds):
+    """Strip command-position wrappers. Returns (words, flags, cwds) where flags may
+    hold 'xargs', and cwds is overridden by env -C / sudo -D."""
+    flags = set()
+    cwds = cmd_cwds
+    k = 0
+    for _ in range(16):
+        if k >= len(words):
+            break
+        w = base(words[k])
+        if ASSIGN.match(words[k]):
+            k += 1; continue
+        if w in ("sudo", "doas"):
+            k += 1
+            while k < len(words) and words[k].startswith("-"):
+                o = words[k]; k += 1
+                if o in ("-u", "-g", "-C", "-h", "-p", "-r", "-t", "-U", "-T", "-D", "--chdir",
+                         "--user", "--group", "--host", "--prompt"):
+                    if o in ("-D", "--chdir") and k < len(words):
+                        cwds = {"" if DYN in words[k] else words[k]} if words[k].startswith("/") else {""}
+                    k += 1
+            continue
+        if w == "command":
+            if k + 1 < len(words) and words[k + 1] in ("-v", "-V"):
+                return [], flags, cwds
+            k += 1
+            while k < len(words) and words[k] == "-p":
+                k += 1
+            continue
+        if w == "watch":
+            k += 1
+            while k < len(words) and words[k].startswith("-"):
+                o = words[k]; k += 1
+                if o in ("-n", "--interval", "-d", "-q", "--equexit"):
+                    if o in ("-n", "--interval", "-q", "--equexit"):
+                        k += 1
+            continue
+        if w in ("builtin", "nohup", "exec", "time"):
+            k += 1
+            while k < len(words) and words[k].startswith("-"):
+                o = words[k]; k += 1
+                if w == "exec" and o == "-a":
+                    k += 1
+            continue
+        if w == "nice":
+            k += 1
+            while k < len(words) and words[k].startswith("-"):
+                o = words[k]; k += 1
+                if o in ("-n", "--adjustment"):
+                    k += 1
+            continue
+        if w in ("ionice", "chrt", "taskset", "stdbuf"):
+            k += 1
+            while k < len(words) and words[k].startswith("-"):
+                o = words[k]; k += 1
+                if len(o) == 2 and o[1] in "cnpioe":
+                    k += 1
+            if w in ("chrt", "taskset") and k < len(words):
+                k += 1
+            continue
+        if w == "timeout":
+            k += 1
+            while k < len(words) and words[k].startswith("-"):
+                o = words[k]; k += 1
+                if o in ("-s", "--signal", "-k", "--kill-after"):
+                    k += 1
+            k += 1                                    # DURATION
+            continue
+        if w == "env":
+            k += 1
+            while k < len(words):
+                o = words[k]
+                if o in ("-i", "-0", "--ignore-environment", "--null", "-v", "--debug"):
+                    k += 1
+                elif o in ("-u", "--unset"):
+                    k += 2
+                elif o in ("-C", "--chdir") or o.startswith("--chdir="):
+                    d = o.split("=", 1)[1] if "=" in o else (words[k + 1] if k + 1 < len(words) else "")
+                    k += 1 if "=" in o else 2
+                    cwds = {posixpath.normpath(d)} if (d.startswith("/") and DYN not in d) else {""}
+                elif o in ("-S", "--split-string") or o.startswith("--split-string="):
+                    return None, flags, cwds          # caller: re-lex unknown → loose
+                elif ASSIGN.match(o):
+                    k += 1
+                else:
+                    break
+            continue
+        if w == "xargs":
+            flags.add("xargs")
+            k += 1
+            while k < len(words) and words[k].startswith("-"):
+                o = words[k]; k += 1
+                if o in ("-I", "-n", "-L", "-P", "-s", "-d", "-E", "-a", "--arg-file",
+                         "--max-args", "--max-procs", "--delimiter", "--max-chars"):
+                    if o in ("-a", "--arg-file") and k < len(words):
+                        flags.add("argfile:" + words[k])
+                    k += 1
+            continue
+        break
+    return words[k:], flags, cwds
+
+
+# ── Analysis ──────────────────────────────────────────────────────────────────
+class Analyzer:
+    def __init__(self):
+        self.records = []
+        self.text_all = cmd
+
+    def emit(self, kind, cwds, path=None):
+        if kind == "D":
+            self.records.append(("D", "", path or "deny"))
+            return
+        if path is not None:
+            if "\n" in path or "\x1f" in path or VO in path:
+                self.records.append(("D", "", "unrepresentable path"))
+                return
+            if DYN in path:
+                # Unknown at guard time. A source extension, or a recursive walk of an
+                # unknown place, is denied; anything else stays allowed (unknowable).
+                if kind != "F" or SRC_EXT.search(path.replace(DYN, "")):
+                    self.records.append(("D", "", "dynamic path"))
+                return
+            if path.startswith(("/", "~")):
+                cwds = {""}
+        for c in sorted(cwds):
+            self.records.append((kind, c, "" if path is None else path))
+
+    def judge_tool(self, tool, args, cwds, piped_in, flags, dynamic_tool):
+        if "xargs" in flags:
+            # The file list arrives on stdin (or an -a file): judge the cwd.
+            for f in flags:
+                if f.startswith("argfile:"):
+                    self.emit("F", cwds, f.split(":", 1)[1])
+            self.emit("C", cwds)
+            return
+        if dynamic_tool:
+            recursive = any(re.fullmatch(r"-[A-Za-z]*[rR][A-Za-z]*|--recursive|--dereference-recursive", a)
+                            for a in args)
+            for a in args:
+                if not a.startswith("-"):
+                    self.emit("R" if recursive else "F", cwds, a)
+            return
+        if tool in ("grep", "egrep", "fgrep"):
+            g = parse_grep(args)
+            for f in g["pattern_files"]:
+                self.emit("F", cwds, f)
+            if g["recursive"]:
+                if g["includes"] and all(ALLOWED.search(i) for i in g["includes"]):
+                    return
+                if not g["operands"]:
+                    self.emit("C", cwds)
+                for o in g["operands"]:
+                    self.emit("R", cwds, o)
+            else:
+                for o in g["operands"]:
+                    self.emit("F", cwds, o)
+        elif tool == "sed":
+            in_place, ops, files = parse_sed(args)
+            if in_place:
+                return
+            for o in ops + files:
+                self.emit("F", cwds, o)
+        elif tool in CAT_LIKE:
+            for o in parse_plain(args, "vbsw" if tool == "nl" else "",
+                                 ("--line-range", "--language", "--style") if tool.startswith("bat") else ()):
+                self.emit("F", cwds, o)
+        elif tool in ("head", "tail"):
+            for o in parse_plain(args, "nc" + ("s" if tool == "tail" else ""),
+                                 ("--lines", "--bytes", "--sleep-interval", "--pid")):
+                self.emit("F", cwds, o)
+        elif tool in ("rg", "ag", "ack"):
+            paths, globs, pfiles = parse_rg(args, tool)
+            for f in pfiles:
+                self.emit("F", cwds, f)
+            if globs and all(ALLOWED.search(x) for x in globs):
+                return
+            if not paths:
+                if not piped_in:
+                    self.emit("C", cwds)
+                return
+            for p in paths:
+                self.emit("R", cwds, p)
+
+    def find_exec(self, words, cwds):
+        """find PATHS … -exec TOOL … {} ; — TOOL reads what find walks."""
+        starts = []
+        k = 1
+        while k < len(words) and not words[k].startswith(("-", "(", "!")):
+            starts.append(words[k]); k += 1
+        while k < len(words):
+            if words[k] in ("-exec", "-execdir", "-ok", "-okdir"):
+                j = k + 1
+                sub = []
+                while j < len(words) and words[j] not in (";", "+"):
+                    sub.append(words[j]); j += 1
+                if sub and base(sub[0]) in READ_TOOLS:
+                    if not starts:
+                        self.emit("C", cwds)
+                    for s0 in starts:
+                        self.emit("R", cwds, s0)
+                k = j + 1
+                continue
+            k += 1
+
+    def run(self, text, depth, state):
+        lx = Lexer(text, depth)
+        items = lx.run()
+        if lx.funcdef or re.search(r"(^|[;&|(\s])(function\s+\w|alias\s|shopt\s+-s\s+expand_aliases)", text):
+            # A function/alias runs code under a name the guard can't follow.
+            if loose(text):
+                self.emit("D", None, "function or alias wrapping a read")
+            state = State({""} | state.cwds, {k: None for k in state.vars})
+        self.walk(items, depth, state, text)
+
+    def walk(self, items, depth, state, text):
+        stack = []
+        cur = state
+        ctl = 0
+        chain_or = False
+        prev_op = None
+        last = None          # (old_state, success_state, may_fail, definite, in_pipe)
+        for idx, it in enumerate(items):
+            kind = it[0]
+            if kind == "open":
+                stack.append((cur.copy(), ctl, chain_or, prev_op))
+                chain_or = False; last = None; prev_op = None
+                continue
+            if kind == "close":
+                if stack:
+                    cur, ctl, chain_or, prev_op = stack.pop()
+                else:
+                    cur = State({""} | cur.cwds, {k: None for k in cur.vars})
+                last = (cur.copy(), cur.copy(), False, True, False)
+                continue
+            if kind == "op":
+                o = it[1]
+                if last is not None:
+                    old, succ, may_fail, definite, in_pipe = last
+                    if in_pipe or o in ("|", "&"):
+                        # A pipeline stage's effects stay in its subshell — but the
+                        # stage may be `while read f; do …; done`, whose body shares
+                        # it. RISKY taint is kept (never loosens a verdict).
+                        cur = old.copy()
+                        for k, v in succ.vars.items():
+                            if v is RISKY:
+                                cur.vars[k] = RISKY
+                    elif o == "&&" and not chain_or:
+                        cur = succ
+                    elif may_fail or not definite:
+                        cur = old.merge(succ)
+                    else:
+                        cur = succ
+                if o == "||":
+                    chain_or = True
+                elif o in (";", "&"):
+                    chain_or = False
+                prev_op = o
+                last = None
+                continue
+            rec = it[1]
+            nxt = None
+            for later in items[idx + 1:]:
+                if later[0] == "op":
+                    nxt = later[1]
+                    break
+                if later[0] in ("open", "close"):
+                    break
+            in_pipe = prev_op == "|" or nxt in ("|", "&")
+            definite = ctl == 0 and prev_op not in ("&&", "||")
+            old = cur.copy()
+            succ, may_fail = self.command(rec, depth, cur, prev_op == "|", text)
+            words0 = [w for w in rec["words"]]
+            if words0 and words0[0] in OPEN_KW:
+                ctl += 1
+            if words0 and words0[0] in CLOSE_KW:
+                ctl = max(0, ctl - 1)
+            last = (old, succ, may_fail, definite, in_pipe)
+
+    def command(self, rec, depth, cur, piped_in, text):
+        """Judge one simple command; return (state if it succeeds, may_fail)."""
+        raw = rec["words"]
+        # `for NAME in LIST` / `select`: NAME takes each LIST word. If any could name
+        # source (a source extension, a glob, or run-time text) the loop variable is
+        # RISKY — a read of it is judged as a source read.
+        if len(raw) >= 2 and raw[0] in ("for", "select"):
+            succ = cur.copy()
+            items = [expand(w, cur) for w in raw[3:]] if len(raw) > 2 and raw[2] == "in" else [DYN]
+            risky = any(DYN in w or SRC_EXT.search(w) or re.search(r"[*?\[]", w) for w in items)
+            succ.vars[raw[1]] = RISKY if risky else None
+            return succ, False
+        words = [x for w in raw for x in brace_expand(expand(w, cur))]
+        # Leading keywords (`if cat x.py; then`, `! grep …`, `{ cat x; }`).
+        while words and (words[0] in SKIP_KW or words[0] in OPEN_KW or words[0] in CLOSE_KW):
+            if words[0] == "case":
+                words = []
+                break
+            words = words[1:]
+        # `read NAME…` / mapfile: the names come from input the guard can't see.
+        if words and base(words[0]) in ("read", "mapfile", "readarray"):
+            succ = cur.copy()
+            for w in words[1:]:
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", w):
+                    succ.vars[w] = RISKY
+            if not any(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", w) for w in words[1:]):
+                succ.vars["REPLY"] = RISKY
+            for f in rec["in"]:
+                self.emit("F", cur.cwds, expand(f, cur))
+            return succ, False
+        lead = words
+        # Pure assignments: update literal variables.
+        if words and all(ASSIGN.match(w) for w in words):
+            succ = cur.copy()
+            for w in words:
+                name, val = ASSIGN.match(w).groups()
+                succ.vars[name] = None if (DYN in val or "+=" in w.split("=", 1)[0] + "=") else val
+            for f in rec["in"]:
+                self.emit("F", cur.cwds, expand(f, cur))
+            return succ, False
+        if words and base(words[0]) in ("export", "declare", "typeset", "local", "readonly"):
+            succ = cur.copy()
+            for w in words[1:]:
+                m = ASSIGN.match(w)
+                if m:
+                    succ.vars[m.group(1)] = None if DYN in m.group(2) else m.group(2)
+            return succ, False
+        if words and base(words[0]) == "unset":
+            succ = cur.copy()
+            for w in words[1:]:
+                if not w.startswith("-"):
+                    succ.vars[w] = None
+            return succ, False
+        if words and base(words[0]) in ("cd", "pushd"):
+            succ = cur.copy()
+            succ.cwds = cd_target(cur, words[1:])
+            return succ, True
+        if words and base(words[0]) == "popd":
+            succ = cur.copy()
+            succ.cwds = {""}
+            return succ, True
+
+        inner, flags, cwds = unwrap(words, cur.cwds)
+        if inner is None:
+            if loose(" ".join(words)):
+                self.emit("D", None, "env -S")
+            return cur, False
+        if rec["in"]:
+            judged = not inner or base(inner[0]) in READ_TOOLS or DYN in inner[0] \
+                or base(inner[0]) in SHELLS or base(inner[0]) in ("while", "read", "mapfile", "readarray")
+            if not inner and not lead:
+                judged = True
+            if judged:
+                for f in rec["in"]:
+                    self.emit("F", cwds, expand(f, cur))
+        if not inner:
+            return cur, False
+        w0 = inner[0]
+        b0 = base(w0)
+        dynamic_tool = False
+        args = inner[1:]
+        if DYN in w0:
+            # A run-time word in command position (`$(echo cat)`, `$X`, and the
+            # word-splitting `cat${IFS}x.py`): unknown means "may be a read tool".
+            parts = w0.split(DYN)
+            static = w0.replace(DYN, "")
+            if base(parts[0]) in READ_TOOLS:
+                dynamic_tool = True
+                args = [p for p in parts[1:] if p] + args
+            elif not static or base(static) in READ_TOOLS:
+                dynamic_tool = True
+        if dynamic_tool or b0 in READ_TOOLS:
+            self.judge_tool(b0, args, cwds, piped_in, flags, dynamic_tool)
+        elif b0 == "find":
+            self.find_exec(inner, cwds)
+        elif b0 in SHELLS:
+            sub_state = State(cwds, {})
+            has_c = has_operand = False
+            for k in range(1, len(inner)):
+                if re.fullmatch(r"-[A-Za-z]*c[A-Za-z]*", inner[k]):
+                    has_c = True
+                    if k + 1 < len(inner):
+                        if DYN in inner[k + 1] and loose(text):
+                            self.emit("D", None, "shell code built at run time")
+                        self.run(inner[k + 1].replace(DYN, " "), depth + 1, sub_state)
+                    break
+                if not inner[k].startswith(("-", "+")):
+                    has_operand = True
+                    break
+            if not has_c and not has_operand:
+                for body in rec["stdin"]:
+                    self.run(body, depth + 1, sub_state)
+                if piped_in and loose(text):
+                    self.emit("D", None, "read piped into a shell")
+        elif b0 == "eval":
+            code = " ".join(inner[1:])
+            if DYN in code and loose(text):
+                self.emit("D", None, "eval of code built at run time")
+            self.run(code.replace(DYN, " "), depth + 1, State(cwds, cur.vars))
+        elif b0 in ("source", ".") and len(inner) > 1 and (inner[1] in ("/dev/stdin", "-") or DYN in inner[1]):
+            if loose(text):
+                self.emit("D", None, "source of generated code")
+        return cur, False
+
+
+try:
+    if len(cmd) > 65536:
+        sys.exit(3)
+    a = Analyzer()
+    a.run(cmd, 0, State({SESSION_CWD}, {}))
+    seen = set()
+    out = []
+    for r in a.records:
+        if r not in seen:
+            seen.add(r)
+            out.append("\x1f".join(r))
+    sys.stdout.write("\n".join(out) + ("\n" if out else ""))
+    sys.exit(0)
+except Unparseable:
+    # Bash can't run it as written either, but our lexer may be the one that is
+    # wrong: deny on a loose whole-text match, otherwise hand to the legacy scan.
+    sys.exit(2 if loose(cmd) else 3)
+except TooDeep:
+    sys.exit(2)
+except SystemExit:
+    raise
+except Exception:
+    sys.exit(3)
+PY
+
+# Judge one analyzer record. CWD_REAL is set by the caller to the record's cwd.
+# Each returns 0 when the read is repo source (deny).
+judge_file() {
+  local tok="$1" gm grc g probe rprobe is_src=0
+  gm=$(glob_matches "$tok"); grc=$?
+  if [[ $grc -eq 2 ]]; then
+    probe=$(abs_of "$tok")
+    [[ -z "$probe" ]] || in_repo "$probe"
+    return
+  fi
+  if [[ -n "$gm" ]]; then
+    while IFS= read -r g; do
+      [[ -n "$g" ]] && reads_repo_source "$g" && return 0
+    done <<< "$gm"
+    return 1
+  fi
+  printf '%s' "$tok" | grep -qE "$SRC_EXT" && is_src=1
+  probe=$(abs_of "$tok")
+  if [[ $is_src -eq 0 && -n "$probe" ]]; then
+    rprobe=$(resolve_path "$probe")
+    printf '%s' "$rprobe" | grep -qE "$SRC_EXT" && in_repo "$rprobe" && is_src=1
+  fi
+  [[ $is_src -eq 1 ]] || return 1
+  allowed_loc "$tok" && return 1
+  [[ -z "$probe" ]] && return 0            # relative, cwd unknown: fail closed
+  in_repo "$probe"                          # lands outside the repo → jcode can't help
+}
+
+judge_recursive() {
+  local tok="$1" gm grc g probe
+  allowed_loc "$tok" && return 1
+  gm=$(glob_matches "$tok"); grc=$?
+  if [[ $grc -eq 2 ]]; then
+    probe=$(abs_of "$tok")
+    [[ -z "$probe" ]] || in_repo "$probe" || is_repo_ancestor "$probe"
+    return
+  fi
+  if [[ -n "$gm" ]]; then
+    while IFS= read -r g; do
+      [[ -n "$g" ]] && reads_repo_source "$g" recursive && return 0
+    done <<< "$gm"
+    return 1
+  fi
+  probe=$(abs_of "$tok")
+  [[ -z "$probe" ]] && return 0
+  if [[ -f "$(resolve_path "$probe")" ]]; then
+    reads_repo_source "$probe" recursive
+    return
+  fi
+  in_repo "$probe" || is_repo_ancestor "$probe"
+}
+
+judge_cwd() {
+  [[ -z "$CWD_REAL" ]] && return 0
+  in_repo "$CWD_REAL" || is_repo_ancestor "$CWD_REAL"
+}
+
+deny=0
+USE_LEGACY=1
+if command -v python3 >/dev/null 2>&1; then
+  # -S: skip site.py (~10 ms of a ~15 ms start; the analyzer is stdlib-only).
+  # -E: ignore PYTHON* env vars, so PYTHONPATH/PYTHONSTARTUP can't swap in code.
+  RECORDS=$(printf '%s' "$CMD" | python3 -S -E -c "$GG_PROG" "$CWD_REAL" 2>/dev/null)
+  prc=$?
+  if [[ $prc -eq 2 ]]; then
+    deny=1; USE_LEGACY=0
+  elif [[ $prc -eq 0 ]]; then
+    USE_LEGACY=0
+    SESSION_CWD_REAL="$CWD_REAL"
+    while IFS=$'\x1f' read -r r_kind r_cwd r_path; do
+      [[ -z "$r_kind" ]] && continue
+      CWD_REAL="$r_cwd"
+      case "$r_kind" in
+        D) deny=1 ;;
+        F) judge_file "$r_path" && deny=1 ;;
+        R) judge_recursive "$r_path" && deny=1 ;;
+        C) judge_cwd && deny=1 ;;
+        *) deny=1 ;;                         # unknown record: fail closed
+      esac
+      [[ $deny -eq 1 ]] && break
+    done <<< "$RECORDS"
+    CWD_REAL="$SESSION_CWD_REAL"
+  fi
+fi
+
+if [[ $USE_LEGACY -eq 1 ]]; then
+# ── Legacy scan: used only when the analyzer is unavailable (no python3) or could
+# not lex the command. Unchanged since 2026-10-22; errs toward denying source.
+
 # A heredoc means the command is WRITING (e.g. `cat >> audit.md <<'EOF'`) — allow outright.
 echo "$CMD" | grep -qE '<<' && exit 0
 
 # Strip a trailing shell comment so an allowed path named in a comment cannot exempt a
 # real source grep (the old whole-command substring-exception bug).
 CMD_CLEAN=$(printf '%s' "$CMD" | sed -E 's/[[:space:]]+#.*$//')
-
-ALLOWED_RE='(/tmp/|/proc/|/var/log/|(^|[^[:alnum:]_])state/|\.log([^[:alnum:]]|$)|\.code-index|hook-blocks)'
-SRC_EXT='\.(py|sh|bash|js|mjs|cjs|jsx|ts|tsx|go|rs|rb|php|java|c|h|cpp|hpp|swift|kt|lua|pl)([^[:alnum:]]|$)'
 
 # Split into command segments on  &&  ||  |  ;  &  (and newlines already split rows).
 SEGMENTS=$(printf '%s' "$CMD_CLEAN" | sed -E 's/(&&|\|\||;|&|\|)/\n/g')
@@ -466,6 +1601,11 @@ if [[ $deny -eq 0 ]] \
     if [[ $has_path -eq 0 || $repo_path -eq 1 ]]; then deny=1; break; fi
   done <<< "$PIPELINES"
 fi
+fi   # USE_LEGACY
+
+# Tests assert WHICH path decided (a silent fall-back to the legacy scan would pass
+# most cases and hide a broken analyzer).
+[[ -n "${GREP_GUARD_DEBUG:-}" ]] && echo "grep-guard: path=$([[ $USE_LEGACY -eq 1 ]] && echo legacy || echo analyzer) deny=$deny" >&2
 
 [[ $deny -eq 0 ]] && exit 0
 

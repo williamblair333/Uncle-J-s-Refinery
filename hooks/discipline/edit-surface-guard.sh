@@ -93,17 +93,44 @@ if [[ -z "${SESSION_ID:-}" ]]; then
   exit 0
 fi
 
-is_surface() {
+# Surface list. Reviewed against state/hook-blocks.log 2026-10-23 (513 BLOCKED /
+# 7532 ALLOWED since 2026-05-25):
+#   * narrowed — a test module (tests/test_*.py, tests/*_test.py) is not a deploy
+#     surface: 65 blocks, 13% of all blocks, every one a pre-mortem for a test edit.
+#     conftest.py (runs at collection) and anything under hooks/, scripts/ or
+#     features/ stay gated, so guard code is never exempted with its tests.
+#   * widened — files that ARE the surface-list categories but matched no rule:
+#     .mcp.json (PR #105: a committed project .mcp.json shadowed user scope and killed
+#     all 5 stack servers), settings.local.json (hook + permission config, the
+#     settings.json rule matched only that exact basename), justfile (every repo's
+#     command entry point), *.service / *.timer (systemd: scheduled tasks).
+#   * extensions compare case-insensitively (`deploy.SH` is still a script).
+is_test_module() {
   local f="$1" b
   b="$(basename "$f")"
+  case "$f" in */hooks/*|*/scripts/*|*/features/*) return 1 ;; esac
+  case "$f" in */tests/*|*/test/*) ;; *) return 1 ;; esac
+  [[ "$b" == test_*.py || "$b" == *_test.py ]]
+}
+
+is_surface() {
+  local f="$1" b
+  f="${f,,}"                    # lower-case: extension/name checks are case-blind
+  b="$(basename "$f")"
+  [[ "$b" == .mcp.json ]]       && return 0
+  [[ "$b" == settings.local.json ]] && return 0
+  [[ "$b" == justfile || "$b" == .justfile ]] && return 0
+  [[ "$f" == *.service ]]       && return 0
+  [[ "$f" == *.timer ]]         && return 0
+  is_test_module "$1"           && return 1
   [[ "$f" == *.sh ]]            && return 0
   [[ "$f" == *.py ]]            && return 0
   [[ "$f" == *.toml ]]          && return 0
   [[ "$f" == *.yml ]]           && return 0
   [[ "$f" == *.yaml ]]          && return 0
-  [[ "$b" == Dockerfile* ]]     && return 0
+  [[ "$b" == dockerfile* ]]     && return 0
   [[ "$b" == settings.json ]]   && return 0
-  [[ "$b" == CLAUDE.md ]]       && return 0
+  [[ "$b" == claude.md ]]       && return 0
   [[ "$f" == *"/scripts/"* ]]   && return 0
   [[ "$f" == *"/hooks/"* ]]     && return 0
   [[ "$f" == *"/features/"* ]]  && return 0
@@ -114,14 +141,19 @@ is_surface() {
   return 1
 }
 
-is_surface "$FILE_PATH" || exit 0
+# Judge the path as written AND where it lands: Edit/Write follow symlinks, so an
+# innocuous-looking /tmp/notes.txt -> <repo>/hooks/x.sh edits the hook (red-team
+# 2026-10-23: the literal-only check let that through with no pre-mortem).
+_resolved=$(realpath -m -- "$FILE_PATH" 2>/dev/null) || _resolved=""
+if ! is_surface "$FILE_PATH"; then
+  [[ -n "$_resolved" ]] && is_surface "$_resolved" || exit 0
+fi
 
 # A scratch file under /tmp is not a surface edit (2026-10-16: 75 logged blocks of
 # Write to $scratchpad/*.py). Exempt only what RESOLVES under /tmp — realpath -m
 # folds `..` and follows existing symlinks — and never the token path, so the
 # forgery check below still sees it. realpath missing → no exemption (fail closed).
 # Same rule as the /tmp exemption in surface-write-guard.sh.
-_resolved=$(realpath -m -- "$FILE_PATH" 2>/dev/null) || _resolved=""
 if [[ "$_resolved" == /tmp/?* && "$_resolved" != "${BYPASS_PREFIX}"* \
       && "$FILE_PATH" != "${BYPASS_PREFIX}"* ]]; then
   exit 0
@@ -155,8 +187,15 @@ token_valid() {
   }
   status=$(python3 -c "import json; d=json.load(open('$BYPASS_FILE_PY')); print(d['status'])" 2>/dev/null) || return 1
   [[ "$status" == "PRE-MORTEM-COMPLETE" ]] || return 1
+  # ts must be a plain epoch integer. It reached `(( ))` raw, and bash arithmetic
+  # EVALUATES its operands: ts="now" made now-now=0 (a token that never expires),
+  # ts="a[\$(cmd)]" ran a command, and a future ts gave a negative age that also
+  # never expired (red-team 2026-10-23). Reject all three.
+  [[ "$ts" =~ ^[0-9]{1,12}$ ]] || { log_entry "BLOCKED token-ts-invalid file=$BYPASS_FILE session=$SESSION_ID"; return 1; }
   now=$(date +%s)
-  (( now - ts <= TOKEN_MAX_AGE )) || { rm -f "$BYPASS_FILE"; return 1; }
+  [[ "$now" =~ ^[0-9]+$ ]] || return 1
+  (( 10#$ts <= now + 60 )) || { log_entry "BLOCKED token-ts-future file=$BYPASS_FILE session=$SESSION_ID"; return 1; }
+  (( now - 10#$ts <= TOKEN_MAX_AGE )) || { rm -f "$BYPASS_FILE"; return 1; }
   return 0
 }
 

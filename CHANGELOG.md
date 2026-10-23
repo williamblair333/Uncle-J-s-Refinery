@@ -44,6 +44,89 @@
   `~/.claude/agents` links into `global-agents/`. `healthcheck.sh` checks the agents that ship
   instead of a fixed list. Reasons per agent: `docs/RELIABILITY.md`.
 
+## 2026-10-23 — security hardening: grep-guard analyzer, surface list, Telegram gateway
+
+- **Fixed** grep-guard's false positives. It split commands on spaces with no idea of
+  quoting, so `grep -e 'uv run example.py' f.md` read `example.py'` as a file. It judged
+  relative paths against the session cwd even after `cd /tmp &&`. It couldn't see `S=/tmp/…;
+  cat $S/a.py`. A bash-aware analyzer (an inline python3 lexer, the same approach as
+  push-guard) now lists every path a read tool would open, with the possible working
+  directories. The existing helpers judge each path. Replaying the 605 untruncated logged
+  blocks, 93 (15%) are now allowed; all 93 were reviewed and none read the session repo's
+  source.
+- **Security** grep-guard bypasses closed, each pinned by a test (63 deny cases, 25 allow cases):
+  `$(echo cat) x.py`, `` `echo cat` ``, `cat${IFS}x.py`, `{cat,x.py}`, `echo "$(cat x.py)"`,
+  `<( )`, `sudo`/`env`/`timeout`/`nice`/`watch`/`command`/`exec` wrappers, `bash -c`, `eval`,
+  a heredoc or pipe into a shell, `cat < x.py`, `while … done < x.py`, `grep -efoo x.py`,
+  `grep -d recurse`, piped `rg` with paths, `xargs`/`find -exec`, functions, aliases,
+  for/read loop variables, `cd` inside a subshell/pipeline/after `||`, `cd -`, CDPATH, and any
+  `<<` (which used to allow the whole command). Added tac/nl/less/more/bat. With no python3, or
+  when the lexer fails, the guard falls back to the legacy scan. An unparseable command is
+  denied when it names a read tool and a source file.
+- **Changed** edit-surface-guard's surface list, from the log review: test modules are no
+  longer surfaces (65 blocks, 13% of all blocks). Added `.mcp.json`, `settings.local.json`,
+  `justfile`, `*.service`, `*.timer`. Extensions compare case-blind. surface-write-guard
+  mirrors the additions.
+- **Security** edit-surface-guard checked the path as written. `/tmp/notes.txt` pointing at a
+  hook edited it with no pre-mortem; the resolved path is judged too now. The token's `ts`
+  reached bash arithmetic raw. `"now"` gave a token that never expired, a future ts did the
+  same, and `a[$(cmd)]` ran a command. ts must now be a plain, non-future integer.
+- **Security** Telegram gateway, the four remaining red-team findings:
+  - Skill promotion rejects power-granting frontmatter (`allowed-tools`, `hooks`, `context`,
+    `agent`), `` !`cmd` `` bodies, and zero-width, bidi or fullwidth-obfuscated injection.
+  - A name collision with a different existing skill is refused. `copy2` used to overwrite it,
+    so a draft named `pre-mortem` could replace that gate.
+  - Output redaction gained token-shape and prose-key rules plus `~/`, Windows and relative
+    paths.
+  - The bot token moved out of curl's argv (world-readable in `/proc/<pid>/cmdline`) in the
+    poll loop, drain-offset, session-end-check, vault-session-check, notify-telegram and the
+    installer.
+- **Fixed** `state/hook-blocks.log.20261022` still held the 209 NUL bytes from the
+  2026-10-10 review, plus 2 lines cut mid-character, so plain `grep` returned nothing. Both
+  were stripped; the original is kept as `.pre-nul-strip`. That closes the review.
+## 2026-10-23 — small CPU model for the Pi / tc-vmh-03; sweep stale matches; Bill's decisions
+
+- **Added** `docker/llama-small/compose.yaml` + `just small` (CPU llama-server, 127.0.0.1:8096,
+  multi-arch image). Models: Qwen3.5-2B / 4B Heretic Q4_K_M (Apache-2.0, sha256 checked) in
+  `/opt/models/gguf/`. 2B on this host's CPU: 18.4 tok/s, 2.1 GB RAM.
+- **Fixed** `just waiting`: "awaiting" no longer matches "waiting", and bold labels count only in
+  a HANDOFF's newest entry (old "**Needs Bill:**" lists from finished work were resurfacing).
+- **Changed** `occams-razor` also fires when explaining why something is named, built or chosen
+  the way it is.
+- **Docs** ROADMAP records Bill's 2026-10-23 decisions (Klarheit keeps the 9B, granite removed,
+  Heretic local-only, CampaignGenerator/campaign-forge abandoned, deferrals).
+
+## 2026-10-23 — dcup ships with Uncle J; a hook makes Claude use it
+
+- **Added** `features/dcup/`: `dcup` (the Docker port registry wrapper) vendored from
+  `/opt/lib/docker-port-registry/`, plus its sweeper and an example exceptions file. The registry
+  dir is now `$DCUP_REGISTRY_DIR`, else `/opt/lib/docker-port-registry` if it exists, else
+  `~/.local/share/dcup`, so a new host gets a working registry. The live `ports.db` stays put.
+- **Added** `features/dcup/dcup_guard.py`, a PreToolUse Bash hook. It blocks `docker compose
+  up|create`, `docker compose run --service-ports|-p`, `docker-compose up`, `dcup --bypass up`
+  and `docker run|create` publishing a fixed host port. It parses the command like a shell does:
+  env prefixes, `sudo`/`env`/`timeout`/`nohup`/`xargs`/..., quoting tricks, `;`/`&&`/pipes,
+  `$(...)`, `bash -c`, `eval` and heredocs fed to a shell. It allows read-only docker, `dcup up`,
+  `-p CONTAINER`/`-P`, and text that only mentions the commands (commit heredocs, greps, echo).
+  If the guard itself errors, the command runs anyway. The kill switch is `DCUP_GUARD=off` in
+  the settings env. Tests: `tests/test_dcup_guard.py` (178-case matrix).
+- **Added** `features/dcup/install.sh` (idempotent, `--check`, `--uninstall`). It links
+  `~/.local/bin/dcup`, creates the registry dir, and registers the hook in
+  `~/.claude/settings.json` by marker (`dcup:guard`). The path is written at install time and
+  never committed. It refuses to run from a worktree. `install.sh` §6b2 calls it, and
+  `refinery-doctor.sh` has a new `dcup-guard` check (`--fix` installs).
+  Tests: `tests/test_dcup_install.py`.
+- **Why the old hook was "paused":** it was never wired. `dcup-pretooluse-hook.sh` sat in
+  `/opt/lib/docker-port-registry/` and isn't in `~/.claude/settings.json`. Bill stopped the
+  2026-10-22 attempt over fear that a bad hook would block real commands. The new guard has no
+  side effects (no docker or DB calls) and a tested allow-list.
+- **Ops (outside the repo):** released 52 stale dcup claims from 14 projects whose compose files
+  no longer exist (old `/opt/proj/git/review/...` copies, pre-Gitea `git`, `kanka-ce`). The DB
+  backup is `ports.db.bak.2026-10-23`. gitea, portainer, qr-forge and ser2net were re-registered
+  from their current homes, taking claims from 82 to 41.
+  `/opt/proj/.port-registry` gained 8712 (gitea's win-runner-autoscaler) and 24282–24299
+  (Serena MCP dashboards). 8091 was already there.
+
 ## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
 
 - **Changed** `run_index_local()` calls the jdocmunch CLI only (moved to

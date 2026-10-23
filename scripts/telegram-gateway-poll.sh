@@ -42,9 +42,18 @@ OFFSET="${OFFSET:-0}"
 
 log "Polling Telegram (offset=${OFFSET})"
 
-# Fetch updates via curl (safe: no message content interpolated here)
-UPDATES_JSON=$(curl -sf -X POST \
-  "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" \
+# Fetch updates via curl (safe: no message content interpolated here).
+# The bot token is handed to curl as a config line on stdin (`-K -`) by the printf
+# BUILTIN, never as an argument: /proc/<pid>/cmdline is world-readable, so the old
+# URL argument disclosed the token to every local user on every 2-minute poll
+# (red-team 2026-10-23). A token that isn't <digits>:<urlsafe> is refused, so it
+# can't inject extra curl config lines either.
+if [[ ! "$TELEGRAM_BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
+  log "TELEGRAM_BOT_TOKEN is malformed — skipping."
+  exit 0
+fi
+UPDATES_JSON=$(printf 'url = "https://api.telegram.org/bot%s/getUpdates"\n' "$TELEGRAM_BOT_TOKEN" \
+  | curl -sf -X POST -K - \
   -H "Content-Type: application/json" \
   -d "{\"offset\":${OFFSET},\"limit\":10,\"allowed_updates\":[\"message\",\"callback_query\"],\"timeout\":0}" \
   2>/dev/null) || UPDATES_JSON='{"ok":false,"result":[]}'
@@ -85,7 +94,7 @@ offset_file    = sys.argv[5]
 updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
-from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe, record_stack_callback, record_scout_callback, scout_reason_keyboard
+from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe, assert_skill_install_safe, record_stack_callback, record_scout_callback, scout_reason_keyboard
 import tg_history  # chat continuity: recent turns in, exchange logged out (fail-quiet)
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
@@ -227,13 +236,20 @@ def install_skill(draft_path, skill_name, scope):
         raise ValueError(f"Unsafe skill name rejected: {skill_name!r}")
     subdir = 'global-skills' if scope == 'global' else 'skills'
     skill_dir = os.path.join(proj_root, subdir, skill_name)
-    os.makedirs(skill_dir, exist_ok=True)
-    shutil.copy2(draft_path, os.path.join(skill_dir, 'SKILL.md'))
     link = os.path.join(os.path.expanduser('~/.claude/skills'), skill_name)
-    # Refuse to clobber a real (non-symlink) skill on name collision; only replace
-    # a gateway-owned symlink. Never shutil.rmtree a real directory.
+    # Refuse every destructive collision BEFORE writing anything: an existing skill
+    # dir whose SKILL.md differs from the draft (copy2 used to overwrite it — a draft
+    # named `pre-mortem` replaced that skill), or a link that points at some other
+    # skill. Never shutil.rmtree a real directory.
+    assert_skill_install_safe(skill_dir, draft_path, link)
     assert_skill_target_safe(link)
+    os.makedirs(skill_dir, exist_ok=True)
+    target = os.path.join(skill_dir, 'SKILL.md')
+    if not os.path.exists(target):
+        shutil.copy2(draft_path, target)
     if os.path.islink(link):
+        if os.path.realpath(link) == os.path.realpath(skill_dir):
+            return skill_dir             # already linked here (auto-maintain Part C)
         os.unlink(link)
     os.symlink(skill_dir, link)
     return skill_dir

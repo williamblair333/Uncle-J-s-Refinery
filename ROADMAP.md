@@ -14,28 +14,30 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Ship `dcup` with Uncle J and enforce it** (opened 2026-10-22). `dcup` (Docker port registry,
-  SQLite, 80+ claims) lives only in `/opt/lib/docker-port-registry/`, outside any repo, so new
-  users don't get it. Fixed in place 2026-10-22: compose.yaml discovery, Compose-style project
-  names, `scan` skipping parked copies. Left: vendor it, install it from `install.sh`, ship a
-  PreToolUse hook that blocks `docker compose up` / `docker run -p` that bypass it. (`just
-  heretic up`, `ask-local-up` and the chat page's Start already go through it, 2026-10-22.) Unverified: a past session said
-  its hook is already wired in `~/.claude/settings.json`.
+- **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in
+  `features/dcup/`, installed by `install.sh` §6b2 and checked by the `refinery-doctor`
+  `dcup-guard` check. `dcup_guard.py` blocks `docker compose up` and fixed `docker run -p` that
+  bypass dcup (178-case test matrix). The old hook was never wired. Stale claims went from
+  82 to 41. Left: run `features/dcup/install.sh` from the main checkout on each host, then
+  restart Claude Code. Not covered: commands run inside scripts, and `docker service`/`stack`.
 
 - **Local model lineup: fewest models for every goal** (decided 2026-10-22; text side under
   way). Heretic for text and images, Wan 2.2 for video (and stills if they pass), an image
   model, Whisper, Chatterbox for cloned voices; Ollama and the 9B retired. Steps 1–5 are done
   (faster prefill, host config file, `ask-local-up`, Sinkpoint answered, partikus moved).
-  Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Also left: a small
+  Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Decided
+  2026-10-23: Ollama and the 9B stay, for Klarheit only, until those pre-registered trials end
+  (moving a pinned model mid-trial would void them); granite4.2:8b removed; Heretic stays
+  127.0.0.1-only (Bill: local only for now). Also left: a small
   llama-server model for the Pi / tc-vmh-03, then image, video and speech models. Plan:
   `docs/proposals/2026-10-22-local-model-lineup.md`.
 
-- **n8n ideas, parked for review** (opened 2026-10-21). n8n would run beside Uncle J for
+- **n8n ideas, parked for review** (Bill 2026-10-23: not now) (opened 2026-10-21). n8n would run beside Uncle J for
   webhooks and OAuth SaaS flows. The full list is ranked by project, with traps and four
   decisions for Bill: `docs/proposals/2026-10-21-n8n-ideas.md`. The top picks are bizengine,
   multi-host sync and patentengine deadlines. Resume: "set up n8n".
 
-- **Multiplayer-AI viewer** (opened 2026-10-17). For watching AI players cooperate or compete
+- **Multiplayer-AI viewer** (Bill 2026-10-23: still needs a game and engine named) (opened 2026-10-17). For watching AI players cooperate or compete
   in a game, in real time. The plan:
   - a game-side bridge (localhost state/action API, fixed screen types; the pattern is from
     CLI-Anything's Slay the Spire II mod);
@@ -51,7 +53,7 @@ Completed items age out after ~4 weeks.
   plus the five remote-less repos. Recipe names stay shared: setup, test, run, start, stop,
   status, doctor. The five formerly remote-less repos can get theirs now. free-energy's `just test` didn't finish within 10 minutes (it probably collects
   `accel/tests`); worth a look.
-- **Dictation follow-ups** (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
+- **Dictation follow-ups** (Bill 2026-10-23: discuss later) (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
   (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
   (path in HANDOFF).
@@ -89,7 +91,7 @@ Completed items age out after ~4 weeks.
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
-- **Jarvis track** (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
+- **Jarvis track** (Bill 2026-10-23: later) (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
   that handles whatever he asks. **Two homes, one Jarvis:** this repo is the engine (MCP
   servers, crons, every commit), and `/opt/proj/jaredrhod` is where Bill talks to it (the
   Jarvis persona in its `CLAUDE.md`, plus the `vaults/brain` vault as long-term memory).
@@ -108,7 +110,7 @@ Completed items age out after ~4 weeks.
      10–15 minutes per 480p clip (checked 2026-10-17). Use it for background jobs; use a paid
      API for anything interactive.
 
-- **Stop being the glue: one front door to every project** (opened 2026-10-19). Today Bill `cd`s
+- **Stop being the glue: one front door to every project** (Bill 2026-10-23: later) (opened 2026-10-19). Today Bill `cd`s
   into a project, starts Claude Code, and syncs the Pi and tc-vmh-03 by hand. The goal is to
   minimize his attention per finished outcome (local-first, portable off Claude). Agreed order:
   1. **Measure startup, then trim.** Every session start runs the startup checks and launches
@@ -164,29 +166,20 @@ Completed items age out after ~4 weeks.
   says remove it. Checked 2026-10-22: no data. The log didn't exist until that day's test
   calls, so sessions weren't routing anything through ask_local. Re-check once they do.
 
-- **Codex MCP — GPT through the ChatGPT subscription** (opened 2026-10-04). Second of the three
+- **Codex MCP — GPT through the ChatGPT subscription** (Bill 2026-10-23: later) (opened 2026-10-04). Second of the three
   Hermes-replacement pieces (`ask_local` and the memweave MCP shipped). Codex CLI has an
   MCP-server mode (`codex mcp-server`; confirm the flag at install). Register it so Claude Code
   can get a second opinion or a parallel attempt through OpenAI's own sanctioned client. Needs a
   ChatGPT Plus/Pro login (`codex login`). Gemini can't take this route: Google closed consumer
   OAuth on 2026-06-18, so only an API key works.
 
-- **Should `occams-razor`'s `description` widen to cover non-debugging explanation?**
-  (opened 2026-09-23). The 2026-09-23 amendment fixed the skill's *content*, but the miss that
-  prompted it happened because the skill was never invoked — a question about why something was
-  named what it was did not read as "competing explanations, hypotheses, or root causes". Widening
-  the description would catch that class; it would also fire the skill on ordinary questions in
-  every project, since the description drives selection globally. Needs a call on which error is
-  cheaper. Body was amended without touching it.
+- **[DONE 2026-10-23] `occams-razor` description widened** — it now also fires when explaining
+  why something is named, built or chosen the way it is. A missed invocation (the BOTvunnix
+  case) cost more than an extra skill load on ordinary questions.
 
-- **`CampaignGenerator` has no reachable remote** (opened 2026-09-20). `git ls-remote` returns
-  "Repository not found", so its draft brief could not be landed as a PR and sits untracked in
-  the working tree. It also needs its Anthropic API key variable documented and an offline mode
-  before it can be gated at all — both recorded in the brief.
-- **`campaign-forge` is dormant, not classified** (opened 2026-09-20). Kept as a product rather
-  than marked not-software, because the stack is real and a marker would hide it from every
-  future audit. If the code is genuinely finished with, replace the brief with `.no-product-gate`.
-- **11 non-product repos carry only a local opt-out marker** (opened 2026-09-20). The
+- **[CLOSED 2026-10-23] `CampaignGenerator` and `campaign-forge` abandoned** (Bill). No further
+  product-gate work; `reviewed/CampaignGenerator` carries a `.no-product-gate` marker.
+- **11 non-product repos carry only a local opt-out marker** (Bill 2026-10-23: look later) (opened 2026-09-20). The
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
   in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.
@@ -675,9 +668,32 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   stack, and the reviewer had Write/Edit). One line each in `docs/RELIABILITY.md`.
   install-reliability prunes the dangling links; healthcheck checks whatever ships.
 
-- **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
+- **[DONE 2026-10-23] Expand discipline hook surface list.** Reviewed `hook-blocks.log`
+  from 2026-05-25 on: 513 edit-surface blocks, 7532 allowed. Narrowed: test modules
+  (`tests/test_*.py`, `*_test.py`) were 65 blocks (13%); conftest.py and guard dirs stay
+  gated. Widened: `.mcp.json` (the PR #105 incident), `settings.local.json`, `justfile`,
+  `*.service`, `*.timer`. Extensions now compare case-blind, and a symlink resolving onto a
+  surface is gated. surface-write-guard mirrors the additions.
+- **Open: surface-write-guard can't see shell variables.** 43 of 102 blocks since 2026-10-16
+  are writes to `$S/x.py` with `S=/tmp/…scratchpad`. That guard matches regexes, so the fix
+  is grep-guard's lexer (or a shared one) in front of it.
 
-- **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
+- **[DONE 2026-10-23] Telegram gateway, remaining red-team findings.** (a) and (b) were only
+  half closed by PR #73. (a) Frontmatter keys that grant power (`allowed-tools`, `hooks`,
+  `context`, `agent`) and `` !`cmd` `` bodies are now rejected. Zero-width, bidi and
+  fullwidth obfuscation is normalised before the injection scan. (b) An existing skill dir
+  with a different SKILL.md was overwritten by `copy2`, and any symlink counted as
+  gateway-owned. Both are refused now; an identical SKILL.md (auto-maintain Part C) still
+  installs. (c) Added token-shape rules (Telegram, GitHub, OpenAI, Langfuse, AWS, Slack,
+  Google, JWT, PEM, Bearer), prose and lower-case key names, and output-only `~/`, Windows,
+  MSYS and relative paths. (d) The bot token goes to curl as `-K -` config on stdin in all 6
+  call sites, and a malformed token is refused.
+- **[DONE 2026-10-23] grep-guard quote-blind tokenizer + session-cwd-only paths.** A
+  bash-aware analyzer (an inline python3 lexer) now feeds the judging helpers. It handles
+  quoting, `$( )`, backticks, `<( )` and heredocs. It tracks cd/pushd, subshells and literal
+  `VAR=value`, and unwraps sudo/env/xargs/find -exec/sh -c/eval. The legacy splitter stays as
+  the fallback. Residual: interpreters (`python3 -c open(…)`), `git show`, and file names
+  produced at run time (`cat $(git ls-files)`).
 
 - **[DONE 2026-10-22] jcodemunch skew probe** — healthcheck `running processes match the
   installed version` warns on any jcodemunch/jdocmunch watcher or MCP server that started

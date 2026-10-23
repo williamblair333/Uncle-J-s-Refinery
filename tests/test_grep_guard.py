@@ -428,3 +428,166 @@ def test_glob_operands_allowed(glob_repo, cmd):
 @pytest.mark.parametrize("cmd", GLOB_DENY)
 def test_glob_operands_denied(glob_repo, cmd):
     assert _run(cmd, glob_repo) is True
+
+
+# --- 2026-10-23: the bash-aware analyzer ------------------------------------------
+# The legacy scan split the raw command on spaces with no notion of quoting or of
+# where the shell is. A quote-aware lexer now feeds the judging helpers; cd/pushd,
+# subshells and literal VAR=value assignments are followed; wrappers, sh -c, eval
+# and heredoc-fed shells are unwrapped. Every bypass below was ALLOWED before
+# (or allowed only by luck) and every allow below was a real false positive.
+
+def _run_dbg(cmd, cwd=REPO, env=None):
+    payload = {"tool_input": {"command": cmd}, "session_id": "test", "cwd": str(cwd)}
+    r = subprocess.run(["bash", HOOK], input=json.dumps(payload), capture_output=True,
+                       text=True, env={**(env or ENV), "GREP_GUARD_DEBUG": "1"})
+    return '"deny"' in r.stdout.replace(" ", ""), r.stderr
+
+
+ANALYZER_DENY = [
+    # cd tracking: relative paths resolve against the directory the shell is in
+    "cd scripts && cat referee.py",
+    "cd scripts; cat referee.py",
+    "cd scripts && sed -n 1,5p referee.py",
+    "pushd scripts && cat referee.py",
+    "pushd scripts >/dev/null; head referee.py",
+    "(cd /tmp) && cat scripts/referee.py",          # a subshell's cd does not leak out
+    "cd /tmp | cat scripts/referee.py",             # nor does a pipeline stage's
+    "cd /nonexistent-gg-dir; cat scripts/referee.py",  # failed cd: still in the repo
+    "cd /tmp || cat scripts/referee.py",
+    "cd /tmp && cd - && cat scripts/referee.py",    # OLDPWD unknown → fail closed
+    "cd $GG_UNSET_DIR && cat referee.py",
+    "CDPATH=/tmp cd scripts && cat referee.py",
+    "f() { cd /tmp; }; f && cat scripts/referee.py",
+    # quoting / escaping
+    'cat "scripts/referee.py"',
+    "cat scr'ipts'/referee.py",
+    "c\\at scripts/referee.py",
+    '"cat" scripts/referee.py',
+    "cat scripts/referee.py # <<",                  # `<<` no longer exempts the command
+    "cat scripts/referee.py; : <<X\nX",
+    'cat "scripts/referee.py',                      # unbalanced quote: fail closed
+    # command words computed at run time
+    "$(echo cat) scripts/referee.py",
+    "`echo cat` scripts/referee.py",
+    "X=cat; $X scripts/referee.py",
+    # substitutions run
+    'echo "$(cat scripts/referee.py)"',
+    "echo $(cat scripts/referee.py)",
+    "x=$(head -5 scripts/referee.py)",
+    "diff <(cat scripts/referee.py) /dev/null",
+    "(cat scripts/referee.py)",
+    "{ cat scripts/referee.py; }",
+    "if cat scripts/referee.py >/dev/null; then echo y; fi",
+    # wrappers
+    "sudo cat scripts/referee.py",
+    "env cat scripts/referee.py",
+    "env -i PATH=/usr/bin cat scripts/referee.py",
+    "timeout 5 cat scripts/referee.py",
+    "nice -n 5 head scripts/referee.py",
+    "command cat scripts/referee.py",
+    "x=1 cat scripts/referee.py",
+    "nohup tail scripts/referee.py",
+    # code handed to another shell
+    "bash -c 'cat scripts/referee.py'",
+    'sh -c "cd scripts && cat referee.py"',
+    "eval cat scripts/referee.py",
+    'eval "cat scripts/referee.py"',
+    "bash <<'EOF'\ncat scripts/referee.py\nEOF",
+    "echo 'cat scripts/referee.py' | bash",
+    # input redirection reads the file
+    "cat < scripts/referee.py",
+    "while read l; do echo \"$l\"; done < scripts/referee.py",
+    # option syntax
+    "grep -efoo scripts/referee.py",                # pattern by -e: the .py is the FILE
+    "grep -e foo scripts/referee.py",
+    "grep --regexp=foo scripts/referee.py",
+    "grep -f scripts/referee.py README.md",         # -f reads the pattern file
+    "grep -d recurse foo .",
+    "grep --directories=recurse foo scripts",
+    "grep -n --include '*.py' -r foo .",
+    "ls | rg foo scripts/",                          # piped rg with explicit paths
+    # variables
+    "F=scripts/referee.py; cat $F",
+    "D=scripts; cat $D/referee.py",
+    'D=scripts; cat "${D}/referee.py"',
+    "cat $GG_UNSET/referee.py",                      # unknown + source ext
+    "for f in scripts/*.py; do cat $f; done",
+    "git ls-files | while read f; do cat \"$f\"; done",
+    # file lists from elsewhere
+    "git ls-files | xargs grep foo",
+    "find scripts -name '*.py' -exec cat {} \\;",
+    "f() { cat \"$@\"; }; f scripts/referee.py",
+]
+
+
+@pytest.mark.parametrize("cmd", ANALYZER_DENY)
+def test_analyzer_denies_bypass(cmd):
+    denied, err = _run_dbg(cmd)
+    assert denied is True, f"expected DENY: {cmd!r} ({err.strip()})"
+
+
+ANALYZER_ALLOW = [
+    # (a) quoted pattern holding a source name — the reported false positive
+    "grep -e 'uv run example.py' README.md",
+    "grep -n 'scripts/x.py' README.md",
+    'grep -c "import x.py" CHANGELOG.md',
+    "printf '%s' x | grep -c 'scripts/x.py'",
+    # (b) cd away from the repo first
+    "cd /tmp && cat x.py",
+    "cd /tmp && grep -rn foo .",
+    "cd /opt/proj/hearth && grep -rn foo src/",
+    "(cd /tmp && cat x.py)",
+    "pushd /tmp && head x.py",
+    # literal variables (coordinator-reported false positive, 2026-10-23)
+    "S=/tmp/claude-1000/-opt-proj-x/abc/scratchpad/photo; cd /opt/proj/partikus && "
+    "(echo \"import sys\"; cat $S/flange_script.py) > $S/run_flange.py && python3 $S/run_flange.py",
+    'S=/tmp/gg-scratch; cat "$S/a.py"',
+    "S=/tmp/gg-scratch; cat ${S}/a.py",
+    "export S=/tmp/gg-scratch; head $S/a.py",
+    "cat $HOME/.local/bin/x.sh",
+    # text that is not executed
+    'echo "cat scripts/referee.py"',
+    "git commit -m 'cat scripts/referee.py'",
+    "cat >> CHANGELOG.md <<'EOF'\ncat scripts/referee.py\nEOF",
+    "git commit -F - <<'EOF'\nfix: cat scripts/referee.py\nEOF",
+    # plain reads that were always fine
+    "pytest tests/test_x.py | tail -5",
+    "python3 scripts/referee.py --help | head -20",
+    "sed -i 's/a/b/' scripts/referee.py",
+    "sed -ni 's/a/b/p' scripts/referee.py",
+    "tail -n 20 state/hook-blocks.log",
+    "for f in docs/a.md docs/b.md; do cat $f; done",
+    "command -v cat",
+]
+
+
+@pytest.mark.parametrize("cmd", ANALYZER_ALLOW)
+def test_analyzer_allows(cmd):
+    denied, err = _run_dbg(cmd)
+    assert denied is False, f"expected ALLOW: {cmd!r} ({err.strip()})"
+
+
+@pytest.mark.parametrize("cmd", ["cat scripts/referee.py", "grep -e 'x.py' README.md",
+                                 "cd /tmp && cat x.py"])
+def test_analyzer_is_the_deciding_path(cmd):
+    # A crash in the analyzer would fall back to the legacy scan and still pass most
+    # cases. Pin that normal commands are decided by the analyzer.
+    _, err = _run_dbg(cmd)
+    assert "path=analyzer" in err, err
+
+
+def test_no_python3_falls_back_to_legacy_and_still_denies(tmp_path):
+    import shutil
+    shim = tmp_path / "bin"
+    shim.mkdir()
+    for tool in ("jq", "grep", "sed", "realpath", "git", "date", "tr", "head", "iconv",
+                 "wc", "find", "mkdir", "rmdir", "mv", "cat", "bash", "dirname"):
+        p = shutil.which(tool)
+        if p:
+            os.symlink(p, shim / tool)
+    env = {**ENV, "PATH": str(shim)}
+    denied, err = _run_dbg("cat scripts/referee.py", env=env)
+    assert denied is True and "path=legacy" in err, err
+    denied, err = _run_dbg("crontab -l | grep x", env=env)
+    assert denied is False, err
