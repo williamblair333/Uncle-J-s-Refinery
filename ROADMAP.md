@@ -627,7 +627,14 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 - **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
 - **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. Plus: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
 
-- **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
+- **[PARTIAL 2026-10-23] Compressed `jcodemunch_guide`** — measured: the guide is now 2,804
+  chars (the 4.6–5.1k-token estimate is stale) and nothing here loads it per session. The
+  catalogue is 76% of it and duplicates the MCP tool list, so a deterministic `compact` cut
+  (680 chars) beats LLM compression. Built `scripts/guide_bench/` (20 routing queries, local
+  model as router) and an upstream-ready patch (`docs/proposals/2026-10-23-jcodemunch-guide-compact.patch`).
+  **Not done:** the benchmark run (Heretic at ~0.6 tok/s under host load, two timeouts) and the
+  upstream filing (Bill's call). Details: `docs/proposals/2026-10-23-compressed-jcodemunch-guide.md`.
+  Original: **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
 - **[DONE 2026-10-23] ralph-harness env-strip** — `ralph-harness.sh` unsets both keys after its
   CLI check; the Telegram gateway passes a filtered `env=` to its `claude` subprocess. Tests:

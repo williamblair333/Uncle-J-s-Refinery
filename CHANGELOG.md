@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-23 — backlog sweep B: guide benchmark, CLAUDE.md de-dup, local rail
+
+- **Added** `scripts/guide_bench/` (20 routing queries; full vs compact vs LLM-compressed
+  jcodemunch guide, the local model as router) and an upstream-ready `compact` patch for
+  `jcodemunch_guide` (`docs/proposals/2026-10-23-*`). The guide is 2,804 chars now, 76% of it
+  the tool catalogue. The benchmark didn't finish: Heretic ran at ~0.6 tok/s under host load.
+
 ## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
 
 - **Changed** `run_index_local()` calls the jdocmunch CLI only (moved to

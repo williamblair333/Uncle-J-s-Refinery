@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — backlog sweep B (guide bench, CLAUDE.md de-dup, local rail)
+
+- Guide benchmark built but **not run to completion**: Heretic generated ~0.6 tok/s (load avg
+  17–22, CI containers). Re-run `.venv/bin/python scripts/guide_bench/bench.py --out
+  state/guide-bench.json` on an idle host, then decide on filing the compact patch upstream.
+
 ## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
 
 **Most important:** jdocmunch's CLI exits 0 when it fails (`{"success": false}`); anything
