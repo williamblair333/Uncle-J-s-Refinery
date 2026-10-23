@@ -1,0 +1,34 @@
+# ComfyUI for image (Z-Image-Turbo) and video (Wan 2.2 T2V A14B GGUF) generation.
+# Start it with `just comfy up -d`; models with `just comfy-models`; jobs with
+# `just image "prompt"` / `just video "prompt"`. Built locally from docker/comfyui/Dockerfile
+# (pinned upstream commit), not pulled.
+#
+# Loopback only, like llama-heretic and Ollama. Runs with --offline (frontend CSP blocks
+# internet) and the HF hubs set offline; the models are mounted read-only.
+# Dynamic VRAM (ComfyUI's default here) offloads weights to RAM under GPU pressure, so it
+# fits beside Ollama's qwen3.5:9b; stop llama-heretic first for speed (scripts/comfy-job.sh
+# warns when it is awake). Measured numbers: docs/STACK.md "Image and video generation".
+services:
+  comfyui:
+    build: .
+    image: uncle-j/comfyui:v0.39.0
+    container_name: comfyui
+    restart: "no"          # GPU-hungry: start it when wanted, not at boot
+    ports:
+      - "127.0.0.1:8188:8188"
+    volumes:
+      - /opt/models/z-image-turbo:/models/z-image-turbo:ro
+      - /opt/models/wan2.2:/models/wan2.2:ro
+      - /opt/outputs/comfyui:/data/output
+      - comfyui-user:/data/user
+    shm_size: "8gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  comfyui-user:

@@ -29,10 +29,14 @@ Completed items age out after ~4 weeks.
   2026-10-23: Ollama and the 9B stay, for Klarheit only, until those pre-registered trials end
   (moving a pinned model mid-trial would void them); granite4.2:8b removed; Heretic stays
   127.0.0.1-only (Bill: local only for now). Also left: a small
-  llama-server model for the Pi / tc-vmh-03, then image and video models. Speech is done
+  llama-server model for the Pi / tc-vmh-03. Speech is done
   (2026-10-23, both CPU only): whisper.cpp large-v3-turbo (`just whisper up -d`, :8092, a 30 s
   clip in ~31-42 s) and Chatterbox Nano cloned voices (`just tts up -d`, :8093, ~5 s a
-  sentence); numbers in `docs/STACK.md` "Speech". Plan:
+  sentence); numbers in `docs/STACK.md` "Speech". **Image and video done 2026-10-23:**
+  ComfyUI (`just comfy up -d`, `just image`, `just video`, :8188) with Z-Image-Turbo (32 s per
+  warm 1024² image) and Wan 2.2 A14B Q4_K_M (8.1 min per 5 s 480p clip); numbers in
+  `docs/STACK.md` "Image and video generation". Still to try: Wan stills vs Z-Image (the
+  culling test). Plan:
   `docs/proposals/2026-10-22-local-model-lineup.md`.
 
 - **n8n ideas, parked for review** (Bill 2026-10-23: not now) (opened 2026-10-21). n8n would run beside Uncle J for
@@ -114,15 +118,15 @@ Completed items age out after ~4 weeks.
   1. **Daily email triage.** The Gmail and Calendar connectors already exist. Draft replies and
      flag what matters, but only draft: Bill sends. This is the first job that acts for him on
      a schedule rather than when asked.
-  2. **Image generation.** Reinstall a local SDXL front end (Fooocus was removed 2026-10-04)
-     and wrap it in a small MCP. The 3060 can handle it.
+  2. **Image generation.** Local generation runs (ComfyUI + Z-Image-Turbo, `just image`,
+     2026-10-23). Left: wrap it in a small MCP.
   3. **Better voice** for `/opt/proj/voice-line`: the ElevenLabs API or a local voice-cloning
      model.
   4. **Outbound phone calls.** A phone number (Twilio or ElevenLabs agents) plus a voice
      pipeline. This is the largest piece.
-  5. **Video generation.** Wan 2.2 14B GGUF at Q4–Q5 runs locally on the 3060, at about
-     10–15 minutes per 480p clip (checked 2026-10-17). Use it for background jobs; use a paid
-     API for anything interactive.
+  5. **Video generation.** Running: Wan 2.2 14B GGUF Q4_K_M with the lightx2v 4-step LoRAs
+     takes 8.1 min per 5 s 832×480 clip on the 3060 (`just video`, measured 2026-10-23). Use it
+     for background jobs; use a paid API for anything interactive.
 
 - **Stop being the glue: one front door to every project** (Bill 2026-10-23: later) (opened 2026-10-19). Today Bill `cd`s
   into a project, starts Claude Code, and syncs the Pi and tc-vmh-03 by hand. The goal is to

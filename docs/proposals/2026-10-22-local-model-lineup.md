@@ -1,6 +1,7 @@
 # Local model lineup: fewest models, every goal (2026-10-22)
 
-**Status:** decided by Bill, not started. He prioritizes it later.
+**Status:** decided by Bill. As of 2026-10-23 all five jobs run (#2, #3 on ComfyUI; #4, #5
+on CPU); Ollama's retirement waits on Klarheit.
 **Goal:** cover text, image understanding, image generation, video, speech-to-text and
 cloned-voice speech on this host (RTX 3060 12 GB, 46 GB RAM) with as few models and GPU
 users as possible. Commercial use must be allowed.
@@ -18,8 +19,8 @@ users as possible. Commercial use must be allowed.
 | # | Job | Model | License | Runtime | GPU |
 |---|---|---|---|---|---|
 | 1 | Text, reasoning, code, reading images | Qwen3.6-35B-A3B Heretic (running, PR #165) | Apache 2.0 | llama-server | 4.8 GB awake, 0 asleep |
-| 2 | Image generation | Z-Image-Turbo (Apache), or FLUX.3 Klein (Kommunity, < $5M) | see left | ComfyUI | most of 12 GB |
-| 3 | Video | Wan 2.2 (Apache); LTX-2.x (< $10M) if sound is wanted | see left | ComfyUI | all of 12 GB |
+| 2 | Image generation | Z-Image-Turbo (running 2026-10-23); FLUX.3 Klein (Kommunity, < $5M) not tried | Apache 2.0 | ComfyUI | 4.7–5.0 GB peak, 32 s per warm 1024² image |
+| 3 | Video | Wan 2.2 T2V A14B Q4_K_M + lightx2v 4-step (running 2026-10-23); LTX-2.x (< $10M) if sound is wanted | Apache 2.0 | ComfyUI | 7.3 GB peak, 8.1 min per 5 s 480p clip |
 | 4 | Speech-to-text | Whisper large-v3-turbo q5_0 (running, `just whisper`, :8092) | MIT | whisper.cpp server | none (CPU) |
 | 5 | Speech with cloned voices | Chatterbox Nano (running, `just tts`, :8093) | MIT, output watermarked | `docker/chatterbox/server.py` | none (CPU) |
 

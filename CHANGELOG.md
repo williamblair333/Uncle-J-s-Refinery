@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-10-23 — local image and video generation (ComfyUI, Z-Image-Turbo, Wan 2.2)
+
+- **Added** `docker/comfyui/`: ComfyUI v0.39.0 built from the pinned upstream commit plus
+  ComfyUI-GGUF, `--offline`, `127.0.0.1:8188`, models mounted read-only. No Microsoft-owned
+  packages in the image. `just comfy up -d|down|logs|build` (up via dcup, like `heretic`).
+- **Added** `just comfy-models` (`scripts/comfy-models.sh` + `docker/comfyui/models.txt`):
+  downloads from commit-pinned Hugging Face URLs. It keeps a file only if its sha256 matches
+  the Git LFS pointer at that same commit.
+  Z-Image-Turbo and Wan 2.2 T2V A14B Q4_K_M + lightx2v 4-step LoRAs, all Apache 2.0.
+- **Added** `just image "prompt"` / `just video "prompt"` (`scripts/comfy_job.py`): builds
+  the workflow, queues it, and prints the output path, wall time and peak VRAM. It then
+  unloads the models, so an idle ComfyUI doesn't crowd out Heretic or Ollama. It waits
+  rather than overlap a Klarheit trial: Klarheit's Ollama calls time out at 120 s, and one
+  overlap already reached 101 s. Tests: `tests/test_comfy.py`.
+- **Measured:** 1024² image in 32 s warm, 68–70 s cold (4.7–5.0 GB). 5 s 832×480 clip in
+  8.1 min (7.3 GB). Both ran beside Heretic and Ollama. Docs: `docs/STACK.md`. ROADMAP and
+  the lineup proposal updated.
+
 ## 2026-10-23 — local speech: whisper.cpp and Chatterbox Nano, both on CPU
 
 - **Added** `docker/whisper/compose.yaml` (`just whisper up -d`, 127.0.0.1:8092): whisper.cpp

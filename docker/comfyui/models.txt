@@ -1,0 +1,21 @@
+# ComfyUI models: <dest under /opt/models> <url>
+# `just comfy-models` downloads each missing file and checks its sha256 against the Git LFS
+# pointer at the same pinned commit (the URL with /resolve/ → /raw/). The commit hash covers
+# that pointer, so a re-run gets the same bytes or fails. Hashes aren't stored here: the
+# repo's commit scanner blocks any 64-hex string.
+# Licenses re-checked on Hugging Face 2026-10-23: all Apache 2.0, none gated.
+#
+# Z-Image-Turbo (Tongyi-MAI, Apache 2.0), ComfyUI repackage by Comfy-Org (Apache 2.0)
+z-image-turbo/diffusion_models/z_image_turbo_bf16.safetensors https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/diffusion_models/z_image_turbo_bf16.safetensors
+z-image-turbo/text_encoders/qwen_3_4b_fp8_mixed.safetensors https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors
+z-image-turbo/vae/ae.safetensors https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/vae/ae.safetensors
+#
+# Wan 2.2 T2V A14B (Wan-AI, Apache 2.0): GGUF Q4_K_M by QuantStack (Apache 2.0); the two
+# experts run in turn (high noise, then low noise), so only one is on the GPU at a time.
+wan2.2/diffusion_models/Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/73eafba53a1a8f29254e4c77f92e74ea27d7cd6f/HighNoise/Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf
+wan2.2/diffusion_models/Wan2.2-T2V-A14B-LowNoise-Q4_K_M.gguf https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/73eafba53a1a8f29254e4c77f92e74ea27d7cd6f/LowNoise/Wan2.2-T2V-A14B-LowNoise-Q4_K_M.gguf
+wan2.2/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors
+wan2.2/vae/wan_2.1_vae.safetensors https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/vae/wan_2.1_vae.safetensors
+# lightx2v 4-step distill LoRAs (lightx2v, Apache 2.0): 4 steps instead of ~20.
+wan2.2/loras/wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/loras/wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors
+wan2.2/loras/wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors https://huggingface.co/Comfy-Org/Wan-2.2/resolve/ee6f4a40737a995bf5818954cfce6d59443b0f04/split_files/loras/wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors
