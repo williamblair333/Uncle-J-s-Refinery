@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
+
+**Most important:** jdocmunch's CLI exits 0 when it fails (`{"success": false}`); anything
+that shells out to `jdocmunch-mcp index-local` must read the JSON, not the exit code.
+
+- `run_index_local()` is CLI-only now (`scripts/lib/jdocmunch-index-local.sh`).
+
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
 **Most important:** `just waiting` now prints ROADMAP open items, the newest bold

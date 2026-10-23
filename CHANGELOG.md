@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
+
+- **Changed** `run_index_local()` calls the jdocmunch CLI only (moved to
+  `scripts/lib/jdocmunch-index-local.sh`). **Fixed** on the way: the CLI exits 0 on
+  `{"success": false}`, so the old CLI fallback counted a failed refresh as reindexed. The
+  verdict now comes from the JSON. Tests: `tests/test_jdocmunch_index_local.py`.
+
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 
 - **Fixed** the status sweep (`scripts/waiting_sweep.py`) missed most open work: it read only

@@ -242,7 +242,11 @@ Completed items age out after ~4 weeks.
   `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`
   then `diff` against the installed copy. Better than reading `.venv/` when the question is
   whether the *local install* has drifted from upstream, rather than what the installed code does.
-- **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
+- **[DONE 2026-10-23] Dropped the Python-API call for the plain CLI in `run_index_local()`.**
+  Now in `scripts/lib/jdocmunch-index-local.sh`, CLI only, tested with a stub CLI. Found on the
+  way: the CLI exits 0 on `{"success": false}` (1.149.0), so the old fallback counted a failed
+  refresh as reindexed; the verdict is now read from the JSON. Original entry follows.
+  **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
   reason it exists — "the CLI exposes no way to pass ignore patterns" — stopped being true
   when upstream #108 added `--extra-ignore-pattern`, `--no-ai-summaries` and `--embeddings`.
   The CLI is already the fallback and already carries all three. The API still buys
