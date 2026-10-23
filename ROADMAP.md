@@ -67,9 +67,12 @@ Completed items age out after ~4 weeks.
   files. That's low harm, because the block only lists files and searches. Decide whether to
   file it with jgravelle/jcodemunch-mcp. A custom snapshot hook (tasks, decisions, prompts) is
   **not** planned: Claude Code's compaction summary already carries those.
-- **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
-  (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
-  touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
+- **REA upstream follow-up** (opened 2026-10-12). **#2188 was MERGED 2026-10-14** (merge
+  `41a2e84`; the maintainer addressed the review threads himself). #2187 (design issue, `--scope
+  local`) is still open, labelled `enhancement`/`P2: medium`/`area: setup`. As of 2026-10-23 it has
+  no maintainer reply, only two third-party comments: a design review and a native-Windows quoting
+  workaround. If they say "PR welcome", the touched modules are listed in #2187. Install Node
+  ≥22.19 first, since REA's checks need it.
 - **[DONE 2026-10-22] grep-guard false positive on an unexpanded glob** — globs now expand
   against the session cwd and each match is judged; `-r` on a plain non-source file is
   allowed; `cat scripts/*` (which hid source) is now denied. Baseline in audit-baselines.md.
@@ -80,7 +83,9 @@ Completed items age out after ~4 weeks.
 - **Track upstream issue [dwarvesf/claude-guardrails#20](https://github.com/dwarvesf/claude-guardrails/issues/20)**
   (filed 2026-10-22): the escalation hook's grep reads its `--…` pattern as an option. If they
   say "PR welcome", send the `-e` fix. Until it lands, `scripts/fix-guardrails-grep.sh` (run by
-  `install-guardrails.sh`) keeps the local copy repaired.
+  `install-guardrails.sh`) keeps the local copy repaired. Status 2026-10-23: #17 and #20 are both
+  open with zero comments. The repo's last push was 2026-09-08 (#18/#19), so the maintainer is
+  quiet rather than declining.
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
@@ -192,8 +197,14 @@ Completed items age out after ~4 weeks.
   actually run there. Also unresolved: with the test fixtures escaped, the repo contains no live
   positive, so a broken detector would not surface via `jscrub audit` — the unit tests are the only
   guard.
-- **[READY TO FILE — needs Bill's sign-off, do not open unattended] Upstream: `get_watch_status`
-  reports `any_stale: false` without measuring anything** (`jgravelle/jcodemunch-mcp`, verified
+- **[NOT FILED 2026-10-23 — already fixed upstream as [jcodemunch-mcp#565](https://github.com/jgravelle/jcodemunch-mcp/issues/565), closed 2026-09-01, shipped v1.108.315]**
+  Re-checked against installed 1.108.391: `get_watch_status` now routes each repo through
+  `FreshnessProbe.repo_freshness` (`tools/get_watch_status.py:50-72`). The watcher's flag is
+  renamed `watcher_flagged_stale` (`:135`), and `any_stale` is set from the measured
+  freshness (`:157`). A live call returned `any_stale: true` with one repo `stale` and
+  `freshness_checked: true`. The original write-up follows for history.
+  Upstream: `get_watch_status`
+  reports `any_stale: false` without measuring anything (`jgravelle/jcodemunch-mcp`, verified
   against installed 1.108.288). Staleness is read from `get_reindex_status`, which is **in-process,
   in-memory** state (`tools/get_watch_status.py:73,90`). The watcher runs in the systemd daemon —
   a different PID — so a querying MCP server has no reindex state, `has_any_reindex_state()` is
@@ -247,9 +258,14 @@ Completed items age out after ~4 weeks.
   when upstream #108 added `--extra-ignore-pattern`, `--no-ai-summaries` and `--embeddings`.
   The CLI is already the fallback and already carries all three. The API still buys
   structured JSON in one call, so this is a simplification, not a fix; weigh it on its own.
-- **Still worth reporting:** `index_local` crashes with `KeyError 'owner'` when given a name
-  colliding with its own sidecar namespace (e.g. `X.summary`) — found 2026-08-08, and
-  **not** among the 92 issues on the upstream tracker as of 2026-08-16.
+- **[FILED 2026-10-23 — [jdocmunch-mcp#196](https://github.com/jgravelle/jdocmunch-mcp/issues/196)]**
+  `index_local` crashes with `KeyError 'owner'` when given a name colliding with its own
+  sidecar namespace (e.g. `X.summary`). Found 2026-08-08. Reproduced on installed 1.149.0 in a
+  scratch `DOC_INDEX_PATH`. The crash is at `storage/doc_store.py:1724` (`load_index` reads X's
+  summary sidecar as the index). A second symptom of the same cause is silent: `--name X.related`
+  succeeds and overwrites X's related-sections sidecar with the new index. Upstream main is still
+  unguarded (`_safe_repo_component` checks characters only). Watch #196 for a fix, then drop
+  the item.
 - **[FILED 2026-08-16 — [jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120)]**
   jdocmunch's watcher flag gap (`jgravelle/jdocmunch-mcp`,
   `service_installer.py`) — found 2026-08-15. `watch-install` accepts no arguments and
