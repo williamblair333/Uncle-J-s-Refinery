@@ -1,0 +1,26 @@
+# Chatterbox Nano text-to-speech with cloned voices, CPU only (no GPU reservation).
+# Start it with `just tts up -d`; the first `up` builds the image (~3 GB, a few minutes).
+# Loopback only. API: docker/chatterbox/server.py (OpenAI-shaped POST /v1/audio/speech).
+#
+# Weights: /opt/models/chatterbox-nano (HF ResembleAI/chatterbox-nano, MIT; sha256 checked).
+# Voices: drop a 5-20 s clean reference clip in /opt/models/chatterbox-voices/<name>.wav and
+#   ask for "voice": "<name>". Output carries Resemble's PerTh watermark.
+# Measured 2026-10-23 (Ryzen 5 5500, load ~15 from other jobs): load 20 s, 4.3 GB RAM idle,
+#   5.4 GB peak; ~5 s per sentence (a 4.7 s sentence took 8.9 s warm; 3 sentences / 11.6 s
+#   of audio took 15.4 s). First use of a voice adds ~3 s, then it's cached.
+#   Speaker similarity to the reference (Chatterbox's own voice encoder): clone 0.87,
+#   built-in voice 0.56. Whisper read the clone back word for word.
+services:
+  chatterbox:
+    build: .
+    image: refinery/chatterbox-nano:5de7a54
+    container_name: chatterbox
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8093:8080"
+    volumes:
+      - /opt/models/chatterbox-nano:/models:ro
+      - /opt/models/chatterbox-voices:/voices:ro
+    environment:
+      TTS_THREADS: "6"
+    mem_limit: 8g

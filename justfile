@@ -94,6 +94,14 @@ ask-local-up:
 heretic *args:
     ./scripts/heretic.sh {{args}}
 
+# speech-to-text (whisper.cpp, CPU, 127.0.0.1:8092): just whisper up -d | down | logs (up via dcup)
+whisper *args:
+    ./scripts/speech.sh whisper {{args}}
+
+# cloned-voice text-to-speech (Chatterbox Nano, CPU, 127.0.0.1:8093): just tts up -d | down | logs
+tts *args:
+    ./scripts/speech.sh tts {{args}}
+
 # small CPU model for the Pi / tc-vmh-03 (llama-server, 127.0.0.1:8096): SMALL_MODEL=qwen3.5-4b-heretic SMALL_GGUF=… just small up -d
 small *args:
     ./scripts/small.sh {{args}}

@@ -1,0 +1,32 @@
+# whisper.cpp speech-to-text server, CPU only (the CPU image has no CUDA; no GPU reservation).
+# Start it with `just whisper up -d`. Loopback only.
+#
+# Model: /opt/models/whisper/ggml-large-v3-turbo-q5_0.bin (HF ggerganov/whisper.cpp, MIT,
+#   574 MB, sha256 394221709cd5…ffa7e2 checked). Defaults to English (-l en skips language
+#   detection); send language=auto, or a code, as a form field for anything else.
+# -t 6 = the Ryzen 5 5500's physical cores. whisper-cli on the 30 s clip under load:
+#   -t 6 26.7 s, -t 12 66.4 s (12 threads fight the 6 real cores and everything else).
+# API: POST /inference (multipart: file=@clip, response_format=json|text|srt|vtt|verbose_json).
+#   --convert runs ffmpeg in the container, so mp3/ogg/m4a work as well as 16 kHz wav.
+# Image tag = whisper.cpp v1.9.5 (commit d1be6fde, 2026-10-06); upstream publishes no
+#   version tags, only main-<sha>.
+# Measured 2026-10-23, 30 s LibriVox clip over HTTP: 46 s at load ~2-9 (-t 8, -l auto);
+#   31 s at load ~11 and 42 s at load ~27 (-t 6, -l en); 252 s at load ~40 with -t 8. ~0.8 GB RAM. Transcript
+#   word-perfect. Slower than real time: fine for dictation and files, not live captions.
+services:
+  whisper:
+    image: ghcr.io/ggml-org/whisper.cpp:main-d1be6fde11ac6e0407606b4e42fe72d34add8037
+    container_name: whisper
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8092:8080"
+    volumes:
+      - /opt/models/whisper:/models:ro
+    tmpfs:
+      - /tmp
+    command:
+      - >-
+        whisper-server -m /models/ggml-large-v3-turbo-q5_0.bin
+        -t 6 -l en --convert --tmp-dir /tmp
+        --host 0.0.0.0 --port 8080
+    mem_limit: 3g

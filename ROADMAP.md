@@ -29,7 +29,10 @@ Completed items age out after ~4 weeks.
   2026-10-23: Ollama and the 9B stay, for Klarheit only, until those pre-registered trials end
   (moving a pinned model mid-trial would void them); granite4.2:8b removed; Heretic stays
   127.0.0.1-only (Bill: local only for now). Also left: a small
-  llama-server model for the Pi / tc-vmh-03, then image, video and speech models. Plan:
+  llama-server model for the Pi / tc-vmh-03, then image and video models. Speech is done
+  (2026-10-23, both CPU only): whisper.cpp large-v3-turbo (`just whisper up -d`, :8092, a 30 s
+  clip in ~31-42 s) and Chatterbox Nano cloned voices (`just tts up -d`, :8093, ~5 s a
+  sentence); numbers in `docs/STACK.md` "Speech". Plan:
   `docs/proposals/2026-10-22-local-model-lineup.md`.
 
 - **n8n ideas, parked for review** (Bill 2026-10-23: not now) (opened 2026-10-21). n8n would run beside Uncle J for

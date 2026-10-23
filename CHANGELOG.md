@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-10-23 — local speech: whisper.cpp and Chatterbox Nano, both on CPU
+
+- **Added** `docker/whisper/compose.yaml` (`just whisper up -d`, 127.0.0.1:8092): whisper.cpp
+  v1.9.5 server with large-v3-turbo q5_0. CPU image, `-t 6`, English by default, `--convert`
+  so mp3/ogg/m4a work. A 30 s clip takes 31–42 s depending on host load, uses ~0.8 GB RAM,
+  and came back word for word.
+- **Added** `docker/chatterbox/` (`just tts up -d`, 127.0.0.1:8093): Chatterbox Nano (MIT) on
+  CPU behind a small stdlib HTTP server (`server.py`, OpenAI-shaped `POST /v1/audio/speech`).
+  Voices are `/opt/models/chatterbox-voices/<name>.wav`; their conditioning is cached, and
+  long input is split into sentences. ~5 s a sentence, 4.3–5.4 GB RAM. Clone speaker
+  similarity was 0.87 (built-in voice 0.56). The image is pinned to chatterbox commit 5de7a54,
+  torch 2.6.0 CPU, and `--exclude-newer 2026-10-01`.
+- **Added** `scripts/speech.sh` (`up` via dcup, like `heretic.sh`). Tests:
+  `tests/test_speech.py` (script routing, sentence splitting, voice-name checks, WAV encoding,
+  HTTP errors, with a fake model).
+- **Docs** `docs/STACK.md` "Speech" (start, use, measured numbers); lineup #4/#5 marked
+  running; ROADMAP lineup entry. Weights sha256-checked against Hugging Face.
+
 ## 2026-10-23 — quiet Firefox browser MCP, Alt+V image paste, review and scout cleared
 
 - **Added** `just browser`: a Claude Code session with Mozilla's firefox-devtools-mcp 0.10.4

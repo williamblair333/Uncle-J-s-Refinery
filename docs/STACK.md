@@ -223,6 +223,46 @@ ASK_LOCAL_MODEL=heretic` from `config/ask_local.env`, so a reinstall keeps them.
 
 ---
 
+## Speech (whisper.cpp speech-to-text, Chatterbox Nano cloned voices)
+
+**What it does.** Two loopback-only Docker services, both CPU only, so they never touch the
+GPU that Heretic and Ollama share. Lineup items #4 and #5
+(`docs/proposals/2026-10-22-local-model-lineup.md`).
+
+| Service | Port | Model (in `/opt/models`) | License | RAM |
+|---|---|---|---|---|
+| `whisper` (`docker/whisper/`) | 127.0.0.1:8092 | `whisper/ggml-large-v3-turbo-q5_0.bin` (574 MB) | MIT | ~0.8 GB |
+| `chatterbox` (`docker/chatterbox/`) | 127.0.0.1:8093 | `chatterbox-nano/` (110M, ~2 GB on disk) | MIT, output watermarked | 4.3 GB idle, 5.4 GB peak |
+
+**Starting it.**
+```bash
+just whisper up -d       # speech-to-text; `just whisper logs` / `just whisper down`
+just tts up -d           # text-to-speech (first `up` builds the image, ~1.5 GB)
+curl -s -F file=@clip.wav -F response_format=text 127.0.0.1:8092/inference
+curl -s 127.0.0.1:8093/health    # {"model":"chatterbox-nano",...,"voices":[...]}
+curl -s -X POST 127.0.0.1:8093/v1/audio/speech -H 'Content-Type: application/json' \
+  -d '{"input":"Hello there.","voice":"librivox-gettysburg"}' -o out.wav
+```
+Both go through dcup. whisper takes wav, mp3, ogg or m4a (`--convert`), defaults to English,
+and takes `language=auto` as a form field for other languages. For a cloned voice, drop a
+clean 5–20 s clip in `/opt/models/chatterbox-voices/<name>.wav` and send `"voice": "<name>"`.
+`librivox-gettysburg` (a LibriVox reader, public domain) is there as a test voice. The
+built-in voice is `default`.
+
+**Speed (measured 2026-10-23, Ryzen 5 5500, while other jobs loaded the host).** whisper: a
+30 s clip takes 31 s at load ~11 and 42 s at load ~27, and the transcript was word for word.
+That's slower than real time, so it's fine for dictation and files but not live captions.
+Chatterbox: about 5 s per sentence (3 sentences, 11.6 s of audio, took 15.4 s). The first use
+of a voice adds about 3 s. Speaker similarity to the reference clip, by Chatterbox's own voice
+encoder, was 0.87 for the clone and 0.56 for the built-in voice. Samples are in
+`/opt/outputs/speech/`. Under heavy load (~40) whisper took 252 s, so the numbers swing with
+whatever else is running.
+
+**Not the same as voice-line.** voice-line runs its own whisper-server and Kokoro on the GPU
+(ports 2022 and 8880 in `/opt/proj/.port-registry`). These two services are separate from it.
+
+---
+
 ## live_preview (watch any build in a browser)
 
 `scripts/live_preview/server.py` runs on `.venv` and needs only the standard library plus
