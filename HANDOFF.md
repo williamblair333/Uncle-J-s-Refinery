@@ -1,5 +1,19 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
+
+**Most important:** `just waiting` now prints ROADMAP open items, the newest bold
+"**Open / next:**" list, recent project memories, and flags repos with no HANDOFF.md. A status
+that skims it is still wrong: report every section it prints, checked against the source.
+
+- PR #182: `docs/STACK.md` names `just ask-local-up` / `just chat` ("Starting it").
+- Lineup is **not** finished: image, video, speech-to-text and voice models aren't started;
+  nothing but Heretic is in `/opt/models/gguf`.
+- The sweep surfaced 8 `jcodemunch_upgrade_*_unanalyzed` memories under `-home-bill` (cron
+  runs couldn't use gh/WebFetch). Analyze them interactively or prune the stale ones.
+- anatomy-lab (top priority), jaredrhod, qr-forge, tao-intel and magicians-almanac-web have no
+  HANDOFF.md, so their open work only shows through memory.
+
 ## 2026-10-22 (main host, session end) — lineup steps 1–5, guard + healthcheck fixes, 7 tools/fixes
 
 **Most important:** don't retire Ollama or `qwen3.5:9b`. Klarheit's `klarheit-rv` /

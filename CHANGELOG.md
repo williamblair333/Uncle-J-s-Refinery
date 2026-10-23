@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
+
+- **Fixed** the status sweep (`scripts/waiting_sweep.py`) missed most open work: it read only
+  HANDOFF headings. A status on 2026-10-23 left out the image/video/speech lineup, the Jarvis
+  track and more. It now also lists ROADMAP "In Progress"/"Planned" items (minus done ones),
+  bold "**Open / next:**" labels in HANDOFF, every recent `project_*.md` memory, and flags repos
+  with recent commits but no HANDOFF.md (anatomy-lab, jaredrhod, qr-forge, tao-intel,
+  magicians-almanac-web). Tests: `tests/test_waiting_sweep.py`.
+
 ## 2026-10-23 — docs: how to start the local model
 
 - **Docs** `docs/STACK.md` ask_local: a "Starting it" block (`just ask-local-up`, `just chat`,
