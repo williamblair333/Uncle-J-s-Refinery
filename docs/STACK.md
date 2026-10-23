@@ -181,6 +181,14 @@ in charge. Tools:
 It has no shell, writes no files, and refuses credential-like paths. Never use it for a final
 answer.
 
+**Starting it.**
+```bash
+just ask-local-up        # starts the backend config/ask_local.env names (heretic on this host)
+just chat                # chat page at http://127.0.0.1:8091 (start/stop/logs, Claude/agy offload)
+just heretic logs        # model logs; `just heretic down` stops it
+curl -s 127.0.0.1:8090/health   # {"status":"ok"} when heretic is up
+```
+
 **Backend.** Ollama in Docker, from `docker/ollama/compose.yaml` in this repo. A host that
 keeps its own `/opt/docker/ollama/compose.yaml` uses that one instead. It's bound to
 `127.0.0.1:11434` only, unloads idle models after 10 minutes, and loads one model at a time.
@@ -210,9 +218,8 @@ never content. Use it to decide whether ask_local earns its place.
 
 **llama-server backend.** The main host runs Qwen3.6-35B-A3B Heretic this way:
 `just heretic up -d` starts `docker/llama-heretic/compose.yaml` on 127.0.0.1:8090, and
-ask_local is registered with `ASK_LOCAL_BACKEND=openai ASK_LOCAL_URL=http://127.0.0.1:8090
-ASK_LOCAL_MODEL=heretic`. `install.sh` registers without those variables, so re-run the
-`claude mcp add` line from the `server.py` docstring after a reinstall.
+ask_local reads `ASK_LOCAL_BACKEND=openai ASK_LOCAL_URL=http://127.0.0.1:8090
+ASK_LOCAL_MODEL=heretic` from `config/ask_local.env`, so a reinstall keeps them.
 
 ---
 
