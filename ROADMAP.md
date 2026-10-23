@@ -26,16 +26,19 @@ Completed items age out after ~4 weeks.
   way). Heretic for text and images, Wan 2.2 for video (and stills if they pass), an image
   model, Whisper, Chatterbox for cloned voices; Ollama and the 9B retired. Steps 1–5 are done
   (faster prefill, host config file, `ask-local-up`, Sinkpoint answered, partikus moved).
-  Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Also left: a small
+  Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Decided
+  2026-10-23: Ollama and the 9B stay, for Klarheit only, until those pre-registered trials end
+  (moving a pinned model mid-trial would void them); granite4.2:8b removed; Heretic stays
+  127.0.0.1-only (Bill: local only for now). Also left: a small
   llama-server model for the Pi / tc-vmh-03, then image, video and speech models. Plan:
   `docs/proposals/2026-10-22-local-model-lineup.md`.
 
-- **n8n ideas, parked for review** (opened 2026-10-21). n8n would run beside Uncle J for
+- **n8n ideas, parked for review** (Bill 2026-10-23: not now) (opened 2026-10-21). n8n would run beside Uncle J for
   webhooks and OAuth SaaS flows. The full list is ranked by project, with traps and four
   decisions for Bill: `docs/proposals/2026-10-21-n8n-ideas.md`. The top picks are bizengine,
   multi-host sync and patentengine deadlines. Resume: "set up n8n".
 
-- **Multiplayer-AI viewer** (opened 2026-10-17). For watching AI players cooperate or compete
+- **Multiplayer-AI viewer** (Bill 2026-10-23: still needs a game and engine named) (opened 2026-10-17). For watching AI players cooperate or compete
   in a game, in real time. The plan:
   - a game-side bridge (localhost state/action API, fixed screen types; the pattern is from
     CLI-Anything's Slay the Spire II mod);
@@ -51,7 +54,7 @@ Completed items age out after ~4 weeks.
   plus the five remote-less repos. Recipe names stay shared: setup, test, run, start, stop,
   status, doctor. The five formerly remote-less repos can get theirs now. free-energy's `just test` didn't finish within 10 minutes (it probably collects
   `accel/tests`); worth a look.
-- **Dictation follow-ups** (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
+- **Dictation follow-ups** (Bill 2026-10-23: discuss later) (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
   (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
   (path in HANDOFF).
@@ -84,7 +87,7 @@ Completed items age out after ~4 weeks.
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
-- **Jarvis track** (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
+- **Jarvis track** (Bill 2026-10-23: later) (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
   that handles whatever he asks. **Two homes, one Jarvis:** this repo is the engine (MCP
   servers, crons, every commit), and `/opt/proj/jaredrhod` is where Bill talks to it (the
   Jarvis persona in its `CLAUDE.md`, plus the `vaults/brain` vault as long-term memory).
@@ -103,7 +106,7 @@ Completed items age out after ~4 weeks.
      10–15 minutes per 480p clip (checked 2026-10-17). Use it for background jobs; use a paid
      API for anything interactive.
 
-- **Stop being the glue: one front door to every project** (opened 2026-10-19). Today Bill `cd`s
+- **Stop being the glue: one front door to every project** (Bill 2026-10-23: later) (opened 2026-10-19). Today Bill `cd`s
   into a project, starts Claude Code, and syncs the Pi and tc-vmh-03 by hand. The goal is to
   minimize his attention per finished outcome (local-first, portable off Claude). Agreed order:
   1. **Measure startup, then trim.** Every session start runs the startup checks and launches
@@ -159,29 +162,20 @@ Completed items age out after ~4 weeks.
   says remove it. Checked 2026-10-22: no data. The log didn't exist until that day's test
   calls, so sessions weren't routing anything through ask_local. Re-check once they do.
 
-- **Codex MCP — GPT through the ChatGPT subscription** (opened 2026-10-04). Second of the three
+- **Codex MCP — GPT through the ChatGPT subscription** (Bill 2026-10-23: later) (opened 2026-10-04). Second of the three
   Hermes-replacement pieces (`ask_local` and the memweave MCP shipped). Codex CLI has an
   MCP-server mode (`codex mcp-server`; confirm the flag at install). Register it so Claude Code
   can get a second opinion or a parallel attempt through OpenAI's own sanctioned client. Needs a
   ChatGPT Plus/Pro login (`codex login`). Gemini can't take this route: Google closed consumer
   OAuth on 2026-06-18, so only an API key works.
 
-- **Should `occams-razor`'s `description` widen to cover non-debugging explanation?**
-  (opened 2026-09-23). The 2026-09-23 amendment fixed the skill's *content*, but the miss that
-  prompted it happened because the skill was never invoked — a question about why something was
-  named what it was did not read as "competing explanations, hypotheses, or root causes". Widening
-  the description would catch that class; it would also fire the skill on ordinary questions in
-  every project, since the description drives selection globally. Needs a call on which error is
-  cheaper. Body was amended without touching it.
+- **[DONE 2026-10-23] `occams-razor` description widened** — it now also fires when explaining
+  why something is named, built or chosen the way it is. A missed invocation (the BOTvunnix
+  case) cost more than an extra skill load on ordinary questions.
 
-- **`CampaignGenerator` has no reachable remote** (opened 2026-09-20). `git ls-remote` returns
-  "Repository not found", so its draft brief could not be landed as a PR and sits untracked in
-  the working tree. It also needs its Anthropic API key variable documented and an offline mode
-  before it can be gated at all — both recorded in the brief.
-- **`campaign-forge` is dormant, not classified** (opened 2026-09-20). Kept as a product rather
-  than marked not-software, because the stack is real and a marker would hide it from every
-  future audit. If the code is genuinely finished with, replace the brief with `.no-product-gate`.
-- **11 non-product repos carry only a local opt-out marker** (opened 2026-09-20). The
+- **[CLOSED 2026-10-23] `CampaignGenerator` and `campaign-forge` abandoned** (Bill). No further
+  product-gate work; `reviewed/CampaignGenerator` carries a `.no-product-gate` marker.
+- **11 non-product repos carry only a local opt-out marker** (Bill 2026-10-23: look later) (opened 2026-09-20). The
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
   in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.

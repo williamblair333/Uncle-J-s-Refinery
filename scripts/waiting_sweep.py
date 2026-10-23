@@ -28,7 +28,7 @@ import time
 HEADING = re.compile(r"^(#{1,4})\s+(.*)$")
 BOLD_LABEL = re.compile(r"^\*\*([^*]+)\*\*\s*$")
 DATE = re.compile(r"(20\d\d-\d\d-\d\d)")
-WAITING = re.compile(r"waiting|next|blocked|pick up|open question|todo|to do|needs bill|bill to|for bill", re.I)
+WAITING = re.compile(r"\bwaiting|next|blocked|pick up|open question|todo|to do|needs bill|bill to|for bill", re.I)
 ROADMAP_OPEN = re.compile(r"in progress|planned", re.I)
 ROADMAP_ITEM = re.compile(r"^- \*\*(.+?)\*\*")
 DONE = re.compile(r"^\[?(done|resolved|closed)\b|^~~|✅", re.I)
@@ -46,9 +46,12 @@ def waiting_sections(text, max_lines, cutoff_date=""):
     """Yield (heading, lines) for HANDOFF sections whose heading matches WAITING."""
     out, cur, level, body = [], None, 0, []
     dated = []  # (level, date) of enclosing headings, so undated children inherit a date
+    entries = 0  # '##' entries seen; bold labels count only in the newest entry
     for line in text.splitlines():
         m = HEADING.match(line)
-        b = None if m else BOLD_LABEL.match(line)
+        if m and len(m.group(1)) == 2:
+            entries += 1
+        b = None if m or entries > 1 else BOLD_LABEL.match(line)
         if m or b:
             # A bold label on its own line is a heading below every '#' level.
             lvl, title = (len(m.group(1)), m.group(2)) if m else (5, b.group(1).rstrip(":").strip())
