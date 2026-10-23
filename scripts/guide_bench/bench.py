@@ -32,7 +32,7 @@ sys.path.insert(0, str(REPO))
 
 import httpx  # noqa: E402
 
-from scripts.ask_local.server import OLLAMA_URL, LocalClient  # noqa: E402
+from scripts import local_rail  # noqa: E402
 
 QUERIES = Path(__file__).with_name("queries.json")
 JCODEMUNCH = REPO / ".venv" / "bin" / "jcodemunch-mcp"
@@ -89,11 +89,10 @@ def missing_names(text: str, names: list[str]) -> list[str]:
     return [n for n in names if n not in text]
 
 
-def route(rail: LocalClient, names: list[str], guide: str, q: str) -> str:
+def route(rail: local_rail.Rail, names: list[str], guide: str, q: str) -> str:
     prompt = (f"Tool registry: {', '.join(names)}\n\nGuide:\n{guide}\n\n"
               f"Request: {q}\nTool:")
-    res = rail.chat("guide_bench_route", prompt, system=ROUTE_SYSTEM, max_tokens=24,
-                    temperature=0)
+    res = rail.chat("guide_bench_route", prompt, system=ROUTE_SYSTEM, max_tokens=24)
     if "error" in res:
         return f"ERROR:{res['error']}"
     words = re.findall(r"[a-z][a-z0-9_]+", res["text"].lower())
@@ -105,15 +104,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
 
-    rail = LocalClient(httpx.Client(base_url=OLLAMA_URL))
-    if "error" in rail.chat("guide_bench_ping", "Reply OK.", max_tokens=4):
+    # Local-first through the cached rail: a rerun pays only for calls that didn't finish.
+    rail = local_rail.Rail()
+    if "error" in rail.chat("guide_bench_ping", "Reply OK.", max_tokens=4, use_cache=False):
         print("ask_local backend is down — run `just ask-local-up`", file=sys.stderr)
         return 2
 
     full = full_guide()
     names = registry(full)
-    comp = rail.chat("guide_bench_compress", full, system=COMPRESS_SYSTEM, max_tokens=900,
-                     temperature=0)
+    comp = rail.chat("guide_bench_compress", full, system=COMPRESS_SYSTEM, max_tokens=900)
     if "error" in comp:
         print(f"compression failed: {comp}", file=sys.stderr)
         return 1

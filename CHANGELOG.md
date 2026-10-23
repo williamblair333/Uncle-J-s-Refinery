@@ -17,6 +17,10 @@
 - **Added** a ralph usage counter (`state/ralph-runs.log`, read by
   `scripts/audit/collect_benefits.py`). Phase 4's D3 (remove ralph if idle) couldn't be
   decided: the Phase 2 counter never measured ralph. Ralph stays.
+- **Added** `scripts/local_rail.py` (Phase 3, rescoped): batch jobs call the ask_local backend
+  through a content-hash cache in `state/local-rail-cache/`. Errors aren't cached and writes
+  are atomic. The guide benchmark runs through it. Tests: `tests/test_local_rail.py`,
+  `tests/test_guide_bench.py`.
 
 ## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
 

@@ -8,6 +8,8 @@
 - **This repo's sessions now read only `~/.claude/CLAUDE.md`** (claudeMdExcludes). After any
   CLAUDE.md edit here, run `just doctor --fix`, or these sessions keep the old policy.
 - Ralph wasn't removed (D3): there was no usage data. `state/ralph-runs.log` starts now.
+- Local rail: `scripts/local_rail.py` (`Rail().chat(job, prompt, ...)`), cached by content
+  hash in `state/local-rail-cache/`. Delete that dir to force fresh calls.
 
 ## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
 
