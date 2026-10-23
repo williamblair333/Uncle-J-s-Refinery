@@ -14,31 +14,37 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Ship `dcup` with Uncle J and enforce it** (opened 2026-10-22). `dcup` (Docker port registry,
-  SQLite, 80+ claims) lives only in `/opt/lib/docker-port-registry/`, outside any repo, so new
-  users don't get it. Fixed in place 2026-10-22: compose.yaml discovery, Compose-style project
-  names, `scan` skipping parked copies. Left: vendor it, install it from `install.sh`, ship a
-  PreToolUse hook that blocks `docker compose up` / `docker run -p` that bypass it. (`just
-  heretic up`, `ask-local-up` and the chat page's Start already go through it, 2026-10-22.) Unverified: a past session said
-  its hook is already wired in `~/.claude/settings.json`.
+- **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in
+  `features/dcup/`, installed by `install.sh` §6b2 and checked by the `refinery-doctor`
+  `dcup-guard` check. `dcup_guard.py` blocks `docker compose up` and fixed `docker run -p` that
+  bypass dcup (178-case test matrix). The old hook was never wired. Stale claims went from
+  82 to 41. Left: run `features/dcup/install.sh` from the main checkout on each host, then
+  restart Claude Code. Not covered: commands run inside scripts, and `docker service`/`stack`.
 
 - **Local model lineup: fewest models for every goal** (decided 2026-10-22; text side under
   way). Heretic for text and images, Wan 2.2 for video (and stills if they pass), an image
   model, Whisper, Chatterbox for cloned voices; Ollama and the 9B retired. Steps 1–5 are done
   (faster prefill, host config file, `ask-local-up`, Sinkpoint answered, partikus moved).
-  Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Also left: a small
-  llama-server model for the Pi / tc-vmh-03, then speech models. **Image and video done
-  2026-10-23:** ComfyUI (`just comfy up -d`, `just image`, `just video`) with Z-Image-Turbo
-  (32 s per warm 1024² image) and Wan 2.2 A14B Q4_K_M (8.1 min per 5 s 480p clip); numbers
-  in `docs/STACK.md`. Still to try: Wan stills vs Z-Image (the culling test). Plan:
+  Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Decided
+  2026-10-23: Ollama and the 9B stay, for Klarheit only, until those pre-registered trials end
+  (moving a pinned model mid-trial would void them); granite4.2:8b removed; Heretic stays
+  127.0.0.1-only (Bill: local only for now). Also left: a small
+  llama-server model for the Pi / tc-vmh-03. Speech is done
+  (2026-10-23, both CPU only): whisper.cpp large-v3-turbo (`just whisper up -d`, :8092, a 30 s
+  clip in ~31-42 s) and Chatterbox Nano cloned voices (`just tts up -d`, :8093, ~5 s a
+  sentence); numbers in `docs/STACK.md` "Speech". **Image and video done 2026-10-23:**
+  ComfyUI (`just comfy up -d`, `just image`, `just video`, :8188) with Z-Image-Turbo (32 s per
+  warm 1024² image) and Wan 2.2 A14B Q4_K_M (8.1 min per 5 s 480p clip); numbers in
+  `docs/STACK.md` "Image and video generation". Still to try: Wan stills vs Z-Image (the
+  culling test). Plan:
   `docs/proposals/2026-10-22-local-model-lineup.md`.
 
-- **n8n ideas, parked for review** (opened 2026-10-21). n8n would run beside Uncle J for
+- **n8n ideas, parked for review** (Bill 2026-10-23: not now) (opened 2026-10-21). n8n would run beside Uncle J for
   webhooks and OAuth SaaS flows. The full list is ranked by project, with traps and four
   decisions for Bill: `docs/proposals/2026-10-21-n8n-ideas.md`. The top picks are bizengine,
   multi-host sync and patentengine deadlines. Resume: "set up n8n".
 
-- **Multiplayer-AI viewer** (opened 2026-10-17). For watching AI players cooperate or compete
+- **Multiplayer-AI viewer** (Bill 2026-10-23: still needs a game and engine named) (opened 2026-10-17). For watching AI players cooperate or compete
   in a game, in real time. The plan:
   - a game-side bridge (localhost state/action API, fixed screen types; the pattern is from
     CLI-Anything's Slay the Spire II mod);
@@ -46,7 +52,10 @@ Completed items age out after ~4 weeks.
   - Langfuse traces for what each agent saw, said and did.
   - A per-agent lane view needs work in the vendored viewer.
   - Blocked on Bill naming the game and engine.
-- **Justfiles** — 2026-10-22 late: aquarius, immortality, larder, patentengine, reciepts,
+- **[DONE 2026-10-23] Justfiles** — write_well (status, recall; markdown only; write_well #5,
+  `af90396`) and deal-finder (setup, run, status, recall; deal-finder #1 into `master`, its real
+  trunk, `24fc4ef`). Both were made in a scratch worktree off the remote trunk, so their dirty
+  checkouts were untouched. Earlier history: 2026-10-22 late: aquarius, immortality, larder, patentengine, reciepts,
   tao-intel and jaredrhod done (status, recall); free-energy's slow `just test` fixed (`slow`
   marker, ~2 min; `just test-all` for everything; free-energy #32). Left: write_well and
   deal-finder (big uncommitted trees). Original: (rollout done 2026-10-22 for 18 repos). Left: aquarius
@@ -54,7 +63,7 @@ Completed items age out after ~4 weeks.
   plus the five remote-less repos. Recipe names stay shared: setup, test, run, start, stop,
   status, doctor. The five formerly remote-less repos can get theirs now. free-energy's `just test` didn't finish within 10 minutes (it probably collects
   `accel/tests`); worth a look.
-- **Dictation follow-ups** (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
+- **Dictation follow-ups** (Bill 2026-10-23: discuss later) (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
   (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
   (path in HANDOFF).
@@ -70,9 +79,20 @@ Completed items age out after ~4 weeks.
   files. That's low harm, because the block only lists files and searches. Decide whether to
   file it with jgravelle/jcodemunch-mcp. A custom snapshot hook (tasks, decisions, prompts) is
   **not** planned: Claude Code's compaction summary already carries those.
-- **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
-  (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
-  touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
+- **REA upstream follow-up** (opened 2026-10-12). **#2188 was MERGED 2026-10-14** (merge
+  `41a2e84`; the maintainer addressed the review threads himself). #2187 (design issue, `--scope
+  local`) is still open, labelled `enhancement`/`P2: medium`/`area: setup`. As of 2026-10-23 it has
+  no maintainer reply, only two third-party comments: a design review and a native-Windows quoting
+  workaround. If they say "PR welcome", the touched modules are listed in #2187. Install Node
+  ≥22.19 first, since REA's checks need it.
+- **REA in Docker, two containers** (planned 2026-10-22, **waiting for Bill's "build it"**).
+  `docker/rea/` with an Investigator image (REA 6.7.0, Ghidra 12.1.4, Node 24, JDK 21) and a
+  Builder image with no Docker socket, pinned in `versions.env`, `just rea-update` /
+  `rea-rollback`. Plan: `review/2026-10-22-rea-in-docker.md` (main host).
+- **Large-model splitter for the A1 mini ("bigprint")** (spec 2026-10-22, **waiting for Bill**).
+  A full clean-room spec (deterministic grid splits only, to design around US10025882B2) sits in
+  `review/luban-rebuild-handoff.md` (main host). Needs Bill's go, where the new repo lives, and
+  his three open items: filament for gram estimates, connector default, laser outputs.
 - **[DONE 2026-10-22] grep-guard false positive on an unexpanded glob** — globs now expand
   against the session cwd and each match is judged; `-r` on a plain non-source file is
   allowed; `cat scripts/*` (which hid source) is now denied. Baseline in audit-baselines.md.
@@ -83,11 +103,13 @@ Completed items age out after ~4 weeks.
 - **Track upstream issue [dwarvesf/claude-guardrails#20](https://github.com/dwarvesf/claude-guardrails/issues/20)**
   (filed 2026-10-22): the escalation hook's grep reads its `--…` pattern as an option. If they
   say "PR welcome", send the `-e` fix. Until it lands, `scripts/fix-guardrails-grep.sh` (run by
-  `install-guardrails.sh`) keeps the local copy repaired.
+  `install-guardrails.sh`) keeps the local copy repaired. Status 2026-10-23: #17 and #20 are both
+  open with zero comments. The repo's last push was 2026-09-08 (#18/#19), so the maintainer is
+  quiet rather than declining.
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
-- **Jarvis track** (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
+- **Jarvis track** (Bill 2026-10-23: later) (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
   that handles whatever he asks. **Two homes, one Jarvis:** this repo is the engine (MCP
   servers, crons, every commit), and `/opt/proj/jaredrhod` is where Bill talks to it (the
   Jarvis persona in its `CLAUDE.md`, plus the `vaults/brain` vault as long-term memory).
@@ -106,7 +128,7 @@ Completed items age out after ~4 weeks.
      takes 8.1 min per 5 s 832×480 clip on the 3060 (`just video`, measured 2026-10-23). Use it
      for background jobs; use a paid API for anything interactive.
 
-- **Stop being the glue: one front door to every project** (opened 2026-10-19). Today Bill `cd`s
+- **Stop being the glue: one front door to every project** (Bill 2026-10-23: later) (opened 2026-10-19). Today Bill `cd`s
   into a project, starts Claude Code, and syncs the Pi and tc-vmh-03 by hand. The goal is to
   minimize his attention per finished outcome (local-first, portable off Claude). Agreed order:
   1. **Measure startup, then trim.** Every session start runs the startup checks and launches
@@ -139,7 +161,17 @@ Completed items age out after ~4 weeks.
   the smaller output doesn't drop content that matters, and measure tokens against WebFetch
   on a real task. Verdict and numbers: `review/2026-10-19-firecrawl.md` (main host).
   Resume: "build the trafilatura crawler".
-- **Trial firefox-devtools-mcp for browser control** — trial run 2026-10-22, **not adopted yet**.
+- **[DONE 2026-10-23] firefox-devtools-mcp adopted, per session: `just browser`.** Egress
+  measured without root (user+net namespace whose only route is a capturing dummy interface,
+  plus a logging SOCKS5 proxy): with `config/firefox-mcp/user.js` and `scripts/firefox-mcp.sh`
+  the only contacts are the target sites, for TCP, UDP/QUIC and DNS alike, over 4-minute idles.
+  It took three non-pref fixes: `MOZ_REMOTE_SETTINGS_DEVTOOLS=1` (release Firefox ignores the
+  remote-settings server pref otherwise), a private `XDG_CONFIG_HOME` (the host's Crash Reports
+  store holds a pending telemetry ping any Firefox retries), and node on a local install instead
+  of `npx` (which asks the npm registry on every start). Not registered globally. Re-measure
+  after a Firefox major upgrade; method in `reviewed/2026-10-19-browser-automation-no-microsoft.md`
+  (main host). Original entry follows.
+  **Trial firefox-devtools-mcp for browser control** — trial run 2026-10-22, **not adopted yet**.
   It's `@mozilla/firefox-devtools-mcp` now (the old name is deprecated); 0.10.4 works headless
   with system Firefox 150, 34 tools, snapshots 0.4–4.8K chars. But Firefox itself contacts
   Mozilla (detectportal, remote settings, content-signature) besides the target. 19 quieting
@@ -162,41 +194,44 @@ Completed items age out after ~4 weeks.
   says remove it. Checked 2026-10-22: no data. The log didn't exist until that day's test
   calls, so sessions weren't routing anything through ask_local. Re-check once they do.
 
-- **Codex MCP — GPT through the ChatGPT subscription** (opened 2026-10-04). Second of the three
+- **Codex MCP — GPT through the ChatGPT subscription** (Bill 2026-10-23: later) (opened 2026-10-04). Second of the three
   Hermes-replacement pieces (`ask_local` and the memweave MCP shipped). Codex CLI has an
   MCP-server mode (`codex mcp-server`; confirm the flag at install). Register it so Claude Code
   can get a second opinion or a parallel attempt through OpenAI's own sanctioned client. Needs a
   ChatGPT Plus/Pro login (`codex login`). Gemini can't take this route: Google closed consumer
   OAuth on 2026-06-18, so only an API key works.
 
-- **Should `occams-razor`'s `description` widen to cover non-debugging explanation?**
-  (opened 2026-09-23). The 2026-09-23 amendment fixed the skill's *content*, but the miss that
-  prompted it happened because the skill was never invoked — a question about why something was
-  named what it was did not read as "competing explanations, hypotheses, or root causes". Widening
-  the description would catch that class; it would also fire the skill on ordinary questions in
-  every project, since the description drives selection globally. Needs a call on which error is
-  cheaper. Body was amended without touching it.
+- **[DONE 2026-10-23] `occams-razor` description widened** — it now also fires when explaining
+  why something is named, built or chosen the way it is. A missed invocation (the BOTvunnix
+  case) cost more than an extra skill load on ordinary questions.
 
-- **`CampaignGenerator` has no reachable remote** (opened 2026-09-20). `git ls-remote` returns
-  "Repository not found", so its draft brief could not be landed as a PR and sits untracked in
-  the working tree. It also needs its Anthropic API key variable documented and an offline mode
-  before it can be gated at all — both recorded in the brief.
-- **`campaign-forge` is dormant, not classified** (opened 2026-09-20). Kept as a product rather
-  than marked not-software, because the stack is real and a marker would hide it from every
-  future audit. If the code is genuinely finished with, replace the brief with `.no-product-gate`.
-- **11 non-product repos carry only a local opt-out marker** (opened 2026-09-20). The
+- **[CLOSED 2026-10-23] `CampaignGenerator` and `campaign-forge` abandoned** (Bill). No further
+  product-gate work; `reviewed/CampaignGenerator` carries a `.no-product-gate` marker.
+- **11 non-product repos carry only a local opt-out marker** (Bill 2026-10-23: look later) (opened 2026-09-20). The
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
   in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.
-- **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
+- **[DONE 2026-10-23] `jscrub` automation** — (b) `check-vendor` was already in CI via
+  `audit-repo.sh`; that script now also runs a live-positive canary (a temp file with a ZWSP must
+  hit, else exit 3), so a broken detector fails `just audit` and CI. (a) shipped as a pre-commit
+  gate only, report-only: `scripts/jscrub/precommit-scan.sh` scans staged blobs and blocks on a
+  hit; nothing runs `clean`/`--in-place`. No PostToolUse hook. Wired by `install.sh` through
+  `scripts/pre-commit.sh` (session-end check + jscrub). Tests: `tests/test_jscrub_gates.py`.
+  Original: **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
   `just audit` + CI job). Still open, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
   gate — `--in-place` and `--follow-symlinks` are the flags to think hardest about before automating
   a tool that rewrites files; (b) `check-vendor` in CI, which now works with no checkout so it can
   actually run there. Also unresolved: with the test fixtures escaped, the repo contains no live
   positive, so a broken detector would not surface via `jscrub audit` — the unit tests are the only
   guard.
-- **[READY TO FILE — needs Bill's sign-off, do not open unattended] Upstream: `get_watch_status`
-  reports `any_stale: false` without measuring anything** (`jgravelle/jcodemunch-mcp`, verified
+- **[NOT FILED 2026-10-23 — already fixed upstream as [jcodemunch-mcp#565](https://github.com/jgravelle/jcodemunch-mcp/issues/565), closed 2026-09-01, shipped v1.108.315]**
+  Re-checked against installed 1.108.391: `get_watch_status` now routes each repo through
+  `FreshnessProbe.repo_freshness` (`tools/get_watch_status.py:50-72`). The watcher's flag is
+  renamed `watcher_flagged_stale` (`:135`), and `any_stale` is set from the measured
+  freshness (`:157`). A live call returned `any_stale: true` with one repo `stale` and
+  `freshness_checked: true`. The original write-up follows for history.
+  Upstream: `get_watch_status`
+  reports `any_stale: false` without measuring anything (`jgravelle/jcodemunch-mcp`, verified
   against installed 1.108.288). Staleness is read from `get_reindex_status`, which is **in-process,
   in-memory** state (`tools/get_watch_status.py:73,90`). The watcher runs in the systemd daemon —
   a different PID — so a querying MCP server has no reindex state, `has_any_reindex_state()` is
@@ -245,14 +280,23 @@ Completed items age out after ~4 weeks.
   `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`
   then `diff` against the installed copy. Better than reading `.venv/` when the question is
   whether the *local install* has drifted from upstream, rather than what the installed code does.
-- **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
+- **[DONE 2026-10-23] Dropped the Python-API call for the plain CLI in `run_index_local()`.**
+  Now in `scripts/lib/jdocmunch-index-local.sh`, CLI only, tested with a stub CLI. Found on the
+  way: the CLI exits 0 on `{"success": false}` (1.149.0), so the old fallback counted a failed
+  refresh as reindexed; the verdict is now read from the JSON. Original entry follows.
+  **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
   reason it exists — "the CLI exposes no way to pass ignore patterns" — stopped being true
   when upstream #108 added `--extra-ignore-pattern`, `--no-ai-summaries` and `--embeddings`.
   The CLI is already the fallback and already carries all three. The API still buys
   structured JSON in one call, so this is a simplification, not a fix; weigh it on its own.
-- **Still worth reporting:** `index_local` crashes with `KeyError 'owner'` when given a name
-  colliding with its own sidecar namespace (e.g. `X.summary`) — found 2026-08-08, and
-  **not** among the 92 issues on the upstream tracker as of 2026-08-16.
+- **[FILED 2026-10-23 — [jdocmunch-mcp#196](https://github.com/jgravelle/jdocmunch-mcp/issues/196)]**
+  `index_local` crashes with `KeyError 'owner'` when given a name colliding with its own
+  sidecar namespace (e.g. `X.summary`). Found 2026-08-08. Reproduced on installed 1.149.0 in a
+  scratch `DOC_INDEX_PATH`. The crash is at `storage/doc_store.py:1724` (`load_index` reads X's
+  summary sidecar as the index). A second symptom of the same cause is silent: `--name X.related`
+  succeeds and overwrites X's related-sections sidecar with the new index. Upstream main is still
+  unguarded (`_safe_repo_component` checks characters only). Watch #196 for a fix, then drop
+  the item.
 - **[FILED 2026-08-16 — [jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120)]**
   jdocmunch's watcher flag gap (`jgravelle/jdocmunch-mcp`,
   `service_installer.py`) — found 2026-08-15. `watch-install` accepts no arguments and
@@ -601,17 +645,41 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 **Improvement Program** (spec: `docs/superpowers/specs/2026-06-11-refinery-improvement-program-design.md` — phases in order; principles: deterministic-first, local-canonical):
 
 - **Phase 2 — Accuracy instrumentation → memweave migration** ✅ **DONE 2026-06-13** (see Completed). Backend decision (MemPalace eliminated → memweave) resolved 2026-06-12; memweave built (PRs #45–#48) and the full migration + mempalace decommission shipped (PRs #50–#55).
-- **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
-- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. Plus: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
+- **[DONE, rescoped 2026-10-23] Phase 3 — Local rail.** ask_local (Heretic on llama-server, per
+  `config/ask_local.env`) already is the local endpoint, and the lineup work picks the model,
+  so the endpoint/hardware-detect half is dropped. Shipped the missing piece:
+  `scripts/local_rail.py`, a content-hash cache (sha256 of backend, model, system, prompt and
+  params; errors never cached; atomic writes) that batch jobs call local-first. Wired into
+  the guide benchmark and the Telegram daily summaries. Not done: mine compression (no
+  consumer) and dream synthesis (it writes boot-loaded CLAUDE.md playbooks, too risky for a 9B
+  model unreviewed). Tests: `tests/test_local_rail.py`. Original:
+  **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
+- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. **[2026-10-23] Not removed:** the Phase 2 counter never measured ralph (`benefits.json` lists it under `missing`), so it can't confirm idle. No ralph cron is installed. Added the counter: `ralph-harness.sh` now appends to `state/ralph-runs.log` and `collect_benefits.py` reports it; decide after a few weeks of data. **[DONE 2026-10-23] CLAUDE.md de-dup:** `.claude/settings.json` `claudeMdExcludes` skips the repo copy (and worktree copies) here, so sessions load the policy once from `~/.claude/CLAUDE.md` (~5.1k tokens saved per session). The repo copy stays the deploy source; install.sh/doctor are unchanged, so the global Dreaming Notes tail is preserved. Original: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
 
-- **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
+- **[PARTIAL 2026-10-23] Compressed `jcodemunch_guide`** — measured: the guide is now 2,804
+  chars (the 4.6–5.1k-token estimate is stale) and nothing here loads it per session. The
+  catalogue is 76% of it and duplicates the MCP tool list, so a deterministic `compact` cut
+  (680 chars) beats LLM compression. Built `scripts/guide_bench/` (20 routing queries, local
+  model as router) and an upstream-ready patch (`docs/proposals/2026-10-23-jcodemunch-guide-compact.patch`).
+  **Not done:** the benchmark run (Heretic at ~0.6 tok/s under host load, two timeouts) and the
+  upstream filing (Bill's call). Details: `docs/proposals/2026-10-23-compressed-jcodemunch-guide.md`.
+  Original: **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
-- **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
+- **[DONE 2026-10-23] ralph-harness env-strip** — `ralph-harness.sh` unsets both keys after its
+  CLI check; the Telegram gateway passes a filtered `env=` to its `claude` subprocess. Tests:
+  `tests/test_env_strip.py`. Original: **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
 
-- **Telegram chat history persistence** — skill exists (`telegram-chat-history-persistence`)
-  but implementation not yet started; would allow querying past bot conversations
+- **[DONE 2026-10-23] Telegram chat history persistence** — the skill's design, with memweave as
+  the long-term store: every exchange (post-redaction) goes to `state/telegram-history.jsonl`; the
+  last few turns (≤6, ≤6 h, ≤3,000 chars, re-redacted) are prefixed to each new message; the
+  nightly memweave sync has the local model write `telegram-YYYY-MM-DD.md` summaries (never raw
+  turns) into `~/.uncle-j-memory/memory/`. `scripts/lib/tg_history.py`, three lines in the
+  gateway, tests in `tests/test_tg_history.py`. SQLite was skipped: JSONL plus the memweave
+  corpus already cover it.
 
-- **Agent harness competitive analysis** — skill exists; full analysis not yet run
+- **[DONE 2026-10-23] Agent harness competitive analysis** — `docs/2026-10-23-competitive-analysis.md`
+  (ECC, superpowers, Hermes, ruflo, plugin marketplaces; stars and claims as of that day). Open
+  gaps it names: install reach (plugin packaging), multi-host, one chat surface.
 
 - **[RESOLVED, closed 2026-10-22] jdocmunch `.summary` sub-indexes report 0 sections** — not
   indexes at all: `.summary.json` is a jdocmunch sidecar that the healthcheck read as a repo.
@@ -621,12 +689,39 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   Determine whether the summary index is genuinely unpopulated or the count is misreported;
   the latter would be the same class of counting bug as the 2026-07-19 `ls | wc -l` fix
 
-- **ECC specialist agents** — 6 agents imported; evaluate and integrate into
-  active workflows
+- **[DONE 2026-10-23] ECC specialist agents** — evaluated: keep `code-reviewer` (with
+  `silent-failure-hunter` merged in, shell/subprocess patterns added, JS-only sections cut,
+  read-only jcodemunch tools granted). Dropped `planner`, `architect`, `tdd-guide` and
+  `security-reviewer` (they duplicate superpowers skills or red-team/blue-team, carry a JS/SaaS
+  stack, and the reviewer had Write/Edit). One line each in `docs/RELIABILITY.md`.
+  install-reliability prunes the dangling links; healthcheck checks whatever ships.
 
-- **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
+- **[DONE 2026-10-23] Expand discipline hook surface list.** Reviewed `hook-blocks.log`
+  from 2026-05-25 on: 513 edit-surface blocks, 7532 allowed. Narrowed: test modules
+  (`tests/test_*.py`, `*_test.py`) were 65 blocks (13%); conftest.py and guard dirs stay
+  gated. Widened: `.mcp.json` (the PR #105 incident), `settings.local.json`, `justfile`,
+  `*.service`, `*.timer`. Extensions now compare case-blind, and a symlink resolving onto a
+  surface is gated. surface-write-guard mirrors the additions.
+- **Open: surface-write-guard can't see shell variables.** 43 of 102 blocks since 2026-10-16
+  are writes to `$S/x.py` with `S=/tmp/…scratchpad`. That guard matches regexes, so the fix
+  is grep-guard's lexer (or a shared one) in front of it.
 
-- **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
+- **[DONE 2026-10-23] Telegram gateway, remaining red-team findings.** (a) and (b) were only
+  half closed by PR #73. (a) Frontmatter keys that grant power (`allowed-tools`, `hooks`,
+  `context`, `agent`) and `` !`cmd` `` bodies are now rejected. Zero-width, bidi and
+  fullwidth obfuscation is normalised before the injection scan. (b) An existing skill dir
+  with a different SKILL.md was overwritten by `copy2`, and any symlink counted as
+  gateway-owned. Both are refused now; an identical SKILL.md (auto-maintain Part C) still
+  installs. (c) Added token-shape rules (Telegram, GitHub, OpenAI, Langfuse, AWS, Slack,
+  Google, JWT, PEM, Bearer), prose and lower-case key names, and output-only `~/`, Windows,
+  MSYS and relative paths. (d) The bot token goes to curl as `-K -` config on stdin in all 6
+  call sites, and a malformed token is refused.
+- **[DONE 2026-10-23] grep-guard quote-blind tokenizer + session-cwd-only paths.** A
+  bash-aware analyzer (an inline python3 lexer) now feeds the judging helpers. It handles
+  quoting, `$( )`, backticks, `<( )` and heredocs. It tracks cd/pushd, subshells and literal
+  `VAR=value`, and unwraps sudo/env/xargs/find -exec/sh -c/eval. The legacy splitter stays as
+  the fallback. Residual: interpreters (`python3 -c open(…)`), `git show`, and file names
+  produced at run time (`cat $(git ls-files)`).
 
 - **[DONE 2026-10-22] jcodemunch skew probe** — healthcheck `running processes match the
   installed version` warns on any jcodemunch/jdocmunch watcher or MCP server that started

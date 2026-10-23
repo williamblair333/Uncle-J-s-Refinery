@@ -137,7 +137,7 @@ Everything else in this repo — memweave, Serena, Context7, DuckDB, Superpowers
 | | Session stats | Weekly Langfuse efficiency reporter; flags high-token sessions; feeds dreaming |
 | | Auto-skill | Stop hook — analyzes session transcript; drafts a SKILL.md to `state/skill-drafts/`; pitches via Telegram for approval |
 | | Skill manager | Symlinks `global-skills/` + per-project `skills/` into `~/.claude/skills/` at session start, and `global-skills/` into `~/.agents/skills/` (Codex, Copilot CLI) and `~/.gemini/skills/` (Antigravity CLI) so other agents see the same skills. Full list: [`docs/SKILLS.md`](docs/SKILLS.md). Whole third-party collections sit in a **skill library** beside the repo (`../skill-library`, loaded by nothing, so they cost no tokens): `just skill-lib sync`, `just skill-lib list [filter]`, `just skill-lib add <skill>` (scans with cisco-ai-skill-scanner, then vendors it with `LICENSE` + `UPSTREAM`; run `just skills` after) |
-| | Agent library | 6 specialist subagents in `global-agents/` — planner, code-reviewer, security-reviewer, architect, tdd-guide, silent-failure-hunter — symlinked to `~/.claude/agents/` |
+| | Agent library | `code-reviewer` in `global-agents/` (silent failures and shell security merged in; five other ECC agents dropped 2026-10-23, see docs/RELIABILITY.md), symlinked to `~/.claude/agents/` |
 | | Ralph cron | Installs per-PRD cron jobs that run the verification-gated Ralph harness on a schedule |
 | | memweave sync | Stop hook + nightly cron (`uncle-j-memweave-sync`, 02:30) — keeps the cross-project memory store current automatically |
 
@@ -729,7 +729,7 @@ Automated invocation:
 
 ### Config drift check
 
-`refinery-doctor.sh` detects config schema drift — env key renames, stale MCP scopes, a missing jcodemunch compaction-restore hook (`hook-sessionstart`), `~/.claude/CLAUDE.md` out of sync, and unfilled template values. Distinct from `healthcheck.sh` (runtime health) — doctor checks migration state.
+`refinery-doctor.sh` detects config schema drift — env key renames, stale MCP scopes, a missing jcodemunch compaction-restore hook (`hook-sessionstart`), `~/.claude/CLAUDE.md` out of sync, unfilled template values, and a missing Alt+V image-paste keybinding. Distinct from `healthcheck.sh` (runtime health) — doctor checks migration state.
 
 ```bash
 bash scripts/refinery-doctor.sh            # dry-run: report only
@@ -761,6 +761,15 @@ The banner's `fix:` line tells you what to run. Common causes:
 | `post-merge-hook-missing` | `ln -sfn "$STACK_ROOT/scripts/post-merge-hook.sh" "$STACK_ROOT/.git/hooks/post-merge"` |
 | `secrets` | Review the grep hits; add to `.gitignore` or redact |
 | `hook-no-fire` / `trace-api` (full mode) | `tail -5 ~/.claude/state/langfuse_hook.log`, then verify `from langfuse import Langfuse` works from the stack venv |
+
+### Pasting an image does nothing
+
+Check the clipboard first: `xclip -selection clipboard -t TARGETS -o` should list `image/png`,
+and `xclip -selection clipboard -t image/png -o | wc -c` should be well above 0. If it is, the
+terminal is eating Ctrl+V (Tabby does). Press **Alt+V** instead: `refinery-doctor.sh --fix`
+merges that binding into `~/.claude/keybindings.json` without touching your other bindings
+(restart Claude Code after). If the byte count is 0, the copy itself failed: "Copy image" from
+Gmail in Chromium advertises `image/png` but delivers nothing.
 
 ### `verify.sh` reports FAIL after fresh install
 
@@ -968,12 +977,7 @@ Uncle-J-s-Refinery/
 │       └── install.sh                  ← Stop hook: Telegram notification on session end
 │
 ├── global-agents/                      ← specialist subagents, symlinked to ~/.claude/agents/
-│   ├── architect.md
-│   ├── code-reviewer.md
-│   ├── planner.md
-│   ├── security-reviewer.md
-│   ├── silent-failure-hunter.md
-│   └── tdd-guide.md
+│   └── code-reviewer.md
 │
 ├── global-skills/                      ← project-agnostic skills, symlinked to ~/.claude/skills/
 │   ├── deep-repo-analysis/

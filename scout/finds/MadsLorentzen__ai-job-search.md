@@ -21,3 +21,12 @@ MadsLorentzen/ai-job-search is a fork-and-own Claude Code project. It uses slash
 Risk: Adopting it means taking on a whole project setup, Danish-market scrapers and personal-data handling for a use case outside Uncle J's purpose.
 
 Scores: tokens 1/5, accuracy 2/5, creativity 2/5, offline 1/5
+
+## Verdict (reviewed 2026-10-23): no, not my goals
+
+Read-only check (gh api; nothing cloned or run). The repo moved to
+`ai-job-search-dev/ai-job-search` (64,002 stars, MIT, last push 2026-10-21). It's a job-hunting
+app you fork and run Claude Code inside: skills, LaTeX CV templates, and Bun/TypeScript job-board
+CLIs (Danish boards, plus LinkedIn, which Microsoft owns; no runtime deps, TypeScript is
+dev-only). Nothing in it fills a gap in Uncle J. The 2026-10-21 Telegram message expired to
+"maybe"; this records a "no" so the watchlist stops re-sending it on new releases.

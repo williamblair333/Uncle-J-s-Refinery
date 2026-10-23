@@ -78,6 +78,10 @@ preview *args:
 chat *args:
     .venv/bin/python scripts/local_chat/server.py {{args}}
 
+# Claude Code session with a quiet headless Firefox browser MCP (this session only)
+browser *args:
+    claude {{args}} --mcp-config "$(./scripts/firefox-mcp.sh --config)"
+
 # web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
 web2md *args:
     uv run -q --script scripts/web2md.py {{args}}
@@ -105,3 +109,15 @@ image prompt *args:
 # one Wan 2.2 clip (832×480, 81 frames) → /opt/outputs/comfyui: just video "prompt" [--frames N]
 video prompt *args:
     python3 scripts/comfy_job.py video "{{prompt}}" {{args}}
+
+# speech-to-text (whisper.cpp, CPU, 127.0.0.1:8092): just whisper up -d | down | logs (up via dcup)
+whisper *args:
+    ./scripts/speech.sh whisper {{args}}
+
+# cloned-voice text-to-speech (Chatterbox Nano, CPU, 127.0.0.1:8093): just tts up -d | down | logs
+tts *args:
+    ./scripts/speech.sh tts {{args}}
+
+# small CPU model for the Pi / tc-vmh-03 (llama-server, 127.0.0.1:8096): SMALL_MODEL=qwen3.5-4b-heretic SMALL_GGUF=… just small up -d
+small *args:
+    ./scripts/small.sh {{args}}

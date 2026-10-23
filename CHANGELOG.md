@@ -20,6 +20,206 @@
   8.1 min (7.3 GB). Both ran beside Heretic and Ollama. Docs: `docs/STACK.md`. ROADMAP and
   the lineup proposal updated.
 
+## 2026-10-23 — local speech: whisper.cpp and Chatterbox Nano, both on CPU
+
+- **Added** `docker/whisper/compose.yaml` (`just whisper up -d`, 127.0.0.1:8092): whisper.cpp
+  v1.9.5 server with large-v3-turbo q5_0. CPU image, `-t 6`, English by default, `--convert`
+  so mp3/ogg/m4a work. A 30 s clip takes 31–42 s depending on host load, uses ~0.8 GB RAM,
+  and came back word for word.
+- **Added** `docker/chatterbox/` (`just tts up -d`, 127.0.0.1:8093): Chatterbox Nano (MIT) on
+  CPU behind a small stdlib HTTP server (`server.py`, OpenAI-shaped `POST /v1/audio/speech`).
+  Voices are `/opt/models/chatterbox-voices/<name>.wav`; their conditioning is cached, and
+  long input is split into sentences. ~5 s a sentence, 4.3–5.4 GB RAM. Clone speaker
+  similarity was 0.87 (built-in voice 0.56). The image is pinned to chatterbox commit 5de7a54,
+  torch 2.6.0 CPU, and `--exclude-newer 2026-10-01`.
+- **Added** `scripts/speech.sh` (`up` via dcup, like `heretic.sh`). Tests:
+  `tests/test_speech.py` (script routing, sentence splitting, voice-name checks, WAV encoding,
+  HTTP errors, with a fake model).
+- **Docs** `docs/STACK.md` "Speech" (start, use, measured numbers); lineup #4/#5 marked
+  running; ROADMAP lineup entry. Weights sha256-checked against Hugging Face.
+
+## 2026-10-23 — quiet Firefox browser MCP, Alt+V image paste, review and scout cleared
+
+- **Added** `just browser`: a Claude Code session with Mozilla's firefox-devtools-mcp 0.10.4
+  loaded for that session only (`scripts/firefox-mcp.sh`, `config/firefox-mcp/user.js`).
+  Measured without root in a user+net namespace with a capturing sink and a logging SOCKS5
+  proxy: the only contacts are the target sites (TCP, UDP/QUIC and DNS). Default Firefox
+  contacted 5 Mozilla hosts. Fixes beyond prefs: `MOZ_REMOTE_SETTINGS_DEVTOOLS=1`, a private
+  `XDG_CONFIG_HOME` (a pending crash-reporter ping in the host's store), node on a local install
+  instead of `npx`. Tests: `tests/test_firefox_mcp.py`.
+- **Added** doctor check `keybindings`: `--fix` merges Alt+V → `chat:imagePaste` into
+  `~/.claude/keybindings.json` (`scripts/keybindings-merge.py`), keeping other bindings and
+  never overriding an alt+v bound to something else. README troubleshooting: image paste does
+  nothing (Tabby eats Ctrl+V). Tests: `tests/test_keybindings_merge.py`.
+- **Scout:** recorded "no" for ai-job-search (moved to `ai-job-search-dev/`; not my goals),
+  searxNcrawl (Playwright + Chromium; SearXNG and `just web2md` cover it), and the already
+  reviewed playwright-mcp and firecrawl, so none of them gets sent. `scout/finds/` gains the
+  searxNcrawl page; both pages carry the verdict.
+- **Review queue:** Tabby, firecrawl and browser-automation notes (with their clones) moved to
+  `reviewed/`. ROADMAP gains the REA-in-Docker and bigprint items (both waiting for Bill) and a
+  corrected REA upstream line (#2188 merged 2026-10-14).
+
+## 2026-10-23 — justfiles for write_well and deal-finder
+
+- **Added** justfiles in write_well (#5: status, recall) and deal-finder (#1: setup, run,
+  status, recall), each through a scratch worktree so neither repo's uncommitted tree
+  (61 and 2,838 files) was touched. That finishes the justfile rollout ROADMAP item.
+
+## 2026-10-23 — backlog sweep B: guide benchmark, CLAUDE.md de-dup, local rail
+
+- **Added** `scripts/guide_bench/` (20 routing queries; full vs compact vs LLM-compressed
+  jcodemunch guide, the local model as router) and an upstream-ready `compact` patch for
+  `jcodemunch_guide` (`docs/proposals/2026-10-23-*`). The guide is 2,804 chars now, 76% of it
+  the tool catalogue. The benchmark didn't finish: Heretic ran at ~0.6 tok/s under host load.
+- **Changed** sessions in this repo no longer load the routing policy twice:
+  `.claude/settings.json` sets `claudeMdExcludes` for the repo's own `CLAUDE.md` (and
+  worktree copies), so only `~/.claude/CLAUDE.md` loads (~5.1k tokens a session). The repo
+  copy stays the source that install.sh and refinery-doctor deploy, so no content moved and
+  the global Dreaming Notes tail is untouched. Doctor's drift message now says these sessions
+  run on the installed copy. Tests: `tests/test_claude_md_dedup.py`.
+- **Added** a ralph usage counter (`state/ralph-runs.log`, read by
+  `scripts/audit/collect_benefits.py`). Phase 4's D3 (remove ralph if idle) couldn't be
+  decided: the Phase 2 counter never measured ralph. Ralph stays.
+- **Added** `scripts/local_rail.py` (Phase 3, rescoped): batch jobs call the ask_local backend
+  through a content-hash cache in `state/local-rail-cache/`. Errors aren't cached and writes
+  are atomic. The guide benchmark runs through it. Tests: `tests/test_local_rail.py`,
+  `tests/test_guide_bench.py`.
+- **Added** Telegram chat history (`scripts/lib/tg_history.py`). The gateway logs each exchange
+  after output redaction and prefixes the last few turns (bounded, re-redacted) to the next
+  message. The nightly `sync_memory.sh --all` writes local-model daily summaries into the
+  memweave corpus: summaries only, at most 2 days and 120 s a call per run, non-fatal. Gateway diff: one import
+  and two call sites. Tests: `tests/test_tg_history.py`.
+
+## 2026-10-23 — competitive analysis
+
+- **Docs** `docs/2026-10-23-competitive-analysis.md`: Refinery against ECC (most direct),
+  superpowers, Hermes Agent, ruflo and the plugin marketplaces, from their READMEs and the
+  GitHub API that day. Moats: retrieval per modality with an absence contract, guards tested
+  in CI, rebuildable local memory. Gaps: install reach, multi-host, chat surfaces. A summary
+  note went to the memweave corpus.
+
+## 2026-10-23 — ECC agents evaluated: one kept
+
+- **Removed** five of the six imported ECC agents (`planner`, `architect`, `tdd-guide`,
+  `security-reviewer`, `silent-failure-hunter`). **Changed** `code-reviewer`: it absorbs the
+  silent-failure checklist and shell/Python/subprocess patterns, drops the React/Next.js/Node
+  sections, and can call read-only jcodemunch tools. `install-reliability.sh` removes dangling
+  `~/.claude/agents` links into `global-agents/`. `healthcheck.sh` checks the agents that ship
+  instead of a fixed list. Reasons per agent: `docs/RELIABILITY.md`.
+
+## 2026-10-23 — security hardening: grep-guard analyzer, surface list, Telegram gateway
+
+- **Fixed** grep-guard's false positives. It split commands on spaces with no idea of
+  quoting, so `grep -e 'uv run example.py' f.md` read `example.py'` as a file. It judged
+  relative paths against the session cwd even after `cd /tmp &&`. It couldn't see `S=/tmp/…;
+  cat $S/a.py`. A bash-aware analyzer (an inline python3 lexer, the same approach as
+  push-guard) now lists every path a read tool would open, with the possible working
+  directories. The existing helpers judge each path. Replaying the 605 untruncated logged
+  blocks, 93 (15%) are now allowed; all 93 were reviewed and none read the session repo's
+  source.
+- **Security** grep-guard bypasses closed, each pinned by a test (63 deny cases, 25 allow cases):
+  `$(echo cat) x.py`, `` `echo cat` ``, `cat${IFS}x.py`, `{cat,x.py}`, `echo "$(cat x.py)"`,
+  `<( )`, `sudo`/`env`/`timeout`/`nice`/`watch`/`command`/`exec` wrappers, `bash -c`, `eval`,
+  a heredoc or pipe into a shell, `cat < x.py`, `while … done < x.py`, `grep -efoo x.py`,
+  `grep -d recurse`, piped `rg` with paths, `xargs`/`find -exec`, functions, aliases,
+  for/read loop variables, `cd` inside a subshell/pipeline/after `||`, `cd -`, CDPATH, and any
+  `<<` (which used to allow the whole command). Added tac/nl/less/more/bat. With no python3, or
+  when the lexer fails, the guard falls back to the legacy scan. An unparseable command is
+  denied when it names a read tool and a source file.
+- **Changed** edit-surface-guard's surface list, from the log review: test modules are no
+  longer surfaces (65 blocks, 13% of all blocks). Added `.mcp.json`, `settings.local.json`,
+  `justfile`, `*.service`, `*.timer`. Extensions compare case-blind. surface-write-guard
+  mirrors the additions.
+- **Security** edit-surface-guard checked the path as written. `/tmp/notes.txt` pointing at a
+  hook edited it with no pre-mortem; the resolved path is judged too now. The token's `ts`
+  reached bash arithmetic raw. `"now"` gave a token that never expired, a future ts did the
+  same, and `a[$(cmd)]` ran a command. ts must now be a plain, non-future integer.
+- **Security** Telegram gateway, the four remaining red-team findings:
+  - Skill promotion rejects power-granting frontmatter (`allowed-tools`, `hooks`, `context`,
+    `agent`), `` !`cmd` `` bodies, and zero-width, bidi or fullwidth-obfuscated injection.
+  - A name collision with a different existing skill is refused. `copy2` used to overwrite it,
+    so a draft named `pre-mortem` could replace that gate.
+  - Output redaction gained token-shape and prose-key rules plus `~/`, Windows and relative
+    paths.
+  - The bot token moved out of curl's argv (world-readable in `/proc/<pid>/cmdline`) in the
+    poll loop, drain-offset, session-end-check, vault-session-check, notify-telegram and the
+    installer.
+- **Fixed** `state/hook-blocks.log.20261022` still held the 209 NUL bytes from the
+  2026-10-10 review, plus 2 lines cut mid-character, so plain `grep` returned nothing. Both
+  were stripped; the original is kept as `.pre-nul-strip`. That closes the review.
+## 2026-10-23 — small CPU model for the Pi / tc-vmh-03; sweep stale matches; Bill's decisions
+
+- **Added** `docker/llama-small/compose.yaml` + `just small` (CPU llama-server, 127.0.0.1:8096,
+  multi-arch image). Models: Qwen3.5-2B / 4B Heretic Q4_K_M (Apache-2.0, sha256 checked) in
+  `/opt/models/gguf/`. 2B on this host's CPU: 18.4 tok/s, 2.1 GB RAM.
+- **Fixed** `just waiting`: "awaiting" no longer matches "waiting", and bold labels count only in
+  a HANDOFF's newest entry (old "**Needs Bill:**" lists from finished work were resurfacing).
+- **Changed** `occams-razor` also fires when explaining why something is named, built or chosen
+  the way it is.
+- **Docs** ROADMAP records Bill's 2026-10-23 decisions (Klarheit keeps the 9B, granite removed,
+  Heretic local-only, CampaignGenerator/campaign-forge abandoned, deferrals).
+
+## 2026-10-23 — dcup ships with Uncle J; a hook makes Claude use it
+
+- **Added** `features/dcup/`: `dcup` (the Docker port registry wrapper) vendored from
+  `/opt/lib/docker-port-registry/`, plus its sweeper and an example exceptions file. The registry
+  dir is now `$DCUP_REGISTRY_DIR`, else `/opt/lib/docker-port-registry` if it exists, else
+  `~/.local/share/dcup`, so a new host gets a working registry. The live `ports.db` stays put.
+- **Added** `features/dcup/dcup_guard.py`, a PreToolUse Bash hook. It blocks `docker compose
+  up|create`, `docker compose run --service-ports|-p`, `docker-compose up`, `dcup --bypass up`
+  and `docker run|create` publishing a fixed host port. It parses the command like a shell does:
+  env prefixes, `sudo`/`env`/`timeout`/`nohup`/`xargs`/..., quoting tricks, `;`/`&&`/pipes,
+  `$(...)`, `bash -c`, `eval` and heredocs fed to a shell. It allows read-only docker, `dcup up`,
+  `-p CONTAINER`/`-P`, and text that only mentions the commands (commit heredocs, greps, echo).
+  If the guard itself errors, the command runs anyway. The kill switch is `DCUP_GUARD=off` in
+  the settings env. Tests: `tests/test_dcup_guard.py` (178-case matrix).
+- **Added** `features/dcup/install.sh` (idempotent, `--check`, `--uninstall`). It links
+  `~/.local/bin/dcup`, creates the registry dir, and registers the hook in
+  `~/.claude/settings.json` by marker (`dcup:guard`). The path is written at install time and
+  never committed. It refuses to run from a worktree. `install.sh` §6b2 calls it, and
+  `refinery-doctor.sh` has a new `dcup-guard` check (`--fix` installs).
+  Tests: `tests/test_dcup_install.py`.
+- **Why the old hook was "paused":** it was never wired. `dcup-pretooluse-hook.sh` sat in
+  `/opt/lib/docker-port-registry/` and isn't in `~/.claude/settings.json`. Bill stopped the
+  2026-10-22 attempt over fear that a bad hook would block real commands. The new guard has no
+  side effects (no docker or DB calls) and a tested allow-list.
+- **Ops (outside the repo):** released 52 stale dcup claims from 14 projects whose compose files
+  no longer exist (old `/opt/proj/git/review/...` copies, pre-Gitea `git`, `kanka-ce`). The DB
+  backup is `ports.db.bak.2026-10-23`. gitea, portainer, qr-forge and ser2net were re-registered
+  from their current homes, taking claims from 82 to 41.
+  `/opt/proj/.port-registry` gained 8712 (gitea's win-runner-autoscaler) and 24282–24299
+  (Serena MCP dashboards). 8091 was already there.
+
+## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
+
+- **Changed** `run_index_local()` calls the jdocmunch CLI only (moved to
+  `scripts/lib/jdocmunch-index-local.sh`). **Fixed** on the way: the CLI exits 0 on
+  `{"success": false}`, so the old CLI fallback counted a failed refresh as reindexed. The
+  verdict now comes from the JSON. Tests: `tests/test_jdocmunch_index_local.py`.
+- **Changed** `ralph-harness.sh` and the Telegram gateway strip `ANTHROPIC_API_KEY` and
+  `ANTHROPIC_AUTH_TOKEN` before calling `claude`, so runs bill the subscription login, not a
+  key. Tests: `tests/test_env_strip.py`.
+- **Added** a jscrub pre-commit gate: `scripts/jscrub/precommit-scan.sh` scans staged text for
+  invisible Unicode and blocks the commit, report-only (never `clean`/`--in-place`).
+  `scripts/pre-commit.sh` runs it after the session-end docs check; `install.sh` now links the
+  hook there. `audit-repo.sh` gained a live-positive canary (exit 3 if a known ZWSP isn't
+  detected); file selection moved to `scripts/jscrub/pathspec.sh` so both gates agree. CI's
+  jscrub job also runs `tests/test_jscrub_gates.py`.
+
+## 2026-10-23 — upstream filings and the jcodemunch "unanalyzed" backlog
+
+- **Filed** [jdocmunch-mcp#196](https://github.com/jgravelle/jdocmunch-mcp/issues/196):
+  `index_local` accepts a repo name ending in a sidecar suffix. `X.summary` crashes with
+  `KeyError 'owner'`; `X.related` silently overwrites X's sidecar. Reproduced on 1.149.0 in a
+  scratch `DOC_INDEX_PATH`; duplicate-checked.
+- **Not filed:** the `get_watch_status` `any_stale` write-up. It duplicates
+  jcodemunch-mcp#565, fixed in v1.108.315, and re-verified on installed 1.108.391.
+- **Docs** ROADMAP: both items marked. REA #2188 merged and #2187 open with no maintainer reply.
+  claude-guardrails #17/#20 have no replies.
+- **Reviewed** the 8 jcodemunch ranges the 03:00 cron left "unanalyzed" (edc59ad→d56f459).
+  Every installed range was already covered by a post-upgrade sync commit. Only
+  7f3acbc→d56f459 (1.108.392–.395, not installed) is pending. No CLAUDE.md change.
+
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 
 - **Fixed** the status sweep (`scripts/waiting_sweep.py`) missed most open work: it read only
