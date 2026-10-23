@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-23 — docs: how to start the local model
+
+- **Docs** `docs/STACK.md` ask_local: a "Starting it" block (`just ask-local-up`, `just chat`,
+  `just heretic logs|down`, the health check). Dropped the stale "re-run `claude mcp add` after
+  a reinstall" note; the backend now comes from `config/ask_local.env`.
+
 ## 2026-10-22 — session end: lineup steps 1–5, guard and healthcheck fixes
 
 - **Docs** HANDOFF: one session-end entry replaces this session's running notes. README:
