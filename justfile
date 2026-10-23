@@ -89,3 +89,11 @@ ask-local-up:
 # ask_local's abliterated model (llama-server, 127.0.0.1:8090): just heretic up -d | down | logs (up via dcup)
 heretic *args:
     ./scripts/heretic.sh {{args}}
+
+# speech-to-text (whisper.cpp, CPU, 127.0.0.1:8092): just whisper up -d | down | logs (up via dcup)
+whisper *args:
+    ./scripts/speech.sh whisper {{args}}
+
+# cloned-voice text-to-speech (Chatterbox Nano, CPU, 127.0.0.1:8093): just tts up -d | down | logs
+tts *args:
+    ./scripts/speech.sh tts {{args}}

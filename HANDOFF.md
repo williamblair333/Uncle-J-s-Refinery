@@ -1,5 +1,25 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — speech-to-text and cloned voices running, CPU only
+
+**Most important:** both speech services run on the CPU and leave the GPU alone, so Heretic
+and Ollama (Klarheit) are untouched. `just whisper up -d` (:8092) and `just tts up -d` (:8093)
+start them through dcup. How to use them and the measured numbers are in `docs/STACK.md`
+"Speech".
+
+- Models: `/opt/models/whisper/ggml-large-v3-turbo-q5_0.bin`, `/opt/models/chatterbox-nano/`
+  (sha256 checked). Voices: `/opt/models/chatterbox-voices/*.wav`. Samples:
+  `/opt/outputs/speech/`.
+- Both containers have `restart: unless-stopped` and together hold ~6 GB of RAM. Stop them
+  with `just whisper down` / `just tts down` if RAM gets tight.
+- whisper is slower than real time on this 6-core CPU (a 30 s clip took 31 s at load ~11 and
+  252 s at load ~40). For live captions, use a smaller model or voice-line's GPU whisper.
+- voice-line now runs its own whisper-server and Kokoro on the GPU (~1.3 GB VRAM, ports 2022
+  and 8880). That's a separate project; nothing here uses it.
+- **Open / next:** listen to `/opt/outputs/speech/cloned-librivox-gettysburg.wav` (only checked
+  by voice-encoder similarity and a Whisper read-back so far); add a real voice of Bill's if
+  wanted. Neither service is in `healthcheck.sh` yet.
+
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
 **Most important:** `just waiting` now prints ROADMAP open items, the newest bold
