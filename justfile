@@ -80,7 +80,7 @@ chat *args:
 
 # Claude Code session with a quiet headless Firefox browser MCP (this session only)
 browser *args:
-    claude --mcp-config "$(./scripts/firefox-mcp.sh --config)" {{args}}
+    claude {{args}} --mcp-config "$(./scripts/firefox-mcp.sh --config)"
 
 # web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
 web2md *args:
