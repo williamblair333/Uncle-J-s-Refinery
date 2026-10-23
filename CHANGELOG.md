@@ -2,6 +2,37 @@
 
 ---
 
+## 2026-10-23 — dcup ships with Uncle J; a hook makes Claude use it
+
+- **Added** `features/dcup/`: `dcup` (the Docker port registry wrapper) vendored from
+  `/opt/lib/docker-port-registry/`, plus its sweeper and an example exceptions file. The registry
+  dir is now `$DCUP_REGISTRY_DIR`, else `/opt/lib/docker-port-registry` if it exists, else
+  `~/.local/share/dcup`, so a new host gets a working registry. The live `ports.db` stays put.
+- **Added** `features/dcup/dcup_guard.py`, a PreToolUse Bash hook. It blocks `docker compose
+  up|create`, `docker compose run --service-ports|-p`, `docker-compose up`, `dcup --bypass up`
+  and `docker run|create` publishing a fixed host port. It parses the command like a shell does:
+  env prefixes, `sudo`/`env`/`timeout`/`nohup`/`xargs`/..., quoting tricks, `;`/`&&`/pipes,
+  `$(...)`, `bash -c`, `eval` and heredocs fed to a shell. It allows read-only docker, `dcup up`,
+  `-p CONTAINER`/`-P`, and text that only mentions the commands (commit heredocs, greps, echo).
+  If the guard itself errors, the command runs anyway. The kill switch is `DCUP_GUARD=off` in
+  the settings env. Tests: `tests/test_dcup_guard.py` (178-case matrix).
+- **Added** `features/dcup/install.sh` (idempotent, `--check`, `--uninstall`). It links
+  `~/.local/bin/dcup`, creates the registry dir, and registers the hook in
+  `~/.claude/settings.json` by marker (`dcup:guard`). The path is written at install time and
+  never committed. It refuses to run from a worktree. `install.sh` §6b2 calls it, and
+  `refinery-doctor.sh` has a new `dcup-guard` check (`--fix` installs).
+  Tests: `tests/test_dcup_install.py`.
+- **Why the old hook was "paused":** it was never wired. `dcup-pretooluse-hook.sh` sat in
+  `/opt/lib/docker-port-registry/` and isn't in `~/.claude/settings.json`. Bill stopped the
+  2026-10-22 attempt over fear that a bad hook would block real commands. The new guard has no
+  side effects (no docker or DB calls) and a tested allow-list.
+- **Ops (outside the repo):** released 52 stale dcup claims from 14 projects whose compose files
+  no longer exist (old `/opt/proj/git/review/...` copies, pre-Gitea `git`, `kanka-ce`). The DB
+  backup is `ports.db.bak.2026-10-23`. gitea, portainer, qr-forge and ser2net were re-registered
+  from their current homes, taking claims from 82 to 41.
+  `/opt/proj/.port-registry` gained 8712 (gitea's win-runner-autoscaler) and 24282–24299
+  (Serena MCP dashboards). 8091 was already there.
+
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 
 - **Fixed** the status sweep (`scripts/waiting_sweep.py`) missed most open work: it read only

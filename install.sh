@@ -619,6 +619,16 @@ else
     fi
 fi
 
+# --- 6b2. dcup (Docker port registry) + its PreToolUse guard ----------------
+# Vendored in features/dcup/. Links ~/.local/bin/dcup and registers a hook that blocks
+# `docker compose up` / `docker run -p HOST:...` that skip the registry. Idempotent.
+step "Installing dcup (Docker port registry) and its guard hook"
+if bash "$STACK_ROOT/features/dcup/install.sh"; then
+    ok "dcup installed (restart Claude Code to load the hook)"
+else
+    warn "dcup install failed — run: bash $STACK_ROOT/features/dcup/install.sh"
+fi
+
 # --- 6c. Wire git post-merge hook (opt-in) ----------------------------------
 step "Optional features"
 echo ""

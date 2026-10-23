@@ -1,5 +1,23 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — dcup vendored + guard hook; stale claims released
+
+**Most important:** the dcup guard runs only after `bash features/dcup/install.sh` is run from
+the **main checkout**, followed by a Claude Code restart. Until then, nothing blocks
+`docker compose up`. `bash scripts/refinery-doctor.sh --check dcup-guard` says which state
+you're in.
+
+- `features/dcup/` holds dcup, the guard, the installer and tests. `~/.local/bin/dcup` will be
+  a symlink to the repo copy (it's first in PATH). The old `/opt/lib/docker-port-registry/dcup`
+  is left as a fallback, along with the unwired `dcup-pretooluse-hook.sh`, which can be deleted.
+- dcup claims: 52 released (14 projects with deleted compose files), 11 re-registered, so 41
+  remain. Backup: `ports.db.bak.2026-10-23`.
+- Ports: 8712 is gitea's `win-runner-autoscaler.service` (legit). 24282–24285 are Serena
+  dashboards, one per Claude session. Both are in `/opt/proj/.port-registry` now.
+- For Bill: `open-webui` claims 11434 on 0.0.0.0 while `ollama` holds it on 127.0.0.1.
+  kanka-ce's 8 exited containers outlive its deleted compose file, so `docker rm` them if
+  they're unwanted. The guard can't see commands inside scripts or `docker service`/`stack`.
+
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
 **Most important:** `just waiting` now prints ROADMAP open items, the newest bold
