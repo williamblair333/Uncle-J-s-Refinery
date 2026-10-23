@@ -4,7 +4,8 @@
 # Checks for .env key renames, stack MCP servers shadowed by a
 # local/project scope, a missing jcodemunch compaction-restore hook, the
 # jdocmunch-watch summaries-off drop-in, CLAUDE.md drift, the dcup port-registry guard,
-# and placeholder values. Distinct from healthcheck.sh (runtime health).
+# placeholder values, and the Alt+V image-paste keybinding. Distinct from healthcheck.sh
+# (runtime health).
 #
 # Usage:
 #   bash scripts/refinery-doctor.sh            # dry-run: report only
@@ -32,7 +33,7 @@ while [[ $i -le $# ]]; do
             ONLY_CHECK="${!i:-}"
             ;;
         -h|--help)
-            sed -n '1,10p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '1,13p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) printf 'Unknown arg: %s\n' "$arg" >&2; exit 2 ;;
@@ -382,6 +383,32 @@ check_env_placeholders() {
     info "this check is report-only — fill in real values manually"
 }
 
+# Alt+V image paste. Terminals that swallow Ctrl+V (Tabby) never let it reach Claude
+# Code; a second binding fixes that. Merged into the user's file, never overwritten, and
+# an alt+v already bound to something else is left alone.
+check_keybindings() {
+    step "keybindings — Alt+V pastes images (for terminals that eat Ctrl+V)"
+    local helper="$SCRIPT_DIR/keybindings-merge.py" state
+    state=$(python3 "$helper" check 2>/dev/null | tail -n 1)
+    case "$state" in
+        present) ok "alt+v → chat:imagePaste in ~/.claude/keybindings.json" ;;
+        taken)   info "alt+v is bound to something else in Chat — left alone" ;;
+        missing)
+            migration "alt+v image-paste binding missing from ~/.claude/keybindings.json"
+            suggest "run: $0 --fix   # or: python3 $helper merge"
+            record_migration "keybindings"
+            if [[ "$FIX_MODE" == true ]]; then
+                state=$(python3 "$helper" merge | tail -n 1)
+                [[ "$state" == merged ]] \
+                    && fixed "added alt+v → chat:imagePaste (other bindings kept; backup .bak)" \
+                    || info "merge returned '${state:-nothing}'"
+            fi
+            ;;
+        unreadable) info "~/.claude/keybindings.json isn't valid JSON — not touched" ;;
+        *) info "check failed (helper output: ${state:-none}) — skipping" ;;
+    esac
+}
+
 # ── run ──────────────────────────────────────────────────────────────────────
 
 run_check embed-model
@@ -391,6 +418,7 @@ run_check jdocmunch-watch-dropin
 run_check claude-md-sync
 run_check dcup-guard
 run_check env-placeholders
+run_check keybindings
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
