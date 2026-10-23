@@ -1,5 +1,26 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — Firefox browser MCP adopted; review queue and scout cleared
+
+**Most important:** `just browser` starts a session with a headless Firefox the agent can
+drive. It contacts only the sites it's sent to (measured; see ROADMAP). It's not registered
+globally; open a new session with `just browser` when a task needs a browser.
+
+- First `just browser` run installs @mozilla/firefox-devtools-mcp 0.10.4 into
+  `~/.local/state/uncle-j/firefox-mcp/pkg` (npm, once). geckodriver comes from
+  `~/.cache/selenium` (0.37.1 is there); a host without it fetches it from GitHub once.
+- `refinery-doctor.sh --fix` now merges the Alt+V image-paste binding (already present here).
+- Scout: 4 finds answered "no" on Bill's behalf (`answered_by` in `scout/answers.json`);
+  `state/scout-queue.json` dropped the three of them that were queued (backup in the session
+  scratchpad). The lemonlyue pending message expires to "maybe" on the next run, as designed.
+
+**Open / next (Bill's):**
+- REA in Docker: say "build it" (`review/2026-10-22-rea-in-docker.md`).
+- bigprint (A1 mini splitter): go-ahead, repo location, three open items
+  (`review/luban-rebuild-handoff.md`).
+- `review/2026-10-10-hook-blocks-log-nul-bytes.md` is being handled by another session.
+- Optional: a small SearXNG search tool for Claude Code (the gap searxNcrawl pointed at).
+
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
 **Most important:** `just waiting` now prints ROADMAP open items, the newest bold

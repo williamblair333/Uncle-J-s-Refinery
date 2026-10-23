@@ -78,6 +78,10 @@ preview *args:
 chat *args:
     .venv/bin/python scripts/local_chat/server.py {{args}}
 
+# Claude Code session with a quiet headless Firefox browser MCP (this session only)
+browser *args:
+    claude --mcp-config "$(./scripts/firefox-mcp.sh --config)" {{args}}
+
 # web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
 web2md *args:
     uv run -q --script scripts/web2md.py {{args}}

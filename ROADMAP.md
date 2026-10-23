@@ -67,9 +67,17 @@ Completed items age out after ~4 weeks.
   files. That's low harm, because the block only lists files and searches. Decide whether to
   file it with jgravelle/jcodemunch-mcp. A custom snapshot hook (tasks, decisions, prompts) is
   **not** planned: Claude Code's compaction summary already carries those.
-- **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
-  (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
+- **REA upstream follow-up** (opened 2026-10-12). #2188 (docs PR) **merged 2026-10-14**;
+  morluto/rea#2187 (design issue) is still open (gh, 2026-10-23). If they say "PR welcome", the
   touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
+- **REA in Docker, two containers** (planned 2026-10-22, **waiting for Bill's "build it"**).
+  `docker/rea/` with an Investigator image (REA 6.7.0, Ghidra 12.1.4, Node 24, JDK 21) and a
+  Builder image with no Docker socket, pinned in `versions.env`, `just rea-update` /
+  `rea-rollback`. Plan: `review/2026-10-22-rea-in-docker.md` (main host).
+- **Large-model splitter for the A1 mini ("bigprint")** (spec 2026-10-22, **waiting for Bill**).
+  A full clean-room spec (deterministic grid splits only, to design around US10025882B2) sits in
+  `review/luban-rebuild-handoff.md` (main host). Needs Bill's go, where the new repo lives, and
+  his three open items: filament for gram estimates, connector default, laser outputs.
 - **[DONE 2026-10-22] grep-guard false positive on an unexpanded glob** — globs now expand
   against the session cwd and each match is judged; `-r` on a plain non-source file is
   allowed; `cat scripts/*` (which hid source) is now denied. Baseline in audit-baselines.md.
@@ -136,7 +144,17 @@ Completed items age out after ~4 weeks.
   the smaller output doesn't drop content that matters, and measure tokens against WebFetch
   on a real task. Verdict and numbers: `review/2026-10-19-firecrawl.md` (main host).
   Resume: "build the trafilatura crawler".
-- **Trial firefox-devtools-mcp for browser control** — trial run 2026-10-22, **not adopted yet**.
+- **[DONE 2026-10-23] firefox-devtools-mcp adopted, per session: `just browser`.** Egress
+  measured without root (user+net namespace whose only route is a capturing dummy interface,
+  plus a logging SOCKS5 proxy): with `config/firefox-mcp/user.js` and `scripts/firefox-mcp.sh`
+  the only contacts are the target sites, for TCP, UDP/QUIC and DNS alike, over 4-minute idles.
+  It took three non-pref fixes: `MOZ_REMOTE_SETTINGS_DEVTOOLS=1` (release Firefox ignores the
+  remote-settings server pref otherwise), a private `XDG_CONFIG_HOME` (the host's Crash Reports
+  store holds a pending telemetry ping any Firefox retries), and node on a local install instead
+  of `npx` (which asks the npm registry on every start). Not registered globally. Re-measure
+  after a Firefox major upgrade; method in `reviewed/2026-10-19-browser-automation-no-microsoft.md`
+  (main host). Original entry follows.
+  **Trial firefox-devtools-mcp for browser control** — trial run 2026-10-22, **not adopted yet**.
   It's `@mozilla/firefox-devtools-mcp` now (the old name is deprecated); 0.10.4 works headless
   with system Firefox 150, 34 tools, snapshots 0.4–4.8K chars. But Firefox itself contacts
   Mozilla (detectportal, remote settings, content-signature) besides the target. 19 quieting

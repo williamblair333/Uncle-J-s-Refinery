@@ -1,13 +1,41 @@
 {
   "finds": {
+    "1131217056": {
+      "answer": "no",
+      "answered_at": "2026-10-23T18:28:51Z",
+      "answered_by": "claude review 2026-10-23 for Bill ('do the scout items'); see scout/finds",
+      "full_name": "DasDigitaleMomentum/searxNcrawl",
+      "note": "Hard Playwright dependency (Microsoft) plus a 550 MB Chromium download; SearXNG (127.0.0.1:8086) and just web2md already cover search and page-to-markdown.",
+      "reason": "already have it",
+      "rung": 1
+    },
     "1185389803": {
-      "answer": "maybe",
-      "answered_at": "2026-10-21T09:51:08Z",
-      "expired": true,
-      "full_name": "MadsLorentzen/ai-job-search",
-      "reason": null,
+      "answer": "no",
+      "answered_at": "2026-10-23T18:28:51Z",
+      "answered_by": "claude review 2026-10-23 for Bill ('do the scout items'); see scout/finds",
+      "full_name": "ai-job-search-dev/ai-job-search",
+      "note": "Job-hunting app built as a Claude Code project; fills no harness gap. Repo moved from MadsLorentzen/ai-job-search.",
+      "reason": "not my goals",
       "rung": 1,
       "watch_checked": "2026-10-21T09:51:08Z"
+    },
+    "787076358": {
+      "answer": "no",
+      "answered_at": "2026-10-23T18:28:51Z",
+      "answered_by": "claude review 2026-10-23 for Bill ('do the scout items'); see scout/finds",
+      "full_name": "firecrawl/firecrawl",
+      "note": "Reviewed 2026-10-19: 7 services, 3.4 GiB, Playwright browser path. Replaced by just web2md (trafilatura), done 2026-10-22.",
+      "reason": "too heavy",
+      "rung": 1
+    },
+    "952688112": {
+      "answer": "no",
+      "answered_at": "2026-10-23T18:28:51Z",
+      "answered_by": "claude review 2026-10-23 for Bill ('do the scout items'); see scout/finds",
+      "full_name": "microsoft/playwright-mcp",
+      "note": "Microsoft. Reviewed 2026-10-19 (review/2026-10-19-browser-automation-no-microsoft.md); firefox-devtools-mcp chosen instead.",
+      "reason": "not my goals",
+      "rung": 1
     }
   }
 }

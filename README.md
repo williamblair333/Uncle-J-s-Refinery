@@ -729,7 +729,7 @@ Automated invocation:
 
 ### Config drift check
 
-`refinery-doctor.sh` detects config schema drift — env key renames, stale MCP scopes, a missing jcodemunch compaction-restore hook (`hook-sessionstart`), `~/.claude/CLAUDE.md` out of sync, and unfilled template values. Distinct from `healthcheck.sh` (runtime health) — doctor checks migration state.
+`refinery-doctor.sh` detects config schema drift — env key renames, stale MCP scopes, a missing jcodemunch compaction-restore hook (`hook-sessionstart`), `~/.claude/CLAUDE.md` out of sync, unfilled template values, and a missing Alt+V image-paste keybinding. Distinct from `healthcheck.sh` (runtime health) — doctor checks migration state.
 
 ```bash
 bash scripts/refinery-doctor.sh            # dry-run: report only
@@ -761,6 +761,15 @@ The banner's `fix:` line tells you what to run. Common causes:
 | `post-merge-hook-missing` | `ln -sfn "$STACK_ROOT/scripts/post-merge-hook.sh" "$STACK_ROOT/.git/hooks/post-merge"` |
 | `secrets` | Review the grep hits; add to `.gitignore` or redact |
 | `hook-no-fire` / `trace-api` (full mode) | `tail -5 ~/.claude/state/langfuse_hook.log`, then verify `from langfuse import Langfuse` works from the stack venv |
+
+### Pasting an image does nothing
+
+Check the clipboard first: `xclip -selection clipboard -t TARGETS -o` should list `image/png`,
+and `xclip -selection clipboard -t image/png -o | wc -c` should be well above 0. If it is, the
+terminal is eating Ctrl+V (Tabby does). Press **Alt+V** instead: `refinery-doctor.sh --fix`
+merges that binding into `~/.claude/keybindings.json` without touching your other bindings
+(restart Claude Code after). If the byte count is 0, the copy itself failed: "Copy image" from
+Gmail in Chromium advertises `image/png` but delivers nothing.
 
 ### `verify.sh` reports FAIL after fresh install
 
