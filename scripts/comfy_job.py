@@ -14,6 +14,7 @@ import argparse
 import json
 import random
 import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -24,6 +25,7 @@ from pathlib import Path
 
 DEFAULT_URL = "http://127.0.0.1:8188"
 OUTPUT_ROOT = Path("/opt/outputs/comfyui")
+HERETIC_CONTAINER = "llama-heretic"
 
 IMAGE_MODELS = {
     "unet": "z_image_turbo_bf16.safetensors",
@@ -299,11 +301,29 @@ def gpu_warnings(apps: dict[int, tuple[str, int]]) -> list[str]:
     notes = []
     for name, mib in apps.values():
         if "llama-server" in name:
-            notes.append(f"llama-heretic is awake on the GPU ({mib} MiB); "
-                         "`just heretic down` makes this faster (`just heretic up -d` after).")
+            notes.append(f"llama-heretic is awake on the GPU ({mib} MiB); it auto-fits to "
+                         "free VRAM, so it is parked for this job and restarted after.")
         elif "ollama" in name:
             notes.append(f"Ollama holds {mib} MiB (Klarheit's trials); ComfyUI offloads around it.")
     return notes
+
+
+def heretic_on_gpu(apps: dict[int, tuple[str, int]]) -> bool:
+    return any("llama-server" in name for name, _ in apps.values())
+
+
+def _docker(*args: str) -> bool:
+    try:
+        return subprocess.run(["docker", *args], capture_output=True, text=True,
+                              timeout=120).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def _exit_on_signal(signum: int, _frame) -> None:
+    # SIGTERM/SIGHUP skip `finally` by default, which would leave Heretic parked for good
+    # (its restart policy is unless-stopped).
+    raise SystemExit(128 + signum)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -323,6 +343,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--ignore-klarheit", action="store_true",
                     help="start even if it would overlap a Klarheit trial (can make its "
                          "Ollama calls time out)")
+    ap.add_argument("--keep-heretic", action="store_true",
+                    help="don't stop llama-heretic for the job (it auto-fits to free VRAM, "
+                         "so the job usually fails for lack of memory)")
     args = ap.parse_args(argv)
 
     seed = args.seed if args.seed is not None else random.randint(0, 2**32 - 1)
@@ -342,9 +365,23 @@ def main(argv: list[str] | None = None) -> int:
     if not args.ignore_klarheit and not wait_for_klarheit(args.kind, max_wait=3600):
         print("gave up after an hour waiting for Klarheit's trials", file=sys.stderr)
         return 1
-    for note in gpu_warnings(gpu_apps()):
+    apps = gpu_apps()
+    for note in gpu_warnings(apps):
         print(f"note: {note}", file=sys.stderr)
+    parked = False
+    if not args.keep_heretic and heretic_on_gpu(apps):
+        for sig in (signal.SIGTERM, signal.SIGHUP):
+            signal.signal(sig, _exit_on_signal)
+        parked = _docker("stop", HERETIC_CONTAINER)
+    try:
+        return run_job(args, wf, seed)
+    finally:
+        if parked and not _docker("start", HERETIC_CONTAINER):
+            print(f"could not restart {HERETIC_CONTAINER}; run: just heretic up -d",
+                  file=sys.stderr)
 
+
+def run_job(args: argparse.Namespace, wf: dict, seed: int) -> int:
     sampler = VramSampler(container_pid())
     sampler.start()
     t0 = time.monotonic()

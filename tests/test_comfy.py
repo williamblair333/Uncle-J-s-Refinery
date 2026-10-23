@@ -180,7 +180,34 @@ def test_output_files_and_errors():
 def test_gpu_warnings_name_heretic_and_ollama():
     notes = cj.gpu_warnings({1: ("/app/llama-server", 4800), 2: ("/usr/bin/ollama", 5000),
                              3: ("python", 100)})
-    assert len(notes) == 2 and "heretic down" in notes[0] and "Klarheit" in notes[1]
+    assert len(notes) == 2 and "parked" in notes[0] and "Klarheit" in notes[1]
+
+
+def test_heretic_on_gpu_spots_llama_server_only():
+    assert cj.heretic_on_gpu({1: ("/app/llama-server", 9842), 2: ("python", 192)})
+    assert not cj.heretic_on_gpu({2: ("python", 192), 3: ("/usr/bin/ollama", 5000)})
+    assert not cj.heretic_on_gpu({})
+
+
+def test_main_parks_heretic_and_restarts_it_even_on_failure(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cj, "_http", lambda *a, **k: {})
+    monkeypatch.setattr(cj, "wait_for_klarheit", lambda *a, **k: True)
+    monkeypatch.setattr(cj, "gpu_apps", lambda: {1: ("/app/llama-server", 9842)})
+    monkeypatch.setattr(cj, "_docker", lambda *a: calls.append(a) or True)
+
+    def boom(*a):
+        raise RuntimeError("job blew up")
+    monkeypatch.setattr(cj, "run_job", boom)
+    try:
+        cj.main(["image", "x"])
+    except RuntimeError:
+        pass
+    assert calls == [("stop", "llama-heretic"), ("start", "llama-heretic")]
+
+    calls.clear()
+    monkeypatch.setattr(cj, "run_job", lambda *a: 0)
+    assert cj.main(["image", "x", "--keep-heretic"]) == 0 and calls == []
 
 
 def test_next_trial_hourly_and_m12():
