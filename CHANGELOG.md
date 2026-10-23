@@ -9,6 +9,8 @@
   `docker stop llama-heretic` before queueing and `docker start` in a `finally` (SIGTERM/SIGHUP
   mapped to SystemExit so a killed job still restarts it). `--keep-heretic` opts out.
   Verified: image in 62 s, Heretic back up after. ask_local returns errors while it's parked.
+- **Changed** `docs/STACK.md` "Sharing the GPU" and the README local-image row to match;
+  dropped the stale "stop Heretic for speed" advice and the pre-auto-fit OOM note.
 
 ## 2026-10-23 — Heretic sizes itself to free GPU memory (no more OOM crash loop)
 

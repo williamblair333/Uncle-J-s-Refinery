@@ -21,7 +21,8 @@ moneymaker #8, channelengine #3, voice-line #12, write_well #5, deal-finder #1.
   27.7 tok/s with the GPU free, 0.8 GB / 14 tok/s beside the 9B, never OOM. Slower than the old
   ~40 tok/s fixed split; lower the target if Klarheit's 9B ever retires.
 - `just image` / `just video` OOM'd beside the auto-fit Heretic (9.8 GB). FIXED: comfy_job.py
-  now stops llama-heretic for the job and restarts it after (`--keep-heretic` to skip).
+  now stops llama-heretic for the job and restarts it after (`--keep-heretic` to skip). PR #196,
+  docs #197. If a job is SIGKILLed, Heretic stays down: `just heretic up -d`.
 - anatomy-lab A/B: marginal (lib arm 18.4% fewer tokens). Close the 4 catalogue gaps, rerun.
 - jcodemunch guide: plain cut = 184 tokens, same 18/20 routing as the 738-token full guide.
 - Photo → script on Heretic picks wrong primitives (partikus analyzer prompt).
