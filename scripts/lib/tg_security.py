@@ -101,8 +101,35 @@ _INJECTION_PATTERNS = [re.compile(p, re.IGNORECASE | re.DOTALL) for p in [
     r'<system>',
 ]]
 
+# A value that looks like a secret: 12+ non-space chars with at least one digit.
+# ("required", "configured" and other prose after "API key is" never qualify.)
+_SECRETISH = r'[`"\']?(?=[^\s`"\']*\d)[^\s`"\'<>]{12,}'
+
 # Sensitive patterns that must never appear in responses sent to Telegram
 _OUTPUT_REDACTIONS = [
+    # ── 2026-10-23: token SHAPES, whatever (if anything) names them ──
+    # Telegram bot token <bot-id>:<35 urlsafe> — the gateway's own credential.
+    (re.compile(r'\b\d{6,12}:[A-Za-z0-9_-]{30,}'), '[REDACTED-TOKEN]'),
+    # GitHub / Gitea-style, OpenAI-style, Langfuse, AWS, Slack, Google, JWT, PEM.
+    (re.compile(r'\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})'), '[REDACTED-TOKEN]'),
+    (re.compile(r'(?<![a-zA-Z])sk-(?:proj-|svcacct-)?[A-Za-z0-9_\-]{20,}'), '[REDACTED-API-KEY]'),
+    (re.compile(r'\b(?:pk|sk)-lf-[A-Za-z0-9\-]{8,}'), '[REDACTED-API-KEY]'),
+    (re.compile(r'\b(?:AKIA|ASIA)[0-9A-Z]{16}\b'), '[REDACTED-API-KEY]'),
+    (re.compile(r'\bxox[abposr]-[A-Za-z0-9\-]{10,}'), '[REDACTED-TOKEN]'),
+    (re.compile(r'\bAIza[0-9A-Za-z_\-]{35}'), '[REDACTED-API-KEY]'),
+    (re.compile(r'\beyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]{4,}'), '[REDACTED-TOKEN]'),
+    (re.compile(r'-----BEGIN [A-Z ]*PRIVATE[ ]KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE[ ]KEY-----|$)'),
+     '[REDACTED-PRIVATE-KEY]'),
+    (re.compile(r'(?i)\bbearer\s+[A-Za-z0-9._~+/=\-]{16,}'), 'Bearer [REDACTED]'),
+    # Spaced / lower-case / prose key names ("telegram bot token is 123…",
+    # "api key: abc123…", "password = hunter2hunter2") the SCREAMING_SNAKE rules miss.
+    (re.compile(
+        r'(?i)\b((?:telegram[\s_\-]*bot[\s_\-]*token|bot[\s_\-]*token|anthropic[\s_\-]*api[\s_\-]*key'
+        r'|openai[\s_\-]*api[\s_\-]*key|api[\s_\-]*key|secret[\s_\-]*key|client[\s_\-]*secret'
+        r'|access[\s_\-]*token|auth[\s_\-]*token|refresh[\s_\-]*token|private[\s_\-]*key'
+        r'|password|passwd|passphrase|chat[\s_\-]*id)'
+        r'(?:\s+(?:is|was|value|of)\b)*\s*(?:[=:]|->|is|equals)?\s*)' + _SECRETISH),
+     r'\1[REDACTED]'),
     # Anthropic API keys. (?<![a-zA-Z]) stops "task-ant-…"/"flask-ant-…" from matching
     # the trailing "sk" of an ordinary hyphenated word (false-positive over-redaction).
     (re.compile(r'(?<![a-zA-Z])sk-ant-[a-zA-Z0-9\-_]{10,}'), '[REDACTED-API-KEY]'),
@@ -129,6 +156,34 @@ _OUTPUT_REDACTIONS = [
     # SCREAMING_SNAKE env-var assignments
     (re.compile(r'\b([A-Z][A-Z0-9_]{3,})\s*=\s*\S+'), r'\1=[REDACTED]'),
 ]
+
+# Output-only: host paths the absolute-root rule above misses. NOT applied to skill
+# drafts (scan_skill_body) — a skill legitimately says "run scripts/x.sh".
+_OUTPUT_ONLY_REDACTIONS = [
+    # ~/… home paths (the guard list matched only absolute roots)
+    (re.compile(r'(?<![\w/])~/[^\s`"\'<>)\]]+'), '[REDACTED-PATH]'),
+    # Windows and MSYS spellings: C:\Users\…, /c/opt/proj/…
+    (re.compile(r'\b[A-Za-z]:\\[^\s`"\'<>]+'), '[REDACTED-PATH]'),
+    (re.compile(r'(?<![\w.:/])/[a-z]/(?:opt|home|Users|Program Files|Windows)[^\s`"\'<>]*'), '[REDACTED-PATH]'),
+    # Relative paths naming a file (dir/…/name.ext). The left guard keeps URL paths
+    # (https://host/a/b.md) out: a match can't start after / . : ~ or a word char.
+    (re.compile(r'(?<![\w/:.~\-])(?:\.{1,2}/)?(?:[\w.\-]+/)+[\w.\-]+\.(?:py|sh|bash|toml|ya?ml|json|jsonl|md'
+                r'|txt|log|env|cfg|ini|conf|js|mjs|ts|sqlite|db|lock|key|pem|crt|service|timer)\b'),
+     '[REDACTED-PATH]'),
+    # This stack's own directories, with or without a file after them.
+    (re.compile(r'(?<![\w/:.~\-])(?:\./)?(?:scripts|state|config|hooks|features|global-skills|\.claude'
+                r'|\.uncle-j-memory|review|lib)/[\w./\-]*'), '[REDACTED-PATH]'),
+]
+
+# Skill frontmatter keys that grant the skill power when it is invoked: pre-approved
+# tools, shell hooks, a forked agent context. A promoted draft must never carry them
+# (red-team 2026-10-23: the description was scanned, the keys were not).
+_FORBIDDEN_FRONTMATTER_KEYS = {
+    'allowed-tools', 'allowed_tools', 'hooks', 'context', 'agent', 'permissionmode',
+    'permission-mode', 'permission_mode',
+}
+# `!`cmd`` in a skill body is run by Claude Code when the skill loads.
+_SKILL_SHELL_INJECTION_RE = re.compile(r'!\s*`')
 
 # Safe skill name: alphanumeric, hyphens, underscores; no dots, slashes, or traversal
 _SAFE_SKILL_NAME_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_\-]{0,63}$')
@@ -166,7 +221,7 @@ def scan_output(text: str) -> str:
     Redact sensitive patterns from Claude's response before it is sent to Telegram.
     All replacements are annotated so the user knows redaction occurred.
     """
-    for pattern, replacement in _OUTPUT_REDACTIONS:
+    for pattern, replacement in _OUTPUT_REDACTIONS + _OUTPUT_ONLY_REDACTIONS:
         text = pattern.sub(replacement, text)
     return text
 
@@ -207,17 +262,42 @@ def scan_skill_body(path: str) -> 'tuple[bool, str | None]':
     try:
         with open(path, encoding='utf-8') as f:
             content = f.read()
-    except OSError as e:
-        return False, f"Could not read draft: {e}"
+    except (OSError, UnicodeDecodeError) as e:
+        return False, f"Could not read draft: {type(e).__name__}"
+
+    # 2026-10-23: the regexes ran on the RAW text, so a zero-width or bidi character
+    # inside a phrase ("ignore<U+200B> previous instructions") or fullwidth letters
+    # slipped past every pattern while reading the same to Claude. Scan the raw text
+    # AND two normalisations: dangerous characters deleted, and replaced by a space,
+    # both NFKC-folded (fullwidth → ASCII). A hit in any variant rejects.
+    variants = [content]
+    for repl in ('', ' '):
+        variants.append(unicodedata.normalize('NFKC', _DANGEROUS_UNICODE_RE.sub(repl, content)))
+    if any(_DANGEROUS_UNICODE_RE.search(v) for v in variants[:1]):
+        return False, "Skill file contains invisible or bidi control characters."
 
     # Whole file: check for prompt injection patterns (frontmatter included)
     for pattern in _INJECTION_PATTERNS:
-        if pattern.search(content):
+        if any(pattern.search(v) for v in variants):
             return False, "Skill file contains injection pattern."
+
+    # Frontmatter: keys that grant power when the skill runs.
+    fm = re.match(r'\A\ufeff?---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)', content, re.S)
+    if fm:
+        for line in fm.group(1).splitlines():
+            m = re.match(r'^\s*["\']?([A-Za-z_][A-Za-z0-9_\-]*)["\']?\s*:', line)
+            if m and m.group(1).lower() in _FORBIDDEN_FRONTMATTER_KEYS:
+                return False, f"Skill frontmatter key not allowed: {m.group(1)}"
+    elif content.lstrip().startswith('---'):
+        return False, "Skill frontmatter is malformed."
+
+    # `!`cmd`` runs a shell command when the skill is loaded.
+    if any(_SKILL_SHELL_INJECTION_RE.search(v) for v in variants):
+        return False, "Skill file contains a shell-execution (!`cmd`) block."
 
     # Whole file: check for secrets (API keys, env var assignments, etc.)
     for pattern, _ in _OUTPUT_REDACTIONS:
-        if pattern.search(content):
+        if any(pattern.search(v) for v in variants):
             return False, "Skill file contains sensitive data pattern."
 
     return True, None
@@ -241,6 +321,40 @@ def assert_skill_target_safe(link_path: str) -> None:
             f"refusing to overwrite non-symlink at {link_path} — "
             f"a real skill of this name already exists"
         )
+
+
+def assert_skill_install_safe(skill_dir: str, draft_path: str, link_path: str) -> None:
+    """
+    Refuse a promotion that would destroy or hijack an existing skill (red-team
+    2026-10-23, the part of the promote-collision finding assert_skill_target_safe
+    left open).
+
+    * skill_dir exists → it must be a real directory whose SKILL.md is byte-identical
+      to the draft. That is the auto-maintain Part C case: an untracked
+      global-skills/<name>/SKILL.md drafted for approval. Anything else — a different
+      skill of the same name — was silently overwritten by shutil.copy2 (a draft
+      named `pre-mortem` replaced that skill's SKILL.md, and with it the gate).
+    * link_path is a symlink → it must already point at skill_dir. Every symlink was
+      treated as "gateway-owned", so a draft could re-point the link of a skill that
+      lives elsewhere (a plugin, another repo, the other scope).
+
+    Raises ValueError on refusal; returns None when the install is safe.
+    """
+    if os.path.lexists(skill_dir):
+        if os.path.islink(skill_dir) or not os.path.isdir(skill_dir):
+            raise ValueError(f"refusing: {skill_dir} exists and is not a plain directory")
+        existing = os.path.join(skill_dir, 'SKILL.md')
+        if os.path.lexists(existing):
+            if os.path.islink(existing) or not os.path.isfile(existing):
+                raise ValueError(f"refusing: {existing} is not a regular file")
+            with open(existing, 'rb') as a, open(draft_path, 'rb') as b:
+                if a.read() != b.read():
+                    raise ValueError(f"refusing to overwrite a different skill at {skill_dir}")
+        elif os.listdir(skill_dir):
+            raise ValueError(f"refusing: {skill_dir} exists and holds other files")
+    if os.path.islink(link_path):
+        if os.path.realpath(link_path) != os.path.realpath(skill_dir):
+            raise ValueError(f"refusing: {link_path} points at a different skill")
 
 
 # Built-in tools the untrusted (restricted) agent must never reach: execution,

@@ -1,0 +1,61 @@
+--- a/src/jcodemunch_mcp/server.py
++++ b/src/jcodemunch_mcp/server.py
+@@ -4981,7 +4981,12 @@
+             ),
+             inputSchema={
+                 "type": "object",
+-                "properties": {},
++                "properties": {
++                    "compact": {
++                        "type": "boolean",
++                        "description": "Omit the full tool catalogue (the client already lists every tool); keep the routing guidance. Default false.",
++                    },
++                },
+             },
+         ),
+     ]
+@@ -7332,7 +7337,8 @@
+             from .retrieval.provenance import measured_provenance as _measured_provenance
+             result = {
+                 "version": _ver,
+-                "content": _generate_claude_md_snippet(missing_only=False),
++                "content": _generate_claude_md_snippet(
++                    missing_only=False, compact=bool(arguments.get("compact", False))),
+                 # Self-attesting contract: the measured artifacts behind the
+                 # suite's savings/quality claims, plus the declared-vs-measured
+                 # rule. Rides the guide (on-demand) — never the hot path.
+@@ -8614,12 +8620,16 @@
+     return out
+ 
+ 
+-def _generate_claude_md_snippet(missing_only: bool = False) -> str:
++def _generate_claude_md_snippet(missing_only: bool = False, compact: bool = False) -> str:
+     """Return the recommended CLAUDE.md prompt-policy snippet.
+ 
+     When *missing_only* is True, reads ~/.claude/CLAUDE.md and returns only
+     the tools not yet mentioned in it (as a minimal addendum block).
+     Returns an empty string when the file is already fully up to date.
++
++    When *compact* is True, the "All tools" catalogue is left out. An MCP client
++    already lists every tool name and description, so the catalogue repeats it;
++    the quick start and the routing guidance are what the client can't supply.
+     """
+     all_tools = list(_CANONICAL_TOOL_NAMES)
+ 
+@@ -8697,11 +8707,12 @@
+         "### Quick start",
+         *_quick_start_lines(_active),
+         "",
+-        "### All tools",
+     ]
+-    for cat, tools in categories:
+-        lines.append(f"**{cat}:** " + ", ".join(f"`{t}`" for t in tools))
+-    lines.append("")
++    if not compact:
++        lines.append("### All tools")
++        for cat, tools in categories:
++            lines.append(f"**{cat}:** " + ", ".join(f"`{t}`" for t in tools))
++        lines.append("")
+     lines.append("The built-in tools stay the right choice for a file you are about to edit.")
+     lines.append("")
+     return "\n".join(lines)

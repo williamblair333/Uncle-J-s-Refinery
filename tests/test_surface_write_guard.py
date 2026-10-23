@@ -192,6 +192,22 @@ def test_widening_does_not_block_ordinary_work(name, cmd, tmp_path):
     assert not blocked(res), f"{name}: false positive.\ncmd={cmd!r}"
 
 
+# 2026-10-23: the surfaces added to edit-surface-guard.sh are mirrored here.
+SURFACE_ADDED_2026_10_23 = [
+    ("mcp-json",        "echo '{}' > /opt/proj/x/.mcp.json"),
+    ("settings-local",  "echo '{}' > /opt/proj/x/.claude/settings.local.json"),
+    ("justfile",        "printf 'x:\\n\\techo\\n' >> /opt/proj/x/justfile"),
+    ("systemd-service", "echo '[Unit]' > ~/.config/systemd/user/a.service"),
+    ("systemd-timer",   "echo '[Timer]' > ~/.config/systemd/user/a.timer"),
+]
+
+
+@pytest.mark.parametrize("name,cmd", SURFACE_ADDED_2026_10_23,
+                         ids=[c[0] for c in SURFACE_ADDED_2026_10_23])
+def test_added_surfaces_blocked(name, cmd, tmp_path):
+    assert blocked(run_guard(cmd, tmp_path)), f"{name}: NOT blocked.\ncmd={cmd!r}"
+
+
 # ── ALLOW matrix: the guard must not block ordinary work ─────────────────────
 
 ALLOW_CASES = [

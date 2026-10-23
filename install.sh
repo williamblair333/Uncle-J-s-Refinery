@@ -619,6 +619,16 @@ else
     fi
 fi
 
+# --- 6b2. dcup (Docker port registry) + its PreToolUse guard ----------------
+# Vendored in features/dcup/. Links ~/.local/bin/dcup and registers a hook that blocks
+# `docker compose up` / `docker run -p HOST:...` that skip the registry. Idempotent.
+step "Installing dcup (Docker port registry) and its guard hook"
+if bash "$STACK_ROOT/features/dcup/install.sh"; then
+    ok "dcup installed (restart Claude Code to load the hook)"
+else
+    warn "dcup install failed — run: bash $STACK_ROOT/features/dcup/install.sh"
+fi
+
 # --- 6c. Wire git post-merge hook (opt-in) ----------------------------------
 step "Optional features"
 echo ""
@@ -633,12 +643,14 @@ if [[ -d "$STACK_ROOT/.git" ]]; then
         ok "skipped post-merge hook"
     fi
 
-    # Pre-commit hook: session-end documentation gate (always installed — not optional)
-    _PRECOMMIT_SRC="$STACK_ROOT/scripts/session-end-check.sh"
+    # Pre-commit hook (always installed — not optional): session-end documentation
+    # gate, then the jscrub invisible-Unicode scan of staged files (report-only).
+    _PRECOMMIT_SRC="$STACK_ROOT/scripts/pre-commit.sh"
     _PRECOMMIT_DEST="$STACK_ROOT/.git/hooks/pre-commit"
-    chmod +x "$_PRECOMMIT_SRC"
+    chmod +x "$_PRECOMMIT_SRC" "$STACK_ROOT/scripts/session-end-check.sh" \
+        "$STACK_ROOT/scripts/jscrub/precommit-scan.sh"
     ln -sfn "$_PRECOMMIT_SRC" "$_PRECOMMIT_DEST"
-    ok "pre-commit hook installed (session-end documentation gate)"
+    ok "pre-commit hook installed (session-end docs gate + jscrub staged scan)"
 fi
 
 _tg_configured=0

@@ -16,6 +16,17 @@ def test_bold_label_counts_as_waiting_heading():
     assert ws.waiting_sections(text, 10) == [("Open / next", ["- fix grep-guard", "- lineup"])]
 
 
+def test_bold_labels_in_older_entries_ignored():
+    text = ("# Handoff\n\n## 2026-10-23 — new\nnothing open\n\n## 2026-10-04 — old\n**Needs Bill:**\n"
+            "- register the server\n")
+    assert ws.waiting_sections(text, 10) == []
+
+
+def test_awaiting_in_heading_is_not_waiting():
+    text = "## 2026-10-17 — map awaiting review\n- old\n"
+    assert ws.waiting_sections(text, 10) == []
+
+
 def test_heading_sections_unchanged():
     text = "## Waiting on Bill\n1. Etsy app\n## Done\n- x\n### Next session\n- 3MF export\n"
     assert [h for h, _ in ws.waiting_sections(text, 10)] == ["Waiting on Bill", "Next session"]

@@ -71,10 +71,21 @@ stop() { printf '    X   %s\n' "$*" >&2; }
 [ -d "$REPO_PATH" ] || { stop "Repo path not found: $REPO_PATH"; exit 1; }
 command -v claude >/dev/null 2>&1 || { stop "'claude' CLI not found on PATH"; exit 1; }
 
+# Every `claude -p` below bills the subscription login, not an API key: with either
+# variable set, the CLI uses it and charges per token (ROADMAP env-strip item).
+unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN
+
 PRD_PATH="$(cd "$(dirname "$PRD_PATH")" && pwd)/$(basename "$PRD_PATH")"
 REPO_PATH="$(cd "$REPO_PATH" && pwd)"
 
 step "Ralph harness starting"
+# Usage counter for the Phase 4 D3 decision (scripts/audit/collect_benefits.py reads
+# it). One line per real run; dry runs don't count. A failed write never stops ralph.
+if [ "$DRY_RUN" -eq 0 ]; then
+    { mkdir -p "$PROJ_ROOT/state" &&
+      printf '%s start repo=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$REPO_PATH" \
+          >> "$PROJ_ROOT/state/ralph-runs.log"; } 2>/dev/null || true
+fi
 ok "PRD        : $PRD_PATH"
 ok "Repo       : $REPO_PATH"
 ok "MaxIter    : $MAX_ITERATIONS"

@@ -18,8 +18,110 @@ globally; open a new session with `just browser` when a task needs a browser.
 - REA in Docker: say "build it" (`review/2026-10-22-rea-in-docker.md`).
 - bigprint (A1 mini splitter): go-ahead, repo location, three open items
   (`review/luban-rebuild-handoff.md`).
-- `review/2026-10-10-hook-blocks-log-nul-bytes.md` is being handled by another session.
+- The hook-blocks NUL-bytes note is in `reviewed/` now; the security-hardening entry below
+  cleared it (guards write text since 2026-10-22).
 - Optional: a small SearXNG search tool for Claude Code (the gap searxNcrawl pointed at).
+
+## 2026-10-23 (main host) — backlog sweep B (guide bench, CLAUDE.md de-dup, local rail)
+
+- Guide benchmark built but **not run to completion**: Heretic generated ~0.6 tok/s (load avg
+  17–22, CI containers). Re-run `.venv/bin/python scripts/guide_bench/bench.py --out
+  state/guide-bench.json` on an idle host, then decide on filing the compact patch upstream.
+- **This repo's sessions now read only `~/.claude/CLAUDE.md`** (claudeMdExcludes). After any
+  CLAUDE.md edit here, run `just doctor --fix`, or these sessions keep the old policy.
+- Ralph wasn't removed (D3): there was no usage data. `state/ralph-runs.log` starts now.
+- Local rail: `scripts/local_rail.py` (`Rail().chat(job, prompt, ...)`), cached by content
+  hash in `state/local-rail-cache/`. Delete that dir to force fresh calls.
+- Telegram history: `state/telegram-history.jsonl`, and `python scripts/lib/tg_history.py show`
+  prints what the next message gets. Daily summaries land as
+  `~/.uncle-j-memory/memory/telegram-*.md` (02:30 sync; at most 2 days and 120 s a call per run). The gateway diff is 3 lines, kept small
+  because another agent was editing gateway security in parallel.
+- Agents: only `code-reviewer` ships now. The other five links in `~/.claude/agents/` go dangling
+  on pull, and the post-merge run of `install-reliability.sh` prunes them.
+- Competitive analysis: `docs/2026-10-23-competitive-analysis.md`. Its gaps (plugin packaging,
+  multi-host) aren't on the ROADMAP as new items. Bill decides whether they are.
+
+## 2026-10-23 (main host) — security hardening: grep-guard analyzer, surface list, gateway
+
+**Most important:** grep-guard now runs an inline python3 analyzer on every Bash call that
+mentions a read tool. That adds about 50 ms (35 ms → 85 ms). If Bash calls start failing in
+every session, revert this merge; the guard is symlinked into the main checkout. Hooks
+are read on each call, so a running session picks up the change once the main checkout
+is at the merge. No restart needed.
+
+- Findings matrix and FP stats are in the PR body. Baselines are in
+  `~/.uncle-j-memory/memory/audit-baselines.md` (grep-guard, edit-surface-guard, gateway).
+- `GREP_GUARD_DEBUG=1` prints `path=analyzer|legacy` to stderr; tests pin the analyzer path.
+- Open: surface-write-guard still can't resolve `$S/x.py` (43 of 102 blocks since 10-16),
+  `review/2026-10-10-hook-blocks-log-nul-bytes.md` can be moved to reviewed (it's gitignored,
+  so the note isn't in it), and `hook-blocks.log.bak-2026-10-16` still holds NULs (read it
+  with `grep -a`).
+## 2026-10-23 (main host, afternoon) — Bill's decisions recorded; small model ready for the Pi
+
+**Open / next:**
+- Deploy the small model when the hosts are reachable: copy
+  `/opt/models/gguf/qwen3.5-2b-heretic/` to the Pi and `qwen3.5-4b-heretic/` to tc-vmh-03, then
+  `just small up -d` (4B: `SMALL_MODEL=qwen3.5-4b-heretic SMALL_GGUF=Qwen3.5-4B-Heretic-Q4_K_M.gguf`).
+  Measured here (x86 CPU): 2B 18.4 tok/s, 2.1 GB RAM. The Pi number is still to measure.
+- Photo → script on Heretic, real part photo (public-domain pipe-coupling photo): runs end to end
+  in 151 s and the STL exports, but the shapes are wrong (round bell as a hollow box, an unused
+  frustum, the flange unioned twice). The analyzer prompt needs work in partikus.
+- Run the anatomy-lab A/B (`/opt/proj/anatomy-lab/docs/ab-2026-10-23.md`) in a quiet session: it
+  was refused while 20 subagents ran.
+- After the parallel agents land: `scripts/refinery-doctor.sh --fix` (deployed CLAUDE.md is
+  behind) and restart Claude Code (dcup guard hook, PR #186).
+- Bill's: open-webui's 0.0.0.0:11434 dcup claim (keep?), kanka-ce's 8 stopped containers.
+
+**Decided (Bill, 2026-10-23):** partikus private on Gitea (done); granite4.2:8b removed (done);
+Heretic stays local-only; Klarheit keeps Ollama + qwen3.5:9b until its pre-registered trials end;
+occams-razor description widened; CampaignGenerator and campaign-forge abandoned; n8n not now;
+Codex, Jarvis track, front door later; dictation discuss later; opt-out markers look later.
+
+## 2026-10-23 (main host) — dcup vendored + guard hook; stale claims released
+
+**Most important:** the dcup guard runs only after `bash features/dcup/install.sh` is run from
+the **main checkout**, followed by a Claude Code restart. Until then, nothing blocks
+`docker compose up`. `bash scripts/refinery-doctor.sh --check dcup-guard` says which state
+you're in.
+
+- `features/dcup/` holds dcup, the guard, the installer and tests. `~/.local/bin/dcup` will be
+  a symlink to the repo copy (it's first in PATH). The old `/opt/lib/docker-port-registry/dcup`
+  is left as a fallback, along with the unwired `dcup-pretooluse-hook.sh`, which can be deleted.
+- dcup claims: 52 released (14 projects with deleted compose files), 11 re-registered, so 41
+  remain. Backup: `ports.db.bak.2026-10-23`.
+- Ports: 8712 is gitea's `win-runner-autoscaler.service` (legit). 24282–24285 are Serena
+  dashboards, one per Claude session. Both are in `/opt/proj/.port-registry` now.
+- For Bill: `open-webui` claims 11434 on 0.0.0.0 while `ollama` holds it on 127.0.0.1.
+  kanka-ce's 8 exited containers outlive its deleted compose file, so `docker rm` them if
+  they're unwanted. The guard can't see commands inside scripts or `docker service`/`stack`.
+
+## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
+
+**Most important:** jdocmunch's CLI exits 0 when it fails (`{"success": false}`); anything
+that shells out to `jdocmunch-mcp index-local` must read the JSON, not the exit code.
+
+- `run_index_local()` is CLI-only now (`scripts/lib/jdocmunch-index-local.sh`).
+- ralph-harness and the Telegram gateway no longer pass Anthropic API keys to `claude`.
+- jscrub pre-commit gate + audit canary. **The live hook still points at
+  `session-end-check.sh`** until `install.sh` (or `just setup`) runs on the main checkout; then
+  `.git/hooks/pre-commit` → `scripts/pre-commit.sh`.
+
+## 2026-10-23 (main host) — upstream filings, jcodemunch backlog cleared
+
+**Most important:** the 8 `jcodemunch_upgrade_*_unanalyzed` memories were false alarms. The
+cron can't see the repo's own `post-upgrade sync` commits, and those had covered every installed
+range. They're replaced by `-home-bill/memory/jcodemunch_upgrades_reviewed_2026-10-23.md`.
+
+- Filed jdocmunch-mcp#196 (sidecar-suffix name collision). Didn't file the get_watch_status
+  issue: it's upstream #565, already fixed.
+- Pending at the next jcodemunch sync (7f3acbc→d56f459, not installed yet):
+  `get_call_hierarchy` `direct_caller_count`/`via` (`caller_count` counts all depths), the
+  `search_text` `in` field and in-body `truncated`, and ×0.5 ranking for config files, fields
+  and constants.
+- Deployed `~/.claude/CLAUDE.md` lags the repo copy (missing the worktree and test-×0.25 lines
+  from d4e58f6). Run `scripts/refinery-doctor.sh --fix`.
+- Upstream watch: REA #2188 merged, #2187 has no maintainer reply. claude-guardrails #17/#20
+  have none either. jdocmunch #120 was fixed in 1.134.0.
 
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 

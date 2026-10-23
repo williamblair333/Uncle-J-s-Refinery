@@ -3,8 +3,9 @@
 #
 # Checks for .env key renames, stack MCP servers shadowed by a
 # local/project scope, a missing jcodemunch compaction-restore hook, the
-# jdocmunch-watch summaries-off drop-in, CLAUDE.md drift, placeholder values, and the
-# Alt+V image-paste keybinding. Distinct from healthcheck.sh (runtime health).
+# jdocmunch-watch summaries-off drop-in, CLAUDE.md drift, the dcup port-registry guard,
+# placeholder values, and the Alt+V image-paste keybinding. Distinct from healthcheck.sh
+# (runtime health).
 #
 # Usage:
 #   bash scripts/refinery-doctor.sh            # dry-run: report only
@@ -32,7 +33,7 @@ while [[ $i -le $# ]]; do
             ONLY_CHECK="${!i:-}"
             ;;
         -h|--help)
-            sed -n '1,12p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '1,13p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) printf 'Unknown arg: %s\n' "$arg" >&2; exit 2 ;;
@@ -302,6 +303,10 @@ check_claude_md_sync() {
 
     migration "~/.claude/CLAUDE.md routing policy differs from repo (repo: ${repo_sum:0:12}… installed: ${installed_sum:0:12}…)"
     suggest "run: $0 --fix   # replaces policy prefix, preserves Dreaming Notes"
+    # .claude/settings.json excludes the repo copy from auto-load (claudeMdExcludes) so
+    # sessions here don't pay for the policy twice. They therefore run on the
+    # INSTALLED copy: drift here means this repo's own sessions are on the old policy.
+    info "sessions in this repo load only ~/.claude/CLAUDE.md (claudeMdExcludes) — fix the drift"
     record_migration "claude-md-sync"
 
     if [[ "$FIX_MODE" == true ]]; then
@@ -318,6 +323,34 @@ check_claude_md_sync() {
         mv "$tmp" "$installed"
         fixed "updated ~/.claude/CLAUDE.md policy prefix, Dreaming Notes preserved (backup: ${installed}.bak)"
     fi
+}
+
+# dcup (Docker port registry) on PATH + its PreToolUse guard registered in
+# ~/.claude/settings.json, both pointing at this checkout's features/dcup/.
+check_dcup_guard() {
+    step "dcup-guard — dcup linked and its PreToolUse guard registered"
+    local installer="$REPO_ROOT/features/dcup/install.sh" state
+    if [[ ! -f "$installer" ]]; then
+        info "features/dcup/install.sh not found — skipping"
+        return
+    fi
+    state=$(bash "$installer" --check 2>/dev/null | tail -n 1)
+    case "$state" in
+        installed) ok "dcup guard registered and ~/.local/bin/dcup linked" ;;
+        missing)
+            migration "dcup guard hook or ~/.local/bin/dcup missing — docker port claims can bypass the registry"
+            suggest "run: $0 --fix   # or: bash $installer"
+            record_migration "dcup-guard"
+            if [[ "$FIX_MODE" == true ]]; then
+                if bash "$installer" >&2; then
+                    fixed "dcup installed (restart Claude Code to load the hook)"
+                else
+                    info "dcup install failed — run: bash $installer"
+                fi
+            fi
+            ;;
+        *) info "check failed (installer output: ${state:-none}) — skipping" ;;
+    esac
 }
 
 check_env_placeholders() {
@@ -383,6 +416,7 @@ run_check mcp-scope
 run_check jcodemunch-sessionstart
 run_check jdocmunch-watch-dropin
 run_check claude-md-sync
+run_check dcup-guard
 run_check env-placeholders
 run_check keybindings
 
