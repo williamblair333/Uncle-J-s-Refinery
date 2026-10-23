@@ -1,5 +1,24 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — backlog sweep B (guide bench, CLAUDE.md de-dup, local rail)
+
+- Guide benchmark built but **not run to completion**: Heretic generated ~0.6 tok/s (load avg
+  17–22, CI containers). Re-run `.venv/bin/python scripts/guide_bench/bench.py --out
+  state/guide-bench.json` on an idle host, then decide on filing the compact patch upstream.
+- **This repo's sessions now read only `~/.claude/CLAUDE.md`** (claudeMdExcludes). After any
+  CLAUDE.md edit here, run `just doctor --fix`, or these sessions keep the old policy.
+- Ralph wasn't removed (D3): there was no usage data. `state/ralph-runs.log` starts now.
+- Local rail: `scripts/local_rail.py` (`Rail().chat(job, prompt, ...)`), cached by content
+  hash in `state/local-rail-cache/`. Delete that dir to force fresh calls.
+- Telegram history: `state/telegram-history.jsonl`, and `python scripts/lib/tg_history.py show`
+  prints what the next message gets. Daily summaries land as
+  `~/.uncle-j-memory/memory/telegram-*.md` (02:30 sync; at most 2 days and 120 s a call per run). The gateway diff is 3 lines, kept small
+  because another agent was editing gateway security in parallel.
+- Agents: only `code-reviewer` ships now. The other five links in `~/.claude/agents/` go dangling
+  on pull, and the post-merge run of `install-reliability.sh` prunes them.
+- Competitive analysis: `docs/2026-10-23-competitive-analysis.md`. Its gaps (plugin packaging,
+  multi-host) aren't on the ROADMAP as new items. Bill decides whether they are.
+
 ## 2026-10-23 (main host) — security hardening: grep-guard analyzer, surface list, gateway
 
 **Most important:** grep-guard now runs an inline python3 analyzer on every Bash call that

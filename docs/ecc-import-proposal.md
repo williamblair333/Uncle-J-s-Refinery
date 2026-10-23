@@ -2,7 +2,9 @@
 
 **Source:** `_reviewed/ECC/` — Everything Claude Code v2.0.0-rc.1  
 **Analysis date:** 2026-05-22  
-**Status:** Tier 1 implemented 2026-05-22 — 6 agents in `global-agents/`, symlinked to `~/.claude/agents/`  
+**Status:** Tier 1 implemented 2026-05-22 — 6 agents in `global-agents/`, symlinked to `~/.claude/agents/`.
+**Evaluated 2026-10-23:** only `code-reviewer` kept (silent-failure-hunter merged in); the other
+five dropped. One line each in `docs/RELIABILITY.md` ("Specialist agent trigger matrix").  
 **Prior art:** competitive analysis saved to MemPalace (`uncle_j_s_refinery / competitive-intel`)
 
 ---

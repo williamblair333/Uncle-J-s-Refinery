@@ -95,6 +95,7 @@ updates_raw = os.environ.get('UPDATES_JSON', '{"ok":false,"result":[]}')
 
 sys.path.insert(0, os.path.join(proj_root, 'scripts', 'lib'))
 from tg_security import sanitize_input, scan_output, escape_html_response, check_rate_limit, validate_skill_name, scan_skill_body, build_claude_argv, assert_skill_target_safe, assert_skill_install_safe, record_stack_callback, record_scout_callback, scout_reason_keyboard
+import tg_history  # chat continuity: recent turns in, exchange logged out (fail-quiet)
 
 RATE_LIMIT_STATE = os.path.join(proj_root, 'state', 'telegram-gateway-ratelimit.json')
 
@@ -550,7 +551,7 @@ for update in updates:
     # --system-prompt REPLACES the default system context; cwd=/tmp (restricted) loads
     # no project CLAUDE.md, cwd=proj_root (work) loads it normally.
     claude_argv = build_claude_argv(
-        claude_bin, agent_sp, TELEGRAM_SYSTEM_RESTRICTION, routed_text,
+        claude_bin, agent_sp, TELEGRAM_SYSTEM_RESTRICTION, tg_history.with_context(routed_text),
     )
     try:
         result = subprocess.run(
@@ -580,6 +581,7 @@ for update in updates:
         response = response[:4096]
 
     response = scan_output(response)
+    tg_history.record(routed_text, response, agent=agent_name)
     response = escape_html_response(response)
     log(f"Sending response ({len(response)} chars)")
     tg_send(response)

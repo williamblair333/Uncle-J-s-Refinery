@@ -2,6 +2,48 @@
 
 ---
 
+## 2026-10-23 — backlog sweep B: guide benchmark, CLAUDE.md de-dup, local rail
+
+- **Added** `scripts/guide_bench/` (20 routing queries; full vs compact vs LLM-compressed
+  jcodemunch guide, the local model as router) and an upstream-ready `compact` patch for
+  `jcodemunch_guide` (`docs/proposals/2026-10-23-*`). The guide is 2,804 chars now, 76% of it
+  the tool catalogue. The benchmark didn't finish: Heretic ran at ~0.6 tok/s under host load.
+- **Changed** sessions in this repo no longer load the routing policy twice:
+  `.claude/settings.json` sets `claudeMdExcludes` for the repo's own `CLAUDE.md` (and
+  worktree copies), so only `~/.claude/CLAUDE.md` loads (~5.1k tokens a session). The repo
+  copy stays the source that install.sh and refinery-doctor deploy, so no content moved and
+  the global Dreaming Notes tail is untouched. Doctor's drift message now says these sessions
+  run on the installed copy. Tests: `tests/test_claude_md_dedup.py`.
+- **Added** a ralph usage counter (`state/ralph-runs.log`, read by
+  `scripts/audit/collect_benefits.py`). Phase 4's D3 (remove ralph if idle) couldn't be
+  decided: the Phase 2 counter never measured ralph. Ralph stays.
+- **Added** `scripts/local_rail.py` (Phase 3, rescoped): batch jobs call the ask_local backend
+  through a content-hash cache in `state/local-rail-cache/`. Errors aren't cached and writes
+  are atomic. The guide benchmark runs through it. Tests: `tests/test_local_rail.py`,
+  `tests/test_guide_bench.py`.
+- **Added** Telegram chat history (`scripts/lib/tg_history.py`). The gateway logs each exchange
+  after output redaction and prefixes the last few turns (bounded, re-redacted) to the next
+  message. The nightly `sync_memory.sh --all` writes local-model daily summaries into the
+  memweave corpus: summaries only, at most 2 days and 120 s a call per run, non-fatal. Gateway diff: one import
+  and two call sites. Tests: `tests/test_tg_history.py`.
+
+## 2026-10-23 — competitive analysis
+
+- **Docs** `docs/2026-10-23-competitive-analysis.md`: Refinery against ECC (most direct),
+  superpowers, Hermes Agent, ruflo and the plugin marketplaces, from their READMEs and the
+  GitHub API that day. Moats: retrieval per modality with an absence contract, guards tested
+  in CI, rebuildable local memory. Gaps: install reach, multi-host, chat surfaces. A summary
+  note went to the memweave corpus.
+
+## 2026-10-23 — ECC agents evaluated: one kept
+
+- **Removed** five of the six imported ECC agents (`planner`, `architect`, `tdd-guide`,
+  `security-reviewer`, `silent-failure-hunter`). **Changed** `code-reviewer`: it absorbs the
+  silent-failure checklist and shell/Python/subprocess patterns, drops the React/Next.js/Node
+  sections, and can call read-only jcodemunch tools. `install-reliability.sh` removes dangling
+  `~/.claude/agents` links into `global-agents/`. `healthcheck.sh` checks the agents that ship
+  instead of a fixed list. Reasons per agent: `docs/RELIABILITY.md`.
+
 ## 2026-10-23 — security hardening: grep-guard analyzer, surface list, Telegram gateway
 
 - **Fixed** grep-guard's false positives. It split commands on spaces with no idea of

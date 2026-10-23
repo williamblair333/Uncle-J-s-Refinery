@@ -10,7 +10,7 @@ makes sure Claude *actually uses them correctly*. Four components:
 | judge skill                   | Gathers blast radius + PR risk, then delegates to specialist agents | for throwaway prototyping  |
 | referee skill + `scripts/referee.py` | Gemini (via agy) judges Claude's work; JSON verdict, fails closed | when quota is short or the work is private |
 | verifiable-task skill         | Write the check before delegating; run it yourself; report what it measured | never; it's a habit, not a tool |
-| Specialist agents (6)         | Code review, security, silent failures, planning, architecture, TDD — each with precise trigger conditions | individually per task type |
+| Specialist agent (1)          | Code review incl. silent failures and shell/subprocess security (five ECC agents dropped 2026-10-23) | per logic-changing edit |
 | Ralph harness                 | while-true loop that only stops when risk is low + PRD is DONE    | only in live runs           |
 | dwarvesf claude-guardrails    | Block pasted secrets, scan tool output for prompt-injection       | never (low cost, high value)|
 | Superpowers plugin            | 20+ skills: brainstorm, systematic-debug, TDD, verify-before-done | if total skill count > 25   |
@@ -284,16 +284,20 @@ Catches the four classic hallucination patterns:
 
 ### Specialist agent trigger matrix
 
-Six agents in `global-agents/`, symlinked to `~/.claude/agents/`. The judge delegates based on change type. Multiple agents can fire on the same change.
+One agent in `global-agents/`, symlinked to `~/.claude/agents/`. Six ECC agents were imported
+2026-05-22; on 2026-10-23 five were dropped or merged (decisions below).
 
 | Agent | Spawn when | Skip when |
 | ----- | ---------- | --------- |
-| `code-reviewer` | Edit/Write changes function logic, adds/removes functions or classes, modifies control flow, touches API or data model | Typos, whitespace/formatting, comment-only, single-variable rename with no logic change |
-| `security-reviewer` | Edit/Write touches user input handling, auth/session/token code, API endpoints, file I/O with user-controlled paths, DB queries, crypto/hashing, payment flows, subprocess/shell execution | Pure UI layout, documentation, config that doesn't touch auth, input, or data paths |
-| `silent-failure-hunter` | Edit/Write touches exception/error handlers, async functions, network calls, file I/O, DB operations, subprocess execution, or code using try/except / .catch() / \|\| true / default fallbacks; any new function interacting with an external system | Pure logic, data transformation, UI code with no I/O or error-handling paths |
-| `planner` | Spawned BEFORE code when a request spans multiple files, introduces a new feature, or requires phased delivery ("add X feature", "implement Y", "refactor Z across the codebase") | Single-function bug fixes, small contained patches, requests where implementation path is already clear |
-| `architect` | Structural decisions — new module/service boundaries, data model design, technology choices, scalability trade-offs, any cross-service or cross-module design question | Routine feature implementation where structure is already established |
-| `tdd-guide` | Spawned BEFORE implementation of any new function, class, or module; bug fixes requiring new test coverage; refactors that change observable behavior | Editing existing passing tests, fixing comments/docs, formatting-only changes with no behavior change |
+| `code-reviewer` | Edit/Write changes function logic, adds/removes functions or classes, modifies control flow, touches API or data model, error handling, subprocess, network/file I/O or cron/hook scripts | Typos, whitespace/formatting, comment-only, single-variable rename with no logic change |
+
+| Former agent | Decision | Why |
+| ------------ | -------- | --- |
+| `silent-failure-hunter` | merged into `code-reviewer` | Its 40 lines were a checklist; as its own agent it fired on the same edits as code-reviewer, a second pass per change. |
+| `security-reviewer` | dropped (shell/subprocess patterns merged into `code-reviewer`) | npm/eslint/OWASP-web workflow for a Python+bash repo, and it held Write/Edit as a *reviewer*. Deep passes: `red-team` / `blue-team` skills, `/security-review`. |
+| `planner` | dropped | Same job as `superpowers:writing-plans` and the built-in Plan agent; Opus per spawn; Stripe/Next.js worked example; no jcodemunch tools. |
+| `architect` | dropped | Generic SaaS patterns (Next.js, Redis, Supabase); `superpowers:brainstorming` covers design choices here. |
+| `tdd-guide` | dropped | Duplicates `superpowers:test-driven-development`; mandates 80% coverage and Playwright E2E (Microsoft; avoided here). |
 
 ### Ralph harness (our version vs. the plugin)
 

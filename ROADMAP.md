@@ -617,19 +617,41 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 **Improvement Program** (spec: `docs/superpowers/specs/2026-06-11-refinery-improvement-program-design.md` — phases in order; principles: deterministic-first, local-canonical):
 
 - **Phase 2 — Accuracy instrumentation → memweave migration** ✅ **DONE 2026-06-13** (see Completed). Backend decision (MemPalace eliminated → memweave) resolved 2026-06-12; memweave built (PRs #45–#48) and the full migration + mempalace decommission shipped (PRs #50–#55).
-- **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
-- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. Plus: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
+- **[DONE, rescoped 2026-10-23] Phase 3 — Local rail.** ask_local (Heretic on llama-server, per
+  `config/ask_local.env`) already is the local endpoint, and the lineup work picks the model,
+  so the endpoint/hardware-detect half is dropped. Shipped the missing piece:
+  `scripts/local_rail.py`, a content-hash cache (sha256 of backend, model, system, prompt and
+  params; errors never cached; atomic writes) that batch jobs call local-first. Wired into
+  the guide benchmark and the Telegram daily summaries. Not done: mine compression (no
+  consumer) and dream synthesis (it writes boot-loaded CLAUDE.md playbooks, too risky for a 9B
+  model unreviewed). Tests: `tests/test_local_rail.py`. Original:
+  **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
+- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. **[2026-10-23] Not removed:** the Phase 2 counter never measured ralph (`benefits.json` lists it under `missing`), so it can't confirm idle. No ralph cron is installed. Added the counter: `ralph-harness.sh` now appends to `state/ralph-runs.log` and `collect_benefits.py` reports it; decide after a few weeks of data. **[DONE 2026-10-23] CLAUDE.md de-dup:** `.claude/settings.json` `claudeMdExcludes` skips the repo copy (and worktree copies) here, so sessions load the policy once from `~/.claude/CLAUDE.md` (~5.1k tokens saved per session). The repo copy stays the deploy source; install.sh/doctor are unchanged, so the global Dreaming Notes tail is preserved. Original: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
 
-- **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
+- **[PARTIAL 2026-10-23] Compressed `jcodemunch_guide`** — measured: the guide is now 2,804
+  chars (the 4.6–5.1k-token estimate is stale) and nothing here loads it per session. The
+  catalogue is 76% of it and duplicates the MCP tool list, so a deterministic `compact` cut
+  (680 chars) beats LLM compression. Built `scripts/guide_bench/` (20 routing queries, local
+  model as router) and an upstream-ready patch (`docs/proposals/2026-10-23-jcodemunch-guide-compact.patch`).
+  **Not done:** the benchmark run (Heretic at ~0.6 tok/s under host load, two timeouts) and the
+  upstream filing (Bill's call). Details: `docs/proposals/2026-10-23-compressed-jcodemunch-guide.md`.
+  Original: **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
 - **[DONE 2026-10-23] ralph-harness env-strip** — `ralph-harness.sh` unsets both keys after its
   CLI check; the Telegram gateway passes a filtered `env=` to its `claude` subprocess. Tests:
   `tests/test_env_strip.py`. Original: **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
 
-- **Telegram chat history persistence** — skill exists (`telegram-chat-history-persistence`)
-  but implementation not yet started; would allow querying past bot conversations
+- **[DONE 2026-10-23] Telegram chat history persistence** — the skill's design, with memweave as
+  the long-term store: every exchange (post-redaction) goes to `state/telegram-history.jsonl`; the
+  last few turns (≤6, ≤6 h, ≤3,000 chars, re-redacted) are prefixed to each new message; the
+  nightly memweave sync has the local model write `telegram-YYYY-MM-DD.md` summaries (never raw
+  turns) into `~/.uncle-j-memory/memory/`. `scripts/lib/tg_history.py`, three lines in the
+  gateway, tests in `tests/test_tg_history.py`. SQLite was skipped: JSONL plus the memweave
+  corpus already cover it.
 
-- **Agent harness competitive analysis** — skill exists; full analysis not yet run
+- **[DONE 2026-10-23] Agent harness competitive analysis** — `docs/2026-10-23-competitive-analysis.md`
+  (ECC, superpowers, Hermes, ruflo, plugin marketplaces; stars and claims as of that day). Open
+  gaps it names: install reach (plugin packaging), multi-host, one chat surface.
 
 - **[RESOLVED, closed 2026-10-22] jdocmunch `.summary` sub-indexes report 0 sections** — not
   indexes at all: `.summary.json` is a jdocmunch sidecar that the healthcheck read as a repo.
@@ -639,8 +661,12 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   Determine whether the summary index is genuinely unpopulated or the count is misreported;
   the latter would be the same class of counting bug as the 2026-07-19 `ls | wc -l` fix
 
-- **ECC specialist agents** — 6 agents imported; evaluate and integrate into
-  active workflows
+- **[DONE 2026-10-23] ECC specialist agents** — evaluated: keep `code-reviewer` (with
+  `silent-failure-hunter` merged in, shell/subprocess patterns added, JS-only sections cut,
+  read-only jcodemunch tools granted). Dropped `planner`, `architect`, `tdd-guide` and
+  `security-reviewer` (they duplicate superpowers skills or red-team/blue-team, carry a JS/SaaS
+  stack, and the reviewer had Write/Edit). One line each in `docs/RELIABILITY.md`.
+  install-reliability prunes the dangling links; healthcheck checks whatever ships.
 
 - **[DONE 2026-10-23] Expand discipline hook surface list.** Reviewed `hook-blocks.log`
   from 2026-05-25 on: 513 edit-surface blocks, 7532 allowed. Narrowed: test modules
