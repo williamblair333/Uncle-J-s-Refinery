@@ -16,8 +16,10 @@ moneymaker #8, channelengine #3, voice-line #12, write_well #5, deal-finder #1.
 - Local lineup is complete on this host (text, image, video, STT, cloned voice). Left: deploy
   `just small` to the Pi / tc-vmh-03 when reachable; Wan-stills vs Z-Image test; image MCP
   wrapper (Jarvis track); add whisper/tts/comfy to `healthcheck.sh`.
-- GPU load order: if llama-heretic restarts while Ollama holds the 9B fully on GPU, Heretic
-  crash-loops on OOM until Ollama idles out (seen 15:4x). Don't stop Heretic for GPU tests.
+- GPU load order: FIXED 17:3x — Heretic woke from sleep into a GPU the 9B had filled and
+  crash-looped (68 restarts). It now uses llama.cpp auto-fit with `--fit-target 7300`: 2.9 GB /
+  27.7 tok/s with the GPU free, 0.8 GB / 14 tok/s beside the 9B, never OOM. Slower than the old
+  ~40 tok/s fixed split; lower the target if Klarheit's 9B ever retires.
 - anatomy-lab A/B: marginal (lib arm 18.4% fewer tokens). Close the 4 catalogue gaps, rerun.
 - jcodemunch guide: plain cut = 184 tokens, same 18/20 routing as the 738-token full guide.
 - Photo → script on Heretic picks wrong primitives (partikus analyzer prompt).

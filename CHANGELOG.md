@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-10-23 — Heretic sizes itself to free GPU memory (no more OOM crash loop)
+
+- **Fixed** `docker/llama-heretic/compose.yaml`: llama-heretic crash-looped on CUDA OOM (68
+  restarts) when it woke from sleep after Klarheit's pinned qwen3.5:9b had filled the GPU.
+  Dropped `-ngl 999 --n-cpu-moe 36` (which disabled llama.cpp's fit step) for
+  `--fit-target 7300`, leaving room for the 9B. Measured: GPU free → 2.9 GB, 27.7 tok/s;
+  9B loaded → 0.8 GB, 14.0 tok/s. Was ~40 tok/s at 4.8 GB when it fit.
+
 ## 2026-10-23 — session end: guide benchmark result, README for the new local services
 
 - **Measured** `scripts/guide_bench/` on an idle host (20 routing queries, Heretic): full guide
