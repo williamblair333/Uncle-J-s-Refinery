@@ -263,11 +263,11 @@ gave ComfyUI more room.
 times out at 120 s. A video overlapping the 16:05 trial pushed its slowest call to 101 s
 (46 s the hour before). So `just image` / `just video` wait while a `klarheit-rv` or
 `klarheit-m12` run is active. They also won't start a job that would still be running at the
-next trial (:05 hourly; 10:35 and 20:35). `--ignore-klarheit` skips the wait. If Heretic wakes
-during a video, it may not fit until the job ends and ComfyUI unloads. Heretic may be
-stopped for speed (`just heretic down`), but restart it right after (`just heretic up -d`)
-and check `curl -s 127.0.0.1:8090/health`. If Ollama loaded its model while Heretic was down,
-Heretic's restart can't fit and crash-loops on CUDA OOM until Ollama's 10-minute idle unload.
+next trial (:05 hourly; 10:35 and 20:35). `--ignore-klarheit` skips the wait. Heretic is parked
+for every job: it auto-fits to free VRAM (9.8 of 12 GB on an idle GPU), which left ComfyUI
+too little and failed `just image` with `VRAM grow failed`. So the job runs `docker stop
+llama-heretic` first and `docker start` after, even on failure or SIGTERM. `ask_local` returns
+errors meanwhile. `--keep-heretic` skips this. If a job is SIGKILLed, run `just heretic up -d`.
 
 ---
 
