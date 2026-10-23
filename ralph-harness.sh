@@ -71,6 +71,10 @@ stop() { printf '    X   %s\n' "$*" >&2; }
 [ -d "$REPO_PATH" ] || { stop "Repo path not found: $REPO_PATH"; exit 1; }
 command -v claude >/dev/null 2>&1 || { stop "'claude' CLI not found on PATH"; exit 1; }
 
+# Every `claude -p` below bills the subscription login, not an API key: with either
+# variable set, the CLI uses it and charges per token (ROADMAP env-strip item).
+unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN
+
 PRD_PATH="$(cd "$(dirname "$PRD_PATH")" && pwd)/$(basename "$PRD_PATH")"
 REPO_PATH="$(cd "$REPO_PATH" && pwd)"
 

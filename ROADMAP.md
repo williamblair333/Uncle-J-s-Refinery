@@ -14,13 +14,12 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Ship `dcup` with Uncle J and enforce it** (opened 2026-10-22). `dcup` (Docker port registry,
-  SQLite, 80+ claims) lives only in `/opt/lib/docker-port-registry/`, outside any repo, so new
-  users don't get it. Fixed in place 2026-10-22: compose.yaml discovery, Compose-style project
-  names, `scan` skipping parked copies. Left: vendor it, install it from `install.sh`, ship a
-  PreToolUse hook that blocks `docker compose up` / `docker run -p` that bypass it. (`just
-  heretic up`, `ask-local-up` and the chat page's Start already go through it, 2026-10-22.) Unverified: a past session said
-  its hook is already wired in `~/.claude/settings.json`.
+- **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in
+  `features/dcup/`, installed by `install.sh` §6b2 and checked by the `refinery-doctor`
+  `dcup-guard` check. `dcup_guard.py` blocks `docker compose up` and fixed `docker run -p` that
+  bypass dcup (178-case test matrix). The old hook was never wired. Stale claims went from
+  82 to 41. Left: run `features/dcup/install.sh` from the main checkout on each host, then
+  restart Claude Code. Not covered: commands run inside scripts, and `docker service`/`stack`.
 
 - **Local model lineup: fewest models for every goal** (decided 2026-10-22; text side under
   way). Heretic for text and images, Wan 2.2 for video (and stills if they pass), an image
@@ -70,9 +69,12 @@ Completed items age out after ~4 weeks.
   files. That's low harm, because the block only lists files and searches. Decide whether to
   file it with jgravelle/jcodemunch-mcp. A custom snapshot hook (tasks, decisions, prompts) is
   **not** planned: Claude Code's compaction summary already carries those.
-- **REA upstream follow-up** (opened 2026-10-12). morluto/rea#2187 (design issue) and #2188
-  (docs PR, Codex P1 addressed in `d98b6ff`) await maintainers. If they say "PR welcome", the
-  touched modules are listed in #2187. Install Node ≥22.19 first, since REA's checks need it.
+- **REA upstream follow-up** (opened 2026-10-12). **#2188 was MERGED 2026-10-14** (merge
+  `41a2e84`; the maintainer addressed the review threads himself). #2187 (design issue, `--scope
+  local`) is still open, labelled `enhancement`/`P2: medium`/`area: setup`. As of 2026-10-23 it has
+  no maintainer reply, only two third-party comments: a design review and a native-Windows quoting
+  workaround. If they say "PR welcome", the touched modules are listed in #2187. Install Node
+  ≥22.19 first, since REA's checks need it.
 - **[DONE 2026-10-22] grep-guard false positive on an unexpanded glob** — globs now expand
   against the session cwd and each match is judged; `-r` on a plain non-source file is
   allowed; `cat scripts/*` (which hid source) is now denied. Baseline in audit-baselines.md.
@@ -83,7 +85,9 @@ Completed items age out after ~4 weeks.
 - **Track upstream issue [dwarvesf/claude-guardrails#20](https://github.com/dwarvesf/claude-guardrails/issues/20)**
   (filed 2026-10-22): the escalation hook's grep reads its `--…` pattern as an option. If they
   say "PR welcome", send the `-e` fix. Until it lands, `scripts/fix-guardrails-grep.sh` (run by
-  `install-guardrails.sh`) keeps the local copy repaired.
+  `install-guardrails.sh`) keeps the local copy repaired. Status 2026-10-23: #17 and #20 are both
+  open with zero comments. The repo's last push was 2026-09-08 (#18/#19), so the maintainer is
+  quiet rather than declining.
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
@@ -179,15 +183,27 @@ Completed items age out after ~4 weeks.
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
   in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.
-- **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
+- **[DONE 2026-10-23] `jscrub` automation** — (b) `check-vendor` was already in CI via
+  `audit-repo.sh`; that script now also runs a live-positive canary (a temp file with a ZWSP must
+  hit, else exit 3), so a broken detector fails `just audit` and CI. (a) shipped as a pre-commit
+  gate only, report-only: `scripts/jscrub/precommit-scan.sh` scans staged blobs and blocks on a
+  hit; nothing runs `clean`/`--in-place`. No PostToolUse hook. Wired by `install.sh` through
+  `scripts/pre-commit.sh` (session-end check + jscrub). Tests: `tests/test_jscrub_gates.py`.
+  Original: **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
   `just audit` + CI job). Still open, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
   gate — `--in-place` and `--follow-symlinks` are the flags to think hardest about before automating
   a tool that rewrites files; (b) `check-vendor` in CI, which now works with no checkout so it can
   actually run there. Also unresolved: with the test fixtures escaped, the repo contains no live
   positive, so a broken detector would not surface via `jscrub audit` — the unit tests are the only
   guard.
-- **[READY TO FILE — needs Bill's sign-off, do not open unattended] Upstream: `get_watch_status`
-  reports `any_stale: false` without measuring anything** (`jgravelle/jcodemunch-mcp`, verified
+- **[NOT FILED 2026-10-23 — already fixed upstream as [jcodemunch-mcp#565](https://github.com/jgravelle/jcodemunch-mcp/issues/565), closed 2026-09-01, shipped v1.108.315]**
+  Re-checked against installed 1.108.391: `get_watch_status` now routes each repo through
+  `FreshnessProbe.repo_freshness` (`tools/get_watch_status.py:50-72`). The watcher's flag is
+  renamed `watcher_flagged_stale` (`:135`), and `any_stale` is set from the measured
+  freshness (`:157`). A live call returned `any_stale: true` with one repo `stale` and
+  `freshness_checked: true`. The original write-up follows for history.
+  Upstream: `get_watch_status`
+  reports `any_stale: false` without measuring anything (`jgravelle/jcodemunch-mcp`, verified
   against installed 1.108.288). Staleness is read from `get_reindex_status`, which is **in-process,
   in-memory** state (`tools/get_watch_status.py:73,90`). The watcher runs in the systemd daemon —
   a different PID — so a querying MCP server has no reindex state, `has_any_reindex_state()` is
@@ -236,14 +252,23 @@ Completed items age out after ~4 weeks.
   `gh api repos/<owner>/<repo>/contents/<path>?ref=<sha> -H "Accept: application/vnd.github.raw"`
   then `diff` against the installed copy. Better than reading `.venv/` when the question is
   whether the *local install* has drifted from upstream, rather than what the installed code does.
-- **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
+- **[DONE 2026-10-23] Dropped the Python-API call for the plain CLI in `run_index_local()`.**
+  Now in `scripts/lib/jdocmunch-index-local.sh`, CLI only, tested with a stub CLI. Found on the
+  way: the CLI exits 0 on `{"success": false}` (1.149.0), so the old fallback counted a failed
+  refresh as reindexed; the verdict is now read from the JSON. Original entry follows.
+  **Consider dropping the Python-API call for the plain CLI in `run_index_local()`.** The
   reason it exists — "the CLI exposes no way to pass ignore patterns" — stopped being true
   when upstream #108 added `--extra-ignore-pattern`, `--no-ai-summaries` and `--embeddings`.
   The CLI is already the fallback and already carries all three. The API still buys
   structured JSON in one call, so this is a simplification, not a fix; weigh it on its own.
-- **Still worth reporting:** `index_local` crashes with `KeyError 'owner'` when given a name
-  colliding with its own sidecar namespace (e.g. `X.summary`) — found 2026-08-08, and
-  **not** among the 92 issues on the upstream tracker as of 2026-08-16.
+- **[FILED 2026-10-23 — [jdocmunch-mcp#196](https://github.com/jgravelle/jdocmunch-mcp/issues/196)]**
+  `index_local` crashes with `KeyError 'owner'` when given a name colliding with its own
+  sidecar namespace (e.g. `X.summary`). Found 2026-08-08. Reproduced on installed 1.149.0 in a
+  scratch `DOC_INDEX_PATH`. The crash is at `storage/doc_store.py:1724` (`load_index` reads X's
+  summary sidecar as the index). A second symptom of the same cause is silent: `--name X.related`
+  succeeds and overwrites X's related-sections sidecar with the new index. Upstream main is still
+  unguarded (`_safe_repo_component` checks characters only). Watch #196 for a fix, then drop
+  the item.
 - **[FILED 2026-08-16 — [jdocmunch-mcp#120](https://github.com/jgravelle/jdocmunch-mcp/issues/120)]**
   jdocmunch's watcher flag gap (`jgravelle/jdocmunch-mcp`,
   `service_installer.py`) — found 2026-08-15. `watch-install` accepts no arguments and
@@ -597,7 +622,9 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 
 - **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
-- **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
+- **[DONE 2026-10-23] ralph-harness env-strip** — `ralph-harness.sh` unsets both keys after its
+  CLI check; the Telegram gateway passes a filtered `env=` to its `claude` subprocess. Tests:
+  `tests/test_env_strip.py`. Original: **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
 
 - **Telegram chat history persistence** — skill exists (`telegram-chat-history-persistence`)
   but implementation not yet started; would allow querying past bot conversations
