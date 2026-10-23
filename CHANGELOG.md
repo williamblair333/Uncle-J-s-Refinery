@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-10-23 — `just image` / `just video` park Heretic for the job
+
+- **Fixed** `scripts/comfy_job.py`: `just image` failed in 2 s with `CLIPTextEncode: VRAM grow
+  failed`, because Heretic's auto-fit (entry below) held 9.8 of 12 GB. The job now does
+  `docker stop llama-heretic` before queueing and `docker start` in a `finally` (SIGTERM/SIGHUP
+  mapped to SystemExit so a killed job still restarts it). `--keep-heretic` opts out.
+  Verified: image in 62 s, Heretic back up after. ask_local returns errors while it's parked.
+
 ## 2026-10-23 — Heretic sizes itself to free GPU memory (no more OOM crash loop)
 
 - **Fixed** `docker/llama-heretic/compose.yaml`: llama-heretic crash-looped on CUDA OOM (68
