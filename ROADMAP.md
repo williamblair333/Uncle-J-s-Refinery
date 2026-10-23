@@ -648,8 +648,13 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   CLI check; the Telegram gateway passes a filtered `env=` to its `claude` subprocess. Tests:
   `tests/test_env_strip.py`. Original: **ralph-harness env-strip (after 2026-06-15)** — strip `ANTHROPIC_API_KEY` + `ANTHROPIC_AUTH_TOKEN` from subprocess env in `ralph-harness.sh` and Telegram gateway; enables Agent SDK credit billing ($0 actual cost within monthly credit); do NOT apply before June 15
 
-- **Telegram chat history persistence** — skill exists (`telegram-chat-history-persistence`)
-  but implementation not yet started; would allow querying past bot conversations
+- **[DONE 2026-10-23] Telegram chat history persistence** — the skill's design, with memweave as
+  the long-term store: every exchange (post-redaction) goes to `state/telegram-history.jsonl`; the
+  last few turns (≤6, ≤6 h, ≤3,000 chars, re-redacted) are prefixed to each new message; the
+  nightly memweave sync has the local model write `telegram-YYYY-MM-DD.md` summaries (never raw
+  turns) into `~/.uncle-j-memory/memory/`. `scripts/lib/tg_history.py`, three lines in the
+  gateway, tests in `tests/test_tg_history.py`. SQLite was skipped: JSONL plus the memweave
+  corpus already cover it.
 
 - **Agent harness competitive analysis** — skill exists; full analysis not yet run
 

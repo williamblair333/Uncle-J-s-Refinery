@@ -10,6 +10,10 @@
 - Ralph wasn't removed (D3): there was no usage data. `state/ralph-runs.log` starts now.
 - Local rail: `scripts/local_rail.py` (`Rail().chat(job, prompt, ...)`), cached by content
   hash in `state/local-rail-cache/`. Delete that dir to force fresh calls.
+- Telegram history: `state/telegram-history.jsonl`, and `python scripts/lib/tg_history.py show`
+  prints what the next message gets. Daily summaries land as
+  `~/.uncle-j-memory/memory/telegram-*.md` (02:30 sync). The gateway diff is 3 lines, kept small
+  because another agent was editing gateway security in parallel.
 
 ## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
 

@@ -21,6 +21,11 @@
   through a content-hash cache in `state/local-rail-cache/`. Errors aren't cached and writes
   are atomic. The guide benchmark runs through it. Tests: `tests/test_local_rail.py`,
   `tests/test_guide_bench.py`.
+- **Added** Telegram chat history (`scripts/lib/tg_history.py`). The gateway logs each exchange
+  after output redaction and prefixes the last few turns (bounded, re-redacted) to the next
+  message. The nightly `sync_memory.sh --all` writes local-model daily summaries into the
+  memweave corpus: summaries only, at most 3 days a run, non-fatal. Gateway diff: one import
+  and two call sites. Tests: `tests/test_tg_history.py`.
 
 ## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
 
