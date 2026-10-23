@@ -14,13 +14,12 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Ship `dcup` with Uncle J and enforce it** (opened 2026-10-22). `dcup` (Docker port registry,
-  SQLite, 80+ claims) lives only in `/opt/lib/docker-port-registry/`, outside any repo, so new
-  users don't get it. Fixed in place 2026-10-22: compose.yaml discovery, Compose-style project
-  names, `scan` skipping parked copies. Left: vendor it, install it from `install.sh`, ship a
-  PreToolUse hook that blocks `docker compose up` / `docker run -p` that bypass it. (`just
-  heretic up`, `ask-local-up` and the chat page's Start already go through it, 2026-10-22.) Unverified: a past session said
-  its hook is already wired in `~/.claude/settings.json`.
+- **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in
+  `features/dcup/`, installed by `install.sh` §6b2 and checked by the `refinery-doctor`
+  `dcup-guard` check. `dcup_guard.py` blocks `docker compose up` and fixed `docker run -p` that
+  bypass dcup (178-case test matrix). The old hook was never wired. Stale claims went from
+  82 to 41. Left: run `features/dcup/install.sh` from the main checkout on each host, then
+  restart Claude Code. Not covered: commands run inside scripts, and `docker service`/`stack`.
 
 - **Local model lineup: fewest models for every goal** (decided 2026-10-22; text side under
   way). Heretic for text and images, Wan 2.2 for video (and stills if they pass), an image
