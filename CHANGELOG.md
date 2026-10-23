@@ -33,6 +33,36 @@
   `/opt/proj/.port-registry` gained 8712 (gitea's win-runner-autoscaler) and 24282–24299
   (Serena MCP dashboards). 8091 was already there.
 
+## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
+
+- **Changed** `run_index_local()` calls the jdocmunch CLI only (moved to
+  `scripts/lib/jdocmunch-index-local.sh`). **Fixed** on the way: the CLI exits 0 on
+  `{"success": false}`, so the old CLI fallback counted a failed refresh as reindexed. The
+  verdict now comes from the JSON. Tests: `tests/test_jdocmunch_index_local.py`.
+- **Changed** `ralph-harness.sh` and the Telegram gateway strip `ANTHROPIC_API_KEY` and
+  `ANTHROPIC_AUTH_TOKEN` before calling `claude`, so runs bill the subscription login, not a
+  key. Tests: `tests/test_env_strip.py`.
+- **Added** a jscrub pre-commit gate: `scripts/jscrub/precommit-scan.sh` scans staged text for
+  invisible Unicode and blocks the commit, report-only (never `clean`/`--in-place`).
+  `scripts/pre-commit.sh` runs it after the session-end docs check; `install.sh` now links the
+  hook there. `audit-repo.sh` gained a live-positive canary (exit 3 if a known ZWSP isn't
+  detected); file selection moved to `scripts/jscrub/pathspec.sh` so both gates agree. CI's
+  jscrub job also runs `tests/test_jscrub_gates.py`.
+
+## 2026-10-23 — upstream filings and the jcodemunch "unanalyzed" backlog
+
+- **Filed** [jdocmunch-mcp#196](https://github.com/jgravelle/jdocmunch-mcp/issues/196):
+  `index_local` accepts a repo name ending in a sidecar suffix. `X.summary` crashes with
+  `KeyError 'owner'`; `X.related` silently overwrites X's sidecar. Reproduced on 1.149.0 in a
+  scratch `DOC_INDEX_PATH`; duplicate-checked.
+- **Not filed:** the `get_watch_status` `any_stale` write-up. It duplicates
+  jcodemunch-mcp#565, fixed in v1.108.315, and re-verified on installed 1.108.391.
+- **Docs** ROADMAP: both items marked. REA #2188 merged and #2187 open with no maintainer reply.
+  claude-guardrails #17/#20 have no replies.
+- **Reviewed** the 8 jcodemunch ranges the 03:00 cron left "unanalyzed" (edc59ad→d56f459).
+  Every installed range was already covered by a post-upgrade sync commit. Only
+  7f3acbc→d56f459 (1.108.392–.395, not installed) is pending. No CLAUDE.md change.
+
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 
 - **Fixed** the status sweep (`scripts/waiting_sweep.py`) missed most open work: it read only

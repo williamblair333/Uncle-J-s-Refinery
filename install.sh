@@ -643,12 +643,14 @@ if [[ -d "$STACK_ROOT/.git" ]]; then
         ok "skipped post-merge hook"
     fi
 
-    # Pre-commit hook: session-end documentation gate (always installed — not optional)
-    _PRECOMMIT_SRC="$STACK_ROOT/scripts/session-end-check.sh"
+    # Pre-commit hook (always installed — not optional): session-end documentation
+    # gate, then the jscrub invisible-Unicode scan of staged files (report-only).
+    _PRECOMMIT_SRC="$STACK_ROOT/scripts/pre-commit.sh"
     _PRECOMMIT_DEST="$STACK_ROOT/.git/hooks/pre-commit"
-    chmod +x "$_PRECOMMIT_SRC"
+    chmod +x "$_PRECOMMIT_SRC" "$STACK_ROOT/scripts/session-end-check.sh" \
+        "$STACK_ROOT/scripts/jscrub/precommit-scan.sh"
     ln -sfn "$_PRECOMMIT_SRC" "$_PRECOMMIT_DEST"
-    ok "pre-commit hook installed (session-end documentation gate)"
+    ok "pre-commit hook installed (session-end docs gate + jscrub staged scan)"
 fi
 
 _tg_configured=0
