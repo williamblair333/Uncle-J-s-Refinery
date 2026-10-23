@@ -42,6 +42,66 @@
 - **Fixed** `state/hook-blocks.log.20261022` still held the 209 NUL bytes from the
   2026-10-10 review, plus 2 lines cut mid-character, so plain `grep` returned nothing. Both
   were stripped; the original is kept as `.pre-nul-strip`. That closes the review.
+## 2026-10-23 — dcup ships with Uncle J; a hook makes Claude use it
+
+- **Added** `features/dcup/`: `dcup` (the Docker port registry wrapper) vendored from
+  `/opt/lib/docker-port-registry/`, plus its sweeper and an example exceptions file. The registry
+  dir is now `$DCUP_REGISTRY_DIR`, else `/opt/lib/docker-port-registry` if it exists, else
+  `~/.local/share/dcup`, so a new host gets a working registry. The live `ports.db` stays put.
+- **Added** `features/dcup/dcup_guard.py`, a PreToolUse Bash hook. It blocks `docker compose
+  up|create`, `docker compose run --service-ports|-p`, `docker-compose up`, `dcup --bypass up`
+  and `docker run|create` publishing a fixed host port. It parses the command like a shell does:
+  env prefixes, `sudo`/`env`/`timeout`/`nohup`/`xargs`/..., quoting tricks, `;`/`&&`/pipes,
+  `$(...)`, `bash -c`, `eval` and heredocs fed to a shell. It allows read-only docker, `dcup up`,
+  `-p CONTAINER`/`-P`, and text that only mentions the commands (commit heredocs, greps, echo).
+  If the guard itself errors, the command runs anyway. The kill switch is `DCUP_GUARD=off` in
+  the settings env. Tests: `tests/test_dcup_guard.py` (178-case matrix).
+- **Added** `features/dcup/install.sh` (idempotent, `--check`, `--uninstall`). It links
+  `~/.local/bin/dcup`, creates the registry dir, and registers the hook in
+  `~/.claude/settings.json` by marker (`dcup:guard`). The path is written at install time and
+  never committed. It refuses to run from a worktree. `install.sh` §6b2 calls it, and
+  `refinery-doctor.sh` has a new `dcup-guard` check (`--fix` installs).
+  Tests: `tests/test_dcup_install.py`.
+- **Why the old hook was "paused":** it was never wired. `dcup-pretooluse-hook.sh` sat in
+  `/opt/lib/docker-port-registry/` and isn't in `~/.claude/settings.json`. Bill stopped the
+  2026-10-22 attempt over fear that a bad hook would block real commands. The new guard has no
+  side effects (no docker or DB calls) and a tested allow-list.
+- **Ops (outside the repo):** released 52 stale dcup claims from 14 projects whose compose files
+  no longer exist (old `/opt/proj/git/review/...` copies, pre-Gitea `git`, `kanka-ce`). The DB
+  backup is `ports.db.bak.2026-10-23`. gitea, portainer, qr-forge and ser2net were re-registered
+  from their current homes, taking claims from 82 to 41.
+  `/opt/proj/.port-registry` gained 8712 (gitea's win-runner-autoscaler) and 24282–24299
+  (Serena MCP dashboards). 8091 was already there.
+
+## 2026-10-23 — backlog sweep: index-local CLI, env-strip, jscrub gates
+
+- **Changed** `run_index_local()` calls the jdocmunch CLI only (moved to
+  `scripts/lib/jdocmunch-index-local.sh`). **Fixed** on the way: the CLI exits 0 on
+  `{"success": false}`, so the old CLI fallback counted a failed refresh as reindexed. The
+  verdict now comes from the JSON. Tests: `tests/test_jdocmunch_index_local.py`.
+- **Changed** `ralph-harness.sh` and the Telegram gateway strip `ANTHROPIC_API_KEY` and
+  `ANTHROPIC_AUTH_TOKEN` before calling `claude`, so runs bill the subscription login, not a
+  key. Tests: `tests/test_env_strip.py`.
+- **Added** a jscrub pre-commit gate: `scripts/jscrub/precommit-scan.sh` scans staged text for
+  invisible Unicode and blocks the commit, report-only (never `clean`/`--in-place`).
+  `scripts/pre-commit.sh` runs it after the session-end docs check; `install.sh` now links the
+  hook there. `audit-repo.sh` gained a live-positive canary (exit 3 if a known ZWSP isn't
+  detected); file selection moved to `scripts/jscrub/pathspec.sh` so both gates agree. CI's
+  jscrub job also runs `tests/test_jscrub_gates.py`.
+
+## 2026-10-23 — upstream filings and the jcodemunch "unanalyzed" backlog
+
+- **Filed** [jdocmunch-mcp#196](https://github.com/jgravelle/jdocmunch-mcp/issues/196):
+  `index_local` accepts a repo name ending in a sidecar suffix. `X.summary` crashes with
+  `KeyError 'owner'`; `X.related` silently overwrites X's sidecar. Reproduced on 1.149.0 in a
+  scratch `DOC_INDEX_PATH`; duplicate-checked.
+- **Not filed:** the `get_watch_status` `any_stale` write-up. It duplicates
+  jcodemunch-mcp#565, fixed in v1.108.315, and re-verified on installed 1.108.391.
+- **Docs** ROADMAP: both items marked. REA #2188 merged and #2187 open with no maintainer reply.
+  claude-guardrails #17/#20 have no replies.
+- **Reviewed** the 8 jcodemunch ranges the 03:00 cron left "unanalyzed" (edc59ad→d56f459).
+  Every installed range was already covered by a post-upgrade sync commit. Only
+  7f3acbc→d56f459 (1.108.392–.395, not installed) is pending. No CLAUDE.md change.
 
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 

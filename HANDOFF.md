@@ -15,6 +15,51 @@ is at the merge. No restart needed.
   `review/2026-10-10-hook-blocks-log-nul-bytes.md` can be moved to reviewed (it's gitignored,
   so the note isn't in it), and `hook-blocks.log.bak-2026-10-16` still holds NULs (read it
   with `grep -a`).
+## 2026-10-23 (main host) — dcup vendored + guard hook; stale claims released
+
+**Most important:** the dcup guard runs only after `bash features/dcup/install.sh` is run from
+the **main checkout**, followed by a Claude Code restart. Until then, nothing blocks
+`docker compose up`. `bash scripts/refinery-doctor.sh --check dcup-guard` says which state
+you're in.
+
+- `features/dcup/` holds dcup, the guard, the installer and tests. `~/.local/bin/dcup` will be
+  a symlink to the repo copy (it's first in PATH). The old `/opt/lib/docker-port-registry/dcup`
+  is left as a fallback, along with the unwired `dcup-pretooluse-hook.sh`, which can be deleted.
+- dcup claims: 52 released (14 projects with deleted compose files), 11 re-registered, so 41
+  remain. Backup: `ports.db.bak.2026-10-23`.
+- Ports: 8712 is gitea's `win-runner-autoscaler.service` (legit). 24282–24285 are Serena
+  dashboards, one per Claude session. Both are in `/opt/proj/.port-registry` now.
+- For Bill: `open-webui` claims 11434 on 0.0.0.0 while `ollama` holds it on 127.0.0.1.
+  kanka-ce's 8 exited containers outlive its deleted compose file, so `docker rm` them if
+  they're unwanted. The guard can't see commands inside scripts or `docker service`/`stack`.
+
+## 2026-10-23 (main host) — backlog sweep ("DO ALL THESE")
+
+**Most important:** jdocmunch's CLI exits 0 when it fails (`{"success": false}`); anything
+that shells out to `jdocmunch-mcp index-local` must read the JSON, not the exit code.
+
+- `run_index_local()` is CLI-only now (`scripts/lib/jdocmunch-index-local.sh`).
+- ralph-harness and the Telegram gateway no longer pass Anthropic API keys to `claude`.
+- jscrub pre-commit gate + audit canary. **The live hook still points at
+  `session-end-check.sh`** until `install.sh` (or `just setup`) runs on the main checkout; then
+  `.git/hooks/pre-commit` → `scripts/pre-commit.sh`.
+
+## 2026-10-23 (main host) — upstream filings, jcodemunch backlog cleared
+
+**Most important:** the 8 `jcodemunch_upgrade_*_unanalyzed` memories were false alarms. The
+cron can't see the repo's own `post-upgrade sync` commits, and those had covered every installed
+range. They're replaced by `-home-bill/memory/jcodemunch_upgrades_reviewed_2026-10-23.md`.
+
+- Filed jdocmunch-mcp#196 (sidecar-suffix name collision). Didn't file the get_watch_status
+  issue: it's upstream #565, already fixed.
+- Pending at the next jcodemunch sync (7f3acbc→d56f459, not installed yet):
+  `get_call_hierarchy` `direct_caller_count`/`via` (`caller_count` counts all depths), the
+  `search_text` `in` field and in-body `truncated`, and ×0.5 ranking for config files, fields
+  and constants.
+- Deployed `~/.claude/CLAUDE.md` lags the repo copy (missing the worktree and test-×0.25 lines
+  from d4e58f6). Run `scripts/refinery-doctor.sh --fix`.
+- Upstream watch: REA #2188 merged, #2187 has no maintainer reply. claude-guardrails #17/#20
+  have none either. jdocmunch #120 was fixed in 1.134.0.
 
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 

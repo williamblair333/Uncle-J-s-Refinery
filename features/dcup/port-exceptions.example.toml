@@ -1,0 +1,10 @@
+# Docker Port Registry — Known-Safe Overlaps
+# Copied to <registry dir>/port-exceptions.toml by features/dcup/install.sh when none exists.
+# Format: project1:project2:port1,port2,...:reason
+# Both project names must match exactly what dcup uses (the compose file's directory name).
+# Ports listed here are NOT blocked when both projects claim them.
+# Use only for projects that share ports because they are the same service at
+# different stages and never run simultaneously.
+#
+# Example:
+# app-old:app-new:8080,5432:same app in two repos — never run simultaneously

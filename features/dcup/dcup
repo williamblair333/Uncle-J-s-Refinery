@@ -1,0 +1,562 @@
+#!/usr/bin/env bash
+# dcup — Docker port registry wrapper
+# Checks port conflicts before docker compose up, registers claimed ports in
+# a SQLite registry (ports.db in the registry dir, see below).
+#
+# Usage:
+#   dcup up [-f file.yml] [-d] [...]   wrap docker compose up with port check
+#   dcup --check-only [-f file] [-p proj]  dry-run conflict check, no start
+#   dcup scan [dir]                    bulk-register all projects under dir
+#   dcup release [project]             release all ports for a project
+#   dcup list                          show full registry
+#   dcup install-hook [dir]            add pre-commit hook to a git repo
+#   dcup --reconcile-all               report stale claims (no auto-delete)
+#   dcup --bypass [...]                skip registry, exec docker compose directly
+#   dcup --help                        show this message
+#
+# Registry dir: $DCUP_REGISTRY_DIR, else /opt/lib/docker-port-registry when it
+# exists (the original home), else ${XDG_DATA_HOME:-~/.local/share}/dcup.
+# Exception file: <registry dir>/port-exceptions.toml
+# Format: project1:project2:port1,port2,...:reason
+#
+# Vendored in Uncle J's Refinery at features/dcup/dcup; installed by
+# features/dcup/install.sh (symlink in ~/.local/bin). Claude Code sessions are
+# held to it by features/dcup/dcup_guard.py (PreToolUse hook).
+
+set -euo pipefail
+
+_registry_dir() {
+  if [[ -n "${DCUP_REGISTRY_DIR:-}" ]]; then
+    echo "$DCUP_REGISTRY_DIR"
+  elif [[ -d /opt/lib/docker-port-registry ]]; then
+    echo /opt/lib/docker-port-registry
+  else
+    echo "${XDG_DATA_HOME:-$HOME/.local/share}/dcup"
+  fi
+}
+
+REGISTRY_DIR="$(_registry_dir)"
+DB="${REGISTRY_DIR}/ports.db"
+LOCKFILE="${REGISTRY_DIR}/registry.lock"
+EXCEPTIONS="${REGISTRY_DIR}/port-exceptions.toml"
+REAL_DOCKER="${DOCKER_BIN:-$(command -v docker 2>/dev/null || echo /usr/bin/docker)}"
+
+# ── Preflight checks ──────────────────────────────────────────────────────────
+
+_preflight() {
+  command -v sqlite3 >/dev/null 2>&1 || {
+    echo "❌ dcup requires sqlite3. Install: sudo apt-get install sqlite3" >&2
+    exit 1
+  }
+  [[ -d "$REGISTRY_DIR" ]] || {
+    echo "❌ Registry dir missing: $REGISTRY_DIR — run features/dcup/install.sh" >&2
+    exit 1
+  }
+  [[ -f "$LOCKFILE" ]] || {
+    echo "❌ Lockfile missing: $LOCKFILE — run features/dcup/install.sh" >&2
+    exit 1
+  }
+  # Compose v2 check
+  local compose_ver
+  compose_ver="$("$REAL_DOCKER" compose version --short 2>/dev/null | grep -oE '^[0-9]+' | head -1)" || compose_ver=0
+  [[ "${compose_ver:-0}" -ge 2 ]] || {
+    echo "❌ dcup requires Docker Compose v2+ (docker compose). Got: $("$REAL_DOCKER" compose version 2>/dev/null || echo 'not found')" >&2
+    exit 1
+  }
+}
+
+# ── DB init (idempotent, call inside flock) ───────────────────────────────────
+
+_init_db() {
+  sqlite3 "$DB" "
+    CREATE TABLE IF NOT EXISTS port_claims (
+      host_port  INTEGER NOT NULL,
+      proto      TEXT    NOT NULL DEFAULT 'tcp',
+      host_ip    TEXT    NOT NULL DEFAULT '0.0.0.0',
+      project    TEXT    NOT NULL,
+      compose_file TEXT  NOT NULL,
+      service    TEXT    NOT NULL,
+      claimed_at TEXT    NOT NULL,
+      last_seen_running TEXT,
+      PRIMARY KEY (host_port, proto, host_ip)
+    );
+    CREATE TABLE IF NOT EXISTS registry_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+    INSERT OR IGNORE INTO registry_meta VALUES ('schema_version','1');
+  " 2>&1 || { echo "❌ Failed to init DB at $DB" >&2; exit 1; }
+}
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+_normalize_ip() {
+  local ip="$1"
+  case "$ip" in
+    ""|"0.0.0.0"|"::") echo "0.0.0.0" ;;
+    *) echo "$ip" ;;
+  esac
+}
+
+_sql_escape() { echo "$1" | sed "s/'/''/g"; }
+
+# Compose's own lookup order when no -f is given (2026-10-22: compose.yaml was ignored).
+_default_compose() {
+  local f
+  for f in compose.yaml compose.yml docker-compose.yaml docker-compose.yml; do
+    [[ -f "$f" ]] && { echo "$f"; return; }
+  done
+  echo docker-compose.yml
+}
+
+# Compose's default project name: the compose file's directory, lowercased, [a-z0-9_-] only.
+# (Was basename of $PWD, which never matched the com.docker.compose.project label when the
+# file lived in a subdirectory, so the inline reconcile wiped the project's own claims.)
+_project_of() {
+  basename "$(dirname "$1")" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]//g'
+}
+
+# Parse ports from docker compose config JSON.
+# Outputs lines: "host_port proto host_ip service_name"
+# Exits 1 (fail-closed) if compose file has ports: but config returned empty.
+_parse_ports() {
+  local compose_file="$1"
+  local config_json
+  config_json="$("$REAL_DOCKER" compose -f "$compose_file" config --format json 2>/dev/null)" || true
+
+  if [[ -z "$config_json" ]]; then
+    if grep -qE '^\s+ports:' "$compose_file" 2>/dev/null; then
+      echo "❌ docker compose config returned empty for:" >&2
+      echo "   $compose_file" >&2
+      echo "   Is .env missing? Run: docker compose -f '$compose_file' config" >&2
+      exit 1
+    fi
+    return 0
+  fi
+
+  echo "$config_json" | python3 -c "
+import json, sys
+cfg = json.load(sys.stdin)
+for svc, sdef in cfg.get('services', {}).items():
+    for p in sdef.get('ports', []):
+        pub  = str(p.get('published') or '').strip()
+        if not pub:
+            continue
+        proto = (p.get('protocol') or 'tcp').strip() or 'tcp'
+        ip    = (p.get('host_ip')   or '0.0.0.0').strip()
+        if ip in ('', '::'): ip = '0.0.0.0'
+        print(pub, proto, ip, svc)
+" 2>/dev/null || true
+}
+
+# Returns 0 (excepted) if port is a known-safe overlap between project_a and project_b
+_is_excepted() {
+  local port="$1" project_a="$2" project_b="$3"
+  [[ -f "$EXCEPTIONS" ]] || return 1
+  while IFS=: read -r p1 p2 ports _reason || [[ -n "$p1" ]]; do
+    [[ "$p1" =~ ^[[:space:]]*# ]] && continue
+    [[ -z "${p1// }" ]] && continue
+    if { [[ "$p1" == "$project_a" && "$p2" == "$project_b" ]] || \
+         [[ "$p1" == "$project_b" && "$p2" == "$project_a" ]]; }; then
+      IFS=',' read -ra plist <<< "$ports"
+      for ep in "${plist[@]}"; do
+        [[ "${ep// }" == "$port" ]] && return 0
+      done
+    fi
+  done < "$EXCEPTIONS"
+  return 1
+}
+
+# Check port list for conflicts. Reads DB + live docker ps + ss.
+# port_data: newline-separated "port proto ip service" lines (via process sub)
+# Returns 0 = clean, 1 = conflict found
+_check_ports() {
+  local project="$1" compose_file="$2"
+  local -a conflicts=()
+  local -a warnings=()
+
+  while IFS=' ' read -r port proto ip service; do
+    [[ -z "$port" ]] && continue
+    ip="$(_normalize_ip "$ip")"
+
+    # SQLite registry check
+    if [[ -f "$DB" ]]; then
+      local owner
+      owner="$(sqlite3 "$DB" "
+        SELECT project || ' (' || service || ' in ' || compose_file || ')'
+        FROM port_claims
+        WHERE host_port=$port AND proto='$proto'
+          AND (host_ip='0.0.0.0' OR host_ip='$(_sql_escape "$ip")')
+          AND project != '$(_sql_escape "$project")'
+        LIMIT 1;
+      " 2>/dev/null)" || true
+      if [[ -n "$owner" ]]; then
+        local owner_proj="${owner%% (*}"
+        if ! _is_excepted "$port" "$project" "$owner_proj"; then
+          conflicts+=("  port ${port}/${proto} → registry says: $owner")
+        fi
+      fi
+    fi
+
+    # Live docker ps check (catches stale registry entries)
+    local live
+    live="$("$REAL_DOCKER" ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null \
+      | grep -E "0\.0\.0\.0:${port}->|:::${port}->" \
+      | grep -v "$(basename "$compose_file" | sed 's/docker-compose//' | sed 's/\.yml//')" \
+      | head -1)" || true
+    if [[ -n "$live" ]]; then
+      local live_name; live_name="$(echo "$live" | awk '{print $1}')"
+      local live_proj; live_proj="$(echo "$live_name" | sed 's/-[^-]*$//')"
+      if ! _is_excepted "$port" "$project" "$live_proj"; then
+        conflicts+=("  port ${port}/${proto} → live container: $live_name")
+      fi
+    fi
+
+    # ss check — non-docker processes (warning only, not a block)
+    if ss -tlnp 2>/dev/null | grep -qE "[[:space:]]:${port}[[:space:]]"; then
+      local pid_info; pid_info="$(ss -tlnp 2>/dev/null | grep -E "[[:space:]]:${port}[[:space:]]" | grep -oE 'pid=[0-9,]+' | head -1)"
+      warnings+=("  ⚠  port ${port} also bound by non-docker process ($pid_info) — will fail at bind time")
+    fi
+  done
+
+  for w in "${warnings[@]}"; do echo "$w" >&2; done
+
+  if [[ ${#conflicts[@]} -gt 0 ]]; then
+    echo "❌ Port conflict for project '${project}':" >&2
+    for c in "${conflicts[@]}"; do echo "$c" >&2; done
+    echo "" >&2
+    echo "   Run 'dcup list' to see the full registry." >&2
+    echo "   Run 'dcup release <project>' to free ports for a decommissioned project." >&2
+    return 1
+  fi
+  return 0
+}
+
+# Claim ports in DB (call inside flock, after conflict check passes)
+_claim_ports() {
+  local project="$1" compose_file="$2"
+  local now; now="$(date -Iseconds)"
+  while IFS=' ' read -r port proto ip service; do
+    [[ -z "$port" ]] && continue
+    ip="$(_normalize_ip "$ip")"
+    sqlite3 "$DB" "
+      INSERT OR REPLACE INTO port_claims
+        (host_port,proto,host_ip,project,compose_file,service,claimed_at)
+      VALUES (
+        $port,'$(_sql_escape "$proto")','$(_sql_escape "$ip")',
+        '$(_sql_escape "$project")','$(_sql_escape "$compose_file")',
+        '$(_sql_escape "$service")','$now'
+      );
+    " 2>&1 || { echo "❌ Failed to claim port $port in DB" >&2; exit 1; }
+  done
+}
+
+# ── Subcommands ───────────────────────────────────────────────────────────────
+
+cmd_up() {
+  _preflight
+  local compose_file; compose_file="$(_default_compose)"
+  local project=""
+
+  # Extract -f/--file from args (may appear before or after 'up')
+  local args=("$@")
+  local i
+  for (( i=0; i<${#args[@]}; i++ )); do
+    case "${args[$i]}" in
+      -f|--file)
+        compose_file="${args[$((i+1))]:-docker-compose.yml}"
+        ;;
+      --file=*)
+        compose_file="${args[$i]#*=}"
+        ;;
+      --project-name|-p)
+        project="${args[$((i+1))]:-$project}"
+        ;;
+    esac
+  done
+
+  [[ -f "$compose_file" ]] || {
+    echo "❌ Compose file not found: $compose_file" >&2
+    exit 1
+  }
+  compose_file="$(realpath "$compose_file")"
+  [[ -n "$project" ]] || project="$(_project_of "$compose_file")"
+
+  # Parse ports OUTSIDE flock (read-only, idempotent)
+  local port_data
+  port_data="$(_parse_ports "$compose_file")"
+
+  if [[ -z "$port_data" ]]; then
+    echo "ℹ  No exposed ports in $compose_file — skipping registry check."
+    exec "$REAL_DOCKER" compose "$@"
+  fi
+
+  # Acquire flock (30s timeout)
+  exec {LOCK_FD}>"$LOCKFILE"
+  if ! flock --timeout 30 --exclusive "$LOCK_FD"; then
+    local holder; holder="$(fuser "$LOCKFILE" 2>/dev/null | tr ' ' '\n' | xargs -I{} ps -p {} -o pid= -o cmd= --no-headers 2>/dev/null | head -1 || echo 'unknown')"
+    echo "❌ Could not acquire port registry lock after 30s. Held by: $holder" >&2
+    exit 1
+  fi
+
+  _init_db
+
+  # Inline reconcile: if this project has no running containers, clear its claims
+  local running
+  # grep -c already prints "0" on no match (and exits 1); the old `|| echo 0`
+  # appended a SECOND line, yielding "0\n0" and breaking the numeric test below.
+  running="$("$REAL_DOCKER" ps --format '{{.Label "com.docker.compose.project"}}' 2>/dev/null \
+    | grep -cx "$(_sql_escape "$project")")" || running=0
+  if [[ "$running" -eq 0 && -f "$DB" ]]; then
+    sqlite3 "$DB" "DELETE FROM port_claims WHERE project='$(_sql_escape "$project")';" 2>/dev/null || true
+  fi
+
+  # Check conflicts
+  if ! echo "$port_data" | _check_ports "$project" "$compose_file"; then
+    flock --unlock "$LOCK_FD" 2>/dev/null || true
+    exit 1
+  fi
+
+  # Register ports
+  echo "$port_data" | _claim_ports "$project" "$compose_file"
+  flock --unlock "$LOCK_FD" 2>/dev/null || true
+
+  echo "✅ Ports registered for '$project'." >&2
+
+  # `-f`/`-p` are GLOBAL `docker compose` flags and MUST precede the subcommand.
+  # Passing "$@" verbatim (e.g. `up -f file`) makes docker parse `-f` as a flag
+  # to `up`, which fails with "unknown shorthand flag: 'f'". Re-emit them up front.
+  local passthrough=() global=( -f "$compose_file" )
+  local skip=0 j
+  for (( j=0; j<${#args[@]}; j++ )); do
+    if (( skip )); then skip=0; continue; fi
+    case "${args[$j]}" in
+      -f|--file)         skip=1 ;;                                   # drop flag + value
+      --file=*)          ;;                                          # drop
+      -p|--project-name) global+=( -p "${args[$((j+1))]}" ); skip=1 ;;
+      *)                 passthrough+=( "${args[$j]}" ) ;;
+    esac
+  done
+  exec "$REAL_DOCKER" compose "${global[@]}" "${passthrough[@]}"
+}
+
+cmd_check_only() {
+  _preflight
+  local compose_file; compose_file="$(_default_compose)"
+  local project=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--file)   compose_file="${2:?}"; shift 2 ;;
+      --file=*)    compose_file="${1#*=}"; shift ;;
+      -p|--project) project="${2:?}"; shift 2 ;;
+      *)           shift ;;
+    esac
+  done
+
+  [[ -f "$compose_file" ]] || {
+    echo "❌ Compose file not found: $compose_file" >&2
+    exit 1
+  }
+  compose_file="$(realpath "$compose_file")"
+  [[ -n "$project" ]] || project="$(_project_of "$compose_file")"
+
+  local port_data
+  port_data="$(_parse_ports "$compose_file")"
+  [[ -z "$port_data" ]] && { echo "✅ No exposed ports."; exit 0; }
+
+  if echo "$port_data" | _check_ports "$project" "$compose_file"; then
+    local count; count="$(echo "$port_data" | wc -l)"
+    echo "✅ No conflicts — $count port(s) clear for '$project'"
+    exit 0
+  else
+    exit 1
+  fi
+}
+
+cmd_scan() {
+  _preflight
+  local scan_dir="${1:-/opt/proj}"
+  echo "🔍 Scanning $scan_dir for compose files..."
+
+  exec {LOCK_FD}>"$LOCKFILE"
+  flock --timeout 60 --exclusive "$LOCK_FD"
+  _init_db
+
+  local found=0 skipped=0 conflicts=0
+
+  while IFS= read -r cf; do
+    # Skip worktree copies and vendor/node_modules
+    [[ "$cf" =~ /\.claude/worktrees/ ]] && continue
+    [[ "$cf" =~ /vendor/ ]] && continue
+    [[ "$cf" =~ /node_modules/ ]] && continue
+    # Parked or superseded copies of other projects: claiming their ports produces false
+    # conflicts against the live project (2026-10-22 scan: 30+ such claims).
+    [[ "$cf" =~ /(_?review|reviewed|orig|old|__not-in-use|__to_review|__in_progress)/ ]] && continue
+    [[ "$cf" =~ superseded ]] && continue
+
+    local project; project="$(_project_of "$cf")"
+    local port_data
+    port_data="$(_parse_ports "$cf" 2>/dev/null)" || {
+      echo "  ⚠  SKIP $cf (compose config failed — .env missing?)"
+      (( skipped++ )) || true
+      continue
+    }
+
+    [[ -z "$port_data" ]] && continue
+
+    local count; count="$(echo "$port_data" | grep -c . || echo 0)"
+    echo "  📋 $project ($cf): $count port(s)"
+
+    while IFS=' ' read -r port proto ip service; do
+      [[ -z "$port" ]] && continue
+      ip="$(_normalize_ip "$ip")"
+      local existing
+      existing="$(sqlite3 "$DB" "
+        SELECT project FROM port_claims
+        WHERE host_port=$port AND proto='$(_sql_escape "$proto")'
+          AND (host_ip='0.0.0.0' OR host_ip='$(_sql_escape "$ip")')
+          AND project != '$(_sql_escape "$project")'
+        LIMIT 1;" 2>/dev/null)" || true
+
+      if [[ -n "$existing" ]]; then
+        if _is_excepted "$port" "$project" "$existing"; then
+          echo "    ✓  port $port excepted (shared with $existing)"
+        else
+          echo "    ⚠  CONFLICT: port $port/$proto already claimed by '$existing'"
+          (( conflicts++ )) || true
+        fi
+      fi
+
+      sqlite3 "$DB" "
+        INSERT OR IGNORE INTO port_claims
+          (host_port,proto,host_ip,project,compose_file,service,claimed_at)
+        VALUES ($port,'$(_sql_escape "$proto")','$(_sql_escape "$ip")',
+                '$(_sql_escape "$project")','$(_sql_escape "$cf")',
+                '$(_sql_escape "$service")','$(date -Iseconds)');
+      " 2>/dev/null || true
+    done <<< "$port_data"
+
+    (( found++ )) || true
+  done < <(find "$scan_dir" \( -name "docker-compose*.yml" -o -name "docker-compose*.yaml" \
+                               -o -name "compose.yml" -o -name "compose.yaml" \) | sort)
+
+  flock --unlock "$LOCK_FD" 2>/dev/null || true
+  echo ""
+  echo "Scan complete: $found projects registered, $skipped skipped, $conflicts conflicts."
+  [[ $conflicts -gt 0 ]] && echo "⚠  Run 'dcup list' to see all conflicts and resolve manually."
+  return 0
+}
+
+cmd_release() {
+  _preflight
+  local project="${1:-$(basename "$(pwd)")}"
+  [[ -f "$DB" ]] || { echo "No registry yet."; exit 0; }
+
+  exec {LOCK_FD}>"$LOCKFILE"
+  flock --timeout 10 --exclusive "$LOCK_FD"
+  local count; count="$(sqlite3 "$DB" "SELECT COUNT(*) FROM port_claims WHERE project='$(_sql_escape "$project")';")"
+  sqlite3 "$DB" "DELETE FROM port_claims WHERE project='$(_sql_escape "$project")';"
+  flock --unlock "$LOCK_FD" 2>/dev/null || true
+  echo "✅ Released $count port(s) for '$project'"
+}
+
+cmd_list() {
+  [[ -f "$DB" ]] || { echo "No registry. Run: dcup scan /opt/proj"; exit 0; }
+  sqlite3 -column -header "$DB" "
+    SELECT host_port AS port, proto, host_ip AS ip,
+           project, service,
+           substr(claimed_at,1,16) AS claimed,
+           CASE WHEN last_seen_running IS NULL THEN 'reserved'
+                ELSE 'seen:' || substr(last_seen_running,1,16) END AS status
+    FROM port_claims ORDER BY host_port;
+  "
+}
+
+cmd_reconcile_all() {
+  _preflight
+  [[ -f "$DB" ]] || { echo "No registry."; exit 0; }
+  echo "🔄 Checking all port claims against running containers..."
+  local running_projects
+  running_projects="$("$REAL_DOCKER" ps --format '{{.Label "com.docker.compose.project"}}' 2>/dev/null | sort -u)"
+
+  sqlite3 "$DB" "SELECT DISTINCT project FROM port_claims;" 2>/dev/null \
+  | while IFS= read -r proj; do
+    if ! echo "$running_projects" | grep -qx "$proj"; then
+      local cnt; cnt="$(sqlite3 "$DB" "SELECT COUNT(*) FROM port_claims WHERE project='$(_sql_escape "$proj")';")"
+      echo "  ⚠  '$proj' has $cnt claimed port(s) but no running containers — run: dcup release '$proj'"
+    fi
+  done
+  echo "Done. Use 'dcup release <project>' to free ports for dead projects."
+}
+
+cmd_install_hook() {
+  local project_dir="${1:-.}"
+  local hook="$project_dir/.git/hooks/pre-commit"
+  [[ -e "$project_dir/.git" ]] || {
+    echo "❌ Not a git repo: $project_dir" >&2
+    exit 1
+  }
+  # Resolve hook path for worktrees (.git may be a file pointing to the real git dir)
+  if [[ -f "$project_dir/.git" ]]; then
+    local real_git; real_git="$(git -C "$project_dir" rev-parse --git-common-dir 2>/dev/null)"
+    hook="${real_git}/hooks/pre-commit"
+  fi
+  # Don't double-install
+  [[ -f "$hook" ]] && grep -q 'dcup --check-only' "$hook" && {
+    echo "ℹ  dcup hook already present in $project_dir"
+    return 0
+  }
+  cat >> "$hook" << 'HOOK'
+
+# dcup: check port conflicts on compose file changes
+if git diff --cached --name-only 2>/dev/null | grep -qE '(docker-compose.*\.yml|compose\.yml)$'; then
+  _dcup_file="$(git diff --cached --name-only | grep -E '(docker-compose.*\.yml|compose\.yml)$' | head -1)"
+  if command -v dcup >/dev/null 2>&1; then
+    echo "🔍 dcup: checking port conflicts in $_dcup_file..."
+    if ! dcup --check-only -f "$_dcup_file"; then
+      echo "❌ Commit blocked: port conflict. Run 'dcup list' to see registry."
+      exit 1
+    fi
+  fi
+fi
+HOOK
+  chmod +x "$hook"
+  echo "✅ Installed dcup pre-commit hook in $project_dir"
+}
+
+cmd_help() {
+  grep '^#' "$0" | head -24 | sed 's/^# //' | sed 's/^#//'
+  echo ""
+  echo "Registry:   $DB"
+  echo "Exceptions: $EXCEPTIONS"
+  echo "Lockfile:   $LOCKFILE"
+}
+
+# ── Main dispatch ─────────────────────────────────────────────────────────────
+
+# If called with no args or just subcommand flags, show help
+[[ $# -eq 0 ]] && { cmd_help; exit 0; }
+
+# Check if 'up' appears anywhere in args (handle: dcup up, dcup -f x up, docker-compose up)
+HAS_UP=0
+for _arg in "$@"; do [[ "$_arg" == "up" ]] && HAS_UP=1; done
+
+case "${1}" in
+  --check-only)    cmd_check_only "${@:2}" ;;
+  scan)            cmd_scan "${@:2}" ;;
+  release)         cmd_release "${@:2}" ;;
+  install-hook)    cmd_install_hook "${@:2}" ;;
+  list)            cmd_list ;;
+  --reconcile-all) cmd_reconcile_all ;;
+  --bypass)        exec "$REAL_DOCKER" compose "${@:2}" ;;
+  --help|-h|help)  cmd_help ;;
+  *)
+    if [[ $HAS_UP -eq 1 ]]; then
+      cmd_up "$@"
+    else
+      # Pass-through for docker-compose ps, down, logs, etc.
+      exec "$REAL_DOCKER" compose "$@"
+    fi
+    ;;
+esac

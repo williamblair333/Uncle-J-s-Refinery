@@ -556,6 +556,9 @@ for update in updates:
         result = subprocess.run(
             claude_argv,
             cwd=agent_cwd,
+            # Bill the subscription login, never an API key (ROADMAP env-strip item).
+            env={k: v for k, v in os.environ.items()
+                 if k not in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")},
             capture_output=True,
             text=True,
             timeout=120,
