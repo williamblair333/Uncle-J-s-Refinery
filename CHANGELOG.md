@@ -20,6 +20,27 @@
 - **Docs** `docs/STACK.md` "Speech" (start, use, measured numbers); lineup #4/#5 marked
   running; ROADMAP lineup entry. Weights sha256-checked against Hugging Face.
 
+## 2026-10-23 — quiet Firefox browser MCP, Alt+V image paste, review and scout cleared
+
+- **Added** `just browser`: a Claude Code session with Mozilla's firefox-devtools-mcp 0.10.4
+  loaded for that session only (`scripts/firefox-mcp.sh`, `config/firefox-mcp/user.js`).
+  Measured without root in a user+net namespace with a capturing sink and a logging SOCKS5
+  proxy: the only contacts are the target sites (TCP, UDP/QUIC and DNS). Default Firefox
+  contacted 5 Mozilla hosts. Fixes beyond prefs: `MOZ_REMOTE_SETTINGS_DEVTOOLS=1`, a private
+  `XDG_CONFIG_HOME` (a pending crash-reporter ping in the host's store), node on a local install
+  instead of `npx`. Tests: `tests/test_firefox_mcp.py`.
+- **Added** doctor check `keybindings`: `--fix` merges Alt+V → `chat:imagePaste` into
+  `~/.claude/keybindings.json` (`scripts/keybindings-merge.py`), keeping other bindings and
+  never overriding an alt+v bound to something else. README troubleshooting: image paste does
+  nothing (Tabby eats Ctrl+V). Tests: `tests/test_keybindings_merge.py`.
+- **Scout:** recorded "no" for ai-job-search (moved to `ai-job-search-dev/`; not my goals),
+  searxNcrawl (Playwright + Chromium; SearXNG and `just web2md` cover it), and the already
+  reviewed playwright-mcp and firecrawl, so none of them gets sent. `scout/finds/` gains the
+  searxNcrawl page; both pages carry the verdict.
+- **Review queue:** Tabby, firecrawl and browser-automation notes (with their clones) moved to
+  `reviewed/`. ROADMAP gains the REA-in-Docker and bigprint items (both waiting for Bill) and a
+  corrected REA upstream line (#2188 merged 2026-10-14).
+
 ## 2026-10-23 — justfiles for write_well and deal-finder
 
 - **Added** justfiles in write_well (#5: status, recall) and deal-finder (#1: setup, run,
