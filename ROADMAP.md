@@ -642,9 +642,32 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
 - **ECC specialist agents** — 6 agents imported; evaluate and integrate into
   active workflows
 
-- **Expand discipline hook surface list** — after 1 week of `hook-blocks.log` data, review BLOCKED patterns and expand `edit-surface-guard.sh` surface list if coverage gaps appear; narrow if false positives are high
+- **[DONE 2026-10-23] Expand discipline hook surface list.** Reviewed `hook-blocks.log`
+  from 2026-05-25 on: 513 edit-surface blocks, 7532 allowed. Narrowed: test modules
+  (`tests/test_*.py`, `*_test.py`) were 65 blocks (13%); conftest.py and guard dirs stay
+  gated. Widened: `.mcp.json` (the PR #105 incident), `settings.local.json`, `justfile`,
+  `*.service`, `*.timer`. Extensions now compare case-blind, and a symlink resolving onto a
+  surface is gated. surface-write-guard mirrors the additions.
+- **Open: surface-write-guard can't see shell variables.** 43 of 102 blocks since 2026-10-16
+  are writes to `$S/x.py` with `S=/tmp/…scratchpad`. That guard matches regexes, so the fix
+  is grep-guard's lexer (or a shared one) in front of it.
 
-- **Telegram gateway — remaining red-team findings** (from `review/telegram-gateway-redteam.md`, which is gitignored — tracked here so they aren't lost): (a) skill-frontmatter prompt injection — `scan_skill_body` scans body only; (b) destructive `promote` `rmtree` on skill-name collision; (c) output-redaction denylist gaps (spaced/prose keys, relative paths); (d) bot token in curl URL → `/proc` disclosure. The CRITICAL (restricted-agent host access) is already fixed in PR #68.
+- **[DONE 2026-10-23] Telegram gateway, remaining red-team findings.** (a) and (b) were only
+  half closed by PR #73. (a) Frontmatter keys that grant power (`allowed-tools`, `hooks`,
+  `context`, `agent`) and `` !`cmd` `` bodies are now rejected. Zero-width, bidi and
+  fullwidth obfuscation is normalised before the injection scan. (b) An existing skill dir
+  with a different SKILL.md was overwritten by `copy2`, and any symlink counted as
+  gateway-owned. Both are refused now; an identical SKILL.md (auto-maintain Part C) still
+  installs. (c) Added token-shape rules (Telegram, GitHub, OpenAI, Langfuse, AWS, Slack,
+  Google, JWT, PEM, Bearer), prose and lower-case key names, and output-only `~/`, Windows,
+  MSYS and relative paths. (d) The bot token goes to curl as `-K -` config on stdin in all 6
+  call sites, and a malformed token is refused.
+- **[DONE 2026-10-23] grep-guard quote-blind tokenizer + session-cwd-only paths.** A
+  bash-aware analyzer (an inline python3 lexer) now feeds the judging helpers. It handles
+  quoting, `$( )`, backticks, `<( )` and heredocs. It tracks cd/pushd, subshells and literal
+  `VAR=value`, and unwraps sudo/env/xargs/find -exec/sh -c/eval. The legacy splitter stays as
+  the fallback. Residual: interpreters (`python3 -c open(…)`), `git show`, and file names
+  produced at run time (`cat $(git ls-files)`).
 
 - **[DONE 2026-10-22] jcodemunch skew probe** — healthcheck `running processes match the
   installed version` warns on any jcodemunch/jdocmunch watcher or MCP server that started

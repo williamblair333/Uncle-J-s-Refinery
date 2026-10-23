@@ -47,13 +47,22 @@ if [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]]; then
   echo "ERROR: TELEGRAM_BOT_TOKEN not set (.env missing?)" >&2
   exit 1
 fi
-API="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}"
+# tg_curl METHOD[?QUERY] [curl args…]. The bot token reaches curl as a config line on
+# stdin (`-K -`) from the printf BUILTIN, never in argv: /proc/<pid>/cmdline is
+# world-readable, so a URL argument disclosed the token to every local user for the
+# life of the request (red-team 2026-10-23). A token that isn't <digits>:<urlsafe>
+# is refused, so it can't smuggle extra curl config lines either.
+tg_curl() {
+  local m=$1; shift
+  [[ "$TELEGRAM_BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]] || { echo "ERROR: malformed TELEGRAM_BOT_TOKEN" >&2; return 22; }
+  printf 'url = "https://api.telegram.org/bot%s/%s"\n' "$TELEGRAM_BOT_TOKEN" "$m" | curl -K - "$@"
+}
 
 CUR_OFFSET="0"
 [[ -f "$OFFSET_FILE" ]] && CUR_OFFSET="$(cat "$OFFSET_FILE")"
 
 # Read-only peek: earliest-100 unconfirmed, confirms nothing.
-peek() { curl -sf "${API}/getUpdates?limit=100&timeout=0" 2>/dev/null || echo '{"ok":false,"result":[]}'; }
+peek() { tg_curl "getUpdates?limit=100&timeout=0" -sf 2>/dev/null || echo '{"ok":false,"result":[]}'; }
 
 # Analyze a peek JSON → "MIN MAX COUNT FRESH NEWEST_AGE" (or "- - 0 0 -" when empty).
 analyze() {
@@ -140,7 +149,7 @@ while (( iter < 20 )); do
     exit 0
   fi
   newoff=$(( MAX + 1 ))
-  curl -sf "${API}/getUpdates?offset=${newoff}&limit=1&timeout=0" > /dev/null 2>&1 \
+  tg_curl "getUpdates?offset=${newoff}&limit=1&timeout=0" -sf > /dev/null 2>&1 \
     || { echo "ERROR: confirm (getUpdates offset=${newoff}) failed" >&2; exit 1; }
   off="$newoff"
   drained=$(( drained + COUNT ))

@@ -90,8 +90,11 @@ if [[ "$MODE" == "--stop-hook" ]]; then
         fi
         if [[ "$_skip" -eq 0 ]]; then
             printf '%s\t%s\n' "$MSG_HASH" "$NOW" > "$DEDUP_FILE"
-            curl -sf -X POST \
-                "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            # Token as curl config on stdin, never argv (/proc/<pid>/cmdline is
+            # world-readable); a malformed token can't add config lines.
+            [[ "$TELEGRAM_BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]] && \
+            printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$TELEGRAM_BOT_TOKEN" \
+              | curl -sf -X POST -K - \
                 -H "Content-Type: application/json" \
                 -d "{\"chat_id\":\"${TELEGRAM_CHAT_ID}\",\"text\":\"$MSG\"}" \
                 >/dev/null 2>&1 || true

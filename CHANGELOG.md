@@ -2,6 +2,46 @@
 
 ---
 
+## 2026-10-23 — security hardening: grep-guard analyzer, surface list, Telegram gateway
+
+- **Fixed** grep-guard's false positives. It split commands on spaces with no idea of
+  quoting, so `grep -e 'uv run example.py' f.md` read `example.py'` as a file. It judged
+  relative paths against the session cwd even after `cd /tmp &&`. It couldn't see `S=/tmp/…;
+  cat $S/a.py`. A bash-aware analyzer (an inline python3 lexer, the same approach as
+  push-guard) now lists every path a read tool would open, with the possible working
+  directories. The existing helpers judge each path. Replaying the 605 untruncated logged
+  blocks, 93 (15%) are now allowed; all 93 were reviewed and none read the session repo's
+  source.
+- **Security** grep-guard bypasses closed, each pinned by a test (63 deny cases, 25 allow cases):
+  `$(echo cat) x.py`, `` `echo cat` ``, `cat${IFS}x.py`, `{cat,x.py}`, `echo "$(cat x.py)"`,
+  `<( )`, `sudo`/`env`/`timeout`/`nice`/`watch`/`command`/`exec` wrappers, `bash -c`, `eval`,
+  a heredoc or pipe into a shell, `cat < x.py`, `while … done < x.py`, `grep -efoo x.py`,
+  `grep -d recurse`, piped `rg` with paths, `xargs`/`find -exec`, functions, aliases,
+  for/read loop variables, `cd` inside a subshell/pipeline/after `||`, `cd -`, CDPATH, and any
+  `<<` (which used to allow the whole command). Added tac/nl/less/more/bat. With no python3, or
+  when the lexer fails, the guard falls back to the legacy scan. An unparseable command is
+  denied when it names a read tool and a source file.
+- **Changed** edit-surface-guard's surface list, from the log review: test modules are no
+  longer surfaces (65 blocks, 13% of all blocks). Added `.mcp.json`, `settings.local.json`,
+  `justfile`, `*.service`, `*.timer`. Extensions compare case-blind. surface-write-guard
+  mirrors the additions.
+- **Security** edit-surface-guard checked the path as written. `/tmp/notes.txt` pointing at a
+  hook edited it with no pre-mortem; the resolved path is judged too now. The token's `ts`
+  reached bash arithmetic raw. `"now"` gave a token that never expired, a future ts did the
+  same, and `a[$(cmd)]` ran a command. ts must now be a plain, non-future integer.
+- **Security** Telegram gateway, the four remaining red-team findings:
+  - Skill promotion rejects power-granting frontmatter (`allowed-tools`, `hooks`, `context`,
+    `agent`), `` !`cmd` `` bodies, and zero-width, bidi or fullwidth-obfuscated injection.
+  - A name collision with a different existing skill is refused. `copy2` used to overwrite it,
+    so a draft named `pre-mortem` could replace that gate.
+  - Output redaction gained token-shape and prose-key rules plus `~/`, Windows and relative
+    paths.
+  - The bot token moved out of curl's argv (world-readable in `/proc/<pid>/cmdline`) in the
+    poll loop, drain-offset, session-end-check, vault-session-check, notify-telegram and the
+    installer.
+- **Fixed** `state/hook-blocks.log.20261022` still held the 209 NUL bytes from the
+  2026-10-10 review, plus 2 lines cut mid-character, so plain `grep` returned nothing. Both
+  were stripped; the original is kept as `.pre-nul-strip`. That closes the review.
 ## 2026-10-23 — small CPU model for the Pi / tc-vmh-03; sweep stale matches; Bill's decisions
 
 - **Added** `docker/llama-small/compose.yaml` + `just small` (CPU llama-server, 127.0.0.1:8096,
