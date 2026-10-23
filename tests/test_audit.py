@@ -134,6 +134,18 @@ def test_block_log_files_archives_only(tmp_path):
 def test_mempalace_counts_missing_db(tmp_path):
     assert collect_benefits.mempalace_counts(tmp_path / "nope.sqlite3") is None
 
+
+def test_ralph_runs_counts_start_lines(tmp_path):
+    log = tmp_path / "ralph-runs.log"
+    log.write_text("2026-10-20T01:00:00Z start repo=/a\n"
+                   "2026-10-23T02:00:00Z start repo=/b\n")
+    assert collect_benefits.ralph_runs(log) == {"runs": 2, "last_run": "2026-10-23T02:00:00Z"}
+
+
+def test_ralph_runs_missing_log_is_unmeasured_not_idle(tmp_path):
+    assert collect_benefits.ralph_runs(tmp_path / "nope.log") is None
+
+
 def test_scorecard_handles_non_numeric_nested_dict():
     bene = {"components": {"mempalace": {"weird": {"a": "x"}}}, "missing": []}
     md = build_scorecard.render({"components": {}}, {"components": {}}, bene)

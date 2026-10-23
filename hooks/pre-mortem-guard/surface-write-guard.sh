@@ -36,9 +36,13 @@ CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || echo "
 [[ -z "$CMD" ]] && exit 0
 
 # Surface file extension/path patterns (mirrors is_surface() in edit-surface-guard.sh)
-SURF_EXT='\.(sh|py|toml|yml|yaml|cfg|ini)'
+# (2026-10-23) +service/timer, +.mcp.json, settings.local.json, justfile — the same
+# additions as edit-surface-guard.sh (see its surface-list note). Its tests/test_*.py
+# narrowing is NOT mirrored: this guard matches raw text, and a Bash write to a test
+# file is rare enough (and the Edit tool the documented route) not to justify it.
+SURF_EXT='\.(sh|py|toml|yml|yaml|cfg|ini|service|timer)'
 SURF_PATH='(/hooks/|/scripts/|/features/)'
-SURF_FILE='(settings\.json|CLAUDE\.md|Dockerfile)'
+SURF_FILE='(settings\.json|settings\.local\.json|\.mcp\.json|CLAUDE\.md|Dockerfile|justfile)'
 # What may follow a surface filename: anything that can't continue it, or end of line.
 # (2026-10-22) This used to be a REQUIRED character from [[:space:];|&$"'], so a write
 # at the very end of a command — `echo x >> setup.sh` — had nothing to match and was

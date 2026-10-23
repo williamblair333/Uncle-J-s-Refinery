@@ -494,8 +494,11 @@ PY
 # ----- agents installed -----
 check_agents() {
     step "agents — core agents installed"
-    local missing=0
-    for agent in planner code-reviewer security-reviewer architect tdd-guide silent-failure-hunter; do
+    local missing=0 src agent
+    # Every agent shipped in global-agents/ (one since 2026-10-23), not a fixed list.
+    for src in "$REPO_ROOT"/global-agents/*.md; do
+        [ -f "$src" ] || continue
+        agent="$(basename "$src" .md)"
         if [ -f "$HOME/.claude/agents/${agent}.md" ]; then
             ok "agent: $agent"
         else

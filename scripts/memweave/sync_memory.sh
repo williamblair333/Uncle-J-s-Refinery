@@ -157,6 +157,17 @@ export_rc=0
 mirror_rc=0
 "$VENV" "$REPO/scripts/memweave/mirror_vault.py" || mirror_rc=$?
 
+# Third source, nightly (--all) only: daily summaries of the Telegram chat, written
+# by the local model (scripts/lib/tg_history.py; summaries only, never raw turns).
+# Needs the stack venv (httpx), not the memweave one. Non-fatal: a down or slow local
+# model leaves the day unsummarized and the next night retries it. This runs inside
+# the sync lock, so it's bounded: at most 2 days a run, 120 s per model call (~4 min
+# worst case; a Stop-hook sync that arrives meanwhile just skips, as it does today).
+if [ "$MODE" = "--all" ] && [ -x "$REPO/.venv/bin/python" ]; then
+  ASK_LOCAL_TIMEOUT=120 "$REPO/.venv/bin/python" "$REPO/scripts/lib/tg_history.py" summarize --max-days 2 \
+    || echo "[$(date -Iseconds)] WARN telegram summaries incomplete (local model down or slow?) — retried next run" >&2
+fi
+
 "$VENV" "$REPO/scripts/memweave/index_workspace.py"
 echo "===== [$(date -Iseconds)] sync complete ====="
 

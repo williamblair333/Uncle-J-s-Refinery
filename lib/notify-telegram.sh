@@ -2,8 +2,17 @@
 # Telegram notification backend. Sourced by lib/notify.sh — do not execute directly.
 # Requires: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID in environment.
 
-_TG_API="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}"
 _TG_PY=$(command -v python3)
+
+# _tg_curl METHOD [curl args…]: the bot token reaches curl as a config line on stdin
+# (`-K -`) from the printf builtin, never in argv — /proc/<pid>/cmdline is
+# world-readable (red-team 2026-10-23). A malformed token is refused so it can't
+# inject extra curl config lines.
+_tg_curl() {
+  local m=$1; shift
+  [[ "$TELEGRAM_BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]] || return 22
+  printf 'url = "https://api.telegram.org/bot%s/%s"\n' "$TELEGRAM_BOT_TOKEN" "$m" | curl -K - "$@"
+}
 
 # Send a message with inline keyboard buttons.
 # Args: $1=message text, $2=keyboard JSON array (e.g. '[[{"text":"✅ Yes","callback_data":"approve"}]]')
@@ -33,7 +42,7 @@ PYEOF
 
   local tmpresponse
   tmpresponse=$(mktemp /tmp/tg_response_XXXXXX.json)
-  curl -sf -X POST "${_TG_API}/sendMessage" \
+  _tg_curl sendMessage -sf -X POST \
     -H "Content-Type: application/json" \
     -d "@${tmppayload}" > "$tmpresponse" 2>/dev/null
   rm -f "$tmppayload"
@@ -91,7 +100,7 @@ PYEOF
     || { rm -f "$tmppy" "$tmppayload"; return 1; }
   rm -f "$tmppy"
 
-  curl -sf -X POST "${_TG_API}/sendMessage" \
+  _tg_curl sendMessage -sf -X POST \
     -H "Content-Type: application/json" \
     -d "@${tmppayload}" > /dev/null 2>&1 || true
   rm -f "$tmppayload"

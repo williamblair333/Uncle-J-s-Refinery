@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
-description: Spawn after any Edit or Write that changes function logic, adds or removes functions/classes, modifies control flow, or touches an API or data model. SKIP for typos, whitespace/formatting-only, comment-only edits, and single-variable renames with no logic change.
-tools: ["Read", "Grep", "Glob", "Bash"]
+description: Spawn after any Edit or Write that changes function logic, adds or removes functions/classes, modifies control flow, touches an API or data model, or touches error handling, subprocess calls, network/file I/O or cron/hook scripts (silent failures are in scope). SKIP for typos, whitespace/formatting-only, comment-only edits, and single-variable renames with no logic change.
+tools: ["Read", "Grep", "Glob", "Bash", "mcp__jcodemunch__check_references", "mcp__jcodemunch__get_blast_radius", "mcp__jcodemunch__get_file_outline", "mcp__jcodemunch__get_symbol_source", "mcp__jcodemunch__search_text"]
 model: sonnet
 ---
 
@@ -22,7 +22,7 @@ When invoked:
 
 1. **Gather context** — Run `git diff --staged` and `git diff` to see all changes. If no diff, check recent commits with `git log --oneline -5`.
 2. **Understand scope** — Identify which files changed, what feature/fix they relate to, and how they connect.
-3. **Read surrounding code** — Don't review changes in isolation. Read the full file and understand imports, dependencies, and call sites.
+3. **Read surrounding code** — Don't review changes in isolation. Read the full file and understand imports, dependencies, and call sites. Where the repo is indexed by jcodemunch, use `check_references` / `get_blast_radius` to find callers rather than guessing.
 4. **Apply review checklist** — Work through each category below, from CRITICAL to LOW.
 5. **Report findings** — Use the output format below. Only report issues you are confident about (>80% sure it is a real problem).
 
@@ -178,66 +178,31 @@ function processUsers(users) {
 }
 ```
 
-### React/Next.js Patterns (HIGH)
+### Silent Failures (HIGH)
 
-When reviewing React/Next.js code, also check:
+Merged from the former `silent-failure-hunter` agent (2026-10-23). Most of this
+stack's incidents were failures nobody saw, so treat these as HIGH when a trigger
+is nameable:
 
-- **Missing dependency arrays** — `useEffect`/`useMemo`/`useCallback` with incomplete deps
-- **State updates in render** — Calling setState during render causes infinite loops
-- **Missing keys in lists** — Using array index as key when items can reorder
-- **Prop drilling** — Props passed through 3+ levels (use context or composition)
-- **Unnecessary re-renders** — Missing memoization for expensive computations
-- **Client/server boundary** — Using `useState`/`useEffect` in Server Components
-- **Missing loading/error states** — Data fetching without fallback UI
-- **Stale closures** — Event handlers capturing stale state values
+- **Swallowed errors** — `except: pass`, `|| true`, `2>/dev/null` on a command whose
+  failure matters, `catch {}`, errors turned into `None` / `[]` / `0` with no log
+- **Exit codes that lie** — a wrapper that exits 0 when the tool failed, a tool that
+  reports `{"success": false}` but exits 0, `set -e` defeated by a pipe or `$( )`
+- **Dangerous fallbacks** — a default that makes "nothing happened" look like
+  "nothing to do" (empty result read as absence, a missing file read as clean)
+- **Unobservable crons and hooks** — no log line, or a log nobody reads, on a path
+  that runs unattended
+- **Missing timeouts / rollback** — network, subprocess or file writes with no timeout,
+  non-atomic writes of state other jobs read
 
-```tsx
-// BAD: Missing dependency, stale closure
-useEffect(() => {
-  fetchData(userId);
-}, []); // userId missing from deps
+### Shell, Python and Subprocess Patterns (HIGH)
 
-// GOOD: Complete dependencies
-useEffect(() => {
-  fetchData(userId);
-}, [userId]);
-```
-
-```tsx
-// BAD: Using index as key with reorderable list
-{items.map((item, i) => <ListItem key={i} item={item} />)}
-
-// GOOD: Stable unique key
-{items.map(item => <ListItem key={item.id} item={item} />)}
-```
-
-### Node.js/Backend Patterns (HIGH)
-
-When reviewing backend code:
-
-- **Unvalidated input** — Request body/params used without schema validation
-- **Missing rate limiting** — Public endpoints without throttling
-- **Unbounded queries** — `SELECT *` or queries without LIMIT on user-facing endpoints
-- **N+1 queries** — Fetching related data in a loop instead of a join/batch
-- **Missing timeouts** — External HTTP calls without timeout configuration
-- **Error message leakage** — Sending internal error details to clients
-- **Missing CORS configuration** — APIs accessible from unintended origins
-
-```typescript
-// BAD: N+1 query pattern
-const users = await db.query('SELECT * FROM users');
-for (const user of users) {
-  user.posts = await db.query('SELECT * FROM posts WHERE user_id = $1', [user.id]);
-}
-
-// GOOD: Single query with JOIN or batch
-const usersWithPosts = await db.query(`
-  SELECT u.*, json_agg(p.*) as posts
-  FROM users u
-  LEFT JOIN posts p ON p.user_id = u.id
-  GROUP BY u.id
-`);
-```
+- **Unquoted expansions** in bash (`$var`, `$(...)`) where a space or glob breaks it
+- **Shell built from strings** — `shell=True`, `eval`, `bash -c "$x"` with outside input
+- **Secrets in argv or URLs** — tokens on a command line or in a curl URL show up in
+  `/proc/<pid>/cmdline`; pass them by header file or stdin
+- **Environment leakage** — child processes inheriting credentials they don't need
+- **Path handling** — user- or model-controlled paths without a containment check
 
 ### Performance (MEDIUM)
 

@@ -377,11 +377,11 @@ jobs:
         run: python -m pytest tests/test_ask_local.py -v -rs
 
   # ── 19. jscrub: unit tests + read-only repo audit ────────────────────────
-  # The repo carries no live positive (the two intentional fixtures are
-  # excluded by path), so the audit step passing says nothing about whether
-  # the detector works — the unit tests are the only guard on that. Exit 1
-  # (hits) and 2 (unscannable file) both fail the job. Read-only: clean /
-  # --in-place / --follow-symlinks are deliberately not wired here.
+  # audit-repo.sh runs check-vendor, then a live-positive canary (a temp file
+  # with a zero-width space must be detected, else exit 3), then the sweep.
+  # Exit 1 (hits) and 2 (unscannable file) both fail the job. Read-only: clean /
+  # --in-place / --follow-symlinks are deliberately not wired here. The gate
+  # tests cover the pre-commit staged-file scan and the canary itself.
   test-jscrub:
     name: jscrub tests + audit
     runs-on: ubuntu-latest
@@ -396,5 +396,11 @@ jobs:
       - name: jscrub unit tests
         run: python scripts/jscrub/test_cli.py
 
-      - name: jscrub check-vendor + audit
+      - name: jscrub check-vendor + canary + audit
         run: ./scripts/jscrub/audit-repo.sh
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: jscrub gate tests (pre-commit scan, canary)
+        run: python -m pytest tests/test_jscrub_gates.py -v

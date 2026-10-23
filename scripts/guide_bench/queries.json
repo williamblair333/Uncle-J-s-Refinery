@@ -1,0 +1,22 @@
+[
+  {"q": "Is this project indexed yet?", "ok": ["list_repos", "resolve_repo"]},
+  {"q": "Index the local folder /srv/app so I can search it.", "ok": ["index_folder"]},
+  {"q": "Find the function that parses the config file by name.", "ok": ["search_symbols"]},
+  {"q": "Show me the source of the function load_settings and its imports.", "ok": ["get_context_bundle", "get_symbol_source"]},
+  {"q": "Where does the string 'retry budget exceeded' appear?", "ok": ["search_text"]},
+  {"q": "Which files import utils/net.py?", "ok": ["find_importers"]},
+  {"q": "Where is the name build_client used anywhere in the code?", "ok": ["check_references", "find_references"]},
+  {"q": "Who calls process_order, and what does it call?", "ok": ["get_call_hierarchy"]},
+  {"q": "What breaks if I change the signature of save_user?", "ok": ["get_blast_radius", "get_impact_preview", "check_edit_safe"]},
+  {"q": "Is it safe to rename the class Session to UserSession?", "ok": ["check_rename_safe"]},
+  {"q": "Can I delete the function legacy_export?", "ok": ["check_delete_safe"]},
+  {"q": "Show the outline of src/api/routes.py without reading the whole file.", "ok": ["get_file_outline"]},
+  {"q": "Explain how authentication works in this repo, within a token budget.", "ok": ["get_ranked_context", "assemble_task_context"]},
+  {"q": "Are there circular imports in this codebase?", "ok": ["get_dependency_cycles"]},
+  {"q": "Which functions are the most complex?", "ok": ["get_symbol_complexity", "get_hotspots"]},
+  {"q": "List functions that nothing calls anymore.", "ok": ["find_dead_code", "get_dead_code_v2"]},
+  {"q": "Which symbols have no tests?", "ok": ["get_untested_symbols"]},
+  {"q": "Which symbols changed in my working tree since the last commit?", "ok": ["get_changed_symbols"]},
+  {"q": "Give me an overall health score for this repository.", "ok": ["get_repo_health"]},
+  {"q": "Which classes implement the interface Storage?", "ok": ["find_implementations", "get_class_hierarchy"]}
+]
