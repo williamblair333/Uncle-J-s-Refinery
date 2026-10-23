@@ -223,6 +223,54 @@ ASK_LOCAL_MODEL=heretic` from `config/ask_local.env`, so a reinstall keeps them.
 
 ---
 
+## Image and video generation (ComfyUI)
+
+ComfyUI v0.39.0 in Docker, built locally from `docker/comfyui/Dockerfile` (pinned upstream
+commit, plus city96/ComfyUI-GGUF), bound to `127.0.0.1:8188`. It runs with `--offline`, so
+the frontend can't reach the internet, and the Hugging Face libraries are set offline too.
+Both models are Apache 2.0, so commercial use is allowed (licenses re-checked on Hugging
+Face 2026-10-23):
+
+| Job | Model | Files in |
+|---|---|---|
+| Image | Z-Image-Turbo (bf16, Qwen3-4B fp8 text encoder) | `/opt/models/z-image-turbo/` |
+| Video | Wan 2.2 T2V A14B, GGUF Q4_K_M, lightx2v 4-step LoRAs | `/opt/models/wan2.2/` |
+
+**Starting it.**
+```bash
+just comfy-models                 # download + sha256-check the models (~47 GB; skips verified files)
+just comfy up -d                  # build on first run, start via dcup (claims 8188)
+just image "a red fox in snow"    # → /opt/outputs/comfyui/image_NNNNN_.png  (--seed, --width, --height)
+just video "a sailboat at dusk"   # → /opt/outputs/comfyui/video_NNNNN_.mp4  (--frames, default 81)
+just comfy down                   # stop it; do this when done, so it holds no VRAM
+```
+The web UI is at http://127.0.0.1:8188. `just image` / `just video` print the output path,
+the wall time and the peak VRAM, then unload the models (`--keep-loaded` to skip that).
+
+**Measured 2026-10-23** (RTX 3060 12 GB, Heretic awake at 4.8 GB, a game holding 0.5 GB):
+
+| Job | Time | ComfyUI peak VRAM |
+|---|---|---|
+| Image 1024², 9 steps, models loaded from disk | 68–70 s | 4.7 GB |
+| Image 1024², models already loaded | 32 s (3.2 s/step) | 5.0 GB |
+| Video 832×480, 81 frames (5 s at 16 fps), 4 steps | 8.1 min | 7.3 GB |
+
+ComfyUI's dynamic VRAM offloads weights to RAM when other processes hold the GPU, so these
+ran beside Heretic without stopping it. Heretic fell asleep partway through the video, which
+gave ComfyUI more room.
+
+**Sharing the GPU.** Leave Ollama alone: Klarheit's trials use it, and each local call
+times out at 120 s. A video overlapping the 16:05 trial pushed its slowest call to 101 s
+(46 s the hour before). So `just image` / `just video` wait while a `klarheit-rv` or
+`klarheit-m12` run is active. They also won't start a job that would still be running at the
+next trial (:05 hourly; 10:35 and 20:35). `--ignore-klarheit` skips the wait. If Heretic wakes
+during a video, it may not fit until the job ends and ComfyUI unloads. Heretic may be
+stopped for speed (`just heretic down`), but restart it right after (`just heretic up -d`)
+and check `curl -s 127.0.0.1:8090/health`. If Ollama loaded its model while Heretic was down,
+Heretic's restart can't fit and crash-loops on CUDA OOM until Ollama's 10-minute idle unload.
+
+---
+
 ## live_preview (watch any build in a browser)
 
 `scripts/live_preview/server.py` runs on `.venv` and needs only the standard library plus

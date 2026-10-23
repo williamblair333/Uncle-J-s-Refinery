@@ -1,5 +1,31 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — image and video generation running (lineup #2, #3)
+
+**Most important:** run `just comfy down` when you're done generating. ComfyUI unloads its
+models after each `just image` / `just video`, but a running container still holds a CUDA
+context (~200 MB).
+
+- ComfyUI on 127.0.0.1:8188 (claimed in dcup): Z-Image-Turbo for images and Wan 2.2 A14B
+  Q4_K_M (+ lightx2v 4-step) for video. Models are in `/opt/models/z-image-turbo` and
+  `/opt/models/wan2.2`, sha256-verified, Apache 2.0. Outputs go to `/opt/outputs/comfyui`
+  (the fox image and sailboat clip from the test are there).
+- Numbers: 32 s per warm 1024² image (68–70 s cold), 8.1 min per 5 s 480p clip, peak
+  4.7–5.0 / 7.3 GB. These ran beside Heretic and Ollama without stopping either.
+- **Hazard (seen 2026-10-23 during parallel work):** after llama-heretic was stopped, Ollama
+  loaded qwen3.5:9b fully onto the GPU (6.6 GB). Heretic's restart then hit CUDA OOM and
+  restarted 55 times, recovering only once Ollama idled out. **Fix:** if you stop Heretic,
+  restart it straight away and check `curl -s 127.0.0.1:8090/health`. If Ollama holds the
+  GPU (`docker exec ollama ollama ps`), wait for its 10-minute idle unload. Never stop
+  Ollama, because Klarheit's trials use it.
+- Klarheit check: the 16:05 `klarheit-rv` trial overlapped the video job and still passed
+  (rc 0, M11-local 15/15 sessions, no errors in the journal). Its slowest local session took
+  101.4 s against 45.6 s at 15:05, which is close to Klarheit's 120 s per-call timeout. So
+  `just image` / `just video` now wait out a running trial and won't start a job that would
+  overlap the next one (`--ignore-klarheit` overrides).
+- Open: the culling test (Wan stills vs Z-Image), an MCP wrapper for image generation
+  (Jarvis track), and the speech models (#4, #5).
+
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
 **Most important:** `just waiting` now prints ROADMAP open items, the newest bold

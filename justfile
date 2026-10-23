@@ -89,3 +89,19 @@ ask-local-up:
 # ask_local's abliterated model (llama-server, 127.0.0.1:8090): just heretic up -d | down | logs (up via dcup)
 heretic *args:
     ./scripts/heretic.sh {{args}}
+
+# image/video generation (ComfyUI, 127.0.0.1:8188): just comfy up -d | down | logs | build (up via dcup)
+comfy *args:
+    ./scripts/comfy.sh {{args}}
+
+# download + sha256-check ComfyUI's models into /opt/models (optional filter: z-image, wan2.2)
+comfy-models *args:
+    ./scripts/comfy-models.sh {{args}}
+
+# one Z-Image-Turbo image (1024²) → /opt/outputs/comfyui: just image "prompt" [--seed N]
+image prompt *args:
+    python3 scripts/comfy_job.py image "{{prompt}}" {{args}}
+
+# one Wan 2.2 clip (832×480, 81 frames) → /opt/outputs/comfyui: just video "prompt" [--frames N]
+video prompt *args:
+    python3 scripts/comfy_job.py video "{{prompt}}" {{args}}

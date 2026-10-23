@@ -1,0 +1,12 @@
+# Model folders mounted read-only from /opt/models/<name>/ (see compose.yaml, models.txt).
+z_image_turbo:
+  base_path: /models/z-image-turbo
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+wan2_2:
+  base_path: /models/wan2.2
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+  loras: loras
