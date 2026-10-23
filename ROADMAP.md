@@ -185,7 +185,13 @@ Completed items age out after ~4 weeks.
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
   in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.
-- **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
+- **[DONE 2026-10-23] `jscrub` automation** — (b) `check-vendor` was already in CI via
+  `audit-repo.sh`; that script now also runs a live-positive canary (a temp file with a ZWSP must
+  hit, else exit 3), so a broken detector fails `just audit` and CI. (a) shipped as a pre-commit
+  gate only, report-only: `scripts/jscrub/precommit-scan.sh` scans staged blobs and blocks on a
+  hit; nothing runs `clean`/`--in-place`. No PostToolUse hook. Wired by `install.sh` through
+  `scripts/pre-commit.sh` (session-end check + jscrub). Tests: `tests/test_jscrub_gates.py`.
+  Original: **`jscrub` write-side automation** (opened 2026-09-03; read-only half wired 2026-10-22 as
   `just audit` + CI job). Still open, each needing its own pre-mortem: (a) a `PostToolUse` or pre-commit
   gate — `--in-place` and `--follow-symlinks` are the flags to think hardest about before automating
   a tool that rewrites files; (b) `check-vendor` in CI, which now works with no checkout so it can

@@ -11,6 +11,12 @@
 - **Changed** `ralph-harness.sh` and the Telegram gateway strip `ANTHROPIC_API_KEY` and
   `ANTHROPIC_AUTH_TOKEN` before calling `claude`, so runs bill the subscription login, not a
   key. Tests: `tests/test_env_strip.py`.
+- **Added** a jscrub pre-commit gate: `scripts/jscrub/precommit-scan.sh` scans staged text for
+  invisible Unicode and blocks the commit, report-only (never `clean`/`--in-place`).
+  `scripts/pre-commit.sh` runs it after the session-end docs check; `install.sh` now links the
+  hook there. `audit-repo.sh` gained a live-positive canary (exit 3 if a known ZWSP isn't
+  detected); file selection moved to `scripts/jscrub/pathspec.sh` so both gates agree. CI's
+  jscrub job also runs `tests/test_jscrub_gates.py`.
 
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 
