@@ -8,6 +8,9 @@
   `scripts/lib/jdocmunch-index-local.sh`). **Fixed** on the way: the CLI exits 0 on
   `{"success": false}`, so the old CLI fallback counted a failed refresh as reindexed. The
   verdict now comes from the JSON. Tests: `tests/test_jdocmunch_index_local.py`.
+- **Changed** `ralph-harness.sh` and the Telegram gateway strip `ANTHROPIC_API_KEY` and
+  `ANTHROPIC_AUTH_TOKEN` before calling `claude`, so runs bill the subscription login, not a
+  key. Tests: `tests/test_env_strip.py`.
 
 ## 2026-10-23 — `just waiting` sweeps ROADMAP, memories and HANDOFF-less repos
 

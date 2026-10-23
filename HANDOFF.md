@@ -6,6 +6,7 @@
 that shells out to `jdocmunch-mcp index-local` must read the JSON, not the exit code.
 
 - `run_index_local()` is CLI-only now (`scripts/lib/jdocmunch-index-local.sh`).
+- ralph-harness and the Telegram gateway no longer pass Anthropic API keys to `claude`.
 
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
