@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — upstream filings, jcodemunch backlog cleared
+
+**Most important:** the 8 `jcodemunch_upgrade_*_unanalyzed` memories were false alarms. The
+cron can't see the repo's own `post-upgrade sync` commits, and those had covered every installed
+range. They're replaced by `-home-bill/memory/jcodemunch_upgrades_reviewed_2026-10-23.md`.
+
+- Filed jdocmunch-mcp#196 (sidecar-suffix name collision). Didn't file the get_watch_status
+  issue: it's upstream #565, already fixed.
+- Pending at the next jcodemunch sync (7f3acbc→d56f459, not installed yet):
+  `get_call_hierarchy` `direct_caller_count`/`via` (`caller_count` counts all depths), the
+  `search_text` `in` field and in-body `truncated`, and ×0.5 ranking for config files, fields
+  and constants.
+- Deployed `~/.claude/CLAUDE.md` lags the repo copy (missing the worktree and test-×0.25 lines
+  from d4e58f6). Run `scripts/refinery-doctor.sh --fix`.
+- Upstream watch: REA #2188 merged, #2187 has no maintainer reply. claude-guardrails #17/#20
+  have none either. jdocmunch #120 was fixed in 1.134.0.
+
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
 **Most important:** `just waiting` now prints ROADMAP open items, the newest bold
