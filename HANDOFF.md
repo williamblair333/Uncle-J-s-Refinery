@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — justfiles: write_well, deal-finder
+
+- write_well #5 and deal-finder #1 merged on Gitea. deal-finder's trunk is `master`; its
+  `origin/main` is a stale initial commit. Both local checkouts are now behind their remotes by
+  that one commit. Pull when their dirty trees are dealt with.
+- Since PR #189, `~/.claude/CLAUDE.md` is what this repo's sessions read. It was re-deployed
+  with `refinery-doctor --fix` right after the merge (in sync).
+
 ## 2026-10-23 (main host) — backlog sweep B (guide bench, CLAUDE.md de-dup, local rail)
 
 - Guide benchmark built but **not run to completion**: Heretic generated ~0.6 tok/s (load avg

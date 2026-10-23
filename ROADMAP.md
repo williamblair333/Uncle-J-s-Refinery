@@ -45,7 +45,10 @@ Completed items age out after ~4 weeks.
   - Langfuse traces for what each agent saw, said and did.
   - A per-agent lane view needs work in the vendored viewer.
   - Blocked on Bill naming the game and engine.
-- **Justfiles** — 2026-10-22 late: aquarius, immortality, larder, patentengine, reciepts,
+- **[DONE 2026-10-23] Justfiles** — write_well (status, recall; markdown only; write_well #5,
+  `af90396`) and deal-finder (setup, run, status, recall; deal-finder #1 into `master`, its real
+  trunk, `24fc4ef`). Both were made in a scratch worktree off the remote trunk, so their dirty
+  checkouts were untouched. Earlier history: 2026-10-22 late: aquarius, immortality, larder, patentengine, reciepts,
   tao-intel and jaredrhod done (status, recall); free-energy's slow `just test` fixed (`slow`
   marker, ~2 min; `just test-all` for everything; free-energy #32). Left: write_well and
   deal-finder (big uncommitted trees). Original: (rollout done 2026-10-22 for 18 repos). Left: aquarius
