@@ -1,5 +1,21 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-23 (main host) — security hardening: grep-guard analyzer, surface list, gateway
+
+**Most important:** grep-guard now runs an inline python3 analyzer on every Bash call that
+mentions a read tool. That adds about 50 ms (35 ms → 85 ms). If Bash calls start failing in
+every session, revert this merge; the guard is symlinked into the main checkout. Hooks
+are read on each call, so a running session picks up the change once the main checkout
+is at the merge. No restart needed.
+
+- Findings matrix and FP stats are in the PR body. Baselines are in
+  `~/.uncle-j-memory/memory/audit-baselines.md` (grep-guard, edit-surface-guard, gateway).
+- `GREP_GUARD_DEBUG=1` prints `path=analyzer|legacy` to stderr; tests pin the analyzer path.
+- Open: surface-write-guard still can't resolve `$S/x.py` (43 of 102 blocks since 10-16),
+  `review/2026-10-10-hook-blocks-log-nul-bytes.md` can be moved to reviewed (it's gitignored,
+  so the note isn't in it), and `hook-blocks.log.bak-2026-10-16` still holds NULs (read it
+  with `grep -a`).
+
 ## 2026-10-23 (main host) — status sweep covers ROADMAP, memories, HANDOFF-less repos
 
 **Most important:** `just waiting` now prints ROADMAP open items, the newest bold
