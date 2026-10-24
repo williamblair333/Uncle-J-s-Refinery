@@ -18,6 +18,11 @@ patentengine #3, Klarheit #81, lc0 #64, fog-of-chess #250 #251, hearth #22, lard
 moneymaker #8, channelengine #3, voice-line #12, write_well #5, deal-finder #1.
 
 **Open / next:**
+- 2026-10-24 (later): web search was silently empty — Google, Brave, DuckDuckGo and Startpage
+  all blocked SearXNG, so Heretic answered from training data under a "web" label. Fixed: Mojeek,
+  Qwant and Yep enabled in `/opt/docker/searnx/searxng/settings.yml` (not in git; rollback = set
+  those three entries back to `disabled: true`, then `docker restart searxng`); empty searches
+  are now an error naming the blocked engines. Spoken-reply wavs prune after 7 days.
 - 2026-10-24: the chat page now does it all in one place — web search reads the top pages,
   `/image` `/video` `/speak`, "Speak replies", "Think first" (off by default). ComfyUI starts
   and stops per job. Residual: a DNS answer could change between the public-address check and
