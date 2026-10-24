@@ -163,3 +163,46 @@ def test_think_flag_reaches_heretic_only(monkeypatch, tmp_path):
     seen.clear()
     lc.chat({"chat_id": "f" * 32, "text": "again"})
     assert seen == {"think": False}
+
+
+class _Resp:
+    def __init__(self, payload):
+        self.payload = json.dumps(payload).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def read(self, *a):
+        return self.payload
+
+
+def test_empty_search_is_an_error_naming_blocked_engines(monkeypatch):
+    payload = {"results": [], "unresponsive_engines": [["google", "Suspended: access denied"],
+                                                       ["duckduckgo", "CAPTCHA"]]}
+    monkeypatch.setattr(lc.urllib.request, "urlopen", lambda *a, **k: _Resp(payload))
+    r = lc.web_search("latest php exploits")
+    assert not r["ok"]
+    assert "google (Suspended: access denied)" in r["error"] and "duckduckgo (CAPTCHA)" in r["error"]
+
+
+def test_empty_search_stops_the_answer(monkeypatch, tmp_path):
+    monkeypatch.setattr(lc, "CHATS", tmp_path / "chats")
+    monkeypatch.setattr(lc, "web_search", lambda q: {"ok": False, "error": "web search found nothing"})
+    monkeypatch.setitem(lc.BACKENDS, "heretic", lambda msgs, **kw: pytest.fail("must not answer blind"))
+    r = lc.chat({"chat_id": "9" * 32, "text": "latest php exploits", "web": True})
+    assert not r["ok"] and "found nothing" in r["error"]
+
+
+def test_prune_speech_removes_only_old_chat_wavs(tmp_path):
+    import os
+    old, new, sample = tmp_path / "chat-old.wav", tmp_path / "chat-new.wav", tmp_path / "default-voice.wav"
+    for f in (old, new, sample):
+        f.write_bytes(b"x")
+    long_ago = 1_000_000
+    os.utime(old, (long_ago, long_ago))
+    os.utime(sample, (long_ago, long_ago))
+    assert lc.prune_speech(tmp_path, days=7, now=long_ago + 8 * 86400) == 1
+    assert not old.exists() and new.exists() and sample.exists()

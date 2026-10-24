@@ -64,6 +64,7 @@ PAGE_CHARS = 2500         # text kept per page
 PAGE_BYTES = 1_500_000    # read cap per page
 TTS_URL = os.environ.get("TTS_URL", "http://127.0.0.1:8093").rstrip("/")
 SPEAK_CHARS = 800         # longest reply read aloud
+SPEECH_DAYS = float(os.environ.get("CHAT_SPEECH_DAYS", "7"))  # spoken replies kept this long
 OUTPUTS = Path(os.environ.get("CHAT_OUTPUTS", "/opt/outputs"))
 MEDIA_ROOTS = (OUTPUTS / "comfyui", OUTPUTS / "speech")
 MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
@@ -111,6 +112,13 @@ def web_search(query):
     hits = [{"title": r.get("title", ""), "url": r.get("url", ""),
              "snippet": (r.get("content") or "")[:300]}
             for r in data.get("results", [])[:SEARCH_RESULTS]]
+    if not hits:
+        # Engines block SearXNG after heavy use (CAPTCHA, "too many requests"). Answering
+        # anyway would pass training-data guesses off as a web answer, so say so instead.
+        down = ", ".join(f"{e[0]} ({e[1]})" for e in data.get("unresponsive_engines", []) if e)
+        return {"ok": False, "error": "web search found nothing"
+                + (f"; engines refusing SearXNG: {down}" if down else "")
+                + ". Retry later, or untick Search the web to answer from the model's memory."}
     with ThreadPoolExecutor(PAGE_FETCH) as pool:
         for h, text in zip(hits, pool.map(fetch_page, [h["url"] for h in hits[:PAGE_FETCH]])):
             if text:
@@ -346,7 +354,26 @@ def speak(text):
     out = OUTPUTS / "speech" / f"chat-{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}.wav"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(audio)
+    prune_speech(out.parent)
     return {"ok": True, "media": {"path": str(out), "kind": "audio"}}
+
+
+def prune_speech(folder, days=SPEECH_DAYS, now=None):
+    """Delete this page's own spoken replies (chat-*.wav) older than `days`.
+
+    They're regenerable from the saved chat text; other files in the folder (voice samples,
+    test clips) are never touched. Returns how many were removed.
+    """
+    cutoff = (now or time.time()) - days * 86400
+    removed = 0
+    for f in Path(folder).glob("chat-*.wav"):
+        try:
+            if f.is_file() and not f.is_symlink() and f.stat().st_mtime < cutoff:
+                f.unlink()
+                removed += 1
+        except OSError:
+            pass
+    return removed
 
 
 def run_command(chat_id, kind, arg):

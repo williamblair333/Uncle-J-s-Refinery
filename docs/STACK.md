@@ -195,7 +195,16 @@ reasoning: better on hard questions, but minutes slower beside Klarheit's 9B (a 
 9 s without it, 375 s with it). "Speak replies" reads each answer aloud through Chatterbox.
 Typed commands: `/image <prompt>` (~1–2 min, starts and stops ComfyUI itself), `/video
 <prompt>` (~8 min), `/speak <text>`. Results show inline; media is served only from
-`/opt/outputs/comfyui` and `/opt/outputs/speech`.
+`/opt/outputs/comfyui` and `/opt/outputs/speech`. Spoken replies (`chat-*.wav`) are deleted
+after 7 days (`CHAT_SPEECH_DAYS`); images, videos and other speech files are kept.
+
+**When search finds nothing.** The page shows an error naming the engines that refused, rather
+than letting the model answer from memory. Google, Brave, DuckDuckGo, Startpage and Qwant all
+block SearXNG after heavy use (CAPTCHA, "too many requests", "access denied"); SearXNG retries
+them later. Mojeek and Yep (independent indexes) were enabled 2026-10-24 in
+`/opt/docker/searnx/searxng/settings.yml` (`disabled: false`, outside any repo) to keep results
+coming; Bing and Yahoo stay off (Microsoft's index). Check with
+`curl -s '127.0.0.1:8086/search?q=test&format=json' | jq '.unresponsive_engines'`.
 
 **Backend.** Ollama in Docker, from `docker/ollama/compose.yaml` in this repo. A host that
 keeps its own `/opt/docker/ollama/compose.yaml` uses that one instead. It's bound to

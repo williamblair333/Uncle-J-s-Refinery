@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-10-24 — web search no longer fails silently; spoken replies pruned
+
+- **Fixed** `scripts/local_chat/server.py`: when SearXNG returns no results, the chat answers
+  with an error naming the engines that refused it, instead of letting the model answer from
+  memory under a "web" label. Cause found: Google ("access denied"), Brave ("too many
+  requests"), DuckDuckGo and Startpage (CAPTCHA) all blocking SearXNG.
+- **Changed (outside the repo)** `/opt/docker/searnx/searxng/settings.yml`: Mojeek, Qwant and Yep
+  enabled. Queries went from 0 results to 36–40 (Yep, Mojeek, Startpage once it recovered).
+- **Added** spoken-reply cleanup: `chat-*.wav` older than 7 days (`CHAT_SPEECH_DAYS`) are
+  deleted when a new one is written; other files in `/opt/outputs/speech` are untouched.
+- Tests: 3 new in `tests/test_local_chat.py`.
+
 ## 2026-10-24 — session end: scout's nightly answers, HANDOFF pointers
 
 - **Docs** scout: the 04:15 run's `scout/answers.json` entries and the `microsoft__LLMLingua`
