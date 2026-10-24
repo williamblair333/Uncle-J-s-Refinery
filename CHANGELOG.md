@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-24 — session end: scout's nightly answers, HANDOFF pointers
+
+- **Docs** scout: the 04:15 run's `scout/answers.json` entries and the `microsoft__LLMLingua`
+  find page committed (find pages are tracked). HANDOFF's top note: dcup guard verified live,
+  M12 due tonight, chat page vs Heretic ports.
+
 ## 2026-10-24 — chat page: page-text web search, /image /video /speak, spoken replies
 
 - **Changed** `scripts/local_chat/server.py`: "Search the web" now also reads the top 3 result
