@@ -248,6 +248,69 @@ def test_klarheit_running_reads_systemctl():
     assert not cj.klarheit_running(run=lambda *a, **k: R("inactive\ninactive\n"))
 
 
-def test_unreachable_server_exits_2(capsys):
-    assert cj.main(["image", "x", "--url", "http://127.0.0.1:9"]) == 2
+def test_vram_sampler_stops_cleanly():
+    # Regression: an Event named _stop shadowed Thread._stop and join() raised on Python 3.11.
+    s = cj.VramSampler(None)
+    s.start()
+    s.stop()
+    assert not s.is_alive()
+
+
+def test_unreachable_server_exits_2_without_autostart(capsys):
+    assert cj.main(["image", "x", "--url", "http://127.0.0.1:9", "--no-autostart"]) == 2
     assert "just comfy up -d" in capsys.readouterr().err
+
+
+class _Run:
+    def __init__(self, rc=0):
+        self.rc, self.calls = rc, []
+
+    def __call__(self, cmd, **kw):
+        self.calls.append(cmd)
+        return type("R", (), {"returncode": self.rc, "stdout": "", "stderr": "boom"})()
+
+
+def test_start_comfy_waits_until_it_answers():
+    run, answers = _Run(), iter([False, False, True])
+    assert cj.start_comfy("u", run=run, up=lambda u: next(answers), sleep=lambda s: None)
+    assert run.calls == [[str(cj.COMFY_SH), "up", "-d"]]
+
+
+def test_start_comfy_reports_failure(capsys):
+    assert not cj.start_comfy("u", run=_Run(rc=1), up=lambda u: True, sleep=lambda s: None)
+    assert "could not start ComfyUI" in capsys.readouterr().err
+
+
+def test_start_comfy_gives_up_if_never_ready(capsys):
+    assert not cj.start_comfy("u", run=_Run(), up=lambda u: False, sleep=lambda s: None, wait=9)
+    assert "didn't answer" in capsys.readouterr().err
+
+
+def test_main_starts_and_stops_comfy_it_started(monkeypatch):
+    events = []
+    monkeypatch.setattr(cj, "comfy_up", lambda url: False)
+    monkeypatch.setattr(cj, "start_comfy", lambda url: events.append("start") or True)
+    monkeypatch.setattr(cj, "stop_comfy", lambda: events.append("stop"))
+    monkeypatch.setattr(cj, "_with_gpu", lambda a, wf, seed: events.append("job") or 0)
+    assert cj.main(["image", "x", "--ignore-klarheit"]) == 0
+    assert events == ["start", "job", "stop"]
+
+
+def test_main_leaves_running_comfy_alone(monkeypatch):
+    events = []
+    monkeypatch.setattr(cj, "comfy_up", lambda url: True)
+    monkeypatch.setattr(cj, "start_comfy", lambda url: events.append("start") or True)
+    monkeypatch.setattr(cj, "stop_comfy", lambda: events.append("stop"))
+    monkeypatch.setattr(cj, "_with_gpu", lambda a, wf, seed: events.append("job") or 0)
+    assert cj.main(["image", "x", "--ignore-klarheit"]) == 0
+    assert events == ["job"]
+
+
+def test_keep_up_skips_the_stop(monkeypatch):
+    events = []
+    monkeypatch.setattr(cj, "comfy_up", lambda url: False)
+    monkeypatch.setattr(cj, "start_comfy", lambda url: True)
+    monkeypatch.setattr(cj, "stop_comfy", lambda: events.append("stop"))
+    monkeypatch.setattr(cj, "_with_gpu", lambda a, wf, seed: 0)
+    assert cj.main(["image", "x", "--ignore-klarheit", "--keep-up"]) == 0
+    assert events == []

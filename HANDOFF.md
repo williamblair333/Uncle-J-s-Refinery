@@ -13,6 +13,10 @@ patentengine #3, Klarheit #81, lc0 #64, fog-of-chess #250 #251, hearth #22, lard
 moneymaker #8, channelengine #3, voice-line #12, write_well #5, deal-finder #1.
 
 **Open / next:**
+- 2026-10-24: the chat page now does it all in one place — web search reads the top pages,
+  `/image` `/video` `/speak`, "Speak replies", "Think first" (off by default). ComfyUI starts
+  and stops per job. Residual: a DNS answer could change between the public-address check and
+  the fetch (rebinding); low impact, loopback services still need their own auth.
 - Local lineup is complete on this host (text, image, video, STT, cloned voice). Left: deploy
   `just small` to the Pi / tc-vmh-03 when reachable; Wan-stills vs Z-Image test; image MCP
   wrapper (Jarvis track); add whisper/tts/comfy to `healthcheck.sh`.
