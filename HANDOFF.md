@@ -2,8 +2,13 @@
 
 ## 2026-10-23 (main host, session end) — Bill's "fix all these": 14 agents, ~30 PRs across 18 repos
 
-**Most important:** restart Claude Code. The dcup guard hook (PR #186) loads only at startup.
-Then `just waiting` lists every open item below by repo.
+**Most important (updated 2026-10-24 session end):** Claude Code was restarted and the dcup
+guard is verified live (a `docker run -p` was blocked). **Klarheit M12 feasibility is due about
+2026-10-24 21:00 EDT** if the 10-24 midday and evening dry slots run clean; steps in Klarheit's
+HANDOFF. `just waiting` lists every open item by repo. The chat page (`just chat`, :8091) talks
+to Heretic (:8090); it isn't a service, so start it again after a reboot.
+Also 10-24: #195 Heretic auto-fit (no more OOM loop), #198 chat tools; lc0 and fog-of-chess
+HANDOFFs had stale "Next session" lists, fixed.
 
 **Merged today (Refinery):** #182 docs, #183 sweep, #184 upstream, #185/#189/#190 backlog,
 #186 dcup, #187 decisions + small model, #188 hook hardening, #191 reviews/scout/firefox,
