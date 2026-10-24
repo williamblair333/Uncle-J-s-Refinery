@@ -15,14 +15,25 @@ Claude and agy get the conversation as one transcript prompt, so any of them can
 up where another left off.
 
 "Search the web" queries SearXNG (SEARXNG_URL, default http://127.0.0.1:8086, JSON format
-enabled) with your message and hands the top results to whichever backend answers.
+enabled) with your message, fetches the text of the top PAGE_FETCH result pages (public
+addresses only, redirects re-checked), and hands snippets plus page text to whichever
+backend answers.
+
+Commands typed as the message, instead of a question:
+  /image <prompt>   Z-Image-Turbo via scripts/comfy_job.py (starts ComfyUI if needed)
+  /video <prompt>   Wan 2.2, ~8 min for 5 s
+  /speak <text>     Chatterbox TTS (TTS_URL, default http://127.0.0.1:8093)
+"Speak replies" reads each answer aloud with the same TTS. Media is served from
+/opt/outputs/comfyui and /opt/outputs/speech only.
 Start uses `dcup up` when dcup is installed, so heretic's port is claimed in the registry.
 """
 import argparse
+import ipaddress
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -30,6 +41,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -46,6 +59,17 @@ DCUP = shutil.which("dcup") or next(
 LLAMA_URL = os.environ.get("ASK_LOCAL_URL", "http://127.0.0.1:8090").rstrip("/")
 SEARX_URL = os.environ.get("SEARXNG_URL", "http://127.0.0.1:8086").rstrip("/")
 SEARCH_RESULTS = 5
+PAGE_FETCH = 3            # result pages whose text is fetched
+PAGE_CHARS = 2500         # text kept per page
+PAGE_BYTES = 1_500_000    # read cap per page
+TTS_URL = os.environ.get("TTS_URL", "http://127.0.0.1:8093").rstrip("/")
+SPEAK_CHARS = 800         # longest reply read aloud
+OUTPUTS = Path(os.environ.get("CHAT_OUTPUTS", "/opt/outputs"))
+MEDIA_ROOTS = (OUTPUTS / "comfyui", OUTPUTS / "speech")
+MEDIA_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
+               ".mp4": "video/mp4", ".webm": "video/webm", ".wav": "audio/wav"}
+COMMAND = re.compile(r"^/(image|video|speak)\s+(.+)$", re.S)
+JOB_TIMEOUT = {"image": 900, "video": 3600}
 CHAT_ID = re.compile(r"^[0-9a-f]{32}$")
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")  # compose logs keep line-erase codes despite --no-color
 TIMEOUT = 600
@@ -87,11 +111,87 @@ def web_search(query):
     hits = [{"title": r.get("title", ""), "url": r.get("url", ""),
              "snippet": (r.get("content") or "")[:300]}
             for r in data.get("results", [])[:SEARCH_RESULTS]]
+    with ThreadPoolExecutor(PAGE_FETCH) as pool:
+        for h, text in zip(hits, pool.map(fetch_page, [h["url"] for h in hits[:PAGE_FETCH]])):
+            if text:
+                h["page"] = text
     return {"ok": True, "results": hits}
 
 
+def public_url(url):
+    """True only for http(s) URLs whose host resolves solely to public addresses.
+
+    Search results are untrusted: one pointing at 127.0.0.1, the LAN or a link-local address
+    would make this server read local services (Gitea, Grocy, ComfyUI) into the prompt.
+    """
+    try:
+        u = urllib.parse.urlsplit(url)
+        if u.scheme not in ("http", "https") or not u.hostname:
+            return False
+        infos = socket.getaddrinfo(u.hostname, u.port or (443 if u.scheme == "https" else 80),
+                                   proto=socket.IPPROTO_TCP)
+    except (ValueError, OSError):
+        return False
+    addrs = {ipaddress.ip_address(i[4][0].split("%")[0]) for i in infos}
+    return bool(addrs) and all(a.is_global for a in addrs)
+
+
+class _PublicRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not public_url(newurl):
+            raise urllib.error.URLError(f"redirect to a non-public address refused: {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(_PublicRedirects)
+
+
+class _Text(HTMLParser):
+    SKIP = {"script", "style", "noscript", "svg", "nav", "header", "footer", "form", "aside"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts, self.depth = [], 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.SKIP:
+            self.depth += 1
+
+    def handle_endtag(self, tag):
+        if tag in self.SKIP and self.depth:
+            self.depth -= 1
+
+    def handle_data(self, data):
+        if not self.depth and data.strip():
+            self.parts.append(data.strip())
+
+
+def page_text(html):
+    p = _Text()
+    p.feed(html)
+    return re.sub(r"\s+", " ", " ".join(p.parts)).strip()
+
+
+def fetch_page(url):
+    """Readable text of one result page, or "" when it can't (or mustn't) be fetched."""
+    if not public_url(url):
+        return ""
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (local-chat)"})
+    try:
+        with _OPENER.open(req, timeout=10) as resp:
+            if "html" not in resp.headers.get("Content-Type", ""):
+                return ""
+            raw = resp.read(PAGE_BYTES)
+            charset = resp.headers.get_content_charset() or "utf-8"
+    except (urllib.error.URLError, OSError, ValueError):
+        return ""
+    return page_text(raw.decode(charset, errors="replace"))[:PAGE_CHARS]
+
+
 def with_sources(question, hits):
-    lines = [f"[{i}] {h['title']} — {h['url']}\n{h['snippet']}" for i, h in enumerate(hits, 1)]
+    lines = [f"[{i}] {h['title']} — {h['url']}\n{h['snippet']}"
+             + (f"\nPage text: {h['page']}" if h.get("page") else "")
+             for i, h in enumerate(hits, 1)]
     return (f"{question}\n\n---\nWeb search results (today is {time.strftime('%Y-%m-%d')}):\n\n"
             + "\n\n".join(lines)
             + "\n\nUse these where they're relevant and cite them as [n]. If they don't answer "
@@ -102,8 +202,11 @@ def transcript(messages):
     return "\n\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages)
 
 
-def ask_heretic(messages):
-    body = json.dumps({"model": "heretic", "messages": messages, "max_tokens": 8192}).encode()
+def ask_heretic(messages, think=False):
+    # Thinking off by default: beside Klarheit's 9B Heretic runs ~11 tok/s, and its hidden
+    # reasoning (1.6k–2.9k tokens measured) turned a two-sentence answer into 4–6 minutes.
+    body = json.dumps({"model": "heretic", "messages": messages, "max_tokens": 8192,
+                       "chat_template_kwargs": {"enable_thinking": bool(think)}}).encode()
     req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", body,
                                  {"Content-Type": "application/json"})
     try:
@@ -178,6 +281,9 @@ def chat(body):
         entry = {"role": "user", "content": text, "ts": time.time()}
         append_chat(chat_id, entry)
         history.append(entry)
+        cmd = COMMAND.match(text)
+        if cmd:
+            return run_command(chat_id, cmd.group(1), cmd.group(2).strip())
     else:
         # No new text = hand your last question to this backend (a second opinion), so drop
         # the answers that followed it from what the backend sees.
@@ -198,21 +304,82 @@ def chat(body):
         found = web_search(messages[-1]["content"])
         if not found["ok"]:
             return {"ok": False, "error": found["error"], "chat_id": chat_id}
-        sources = found["results"]
-        if sources:
-            messages[-1]["content"] = with_sources(messages[-1]["content"], sources)
+        if found["results"]:
+            messages[-1]["content"] = with_sources(messages[-1]["content"], found["results"])
+        # Page text went to the backend; the saved chat keeps only title, url and snippet.
+        sources = [{k: v for k, v in h.items() if k != "page"} for h in found["results"]]
     started = time.time()
-    out = BACKENDS[backend](messages)
+    extra = {"think": bool(body.get("think"))} if backend == "heretic" else {}
+    out = BACKENDS[backend](messages, **extra)
     if out["ok"]:
         entry = {"role": "assistant", "content": out["text"], "backend": backend,
                  "seconds": round(time.time() - started, 1), "ts": time.time()}
         if sources is not None:
             entry["sources"] = sources
+        if body.get("speak"):
+            spoken = speak(out["text"][:SPEAK_CHARS])
+            if spoken["ok"]:
+                entry["media"] = out["media"] = [spoken["media"]]
+            else:
+                out["note"] = spoken["error"]
         append_chat(chat_id, entry)
         out["sources"] = sources
     out["chat_id"] = chat_id
     out["backend"] = backend
     return out
+
+
+def media_kind(path):
+    ctype = MEDIA_TYPES.get(Path(path).suffix.lower(), "")
+    return ctype.split("/")[0] or None
+
+
+def speak(text):
+    """Chatterbox TTS → a wav under OUTPUTS/speech."""
+    body = json.dumps({"input": text}).encode()
+    req = urllib.request.Request(f"{TTS_URL}/v1/audio/speech", body, {"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+            audio = resp.read()
+    except (urllib.error.URLError, OSError) as e:
+        return {"ok": False, "error": f"TTS unreachable at {TTS_URL} (just tts up -d): {e}"}
+    out = OUTPUTS / "speech" / f"chat-{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}.wav"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(audio)
+    return {"ok": True, "media": {"path": str(out), "kind": "audio"}}
+
+
+def run_command(chat_id, kind, arg):
+    """/image, /video or /speak: run the tool, save its result as the assistant turn."""
+    started = time.time()
+    if kind == "speak":
+        r = speak(arg)
+        media = [r["media"]] if r["ok"] else []
+        text, ok = ("Spoken." if r["ok"] else r["error"]), r["ok"]
+    else:
+        r = _run([sys.executable, str(ROOT / "scripts" / "comfy_job.py"), kind, arg],
+                 timeout=JOB_TIMEOUT[kind])
+        lines = r["output"].splitlines()
+        media = [{"path": p, "kind": media_kind(p)} for p in lines
+                 if p.startswith(str(OUTPUTS)) and media_kind(p)]
+        ok = r["ok"] and bool(media)
+        text = (lines[-1] if lines else "") if ok else f"{kind} failed:\n{r['output'][-1500:]}"
+    if not ok:
+        return {"ok": False, "error": text, "chat_id": chat_id}
+    entry = {"role": "assistant", "content": text, "backend": kind, "media": media,
+             "seconds": round(time.time() - started, 1), "ts": time.time()}
+    append_chat(chat_id, entry)
+    return {"ok": True, "text": text, "media": media, "chat_id": chat_id, "backend": kind}
+
+
+def media_file(path):
+    """The file at `path` if it's a known media type under MEDIA_ROOTS, else ValueError."""
+    p = Path(path).resolve()
+    if p.suffix.lower() not in MEDIA_TYPES or not p.is_file():
+        raise ValueError("not a media file")
+    if not any(p.is_relative_to(r.resolve()) for r in MEDIA_ROOTS):
+        raise ValueError("outside the media folders")
+    return p
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -254,6 +421,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, list_chats())
             if path == "/api/chat":
                 return self._send(200, load_chat(query.removeprefix("id=")))
+            if path == "/media":
+                f = media_file(urllib.parse.parse_qs(query).get("p", [""])[0])
+                return self._send(200, f.read_bytes(), MEDIA_TYPES[f.suffix.lower()])
         except ValueError as e:
             return self._send(400, {"ok": False, "error": str(e)})
         self._send(404, {"error": "not_found"})

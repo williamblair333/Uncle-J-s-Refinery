@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-10-24 — chat page: page-text web search, /image /video /speak, spoken replies
+
+- **Changed** `scripts/local_chat/server.py`: "Search the web" now also reads the top 3 result
+  pages (stdlib HTML-to-text, 2,500 chars each). Only public addresses are fetched and every
+  redirect is re-checked, so a result can't point the server at Gitea, Grocy or the LAN.
+  Tomorrow's forecast went from "the snippets don't say" to a cited answer.
+- **Added** `/image`, `/video`, `/speak` commands and a "Speak replies" box; results show inline,
+  served by `/media` from `/opt/outputs/{comfyui,speech}` only. A "Think first" box: Heretic's
+  hidden reasoning is now off by default (web answer 9 s instead of 375 s beside the 9B).
+- **Changed** `scripts/comfy_job.py`: starts ComfyUI when it's down (after the Klarheit wait) and
+  stops it after the job (`--keep-up`, `--no-autostart`).
+- **Fixed** `VramSampler` named its Event `_stop`, shadowing `Thread._stop`; `join()` raised on
+  Python 3.11 (the chat server's venv), so jobs launched from the page failed.
+- Tests: `tests/test_local_chat.py` (new, SSRF + media-path guards pinned), `tests/test_comfy.py`.
+
 ## 2026-10-23 — `just image` / `just video` park Heretic for the job
 
 - **Fixed** `scripts/comfy_job.py`: `just image` failed in 2 s with `CLIPTextEncode: VRAM grow

@@ -45,6 +45,11 @@ button:disabled { opacity: .5; cursor: default; }
 .meta { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
 .sources { font-size: 12px; color: var(--muted); margin-top: 6px; white-space: normal; }
 .sources a { color: var(--accent); }
+.media { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; white-space: normal; }
+.media img, .media video { max-width: min(100%, 640px); border-radius: 8px; border: 1px solid var(--line); }
+.media audio { width: min(100%, 420px); }
+.hint { font-size: 12px; color: var(--muted); }
+.hint code { font-size: 12px; }
 .offload { font-size: 12px; color: var(--muted); }
 .offload button { font-size: 12px; padding: 2px 8px; }
 form { border-top: 1px solid var(--line); padding: 12px clamp(16px, 4vw, 48px); display: flex; flex-direction: column; gap: 8px; background: var(--panel); }
@@ -89,9 +94,12 @@ textarea { width: 100%; min-height: 72px; resize: vertical; border: 1px solid va
         <option value="agy">agy (Antigravity)</option>
       </select>
       <label><input type="checkbox" id="web"> Search the web</label>
+      <label><input type="checkbox" id="speak"> Speak replies</label>
+      <label title="heretic reasons before answering: better on hard questions, minutes slower"><input type="checkbox" id="think"> Think first</label>
       <button class="primary" id="send" type="submit">Send</button>
       <span id="busy" class="offload" hidden>thinking…</span>
     </div>
+    <div class="hint">Commands: <code>/image a red toolbox</code> (~1 min) · <code>/video a sailboat at sunset</code> (~8 min) · <code>/speak hello there</code></div>
   </form>
 </main>
 <div id="logs" hidden>
@@ -101,7 +109,8 @@ textarea { width: 100%; min-height: 72px; resize: vertical; border: 1px solid va
 </div>
 <script>
 const $ = id => document.getElementById(id);
-const NAMES = { heretic: "heretic", claude: "Claude", agy: "agy" };
+const NAMES = { heretic: "heretic", claude: "Claude", agy: "agy", image: "image", video: "video", speak: "voice" };
+const WAITS = { image: "making the image (~1 min)…", video: "making the video (~8 min)…", speak: "speaking…" };
 let chatId = null, busy = false;
 
 async function api(path, body) {
@@ -139,6 +148,23 @@ function addMsg(m) {
     div.append(meta);
   }
   div.append(document.createTextNode(m.content));
+  if (m.media && m.media.length) {
+    const box = document.createElement("div");
+    box.className = "media";
+    for (const f of m.media) {
+      const tag = { image: "img", video: "video", audio: "audio" }[f.kind];
+      if (!tag) continue;
+      const el = document.createElement(tag);
+      el.src = "/media?p=" + encodeURIComponent(f.path);
+      if (tag !== "img") el.controls = true;
+      if (tag === "img") el.alt = m.content;
+      const link = document.createElement("a");
+      link.href = el.src; link.target = "_blank"; link.rel = "noopener"; link.textContent = f.path;
+      link.className = "hint";
+      box.append(el, link);
+    }
+    div.append(box);
+  }
   if (m.sources && m.sources.length) {
     const src = document.createElement("ol");
     src.className = "sources";
@@ -197,15 +223,22 @@ async function openChat(id) {
 async function send(text, backend) {
   if (busy) return;
   busy = true; $("send").disabled = true; $("busy").hidden = false;
-  $("busy").textContent = ($("web").checked ? "searching, then " : "") + NAMES[backend] + " is thinking…";
+  const cmd = (text.match(/^\/(image|video|speak)\s/) || [])[1];
+  $("busy").textContent = cmd ? WAITS[cmd]
+    : ($("web").checked ? "searching and reading pages, then " : "") + NAMES[backend] + " is thinking…";
   document.querySelectorAll(".offload.bar button").forEach(b => b.disabled = true);
   if (text) addMsg({ role: "user", content: text });
   try {
-    const web = $("web").checked;
-    const r = await api("/api/send", { chat_id: chatId, text, backend, web });
+    const web = $("web").checked, speak = $("speak").checked, think = $("think").checked;
+    const r = await api("/api/send", { chat_id: chatId, text, backend, web, speak, think });
     chatId = r.chat_id || chatId;
-    if (r.ok) addMsg({ role: "assistant", content: r.text, backend: r.backend, sources: r.sources });
-    else alertBox(NAMES[backend] + " failed: " + r.error);
+    if (r.ok) {
+      const div = addMsg({ role: "assistant", content: r.text, backend: r.backend, sources: r.sources, media: r.media });
+      const audio = div.querySelector("audio");
+      if (audio && (speak || cmd === "speak")) audio.play().catch(() => {});
+      if (r.note) alertBox(r.note);
+    }
+    else alertBox((NAMES[cmd] || NAMES[backend]) + " failed: " + r.error);
   } catch (e) { alertBox("request failed: " + e); }
   busy = false; $("send").disabled = false; $("busy").hidden = true;
   addOffload();

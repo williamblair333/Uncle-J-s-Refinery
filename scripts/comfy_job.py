@@ -6,6 +6,10 @@ the lightx2v 4-step LoRAs for video), POSTs it to ComfyUI's /prompt, polls /hist
 it finishes, and prints the output files (host paths under /opt/outputs/comfyui), the wall
 time, and the peak VRAM seen while it ran (whole GPU, and ComfyUI's own process).
 
+If ComfyUI isn't running it starts it (`scripts/comfy.sh up -d`, through dcup) after any
+wait for Klarheit, and stops it again when the job ends, so an idle ComfyUI never holds the
+GPU. --keep-up leaves it running; --no-autostart restores "exit 2 if it isn't up".
+
 Stdlib only, so it runs with the system python3.
 """
 from __future__ import annotations
@@ -26,6 +30,7 @@ from pathlib import Path
 DEFAULT_URL = "http://127.0.0.1:8188"
 OUTPUT_ROOT = Path("/opt/outputs/comfyui")
 HERETIC_CONTAINER = "llama-heretic"
+COMFY_SH = Path(__file__).resolve().parent / "comfy.sh"
 
 IMAGE_MODELS = {
     "unet": "z_image_turbo_bf16.safetensors",
@@ -244,19 +249,20 @@ class VramSampler(threading.Thread):
     def __init__(self, pid: int | None):
         super().__init__(daemon=True)
         self.pid, self.peak_total, self.peak_proc = pid, 0, 0
-        self._stop = threading.Event()
+        # Not `_stop`: Python 3.11's Thread.join() calls its own self._stop().
+        self._halt = threading.Event()
 
     def run(self):
         if not shutil.which("nvidia-smi"):
             return
-        while not self._stop.is_set():
+        while not self._halt.is_set():
             self.peak_total = max(self.peak_total, _gpu_used_mib())
             if self.pid:
                 self.peak_proc = max(self.peak_proc, _proc_used_mib(self.pid))
-            self._stop.wait(1)
+            self._halt.wait(1)
 
     def stop(self):
-        self._stop.set()
+        self._halt.set()
         self.join(timeout=5)
 
 
@@ -346,6 +352,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--keep-heretic", action="store_true",
                     help="don't stop llama-heretic for the job (it auto-fits to free VRAM, "
                          "so the job usually fails for lack of memory)")
+    ap.add_argument("--keep-up", action="store_true",
+                    help="leave ComfyUI running after the job if this job started it")
+    ap.add_argument("--no-autostart", action="store_true",
+                    help="exit 2 instead of starting ComfyUI when it isn't running")
     args = ap.parse_args(argv)
 
     seed = args.seed if args.seed is not None else random.randint(0, 2**32 - 1)
@@ -356,15 +366,62 @@ def main(argv: list[str] | None = None) -> int:
     else:
         wf = video_workflow(args.prompt, seed, frames=args.frames, prefix="video", **sizes)
 
-    try:
-        _http(f"{args.url}/system_stats", timeout=5)
-    except (urllib.error.URLError, OSError) as exc:
-        print(f"ComfyUI is not answering at {args.url} ({exc}); start it: just comfy up -d",
-              file=sys.stderr)
+    if args.no_autostart and not comfy_up(args.url):
+        print(f"ComfyUI is not answering at {args.url}; start it: just comfy up -d", file=sys.stderr)
         return 2
     if not args.ignore_klarheit and not wait_for_klarheit(args.kind, max_wait=3600):
         print("gave up after an hour waiting for Klarheit's trials", file=sys.stderr)
         return 1
+    started = False
+    if not comfy_up(args.url):
+        print("ComfyUI isn't running; starting it (just comfy up -d)…", file=sys.stderr)
+        if not start_comfy(args.url):
+            return 2
+        started = True
+    try:
+        return _with_gpu(args, wf, seed)
+    finally:
+        if started and not args.keep_up:
+            stop_comfy()
+
+
+def comfy_up(url: str) -> bool:
+    try:
+        _http(f"{url}/system_stats", timeout=5)
+        return True
+    except (urllib.error.URLError, OSError):
+        return False
+
+
+def start_comfy(url: str, run=subprocess.run, up=comfy_up, sleep=time.sleep,
+                wait: float = 240) -> bool:
+    """`comfy.sh up -d`, then wait until /system_stats answers."""
+    try:
+        r = run([str(COMFY_SH), "up", "-d"], capture_output=True, text=True, timeout=300)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"could not start ComfyUI: {exc}", file=sys.stderr)
+        return False
+    if r.returncode != 0:
+        print(f"could not start ComfyUI:\n{(r.stdout + r.stderr).strip()[-800:]}", file=sys.stderr)
+        return False
+    for _ in range(int(wait // 3)):
+        if up(url):
+            return True
+        sleep(3)
+    print(f"ComfyUI started but didn't answer at {url} within {wait:.0f} s", file=sys.stderr)
+    return False
+
+
+def stop_comfy(run=subprocess.run) -> None:
+    try:
+        r = run([str(COMFY_SH), "down"], capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            print("could not stop ComfyUI; run: just comfy down", file=sys.stderr)
+    except (OSError, subprocess.TimeoutExpired):
+        print("could not stop ComfyUI; run: just comfy down", file=sys.stderr)
+
+
+def _with_gpu(args: argparse.Namespace, wf: dict, seed: int) -> int:
     apps = gpu_apps()
     for note in gpu_warnings(apps):
         print(f"note: {note}", file=sys.stderr)

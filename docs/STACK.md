@@ -189,6 +189,14 @@ just heretic logs        # model logs; `just heretic down` stops it
 curl -s 127.0.0.1:8090/health   # {"status":"ok"} when heretic is up
 ```
 
+**In the chat page.** "Search the web" sends SearXNG's top 5 results plus the text of the top 3
+pages (public addresses only; redirects re-checked). "Think first" turns on Heretic's hidden
+reasoning: better on hard questions, but minutes slower beside Klarheit's 9B (a web answer took
+9 s without it, 375 s with it). "Speak replies" reads each answer aloud through Chatterbox.
+Typed commands: `/image <prompt>` (~1–2 min, starts and stops ComfyUI itself), `/video
+<prompt>` (~8 min), `/speak <text>`. Results show inline; media is served only from
+`/opt/outputs/comfyui` and `/opt/outputs/speech`.
+
 **Backend.** Ollama in Docker, from `docker/ollama/compose.yaml` in this repo. A host that
 keeps its own `/opt/docker/ollama/compose.yaml` uses that one instead. It's bound to
 `127.0.0.1:11434` only, unloads idle models after 10 minutes, and loads one model at a time.
@@ -239,11 +247,12 @@ Face 2026-10-23):
 **Starting it.**
 ```bash
 just comfy-models                 # download + sha256-check the models (~47 GB; skips verified files)
-just comfy up -d                  # build on first run, start via dcup (claims 8188)
 just image "a red fox in snow"    # → /opt/outputs/comfyui/image_NNNNN_.png  (--seed, --width, --height)
 just video "a sailboat at dusk"   # → /opt/outputs/comfyui/video_NNNNN_.mp4  (--frames, default 81)
-just comfy down                   # stop it; do this when done, so it holds no VRAM
+just comfy up -d / down           # only to keep it running between jobs (it builds on first run)
 ```
+`just image` / `just video` start ComfyUI themselves when it's down (after any Klarheit wait)
+and stop it when the job ends; `--keep-up` leaves it running, `--no-autostart` exits instead.
 The web UI is at http://127.0.0.1:8188. `just image` / `just video` print the output path,
 the wall time and the peak VRAM, then unload the models (`--keep-loaded` to skip that).
 
