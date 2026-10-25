@@ -18,6 +18,12 @@
 - `tests/test_delegate.py`: 8 tests, no network.
 - **Follow-up (Bill's calls):** mtw2 came off the list; only `mtw2/.env` stays blocked. Gitea's
   `stack.env`, `runner-config.yaml` and `state/` were added.
+- **agy permissions made durable:** the 12 rules gitea-dc added by hand to agy's settings
+  (read_file allow/deny, `read_url(*)`) are now in `features/antigravity/permissions.json`.
+  `apply_permissions.py` replaces the whole block, so the next install would have erased them.
+  `read_url(*)` is the one catch-all the tests now accept.
+  `sync_mcp.py` never copies `delegate` into agy, and removes an old copy.
+  Re-applied live; agy file read verified.
 
 ## 2026-10-25 — the random ding: KWin bell muted; mtw2 public snapshot updated
 
