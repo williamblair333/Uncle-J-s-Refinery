@@ -4,8 +4,13 @@
 
 **Most important:** the new `delegate` MCP server (user scope) gives every project `ask_agy`,
 `ask_heretic`, `ask_openai`, `make_image`, `make_video` and `speak`. CLAUDE.md now says to
-delegate bounded work by default. agy refuses inside anatomy-lab and mtw2
-(`config/delegate-local-only.txt`). Open items:
+delegate bounded work by default. agy refuses inside anatomy-lab and on listed secret files
+(`config/delegate-local-only.txt`). Bill's calls this session: mtw2 may use Gemini (only its
+`.env` is blocked); gitea's stack.env, runner-config.yaml and state/ were added; agy keeps
+full use of the stack's MCP tools ("funnel everything through Uncle J's tools"). Open items:
+- **Residual exposure:** agy can still reach anatomy-lab through jcodemunch, or reach its
+  transcripts through memweave. Those tools have no per-repo deny, and the delegate guard only
+  sees the prompt. Fixing it needs a repo filter in the servers that agy calls.
 - **agy recursion:** `features/antigravity/sync_mcp.py` copies every user-scope server into agy. The
   next run would give agy `delegate` too, so agy could call itself. Exclude `delegate` there
   before re-running it.

@@ -1,6 +1,10 @@
-# Directories whose contents must never reach an off-machine model (agy/Gemini, OpenAI).
-# One path per line; ~ is expanded; a path that doesn't exist on this host is harmless.
-# The delegate MCP server refuses ask_agy/ask_openai when the session's directory is
-# under one of these. Add more per host with DELEGATE_LOCAL_ONLY.
-/opt/proj/anatomy-lab        # invention figures stay local
-/opt/proj/games/mtw2         # private; publishes only as scrubbed snapshots
+# Paths whose contents must never reach an off-machine model (agy/Gemini, OpenAI).
+# One path per line, a directory or a single file; ~ is expanded; a path that doesn't exist
+# on this host is harmless. The delegate MCP server refuses ask_agy/ask_openai when the
+# session's directory, or a path named in the prompt, is under one of these. Add more per
+# host with DELEGATE_LOCAL_ONLY.
+/opt/proj/anatomy-lab                  # invention figures stay local
+/opt/proj/games/mtw2/.env              # mtw2 itself may use Gemini (Bill, 2026-10-25); its secrets may not
+/opt/proj/gitea/stack.env              # Gitea stack secrets
+/opt/proj/gitea/runner-config.yaml     # runner registration token
+/opt/proj/gitea/state                  # logs and locks
