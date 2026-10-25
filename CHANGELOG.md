@@ -24,6 +24,8 @@
   `read_url(*)` is the one catch-all the tests now accept.
   `sync_mcp.py` never copies `delegate` into agy, and removes an old copy.
   Re-applied live; agy file read verified.
+- **Deny rule for env-style secret files** (`read_file(**/*.env)`), added by Bill: agy can no
+  longer read gitea's stack secrets directly. Live and repo deny lists match (32 rules).
 
 ## 2026-10-25 — the random ding: KWin bell muted; mtw2 public snapshot updated
 
