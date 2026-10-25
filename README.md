@@ -638,6 +638,13 @@ Skills run by `/name` in agy; they do not fire on their own in print mode. See
 after agy updates, and why `ask_agy.py` exists (agy reports success when a command was
 blocked).
 
+**delegate MCP server** (`scripts/delegate/server.py`, registered at user scope by
+`install.sh`) puts agy and the local models in every project's tool list: `ask_agy`,
+`ask_heretic`, `ask_openai` (off until `OPENAI_API_KEY` and `DELEGATE_OPENAI_MODEL` are set in
+its env), `make_image`, `make_video`, `speak`, `delegate_status`. `CLAUDE.md` makes delegating
+the default for bounded work. Off-machine calls refuse inside any root listed in
+`config/delegate-local-only.txt`. Calls are logged to `state/delegate.jsonl`.
+
 ### 23. Repo scout — one open-source find each morning (optional)
 
 An overnight job that keeps a map of the open-source agent landscape laid over what Uncle J

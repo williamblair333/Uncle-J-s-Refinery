@@ -43,6 +43,9 @@ WebSearch/WebFetch for third-party library docs and say that you fell back.
 | Third-party library documentation               | **context7**                      | WebSearch/WebFetch                |
 | "What did we decide / discuss / build before?"  | **memweave** (`memory_search`)    | `mw_search.py` CLI, then transcript |
 | General web / news / current events             | WebSearch, WebFetch               | —                                 |
+| Bounded work another model can do (see below)   | **delegate** `ask_agy` (Gemini)   | `ask_heretic`, then do it yourself |
+| Private / local-only material                   | **delegate** `ask_heretic`        | ask_local, then do it yourself    |
+| Images, video, speech                           | **delegate** `make_image` / `make_video` / `speak` | —                |
 | Bulk, low-stakes grunt work (see below)         | **ask_local** (local Ollama)      | do it yourself                    |
 
 If the first choice is unavailable, try the fallback and note it. Do **not**
@@ -56,6 +59,23 @@ and classification. **Never for the final answer, code review, or anything where
 gets acted on — verify what it returns.** It refuses credential-like paths and only ever
 returns `{"error": ...}` on failure, never raises. Each call is logged to
 `state/ask_local.jsonl` (counts and latency only) so its value can be measured.
+
+### Delegate by default — Claude tokens are the scarce resource
+**delegate** (`scripts/delegate/server.py`, user scope) offloads work off Claude:
+`ask_agy` (Antigravity, Gemini Flash by default, Google AI Pro quota), `ask_heretic` (local
+llama-server on :8090), `ask_openai` (any OpenAI-compatible API; `not_configured` until a key is
+set), `make_image` / `make_video` / `speak` (ComfyUI, Chatterbox). `delegate_status` says what's up.
+- **Default to delegating** research sweeps, first drafts, bulk summaries, file reviews, test
+  writing, boilerplate, and second opinions (`referee` skill). Keep for yourself: anything under
+  ~a minute of your own work (agy costs ~15 s minimum per call), edits mid-conversation, and the
+  final call on anything that gets acted on.
+- **Always use the `verifiable-task` skill**: write the check before handing off, run it on
+  what comes back. agy's own "done" is not evidence; the wrapper fails closed, the model can still be wrong.
+- `ask_agy` and `ask_openai` refuse with `error: local_only` when the project, or a path in the
+  prompt, is under `config/delegate-local-only.txt` (anatomy-lab, mtw2). Use `ask_heretic` there.
+- AI Pro quota is unpublished (5-hour window plus a weekly cap). A zero-token `status ERROR` is
+  an expired login or exhausted quota — fall back to `ask_heretic`, then to doing it yourself,
+  and say so. Calls are logged to `state/delegate.jsonl` (no content).
 
 ## The absence contract — applies to every munch tool
 

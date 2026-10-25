@@ -1,5 +1,19 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-25 (main host) — delegate by default
+
+**Most important:** the new `delegate` MCP server (user scope) gives every project `ask_agy`,
+`ask_heretic`, `ask_openai`, `make_image`, `make_video` and `speak`. CLAUDE.md now says to
+delegate bounded work by default. agy refuses inside anatomy-lab and mtw2
+(`config/delegate-local-only.txt`). Open items:
+- **agy recursion:** `features/antigravity/sync_mcp.py` copies every user-scope server into agy. The
+  next run would give agy `delegate` too, so agy could call itself. Exclude `delegate` there
+  before re-running it.
+- **OpenAI:** set `OPENAI_API_KEY` and `DELEGATE_OPENAI_MODEL` in the server's env
+  (`claude mcp add -e`) when there's a key.
+- **Quota:** watch `state/delegate.jsonl` for zero-token `status ERROR`. AI Pro has a weekly cap
+  that Google doesn't publish.
+
 ## 2026-10-25 (main host, session end) — the random ding
 
 **Most important:** the loud random ding was the KWin X11 bell, ringing about once a second

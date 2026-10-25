@@ -1,0 +1,6 @@
+# Directories whose contents must never reach an off-machine model (agy/Gemini, OpenAI).
+# One path per line; ~ is expanded; a path that doesn't exist on this host is harmless.
+# The delegate MCP server refuses ask_agy/ask_openai when the session's directory is
+# under one of these. Add more per host with DELEGATE_LOCAL_ONLY.
+/opt/proj/anatomy-lab        # invention figures stay local
+/opt/proj/games/mtw2         # private; publishes only as scrubbed snapshots

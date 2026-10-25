@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-10-25 — delegate MCP server: offload to agy/Gemini, Heretic, OpenAI, media by default
+
+- **`scripts/delegate/server.py`** (new, user scope): `ask_agy` (wraps `ask_agy.ask`, default
+  `gemini-3.8-flash-medium`), `ask_heretic`, `ask_openai` (any OpenAI-compatible API, returns
+  `not_configured` until a key and model are set), `make_image` / `make_video` / `speak` (reuses
+  `scripts/local_chat`, loaded lazily so a break there can't take agy down), `delegate_status`.
+- **Local-only guard:** `config/delegate-local-only.txt` (anatomy-lab, mtw2) plus
+  `DELEGATE_LOCAL_ONLY`. agy/openai refuse when the session's directory, or a path named in the
+  prompt, falls under a listed root.
+- **Policy:** `CLAUDE.md` routing table plus a "Delegate by default" section. Bounded work goes to
+  agy first, then Heretic, then Claude, always under the `verifiable-task` check.
+- **Measured live:** agy "PONG" took 15.6 s (2,042 input tokens of agy's own context), Heretic 3.5 s.
+  Both guard paths refused.
+- `tests/test_delegate.py`: 8 tests, no network.
+
 ## 2026-10-25 — the random ding: KWin bell muted; mtw2 public snapshot updated
 
 No Refinery code changed. The session's work landed in other repos and on the desktop:
