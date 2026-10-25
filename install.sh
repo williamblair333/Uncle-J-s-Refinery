@@ -463,6 +463,8 @@ if [ "$AUTO_REGISTER" -eq 1 ] && [ "$SKIP_CLAUDE_CLI" -eq 0 ]; then
     mcp_add memweave -- "$STACK_ROOT/.venv-memweave/bin/python" "$STACK_ROOT/scripts/memweave/mw_mcp.py"
     # Stdlib + mcp only; writes under ~/.live-preview, serves on 127.0.0.1.
     mcp_add live_preview -- "$VENV_BIN/python" "$STACK_ROOT/scripts/live_preview/server.py"
+    # Offload to agy/Gemini, Heretic, an OpenAI-compatible API, ComfyUI and TTS from any project.
+    mcp_add delegate -- "$VENV_BIN/python" "$STACK_ROOT/scripts/delegate/server.py"
     ok "Registered. Verify with: claude mcp list"
 fi
 
