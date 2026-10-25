@@ -136,7 +136,8 @@ def test_merge_creates_missing_file(tmp_path):
 
 def test_shipped_rules_have_no_wildcards_and_deny_destructive():
     rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
-    joined = " ".join(rules["allow"])
+    # read_url(*) is the one catch-all: web research is what agy is for (Bill, 2026-10-25)
+    joined = " ".join(r for r in rules["allow"] if r != "read_url(*)")
     assert "(*)" not in joined and "regex:" not in joined
     for must in ("command(rm)", "command(sudo)", "command(git push)", "command(curl)",
                  "mcp(jdocmunch/delete_index)", "mcp(jdatamunch/delete_dataset)"):
@@ -188,3 +189,16 @@ def test_shipped_rules_block_includes_claude_md_and_fits():
     block = (REPO / "features/antigravity/rules-block.md").read_text()
     assert "@[" in block and "CLAUDE.md)" in block
     assert len((REPO / "CLAUDE.md").read_bytes()) + len(block.encode()) < 24_000  # agy per-file cap
+
+
+def test_sync_mcp_never_gives_agy_delegate(tmp_path):
+    # delegate's ask_agy inside agy would let agy call itself
+    claude = tmp_path / "claude_user.json"
+    claude.write_text(json.dumps({"mcpServers": {
+        "delegate": {"command": "/v/python", "args": ["delegate/server.py"]},
+        "memweave": {"command": "/v/python", "args": ["mw_mcp.py"]},
+    }}))
+    target = tmp_path / "mcp_config.json"
+    target.write_text(json.dumps({"mcpServers": {"delegate": {"command": "old"}}}))
+    assert sync.sync(claude, target) == ["memweave"]
+    assert set(json.loads(target.read_text())["mcpServers"]) == {"memweave"}

@@ -11,9 +11,13 @@ full use of the stack's MCP tools ("funnel everything through Uncle J's tools").
 - **Residual exposure:** agy can still reach anatomy-lab through jcodemunch, or reach its
   transcripts through memweave. Those tools have no per-repo deny, and the delegate guard only
   sees the prompt. Fixing it needs a repo filter in the servers that agy calls.
-- **agy recursion:** `features/antigravity/sync_mcp.py` copies every user-scope server into agy. The
-  next run would give agy `delegate` too, so agy could call itself. Exclude `delegate` there
-  before re-running it.
+- **Done:** `sync_mcp.py` now skips `delegate` (no agy→agy loop). gitea-dc's hand-made agy rules
+  were copied into `features/antigravity/permissions.json`, the single source now (apply replaces
+  wholesale, so a reinstall would have wiped them). gitea-dc removed the mtw2 read_file deny.
+- **One rule left for Bill (credential guard blocks Claude from writing it):** add
+  `read_file(**/*.env)` to the `deny` list in `features/antigravity/permissions.json`, then run
+  `.venv/bin/python features/antigravity/apply_permissions.py`. It closes agy's read of
+  gitea's `stack.env`.
 - **OpenAI:** set `OPENAI_API_KEY` and `DELEGATE_OPENAI_MODEL` in the server's env
   (`claude mcp add -e`) when there's a key.
 - **Quota:** watch `state/delegate.jsonl` for zero-token `status ERROR`. AI Pro has a weekly cap

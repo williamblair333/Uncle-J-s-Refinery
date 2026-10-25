@@ -32,7 +32,10 @@
     "mcp(serena/find_declaration)",
     "mcp(serena/find_implementations)",
     "mcp(serena/get_symbols_overview)",
-    "mcp(serena/get_diagnostics_for_file)"
+    "mcp(serena/get_diagnostics_for_file)",
+    "read_file(/opt/proj/)",
+    "read_file(/tmp/claude-1000/)",
+    "read_url(*)"
   ],
   "deny": [
     "command(rm)",
@@ -56,7 +59,16 @@
     "write_file(.git/)",
     "mcp(jdocmunch/delete_index)",
     "mcp(jdatamunch/delete_dataset)",
-    "mcp(jcodemunch/invalidate_cache)"
+    "mcp(jcodemunch/invalidate_cache)",
+    "read_file(**/.env)",
+    "read_file(**/.env.*)",
+    "read_file(**/*creds*)",
+    "read_file(**/*secret*)",
+    "read_file(**/id_rsa*)",
+    "read_file(**/id_ed25519*)",
+    "read_file(/opt/proj/anatomy-lab)",
+    "read_file(/opt/proj/gitea/runner-config.yaml)",
+    "read_file(/opt/proj/gitea/state/)"
   ],
   "ask": []
 }
