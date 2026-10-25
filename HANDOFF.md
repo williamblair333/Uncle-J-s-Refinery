@@ -3,8 +3,9 @@
 ## 2026-10-25 (main host, session end) — the random ding
 
 **Most important:** the loud random ding was the KWin X11 bell, ringing about once a second
-while MTW2 + Parley run. It's silenced by `kde-bell-mute.sh` (debian-howto-guides #14,
-autostarted; `just bell-mute --status` there). The source is probably Wine passing on the
+while MTW2 + Parley run. It comes from KWin's built-in `systembell` effect, now off via
+`kwinrc` `[Plugins] systembellEnabled=false`. This is a saved setting with no watcher; see
+debian-howto-guides #15, `just bell-mute --status|--on|--off`. The source is probably Wine passing on the
 game's beeps as Parley clicks, but that's unproven. Worth checking in the mtw2 project.
 Discord (Parley turn posts) and Telegram (this repo's Stop hook "📝 Skill draft" after every
 reply) still ding; Bill mutes those in the apps. mtw2 publishes only as scrubbed snapshots
