@@ -14,6 +14,12 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Per-repo deny in the servers agy calls** (opened 2026-10-25). agy keeps full use of the stack
+  (Bill's call), so it can still reach anatomy-lab through jcodemunch, and its transcripts through
+  memweave. Closing that needs a repo filter inside those servers when agy is the caller. The
+  delegate guard only sees the prompt.
+- **OpenAI backend for delegate** (opened 2026-10-25, when needed). Set `OPENAI_API_KEY` and
+  `DELEGATE_OPENAI_MODEL` in the server's env; the code is already in.
 - **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in
   `features/dcup/`, installed by `install.sh` §6b2 and checked by the `refinery-doctor`
   `dcup-guard` check. `dcup_guard.py` blocks `docker compose up` and fixed `docker run -p` that
@@ -317,6 +323,15 @@ Completed items age out after ~4 weeks.
   `openai-compatible` is not in `_EMBED_AUTO_DETECT_ORDER` and is never auto-selected.
   Corrected in SECURITY.md with the evidence. If the narrower version is worth tracking,
   it needs its own issue.
+## Recently completed (2026-10-25 — delegate by default)
+
+- **`delegate` MCP server** (PRs #203–#206). Every project gets `ask_agy`, `ask_heretic`,
+  `ask_openai`, `make_image`, `make_video` and `speak`, and CLAUDE.md makes delegating bounded
+  work the default. Local-only guard: `config/delegate-local-only.txt`.
+- **agy permissions durable**: `features/antigravity/permissions.json` is the single source.
+  It gained the denies for anatomy-lab, gitea secrets and env files. `sync_mcp.py` skips
+  `delegate`, so agy can't call itself.
+
 ## Recently completed (2026-10-22 — local chat page)
 
 - **Web search in the chat page**: a "Search the web" checkbox feeds the top 5 SearXNG results
