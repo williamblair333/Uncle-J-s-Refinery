@@ -166,6 +166,23 @@ plus a session-end Stop-hook keep the store current — you don't need to run
 
 ---
 
+## delegate (offload work to other models)
+
+`scripts/delegate/server.py`, registered at user scope by `install.sh`. Tools:
+- `ask_agy`: Gemini Flash by default; pass `model=` for another.
+- `ask_heretic`: local, on :8090.
+- `ask_openai`: any OpenAI-compatible API, off until `OPENAI_API_KEY` and
+  `DELEGATE_OPENAI_MODEL` are set.
+- `make_image`, `make_video`, `speak`: these reuse `scripts/local_chat`.
+- `delegate_status`.
+
+agy and OpenAI calls refuse when the session's directory, or a path named in the prompt, is under
+`config/delegate-local-only.txt` or `DELEGATE_LOCAL_ONLY`. Env: `DELEGATE_AGY_MODEL`,
+`DELEGATE_AGY_TIMEOUT`, `DELEGATE_OPENAI_URL`, `DELEGATE_OPENAI_KEY_ENV`, `DELEGATE_LOG`.
+Each call adds a line to `state/delegate.jsonl` (backend, model, seconds, ok; never content).
+
+---
+
 ## ask_local (local model for bounded grunt work)
 
 **What it does.** An MCP server that hands bounded subtasks to a local model, so Claude stays
