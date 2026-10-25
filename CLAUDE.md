@@ -72,7 +72,9 @@ set), `make_image` / `make_video` / `speak` (ComfyUI, Chatterbox). `delegate_sta
 - **Always use the `verifiable-task` skill**: write the check before handing off, run it on
   what comes back. agy's own "done" is not evidence; the wrapper fails closed, the model can still be wrong.
 - `ask_agy` and `ask_openai` refuse with `error: local_only` when the project, or a path in the
-  prompt, is under `config/delegate-local-only.txt` (anatomy-lab, mtw2). Use `ask_heretic` there.
+  prompt, is under `config/delegate-local-only.txt` (anatomy-lab, plus secret files such as
+  mtw2's env file and gitea's `stack.env`). Use `ask_heretic` there. Pass `model=` when the
+  project wants something other than Flash (mtw2 uses `gemini-4-argon-high`).
 - AI Pro quota is unpublished (5-hour window plus a weekly cap). A zero-token `status ERROR` is
   an expired login or exhausted quota — fall back to `ask_heretic`, then to doing it yourself,
   and say so. Calls are logged to `state/delegate.jsonl` (no content).

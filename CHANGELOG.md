@@ -16,6 +16,8 @@
 - **Measured live:** agy "PONG" took 15.6 s (2,042 input tokens of agy's own context), Heretic 3.5 s.
   Both guard paths refused.
 - `tests/test_delegate.py`: 8 tests, no network.
+- **Follow-up (Bill's calls):** mtw2 came off the list; only `mtw2/.env` stays blocked. Gitea's
+  `stack.env`, `runner-config.yaml` and `state/` were added.
 
 ## 2026-10-25 — the random ding: KWin bell muted; mtw2 public snapshot updated
 
