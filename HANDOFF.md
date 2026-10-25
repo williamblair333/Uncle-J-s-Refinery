@@ -1,5 +1,15 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-25 (main host, session end) — the random ding
+
+**Most important:** the loud random ding was the KWin X11 bell, ringing about once a second
+while MTW2 + Parley run. It's silenced by `kde-bell-mute.sh` (debian-howto-guides #14,
+autostarted; `just bell-mute --status` there). The source is probably Wine passing on the
+game's beeps as Parley clicks, but that's unproven. Worth checking in the mtw2 project.
+Discord (Parley turn posts) and Telegram (this repo's Stop hook "📝 Skill draft" after every
+reply) still ding; Bill mutes those in the apps. mtw2 publishes only as scrubbed snapshots
+(memory `project_mtw2-public-snapshots`); never mirror or unhide `bill/mtw2`.
+
 ## 2026-10-23 (main host, session end) — Bill's "fix all these": 14 agents, ~30 PRs across 18 repos
 
 **Most important (updated 2026-10-24 session end):** Claude Code was restarted and the dcup

@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-10-25 — the random ding: KWin bell muted; mtw2 public snapshot updated
+
+No Refinery code changed. The session's work landed in other repos and on the desktop:
+- **Diagnosed** three ding sources by logging `pactl subscribe` (new audio streams) and
+  `dbus-monitor` (notifications) through the Monitor tool: the KWin X11 bell (~1/s while
+  MTW2 + Parley run), Discord (Parley's per-turn posts) and Telegram (this repo's Stop-hook
+  "Skill draft" message after every reply).
+- **Fixed (debian-howto-guides PR #14)** `kde-bell-mute.sh` + `kde-kwin-bell-mute.md`: mutes
+  each `event.id="bell"` stream as it starts. Five KDE/X off-switches don't stop the bell on
+  KWin 6.3.6. Installed via KDE autostart. That Gitea repo is now public, as on GitHub.
+- **Published** mtw2 as a scrubbed snapshot `c6e8dca` to GitHub `williamblair333/mtw2` and
+  Gitea `bill/mtw2-public` (fast-forward; 487 tests pass on the scrubbed tree). `bill/mtw2`
+  stays private. The procedure is in memory `project_mtw2-public-snapshots`.
+- **Docs** scout: `scout/finds/mdombrov-33__vex-mcp.md` committed.
+
 ## 2026-10-24 — web search no longer fails silently; spoken replies pruned
 
 - **Fixed** `scripts/local_chat/server.py`: when SearXNG returns no results, the chat answers
