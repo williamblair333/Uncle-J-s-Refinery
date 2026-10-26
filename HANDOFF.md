@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — agy runs tests; local-health
+
+agy can run `just test` now (shim recursion fixed) and check local services with `local-health`. Run `bash features/antigravity/install.sh` to apply the permissions. Follow-ups for agy: make the sandbox marker unforgeable (a dir only bwrap creates, not an env var), and close `git grep -O<cmd>`, which runs a pager command unsandboxed and predates today.
+
 ## 2026-10-26 (main host) — light tier local-first; agy self-diagnosis fixes
 
 `light` tries Heretic, then ask_local, before agy quota; agy failures now return agy's real error, a tool-use tally and a copied CLI log (`state/agy-logs/`). Known gap: with two sessions running agy at once, the log copy can pick the other session's log (match on conversation_id next). Still to do, as agy jobs: Job B — the sandbox shim recursion that stops agy running `just test` (F3), `mkdir/cp/mv/touch/sleep/ps`, a `local-health` script instead of curl; Job C — agy rules (re-read before edit, no polling, `repo=` on jcodemunch, write findings as you go). Restart Claude Code so the delegate server loads this.

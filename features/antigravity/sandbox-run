@@ -11,6 +11,8 @@ set -euo pipefail
 [[ $# -gt 0 ]] || { echo "usage: sandbox-run COMMAND [ARGS...]" >&2; exit 2; }
 command -v bwrap >/dev/null || { echo "sandbox-run: bubblewrap (bwrap) is not installed" >&2; exit 127; }
 
+export SANDBOX_RUN=1
+
 here="$(pwd -P)"
 [[ "$here" != "$HOME" && "$here" != "/" ]] || { echo "sandbox-run: refusing to run with $here writable" >&2; exit 2; }
 
@@ -25,13 +27,13 @@ if uv="$(command -v uv)"; then
     case "$real" in "$HOME"/*) args+=(--ro-bind "$real" "$real") ;; esac
     args+=(--symlink "$real" "$HOME/.local/bin/uv")
 fi
-for d in "$HOME/.local/share/uv"; do [[ -d "$d" ]] && args+=(--ro-bind "$d" "$d"); done
+for d in "$HOME/.local/share/uv"; do [[ -d "$d" ]] && args+=(--dir "$HOME/.local/share" --ro-bind "$d" "$d"); done
 [[ -d "$HOME/.cache/uv" ]] && args+=(--bind "$HOME/.cache/uv" "$HOME/.cache/uv")
 # The current directory's own venv, so `sandbox-run pytest` finds it. It is already inside the
 # writable bind below; nothing outside the current directory is mounted on the caller's say-so.
 spath="$HOME/.local/bin:/usr/bin:/bin"
 [[ -d "$here/.venv/bin" ]] && spath="$here/.venv/bin:$spath"
 args+=(--bind "$here" "$here" --chdir "$here" --unshare-net --unshare-pid --die-with-parent
-       --setenv HOME "$HOME" --setenv PATH "$spath" --setenv UV_OFFLINE 1)
+       --setenv HOME "$HOME" --setenv PATH "$spath" --setenv UV_OFFLINE 1 --setenv SANDBOX_RUN 1)
 
 exec bwrap "${args[@]}" "$@"

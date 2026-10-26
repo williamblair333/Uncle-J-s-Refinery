@@ -219,7 +219,7 @@ def test_shipped_rules_have_no_wildcards_and_deny_destructive():
 def test_read_only_lookups_are_allowed():
     # a Gemini job died on `which sandbox-run`, its first look at PATH (2026-10-26)
     rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
-    for cmd in ("which", "basename", "dirname", "realpath", "readlink", "date", "git grep"):
+    for cmd in ("which", "basename", "dirname", "realpath", "readlink", "date", "git grep", "sleep", "ps", "local-health"):
         assert f"command({cmd})" in rules["allow"]
     # no echo: a redirect (`echo x > f`) would write, and the matcher isn't known to refuse it
     assert "command(echo)" not in rules["allow"]
