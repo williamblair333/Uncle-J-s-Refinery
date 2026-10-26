@@ -7,6 +7,7 @@
 - **`config/delegate-routing.json` & `scripts/delegate/server.py`**: `run_agy` now supports a `task` parameter mapping to model tiers (`light`, `code`, `hard`, `review`); models hitting AI Pro quota limits are recorded with parsed "Resets in XhYmZs" into `state/agy-quota.json` and skipped on subsequent runs until reset, with automatic fallback across the tier.
 - **`hooks/discipline/offload-check.sh` & `install-reliability.sh`**: PreToolUse hook for the Agent tool blocks Claude subagents unless the prompt contains a `CLAUDE-ONLY:` line or uses built-in subagents (`fork`, `claude-code-guide`, `statusline-setup`), redirecting work to `ask_agy` / `ask_local` / `ask_heretic`; logs decisions to `~/.claude/state/offload-check.jsonl` and fails open.
 - **Tests**: 14 tests in `tests/test_delegate.py` and 5 in `tests/test_offload_check.py` cover tier walking order, quota skipping and parsing, explicit model overrides, all-exhausted handling, status reporting, and hook permission decisions.
+- `offload-check.sh` committed executable (install-reliability.sh chmods it; the mode diff otherwise dirtied every checkout). Live check: an unmarked `Agent` spawn was denied and logged.
 
 ## 2026-10-26 — agy rules: one command per call
 
