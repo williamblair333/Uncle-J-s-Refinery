@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-26 — agy shims: habitual commands run sandboxed instead of ending the job
+
+- **`features/antigravity/shims/`**: one `_shim` linked as python, python3, pytest, uv, just,
+  make, find, sed, awk, jq, sort, uniq, cut, tr, xargs; each runs the real binary through
+  `sandbox-run`. `scripts/ask_agy.py` puts the directory first on agy's PATH (`agy_env()`), and
+  the names are allowed (absolute paths stay denied). Live: Flash ran `python3 -c` and
+  `git branch -a` despite the rules, and each denial ended a whole job. `git branch -a`,
+  `git branch --show-current` and `git remote -v` are allowed too.
+
 ## 2026-10-26 — auditor skill: quiet one-line checks, deep audits on request
 
 - **`global-skills/auditor`** (new), from Bill's "Ontological Auditor" idea (prompt drafted by

@@ -9,12 +9,12 @@ The policy below was written for Claude Code. Translations for you:
   `Read`/`Grep`/`Glob`/`Bash` are your file, grep, list and command tools; `Skill` is `/name`
   (skills in `~/.gemini/skills`). Hooks, settings.json, pre-mortem tokens and deploy notes
   don't apply to you.
-- **Direct shell:** only `ls cat head tail wc grep rg pwd stat file tree diff` and read-only git
-  (`status log diff show ls-files rev-parse blame`). **Any other command is denied and ends
-  your whole job.**
-- **Everything else through `sandbox-run`** (offline, writes only in the current directory):
-  `sandbox-run uv run pytest -q`, `sandbox-run find . -name "*.lua"`, python, sed, jq. Run the
-  tests yourself before you say a change is done.
+- **Shell:** `ls cat head tail wc grep rg pwd stat file tree diff`, read-only git (`status log
+  diff show ls-files rev-parse blame`, `branch -a`, `remote -v`), `sandbox-run`, and
+  `python3 python pytest uv just make find sed awk jq sort uniq cut tr xargs`, which run
+  sandboxed (offline; they see and write only the current directory). **Anything else, or a
+  full path like /usr/bin/python3, is denied and ends your whole job.** Run the tests yourself
+  before you say a change is done.
 - **Web:** the `fetch` tool with `"raw": true` (its HTML cleaner is broken here), paging with
   `max_length`/`start_index`. No curl, wget or `read_url`.
 - **Repo id once:** `resolve_repo` / `doc_resolve_repo` with your working directory's absolute
