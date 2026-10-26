@@ -147,6 +147,15 @@ def test_shipped_rules_have_no_wildcards_and_deny_destructive():
     assert "mcp(serena/*)" not in rules["allow"] and "mcp(duckdb/*)" not in rules["allow"]
 
 
+def test_read_only_lookups_are_allowed():
+    # a Gemini job died on `which sandbox-run`, its first look at PATH (2026-10-26)
+    rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
+    for cmd in ("which", "basename", "dirname", "realpath", "readlink", "date", "git grep"):
+        assert f"command({cmd})" in rules["allow"]
+    # no echo: a redirect (`echo x > f`) would write, and the matcher isn't known to refuse it
+    assert "command(echo)" not in rules["allow"]
+
+
 # ── sync_mcp: Claude user-scope servers -> agy mcp_config.json ───────────────
 
 def test_sync_mcp_copies_servers_keeps_others_and_is_private(tmp_path):

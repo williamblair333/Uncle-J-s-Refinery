@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (from mtw2) — agy read-only lookups
+
+agy may now run `which`, `basename`, `dirname`, `realpath`, `readlink`, `date` and `git grep`
+(`features/antigravity/permissions.json`). Apply with `features/antigravity/apply_permissions.py`
+after pulling. `echo` stays off on purpose: a redirect would write.
+
 ## 2026-10-26 (from mtw2) — agy shims
 
 Habitual commands (python3, find, sed, jq...) are shims first on agy's PATH (set by

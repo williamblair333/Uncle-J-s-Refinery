@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-26 — agy may run read-only lookups (`which` and friends)
+
+- **`features/antigravity/permissions.json`** allows `which`, `basename`, `dirname`, `realpath`,
+  `readlink`, `date` and `git grep`. An mtw2 Gemini job died on its first command,
+  `which sandbox-run`. `echo` stays off: a redirect would write and the matcher isn't known to
+  refuse one. Pinned by `test_read_only_lookups_are_allowed`.
+
 ## 2026-10-26 — session-end gate ignores scout state
 
 - **`.session-end.yml`** gets `exclude_paths: ["scout/"]`. **`scripts/session-end-check.sh`** drops those
