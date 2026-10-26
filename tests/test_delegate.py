@@ -383,6 +383,44 @@ def test_agy_log_copy_and_pruning(tmp_path, monkeypatch):
     assert log_path in dest_files
 
 
+def test_agy_log_copy_prefers_matching_conversation_id(tmp_path, monkeypatch):
+    src_dir = tmp_path / "src_logs"
+    src_dir.mkdir()
+    dest_dir = tmp_path / "dest_logs"
+    dest_dir.mkdir()
+    monkeypatch.setenv("DELEGATE_AGY_LOG_SRC", str(src_dir))
+    monkeypatch.setenv("DELEGATE_AGY_LOG_DIR", str(dest_dir))
+    monkeypatch.setattr(d, "LOCAL_ONLY_FILE", tmp_path / "none.txt")
+    monkeypatch.setattr(d, "LOG_PATH", None)
+
+    t0 = time.time()
+    src_log1 = src_dir / "cli-20261026_120000.log"
+    src_log1.write_text("session 1 conv-aaa-111 content")
+    os.utime(src_log1, (t0 + 10, t0 + 10))
+
+    src_log2 = src_dir / "cli-20261026_120001.log"
+    src_log2.write_text("session 2 conv-bbb-222 content")
+    os.utime(src_log2, (t0 + 20, t0 + 20))
+
+    # Match older candidate by conversation_id
+    def fake_fail_matching(prompt, **kw):
+        return {"ok": False, "error": "status ERROR", "response": "", "conversation_id": "conv-aaa-111"}
+
+    out = d.run_agy("hi", model="gemini-3.8-flash-low", cwd=str(tmp_path), ask=fake_fail_matching)
+    assert not out["ok"]
+    assert "log" in out
+    assert Path(out["log"]).read_text() == "session 1 conv-aaa-111 content"
+
+    # Fall back to newest when conversation_id doesn't match
+    def fake_fail_unmatched(prompt, **kw):
+        return {"ok": False, "error": "status ERROR", "response": "", "conversation_id": "conv-unknown"}
+
+    out2 = d.run_agy("hi", model="gemini-3.8-flash-low", cwd=str(tmp_path), ask=fake_fail_unmatched)
+    assert not out2["ok"]
+    assert "log" in out2
+    assert Path(out2["log"]).read_text() == "session 2 conv-bbb-222 content"
+
+
 def test_local_result_preserves_usage_and_hint():
     raw_ok = {"ok": True, "text": "answer", "usage": {"total_tokens": 42}, "hint": "useful hint"}
     res_ok = d._local_result("local:heretic", raw_ok)

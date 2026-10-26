@@ -18,7 +18,7 @@ here="$(pwd -P)"
 
 args=(--ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib64 /lib64
       --symlink usr/sbin /sbin --ro-bind /etc /etc --dev /dev --proc /proc --tmpfs /tmp
-      --tmpfs "$HOME")
+      --tmpfs "$HOME" --dir /run --dir /run/sandbox-run-inside)
 # uv itself (wherever it is installed), the Pythons it manages, and its cache (uv locks it)
 if uv="$(command -v uv)"; then
     real="$(readlink -f "$uv")"

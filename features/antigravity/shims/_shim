@@ -15,7 +15,7 @@ for d in "${dirs[@]}"; do
 done
 [[ -n "$real" ]] || { echo "shim: no real '$name' on PATH" >&2; exit 127; }
 real="$(readlink -f "$real")"
-if [[ "${SANDBOX_RUN:-0}" == "1" ]]; then
+if [[ -d "/run/sandbox-run-inside" ]]; then
     exec "$real" "$@"
 fi
 exec sandbox-run "$real" "$@"

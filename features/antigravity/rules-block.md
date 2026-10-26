@@ -4,26 +4,17 @@
 
 The policy below was written for Claude Code. Translations for you:
 
-- **Same MCP servers** (jcodemunch, jdocmunch, jdatamunch, serena, memweave, context7,
-  ask_local, duckdb, plus `fetch`); call their tools by name as the policy says. Claude's
-  `Read`/`Grep`/`Glob`/`Bash` are your file, grep, list and command tools; `Skill` is `/name`
-  (skills in `~/.gemini/skills`). Hooks, settings.json, pre-mortem tokens and deploy notes
-  don't apply to you.
-- **Shell:** `ls cat head tail wc grep rg pwd stat file tree diff which realpath readlink
-  basename dirname date`, read-only git (`status log diff show ls-files rev-parse blame grep`,
-  `branch -a`, `remote -v`), `sandbox-run`, and `python3 python pytest uv just make find sed
-  awk jq sort uniq cut tr xargs`, which run sandboxed (offline; current directory only). One
-  command per call; `&&`, `;`, `|`, `$( )` and backticks are denied as a whole, even when each
-  part is allowed. **Anything else, or a full path like /usr/bin/python3, is denied and ends
-  your whole job.** Run the tests yourself before you say a change is done.
-- **Web:** the `fetch` tool with `"raw": true` (its HTML cleaner is broken here), paging with
-  `max_length`/`start_index`. No curl, wget or `read_url`.
-- **Repo id once:** `resolve_repo` / `doc_resolve_repo` with your working directory's absolute
-  path, or the id in the prompt. **Never `list_repos` or `doc_list_repos`.** Known ids:
-  `local/mtw2`, `bill/jigsaw`, `bill/Uncle-J-s-Refinery`, `bill/M2TWEOP-library` (EOP C++).
-- **Cheapest call that answers:** `search_text`/`search_symbols`, then `get_symbol_source` or a
-  line range; docs via `search_sections` + `get_section`. Whole files only to edit them.
-  Don't repeat a search.
+- **Same MCP servers** (jcodemunch, jdocmunch, jdatamunch, serena, memweave, context7, ask_local, duckdb, `fetch`); call by name. Tools map to your file, grep, list, command tools; skills in `~/.gemini/skills`. Hooks/settings.json don't apply.
+- **Shell:** `ls cat head tail wc grep rg pwd stat file tree diff which realpath readlink basename dirname date`, read-only git (`status log diff show ls-files rev-parse blame`, `branch -a`, `remote -v`), `sandbox-run`, `python3 python pytest uv just make find sed awk jq sort uniq cut tr xargs` (sandboxed; current dir only). `&&`, `;`, `|`, `$( )`, backticks denied. Anything else, or a full path like /usr/bin/python3, is denied. Run the tests yourself before you say a change is done.
+- Re-read the exact target lines right before every edit; a failed edit ends the whole run.
+- Never poll or wait (no sleep loops, no background processes); run commands in the foreground.
+- A denied command ends the whole run: prefer file tools and the munch MCPs over shell; one command per call.
+- jcodemunch/jdocmunch calls need repo= (e.g. bill/Uncle-J-s-Refinery); call resolve_repo first if unsure.
+- For long jobs, write findings or edits as you go, not at the end.
+- `local-health` checks local services; curl is denied.
+- **Web:** the `fetch` tool with `"raw": true` (cleaner broken), page with `max_length`/`start_index`. No curl/wget/`read_url`.
+- **Repo id:** call `resolve_repo` / `doc_resolve_repo` first if unsure. **Never `list_repos` or `doc_list_repos`.** Known ids: `local/mtw2`, `bill/jigsaw`, `bill/Uncle-J-s-Refinery`, `bill/M2TWEOP-library` (EOP C++).
+- **Cheapest call that answers:** `search_text`/`search_symbols` then source or line range; docs via `search_sections` + `get_section`. Whole files only to edit.
 
 @[Retrieval stack routing policy]({STACK_ROOT}/CLAUDE.md)
 <!-- UNCLE-J-AGY-END -->

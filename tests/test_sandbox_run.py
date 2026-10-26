@@ -71,11 +71,21 @@ def test_sandbox_run_exports_sandbox_run(tmp_path):
     assert out.returncode == 0 and out.stdout.strip() == "1"
 
 
-def test_shim_passthrough_when_sandbox_run_set(tmp_path):
-    env = {**os.environ, "PATH": f"{SHIMS}:{SCRIPT.parent}:{os.environ['PATH']}", "SANDBOX_RUN": "1"}
-    out = subprocess.run(["python3", "-c", "import os; print(os.environ.get('SANDBOX_RUN'))"],
-                         cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
+def test_shim_passthrough_when_marker_present(tmp_path):
+    # Inside sandbox-run, the unforgeable /run/sandbox-run-inside marker exists.
+    # The shim must pass through directly without re-invoking sandbox-run.
+    out = run(tmp_path, "sh", "-c", f"PATH={SHIMS}:$PATH python3 -c 'import os; print(os.environ.get(\"SANDBOX_RUN\"))'")
     assert out.returncode == 0 and out.stdout.strip() == "1"
+
+
+def test_shim_sandboxes_when_sandbox_run_set_without_marker(tmp_path):
+    # When SANDBOX_RUN=1 is faked in env on the host without the marker,
+    # the shim must not trust it and must still route through sandbox-run.
+    env = {**os.environ, "PATH": f"{SHIMS}:{SCRIPT.parent}:{os.environ['PATH']}", "SANDBOX_RUN": "1"}
+    code = "import os; print(os.path.isdir('/run/sandbox-run-inside'))"
+    out = subprocess.run(["python3", "-c", code],
+                         cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0 and out.stdout.strip() == "True"
 
 
 def test_local_health_rejects_unknown_argument_and_urls(tmp_path):
@@ -99,3 +109,14 @@ def test_local_health_output_format(tmp_path):
     assert parts[0] == "heretic"
     assert parts[1] in ("up", "down")
     assert parts[2].isdigit()
+
+
+def test_local_health_down_service_prints_exact_000(tmp_path):
+    lh = SHIMS / "local-health"
+    out = subprocess.run([str(lh), "all"], capture_output=True, text=True)
+    assert out.returncode == 0
+    lines = [line.split() for line in out.stdout.strip().splitlines()]
+    down_lines = [parts for parts in lines if parts[1] == "down"]
+    # At least one service is down in test environment
+    for parts in down_lines:
+        assert parts[2] == "000"

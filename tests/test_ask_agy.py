@@ -115,6 +115,16 @@ def test_nonzero_exit_and_no_result_is_failure(tmp_path):
     assert not out["ok"] and "exit 3" in out["error"]
 
 
+def test_conversation_id_captured_from_init(tmp_path):
+    out, _ = run(tmp_path, [{"event": "init", "conversation_id": "conv-4d9b427c"}, result("ok")])
+    assert out["ok"] and out["conversation_id"] == "conv-4d9b427c"
+
+
+def test_conversation_id_captured_from_nested_init(tmp_path):
+    out, _ = run(tmp_path, [{"event": "init", "init": {"conversation_id": "conv-nested-987"}}, result("ok")])
+    assert out["ok"] and out["conversation_id"] == "conv-nested-987"
+
+
 def test_edits_flag_and_timeout_passed(tmp_path):
     script, argv_log = fake_agy(tmp_path, [result("ok")])
     ask.ask("p", agy_bin=str(script), cwd=str(tmp_path), edits=True, timeout=42)
@@ -219,8 +229,12 @@ def test_shipped_rules_have_no_wildcards_and_deny_destructive():
 def test_read_only_lookups_are_allowed():
     # a Gemini job died on `which sandbox-run`, its first look at PATH (2026-10-26)
     rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
-    for cmd in ("which", "basename", "dirname", "realpath", "readlink", "date", "git grep", "sleep", "ps", "local-health"):
+    for cmd in ("which", "basename", "dirname", "realpath", "readlink", "date", "sleep", "ps", "local-health"):
         assert f"command({cmd})" in rules["allow"]
+    assert "command(git grep)" not in rules["allow"]
+    assert "command(git grep -O)" in rules["deny"]
+    assert "command(git grep --open-files-in-pager)" in rules["deny"]
+    assert "command(grep)" in rules["allow"] and "command(rg)" in rules["allow"]
     # no echo: a redirect (`echo x > f`) would write, and the matcher isn't known to refuse it
     assert "command(echo)" not in rules["allow"]
 
