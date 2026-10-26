@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — delegate routing
+
+Delegate task tiers (light, code, hard, review) with automatic AI Pro quota fallback and reset tracking landed in scripts/delegate/server.py and config/delegate-routing.json.
+hooks/discipline/offload-check.sh blocks Claude subagent calls without CLAUDE-ONLY: marker, redirecting to delegate.
+Re-run `bash install-reliability.sh` to register the hook.
+~/.claude/state/offload-check.jsonl counts Claude subagent spawns allowed vs sent back to offload.
+
 ## 2026-10-26 (main host) — agy: one command per call
 
 agy's rules now say one command per call (compounds are denied whole) and list the new read-only lookups. Deployed with `bash features/antigravity/install.sh`. agy still ends jobs on a denial, and the wrapper doesn't say which command was denied; capturing that is the next fix if denials keep costing jobs.

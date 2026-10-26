@@ -6,8 +6,11 @@ Usage:
 
 Backends, one tool each:
 
-- ask_agy:     Antigravity CLI (Gemini Flash by default) via scripts/ask_agy.py, which fails
-               honestly when agy claims success it didn't have. Google AI Pro quota.
+- ask_agy:     Antigravity CLI via scripts/ask_agy.py, which fails honestly when agy claims
+               success it didn't have. Google AI Pro quota. `task` picks a tier from
+               config/delegate-routing.json (an ordered model list); a model whose quota is
+               spent is recorded in state/agy-quota.json until its reset time and skipped,
+               and the next model in the tier answers. `model` bypasses the tiers.
 - ask_heretic: the local llama-server (Heretic) on :8090. Nothing leaves the machine.
 - ask_openai:  any OpenAI-compatible API. Off until the env var named by
                DELEGATE_OPENAI_KEY_ENV (default OPENAI_API_KEY) holds a key and
@@ -21,12 +24,14 @@ directory, so a session inside a local-only repo can't ship it to Google or Open
 
 Every call is logged to state/delegate.jsonl (backend, model, seconds, ok; no content).
 """
+import datetime
 import importlib.util
 import json
 import os
 import re
 import shutil
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -42,6 +47,10 @@ OPENAI_URL = os.environ.get("DELEGATE_OPENAI_URL", "https://api.openai.com/v1").
 OPENAI_MODEL = os.environ.get("DELEGATE_OPENAI_MODEL", "")
 OPENAI_KEY_ENV = os.environ.get("DELEGATE_OPENAI_KEY_ENV", "OPENAI_API_KEY")
 LOCAL_ONLY_FILE = _REPO / "config" / "delegate-local-only.txt"
+ROUTING_FILE = _REPO / "config" / "delegate-routing.json"
+QUOTA_PATH = Path(os.environ.get("DELEGATE_QUOTA_FILE") or _REPO / "state" / "agy-quota.json")
+DEFAULT_QUOTA_SECONDS = 3600
+_RESET_RE = re.compile(r"resets?\s+in\s+(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?", re.I)
 _log_env = os.environ.get("DELEGATE_LOG")
 LOG_PATH = None if _log_env == "" else Path(_log_env or _REPO / "state" / "delegate.jsonl")
 _PATHLIKE = re.compile(r"(?:~|/)[^\s'\"`<>|;,)]+")
@@ -118,22 +127,132 @@ def _refused(cwd: str, prompt: str) -> dict | None:
     return None
 
 
+def load_routing(path: Path | None = None) -> dict:
+    """{"default": tier, "tiers": {tier: [model, ...]}} from config/delegate-routing.json.
+
+    A missing or malformed file falls back to one "code" tier holding AGY_MODEL."""
+    try:
+        data = json.loads((path or ROUTING_FILE).read_text())
+        tiers = {t: [m for m in ms if isinstance(m, str) and m]
+                 for t, ms in data["tiers"].items() if isinstance(ms, list)}
+        tiers = {t: ms for t, ms in tiers.items() if ms}
+        if tiers:
+            default = data.get("default")
+            return {"default": default if default in tiers else next(iter(tiers)), "tiers": tiers}
+    except (OSError, ValueError, KeyError, AttributeError, TypeError):
+        pass
+    return {"default": "code", "tiers": {"code": [AGY_MODEL]}}
+
+
+def read_quota(now: float | None = None) -> dict[str, float]:
+    """{model: unix_until} for models still exhausted. Missing or corrupt file = {}."""
+    now = time.time() if now is None else now
+    try:
+        data = json.loads(QUOTA_PATH.read_text())
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {m: float(u) for m, u in data.items()
+            if isinstance(m, str) and isinstance(u, (int, float)) and not isinstance(u, bool)
+            and u > now}
+
+
+def reset_seconds(text: str) -> int:
+    """Seconds from a "Resets in 97h54m55s" message; DEFAULT_QUOTA_SECONDS if absent."""
+    m = _RESET_RE.search(text or "")
+    if m and any(m.groups()):
+        h, mi, s = (int(g or 0) for g in m.groups())
+        if total := h * 3600 + mi * 60 + s:
+            return total
+    return DEFAULT_QUOTA_SECONDS
+
+
+def mark_exhausted(model: str, text: str = "", now: float | None = None) -> float:
+    """Record model as exhausted until the reset time in text; atomic write. Returns until."""
+    now = time.time() if now is None else now
+    until = now + reset_seconds(text)
+    quota = read_quota(now)
+    quota[model] = until
+    tmp = None
+    try:
+        QUOTA_PATH.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=QUOTA_PATH.parent, prefix=".agy-quota.")
+        with os.fdopen(fd, "w") as f:
+            json.dump(quota, f)
+        os.replace(tmp, QUOTA_PATH)
+        tmp = None
+    except OSError:
+        pass
+    finally:
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+    return until
+
+
+def _is_exhausted(out: dict) -> bool:
+    """A failed agy result that means the model's quota is spent, not that the task failed."""
+    if out.get("ok"):
+        return False
+    usage = out.get("usage")
+    tokens = (usage.get("total_tokens") or usage.get("totalTokens") or 0) if isinstance(usage, dict) else 0
+    if out.get("error") == "status ERROR" and not tokens:
+        return True
+    return "quota" in f"{out.get('error', '')} {out.get('response', '')}".lower()
+
+
+def _iso(ts: float) -> str:
+    return datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+_STATUS_ERROR_HINT = ("zero-token ERROR is usually an expired login or exhausted AI Pro quota; "
+                      "run `agy` in a terminal, else fall back to ask_heretic or do it yourself")
+
+
 def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
-            timeout: int | None = None, edits: bool = False, ask=ask_agy.ask) -> dict:
+            timeout: int | None = None, edits: bool = False, ask=ask_agy.ask,
+            task: str | None = None) -> dict:
     cwd = cwd or os.getcwd()
     if refused := _refused(cwd, prompt):
         return refused
-    model = model or AGY_MODEL
-    started = time.time()
-    out = ask(prompt, cwd=cwd, edits=edits, timeout=timeout or AGY_TIMEOUT, model=model)
-    out = {k: v for k, v in out.items() if v is not None and v != [] and v != {} and v != ""}
-    out["ok"] = bool(out.get("ok"))
-    out["model"] = model
-    if out.get("error") == "status ERROR":
-        out["hint"] = ("zero-token ERROR is usually an expired login or exhausted AI Pro quota; "
-                       "run `agy` in a terminal, else fall back to ask_heretic or do it yourself")
-    _log("agy", model, started, out)
-    return out
+    routing = load_routing()
+    tier = task or routing["default"]
+    if model:
+        models = [model]
+    elif tier in routing["tiers"]:
+        models = routing["tiers"][tier]
+    else:
+        return {"ok": False, "error": f"unknown task {tier!r}",
+                "detail": f"use one of: {', '.join(routing['tiers'])}"}
+    quota = read_quota()
+    skipped = []
+    for m in models:
+        if not model and m in quota:
+            skipped.append({"model": m, "reason": f"exhausted until {_iso(quota[m])}"})
+            continue
+        started = time.time()
+        out = ask(prompt, cwd=cwd, edits=edits, timeout=timeout or AGY_TIMEOUT, model=m)
+        out = {k: v for k, v in out.items() if v is not None and v != [] and v != {} and v != ""}
+        out["ok"] = bool(out.get("ok"))
+        out["model"] = m
+        _log("agy", m, started, out)
+        if _is_exhausted(out):
+            mark_exhausted(m, f"{out.get('error', '')} {out.get('response', '')}")
+            if model:  # explicit model: report its own result, no fallback
+                out["hint"] = _STATUS_ERROR_HINT
+                return out
+            skipped.append({"model": m, "reason": "quota exhausted"})
+            continue
+        if out.get("error") == "status ERROR":
+            out["hint"] = _STATUS_ERROR_HINT
+        if skipped:
+            out["skipped"] = skipped
+        return out
+    return {"ok": False, "error": f"all models in tier {tier} exhausted", "skipped": skipped,
+            "hint": "fall back to ask_heretic / ask_local, or do it yourself"}
 
 
 def run_openai(prompt: str, system: str | None = None, model: str | None = None,
@@ -193,6 +312,14 @@ def run_media(kind: str, prompt: str) -> dict:
     return out
 
 
+def agy_models() -> dict:
+    """Per tier, the first model not marked exhausted; plus {model: ISO reset time}. No pings."""
+    routing, quota = load_routing(), read_quota()
+    return {"tiers": {t: next((m for m in ms if m not in quota), None)
+                      for t, ms in routing["tiers"].items()},
+            "exhausted": {m: _iso(u) for m, u in sorted(quota.items())}}
+
+
 def status() -> dict:
     try:
         with urllib.request.urlopen(f"{local_chat().LLAMA_URL}/v1/models", timeout=3):
@@ -203,6 +330,7 @@ def status() -> dict:
     return {
         "agy": {"installed": bool(shutil.which(os.environ.get("AGY_BIN") or "agy")),
                 "model": AGY_MODEL},
+        "agy_models": agy_models(),
         "heretic": heretic,
         "openai": "configured" if os.environ.get(OPENAI_KEY_ENV) and OPENAI_MODEL else "not_configured",
         "cwd": cwd,
@@ -226,12 +354,14 @@ def build_server():
         return status()
 
     @mcp.tool(name="ask_agy")
-    def _agy(prompt: str, cwd: str | None = None, model: str | None = None,
-             timeout: int | None = None, edits: bool = False) -> dict:
-        """Run one prompt in Antigravity CLI (default Gemini Flash). agy can read files and call
-        the stack's MCP servers under a read-only allow list; edits=True lets it write inside
-        cwd. Default cwd is this session's project. Takes seconds to minutes."""
-        return run_agy(prompt, cwd, model, timeout, edits)
+    def _agy(prompt: str, cwd: str | None = None, task: str | None = None,
+             model: str | None = None, timeout: int | None = None, edits: bool = False) -> dict:
+        """Run one prompt in Antigravity CLI. agy reads files and calls the stack's MCP servers
+        read-only; edits=True lets it write inside cwd. Default cwd is the session's project.
+        task picks the model, falling back when a quota is spent: light=trivial lookups/summaries;
+        code=default, ordinary coding and research; hard=deep reasoning (Opus first);
+        review=second opinion on Claude's work (non-Claude first). model overrides task."""
+        return run_agy(prompt, cwd, model, timeout, edits, task=task)
 
     @mcp.tool(name="ask_heretic")
     def _heretic(prompt: str, system: str | None = None, think: bool = False) -> dict:

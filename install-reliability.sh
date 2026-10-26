@@ -165,7 +165,7 @@ else
     done
 fi
 
-# ── Discipline hooks (edit-surface-guard, grep-guard, push-guard) ────────
+# ── Discipline hooks (edit-surface-guard, grep-guard, push-guard, offload-check) ──
 step "Installing discipline hooks to $CLAUDE_DIR/hooks/discipline"
 mkdir -p "$CLAUDE_DIR/hooks/discipline"
 if [ ! -d "$STACK_ROOT/hooks/discipline" ]; then
@@ -220,6 +220,24 @@ else
               || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
         else
             ok "credential-guard PreToolUse hook already wired in settings.json"
+        fi
+
+        # Wire offload-check (Agent tool) on its own key, for the same reason as credential-guard.
+        # `|| exit 1` keeps a broken script (bash exit 2 = block) from denying every subagent.
+        _offload_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("offload-check"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_offload_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"Agent","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/offload-check.sh || exit 1","timeout":10}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "offload-check PreToolUse hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "offload-check PreToolUse hook already wired in settings.json"
         fi
 
         # Wire Stop hook (unpushed-warn) if not already present
