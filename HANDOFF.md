@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (from mtw2) — agy can run its own tests
+
+`sandbox-run` (features/antigravity) is now the one way agy runs code: offline bubblewrap, empty
+home, cwd-only writes. Re-run `bash features/antigravity/install.sh` after pulling so the allow
+rule, the rules block and the `~/.local/bin` link are live. Open: other languages' toolchains
+(node, cargo) are not bound in yet; add them to `sandbox-run` when a project needs them.
+
 ## 2026-10-25 (main host) — delegate by default
 
 **Most important:** the new `delegate` MCP server (user scope) gives every project `ask_agy`,

@@ -19,6 +19,7 @@
     "command(git ls-files)",
     "command(git rev-parse)",
     "command(git blame)",
+    "command(sandbox-run)",
     "mcp(jcodemunch/*)",
     "mcp(jdocmunch/*)",
     "mcp(jdatamunch/*)",

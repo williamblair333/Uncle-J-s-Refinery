@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-26 — sandbox-run: agy runs the code it writes, offline
+
+- **`features/antigravity/sandbox-run`** (new): bubblewrap around one command; no network, an
+  empty home with only uv's tool, Pythons and cache bound in, the current directory the only
+  writable path, `UV_OFFLINE=1`. agy's own `--sandbox` keeps the host network and user (probed).
+- **Permissions:** `command(sandbox-run)` allowed; curl and wget stay denied. The rules block tells
+  agy to run tests through it and to read the web with `read_url` (already allowed).
+- **install.sh** step 5 links it into `~/.local/bin`. Tests: `tests/test_sandbox_run.py`.
+
 ## 2026-10-25 — delegate MCP server: offload to agy/Gemini, Heretic, OpenAI, media by default
 
 - **`scripts/delegate/server.py`** (new, user scope): `ask_agy` (wraps `ask_agy.ask`, default

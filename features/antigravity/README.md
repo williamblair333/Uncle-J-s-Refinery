@@ -15,7 +15,8 @@ bash features/antigravity/install.sh     # permissions, MCP servers, rules, skil
 
 | File | What it does |
 |---|---|
-| `install.sh` | Runs the four steps below; every step merges and keeps a `.bak`. |
+| `install.sh` | Runs the five steps below; every step merges and keeps a `.bak`. |
+| `sandbox-run` | The one way agy runs code: bubblewrap with no network, an empty home (only uv bound in) and the current directory the only writable path. agy's own `--sandbox` keeps the network and the user (probed 2026-10-26). Linked to `~/.local/bin`. |
 | `permissions.json` | Read-only shell allow list, MCP allow list (read-oriented servers, Serena read tools only, no DuckDB), deny list for destructive commands and index-deleting tools. |
 | `apply_permissions.py` | Merges those rules into `~/.gemini/antigravity-cli/settings.json` (keeps agy's own keys). |
 | `sync_mcp.py` | Copies Claude's user-scope MCP servers (`~/.claude.json`) into `~/.gemini/config/mcp_config.json` (mode 0600; agy-only servers kept). Re-run when registrations change. |
