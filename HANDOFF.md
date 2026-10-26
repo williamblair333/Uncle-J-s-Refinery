@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — agy: one command per call
+
+agy's rules now say one command per call (compounds are denied whole) and list the new read-only lookups. Deployed with `bash features/antigravity/install.sh`. agy still ends jobs on a denial, and the wrapper doesn't say which command was denied; capturing that is the next fix if denials keep costing jobs.
+
 ## 2026-10-26 (main host) — Heretic wake retry
 
 `ask_heretic` now waits out a wake-from-sleep reload (503 / dropped connection) and retries
