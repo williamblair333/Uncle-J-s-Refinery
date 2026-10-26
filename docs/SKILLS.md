@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 75 repo, 1 workflows.
+Totals: 76 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -30,6 +30,7 @@ Totals: 75 repo, 1 workflows.
 | `agent-harness-competitive-analysis` | Structured competitive analysis of an AI agent harness or framework — maps the product against direct/indirect competitors, produces a comparison table, and id… | auto | Refinery stack | repo |
 | `astropy` | Core Python library for astronomy and astrophysics workflows that need Astropy APIs, including units/quantities, coordinates, FITS I/O, tables, time systems, W… | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `audit-pipeline-fabrication-risk` | Systematically audit an AI pipeline for hallucination/fabrication propagation paths — where model-generated content (especially URLs, issue numbers, citations)… | auto | Refinery stack | repo |
+| `auditor` | Use when Bill states a plan, decision, or change to how he works or what his systems do — deferring a fix, turning something off, choosing how something looks… | auto | any agent | repo |
 | `auto-maintain-commit-and-deploy` | Use when a cron-based auto-maintenance script commits new skills or plugins to git but the install script still has a hardcoded list that needs manual updating… | auto | Claude Code | repo |
 | `blue-team` | Use when performing defensive security work — hardening controls, implementing patches from red-team findings, threat modeling, detection engineering, incident… | auto | Claude Code | repo |
 | `building-circuit-boards` | Use when asked to design, make, revise, or order a printed circuit board (PCB), produce Gerbers or a fab zip for JLCPCB/PCBWay, or create a KiCad board or sche… | auto | any agent | repo |

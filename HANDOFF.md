@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — auditor skill
+
+New `auditor` skill: one quiet `Auditor:` line on plans that bear on Bill's seven goals, plus a
+deep audit on "challenge me" / `/auditor`. Watch for noise. If the quiet line shows up on
+routine turns, raise the bar in quiet mode; don't add exceptions. Not yet run in a live session.
+
 ## 2026-10-26 (main host) — nightly upgrades follow releases
 
 `auto-maintain.sh` now upgrades a munch package whenever a newer release exists, as well as at
