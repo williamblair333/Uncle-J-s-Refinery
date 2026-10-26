@@ -45,6 +45,11 @@ import yaml, os, sys
 config    = yaml.safe_load(open(os.environ["SESSION_END_CONFIG"]))
 changed   = set(f.strip() for f in os.environ["SESSION_END_CHANGED"].splitlines() if f.strip())
 
+# Exclude paths
+exclude_prefixes = tuple(config.get("exclude_paths") or [])
+if exclude_prefixes:
+    changed = {f for f in changed if not f.startswith(exclude_prefixes)}
+
 # File-type gate
 trigger_exts = set(config.get("trigger", {}).get("file_types", []))
 triggered = any(

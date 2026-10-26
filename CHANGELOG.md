@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-10-26 — session-end gate ignores scout state
+
+- **`.session-end.yml`** gets `exclude_paths: ["scout/"]`. **`scripts/session-end-check.sh`** drops those
+  paths before the file-type gate, so the nightly scout's `answers.json` no longer triggers a
+  false "stale mandatory docs" Telegram at every session end. A missing key keeps the old behaviour.
+- Four tests in `tests/test_session_end_check.py` (14 pass). Implementation and tests drafted by agy;
+  diff reviewed and tests run by Claude. Scout state from the 2026-10-26 nightly run committed alongside.
+
 ## 2026-10-26 — agy shims: habitual commands run sandboxed instead of ending the job
 
 - **`features/antigravity/shims/`**: one `_shim` linked as python, python3, pytest, uv, just,

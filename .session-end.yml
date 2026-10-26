@@ -1,5 +1,8 @@
 version: 1
 
+# Machine-written scout state, not work needing docs.
+exclude_paths: ["scout/"]
+
 # File-type gate: pre-commit hook only fires when staged files match these extensions.
 # Pure doc/config-only commits (e.g. fixing a typo in README) pass freely.
 trigger:
