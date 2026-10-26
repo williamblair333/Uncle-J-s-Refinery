@@ -10,7 +10,10 @@ Backends, one tool each:
                success it didn't have. Google AI Pro quota. `task` picks a tier from
                config/delegate-routing.json (an ordered model list); a model whose quota is
                spent is recorded in state/agy-quota.json until its reset time and skipped,
-               and the next model in the tier answers. `model` bypasses the tiers.
+               and the next model in the tier answers. `model` bypasses the tiers. A tier
+               entry named "local:heretic" or "local:ask_local" is a free local model
+               (Heretic, the ask_local Ollama model) tried in order; it is skipped for
+               edits=True or a prompt naming a path, since it cannot read files or run tools.
 - ask_heretic: the local llama-server (Heretic) on :8090. Nothing leaves the machine.
 - ask_openai:  any OpenAI-compatible API. Off until the env var named by
                DELEGATE_OPENAI_KEY_ENV (default OPENAI_API_KEY) holds a key and
@@ -54,7 +57,9 @@ _RESET_RE = re.compile(r"resets?\s+in\s+(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?"
 _log_env = os.environ.get("DELEGATE_LOG")
 LOG_PATH = None if _log_env == "" else Path(_log_env or _REPO / "state" / "delegate.jsonl")
 _PATHLIKE = re.compile(r"(?:~|/)[^\s'\"`<>|;,)]+")
+LOCAL_PREFIX = "local:"
 _local_chat = None
+_ask_local = None
 
 
 def local_chat():
@@ -67,6 +72,18 @@ def local_chat():
         spec.loader.exec_module(mod)
         _local_chat = mod
     return _local_chat
+
+
+def ask_local_mod():
+    """scripts/ask_local/server.py, loaded on first use like local_chat()."""
+    global _ask_local
+    if _ask_local is None:
+        spec = importlib.util.spec_from_file_location(
+            "ask_local_server", _REPO / "scripts" / "ask_local" / "server.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _ask_local = mod
+    return _ask_local
 
 
 def local_only_roots(path: Path = LOCAL_ONLY_FILE, env: str | None = None) -> list[Path]:
@@ -111,6 +128,8 @@ def _log(backend: str, model: str | None, started: float, out: dict) -> None:
            "seconds": round(time.time() - started, 1), "ok": bool(out.get("ok"))}
     if not out.get("ok"):
         rec["error"] = str(out.get("error", ""))[:200]
+    if out.get("tools"):
+        rec["tools"] = out["tools"]
     try:
         LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         with LOG_PATH.open("a") as f:
@@ -197,11 +216,68 @@ def _is_exhausted(out: dict) -> bool:
     """A failed agy result that means the model's quota is spent, not that the task failed."""
     if out.get("ok"):
         return False
+    # agy's own error text only: a response that merely discusses quota is not exhaustion
+    text = f"{out.get('error', '')} {out.get('detail', '')}".lower()
+    if "resource_exhausted" in text or "individual quota reached" in text:
+        return True
     usage = out.get("usage")
     tokens = (usage.get("total_tokens") or usage.get("totalTokens") or 0) if isinstance(usage, dict) else 0
     if out.get("error") == "status ERROR" and not tokens:
         return True
-    return "quota" in f"{out.get('error', '')} {out.get('response', '')}".lower()
+    return False
+
+
+def _copy_agy_log(model: str, started: float) -> str | None:
+    """Copy the agy run's CLI log on failure to state/agy-logs, keeping newest 50."""
+    try:
+        src_env = os.environ.get("DELEGATE_AGY_LOG_SRC")
+        src_dir = Path(src_env).expanduser() if src_env else (Path.home() / ".gemini" / "antigravity-cli" / "log")
+        if not src_dir.is_dir():
+            return None
+        candidates = []
+        for p in src_dir.glob("cli-*.log"):
+            try:
+                st = p.stat()
+                if st.st_mtime >= (started - 0.01):
+                    candidates.append((st.st_mtime, p))
+            except OSError:
+                continue
+        if not candidates:
+            return None
+        candidates.sort(key=lambda x: x[0])
+        newest = candidates[-1][1]
+
+        dest_env = os.environ.get("DELEGATE_AGY_LOG_DIR")
+        dest_dir = Path(dest_env).expanduser() if dest_env else (_REPO / "state" / "agy-logs")
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        safe_model = model.replace("/", "_")
+        dest = dest_dir / f"{stamp}-{safe_model}.log"
+        counter = 1
+        while dest.exists():
+            dest = dest_dir / f"{stamp}-{safe_model}-{counter}.log"
+            counter += 1
+
+        shutil.copy2(newest, dest)
+
+        # prune to newest 50
+        all_logs = []
+        for p in dest_dir.glob("*.log"):
+            try:
+                all_logs.append((p.stat().st_mtime, p))
+            except OSError:
+                continue
+        all_logs.sort(key=lambda x: x[0])
+        if len(all_logs) > 50:
+            for _, old_path in all_logs[:-50]:
+                try:
+                    old_path.unlink()
+                except OSError:
+                    pass
+        return str(dest)
+    except Exception:
+        return None
 
 
 def _iso(ts: float) -> str:
@@ -210,26 +286,107 @@ def _iso(ts: float) -> str:
 
 _STATUS_ERROR_HINT = ("zero-token ERROR is usually an expired login or exhausted AI Pro quota; "
                       "run `agy` in a terminal, else fall back to ask_heretic or do it yourself")
+_LOCAL_CANNOT = "local model cannot read files or edit"
+
+
+def _heretic_raw(prompt: str, system: str | None = None, think: bool = False) -> dict:
+    """One Heretic call, unlogged: {"ok", "text", "usage"} or {"ok": False, "error"}."""
+    messages = ([{"role": "system", "content": system}] if system else []) + \
+        [{"role": "user", "content": prompt}]
+    out = local_chat().ask_heretic(messages, think=think)
+    if not out["ok"] and "unreachable" in out.get("error", ""):
+        out["hint"] = "start it from the chat page (:8091) or scripts/heretic.sh"
+    return out
+
+
+def run_ask_local(prompt: str) -> dict:
+    """One prompt to the ask_local model (Ollama by default): {"text", ...} or {"error", ...}."""
+    al = ask_local_mod()
+    with al.httpx.Client(base_url=al.OLLAMA_URL, timeout=al.TIMEOUT_S) as http:
+        return al.ask(al.LocalClient(http), prompt)
+
+
+def _local_result(name: str, raw) -> dict:
+    """A local backend's result in agy's shape: {"ok", "response", "model"} plus "error"."""
+    raw = raw if isinstance(raw, dict) else {}
+    text = next((raw[k] for k in ("text", "response", "answer") if isinstance(raw.get(k), str)), "")
+    text = text.strip()
+    backend_ok = bool(raw.get("ok", "error" not in raw))
+    if backend_ok and text:
+        res = {"ok": True, "response": text, "model": name}
+        if raw.get("usage"):
+            res["usage"] = raw["usage"]
+        if raw.get("hint"):
+            res["hint"] = raw["hint"]
+        return res
+    if backend_ok:
+        err = "empty response"
+    else:
+        err = str(raw.get("error") or "failed")
+        if raw.get("detail"):
+            err = f"{err}: {raw['detail']}"
+    err_res = {"ok": False, "error": err, "model": name}
+    if raw.get("usage"):
+        err_res["usage"] = raw["usage"]
+    if raw.get("hint"):
+        err_res["hint"] = raw["hint"]
+    return err_res
+
+
+def _call_local(name: str, prompt: str, local: dict) -> dict:
+    fn = local.get(name)
+    if fn is None:
+        return {"ok": False, "error": f"unknown local backend {name!r}", "model": name}
+    started = time.time()
+    try:
+        raw = fn(prompt)
+    except Exception as e:  # noqa: BLE001 — a broken local backend must fall through, not crash
+        raw = {"ok": False, "error": f"{type(e).__name__}: {e}"}
+    out = _local_result(name, raw)
+    _log("local", name, started, out)
+    return out
 
 
 def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
             timeout: int | None = None, edits: bool = False, ask=ask_agy.ask,
-            task: str | None = None) -> dict:
+            task: str | None = None, local: dict | None = None) -> dict:
     cwd = cwd or os.getcwd()
-    if refused := _refused(cwd, prompt):
-        return refused
+    if local is None:
+        local = {"local:heretic": _heretic_raw, "local:ask_local": run_ask_local}
+    refused = _refused(cwd, prompt)
     routing = load_routing()
     tier = task or routing["default"]
     if model:
+        if refused and not model.startswith(LOCAL_PREFIX):
+            return refused
         models = [model]
     elif tier in routing["tiers"]:
         models = routing["tiers"][tier]
+        if refused:  # nothing may leave the machine: only local entries remain
+            models = [m for m in models if m.startswith(LOCAL_PREFIX)]
+            if not models:
+                return refused
     else:
+        if refused:
+            return refused
         return {"ok": False, "error": f"unknown task {tier!r}",
                 "detail": f"use one of: {', '.join(routing['tiers'])}"}
     quota = read_quota()
     skipped = []
     for m in models:
+        if m.startswith(LOCAL_PREFIX):
+            if edits or _PATHLIKE.search(prompt):
+                if model:
+                    return {"ok": False, "error": _LOCAL_CANNOT, "model": m}
+                skipped.append({"model": m, "reason": _LOCAL_CANNOT})
+                continue
+            out = _call_local(m, prompt, local)
+            if out["ok"] or model:
+                if skipped:
+                    out["skipped"] = skipped
+                return out
+            skipped.append({"model": m, "reason": out["error"]})
+            continue
         if not model and m in quota:
             skipped.append({"model": m, "reason": f"exhausted until {_iso(quota[m])}"})
             continue
@@ -238,9 +395,13 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
         out = {k: v for k, v in out.items() if v is not None and v != [] and v != {} and v != ""}
         out["ok"] = bool(out.get("ok"))
         out["model"] = m
+        if not out["ok"]:
+            log_path = _copy_agy_log(m, started)
+            if log_path:
+                out["log"] = log_path
         _log("agy", m, started, out)
         if _is_exhausted(out):
-            mark_exhausted(m, f"{out.get('error', '')} {out.get('response', '')}")
+            mark_exhausted(m, f"{out.get('error', '')} {out.get('detail', '')} {out.get('response', '')}")
             if model:  # explicit model: report its own result, no fallback
                 out["hint"] = _STATUS_ERROR_HINT
                 return out
@@ -251,6 +412,8 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
         if skipped:
             out["skipped"] = skipped
         return out
+    if refused:
+        return {**refused, "skipped": skipped}
     return {"ok": False, "error": f"all models in tier {tier} exhausted", "skipped": skipped,
             "hint": "fall back to ask_heretic / ask_local, or do it yourself"}
 
@@ -285,12 +448,8 @@ def run_openai(prompt: str, system: str | None = None, model: str | None = None,
 
 
 def run_heretic(prompt: str, system: str | None = None, think: bool = False) -> dict:
-    messages = ([{"role": "system", "content": system}] if system else []) + \
-        [{"role": "user", "content": prompt}]
     started = time.time()
-    out = local_chat().ask_heretic(messages, think=think)
-    if not out["ok"] and "unreachable" in out.get("error", ""):
-        out["hint"] = "start it from the chat page (:8091) or scripts/heretic.sh"
+    out = _heretic_raw(prompt, system, think)
     _log("heretic", "heretic", started, out)
     return out
 
@@ -358,9 +517,12 @@ def build_server():
              model: str | None = None, timeout: int | None = None, edits: bool = False) -> dict:
         """Run one prompt in Antigravity CLI. agy reads files and calls the stack's MCP servers
         read-only; edits=True lets it write inside cwd. Default cwd is the session's project.
-        task picks the model, falling back when a quota is spent: light=trivial lookups/summaries;
-        code=default, ordinary coding and research; hard=deep reasoning (Opus first);
-        review=second opinion on Claude's work (non-Claude first). model overrides task."""
+        task picks the model, falling back when a quota is spent: light=trivial lookups/summaries,
+        tried first on Heretic then the local Ollama model (free; only for prompts naming no
+        file path and without edits), then Gemini Flash low; code=default, ordinary coding and
+        research; hard=deep reasoning (Opus first); review=second opinion on Claude's work
+        (non-Claude first). model overrides task ("local:heretic" / "local:ask_local" too).
+        In a local-only directory only the local models run."""
         return run_agy(prompt, cwd, model, timeout, edits, task=task)
 
     @mcp.tool(name="ask_heretic")

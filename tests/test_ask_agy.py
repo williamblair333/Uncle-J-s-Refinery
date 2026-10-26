@@ -39,24 +39,27 @@ def result(response, status="SUCCESS", denied=None):
     return {"event": "result", "result": r}
 
 
-def fake_agy(tmp_path, events, exit_code=0):
+def fake_agy(tmp_path, events, exit_code=0, stderr=""):
     """Write an executable that prints `events` as JSON lines and records its argv."""
     data = tmp_path / "events.jsonl"
     data.write_text("\n".join(json.dumps(e) for e in events) + "\n")
     argv_log = tmp_path / "argv.json"
+    err_data = tmp_path / "stderr.txt"
+    err_data.write_text(stderr)
     script = tmp_path / "agy"
     script.write_text(
         "#!/usr/bin/env python3\n"
         "import json, sys\n"
         f"json.dump(sys.argv[1:], open({str(argv_log)!r}, 'w'))\n"
+        f"sys.stderr.write(open({str(err_data)!r}).read())\n"
         f"sys.stdout.write(open({str(data)!r}).read())\n"
         f"sys.exit({exit_code})\n")
     script.chmod(script.stat().st_mode | stat.S_IXUSR)
     return script, argv_log
 
 
-def run(tmp_path, events, *args, exit_code=0):
-    script, argv_log = fake_agy(tmp_path, events, exit_code)
+def run(tmp_path, events, *args, exit_code=0, stderr=""):
+    script, argv_log = fake_agy(tmp_path, events, exit_code, stderr=stderr)
     outcome = ask.ask(*args or ("hello",), agy_bin=str(script), cwd=str(tmp_path))
     return outcome, json.loads(argv_log.read_text())
 
@@ -127,6 +130,56 @@ def test_cli_exit_codes(tmp_path, capsys):
     script, _ = fake_agy(tmp_path, [result("", denied=[{"display_name": "RunCommand"}])])
     assert ask.main(["--agy-bin", str(script), "--cwd", str(tmp_path), "q"]) == 1
     assert json.loads(capsys.readouterr().err)["ok"] is False
+
+
+def test_status_error_with_final_error_detail(tmp_path):
+    r = {"status": "ERROR", "response": "", "error": "Individual quota reached. Resets in 2h0m0s"}
+    out, _ = run(tmp_path, [{"event": "result", "result": r}])
+    assert not out["ok"]
+    assert out["error"] == "status ERROR"
+    assert out["detail"] == "Individual quota reached. Resets in 2h0m0s"
+
+
+def test_status_error_with_stderr_detail(tmp_path):
+    r = {"status": "ERROR", "response": ""}
+    stderr = "agent executor error: RESOURCE_EXHAUSTED: Resets in 5h"
+    out, _ = run(tmp_path, [{"event": "result", "result": r}], stderr=stderr)
+    assert not out["ok"]
+    assert out["error"] == "status ERROR"
+    assert out["detail"] == stderr
+
+
+def test_status_error_with_tool_error_detail(tmp_path):
+    msg = "edit_file: target content not found"
+    tool_ev = step("ERROR", cmd="edit_file", error=msg)
+    r = {"status": "ERROR", "response": ""}
+    out, _ = run(tmp_path, [tool_ev, {"event": "result", "result": r}])
+    assert not out["ok"]
+    assert out["error"] == "status ERROR"
+    assert out["detail"] == msg
+
+
+def test_non_ok_branches_capture_stderr_detail(tmp_path):
+    stderr = "warning: disk nearly full"
+    out, _ = run(tmp_path, [result("   \n")], stderr=stderr)
+    assert not out["ok"]
+    assert out["detail"] == stderr
+
+
+def test_tool_tally_and_mcp_attribution(tmp_path):
+    events = [
+        {"event": "step_update", "step_update": {"step_index": 1, "step_type": "tool", "tool_name": "run_command", "state": "ACTIVE"}},
+        {"event": "step_update", "step_update": {"step_index": 1, "step_type": "tool", "tool_name": "run_command", "state": "DONE"}},
+        {"event": "step_update", "step_update": {"step_index": 2, "step_type": "tool", "tool_name": "run_command", "state": "DONE"}},
+        {"event": "step_update", "step_update": {"step_index": 3, "step_type": "tool", "tool_name": "call_mcp_tool", "state": "DONE",
+                                                 "tool_info": {"parameters": {"ServerName": "jcodemunch", "ToolName": "search_symbols"}}}},
+        {"event": "step_update", "step_update": {"step_index": 4, "step_type": "tool", "tool_name": "call_mcp_tool", "state": "DONE",
+                                                 "tool_info": {"parameters": {}}}},
+        result("done")
+    ]
+    out, _ = run(tmp_path, events)
+    assert out["ok"]
+    assert out["tools"] == {"run_command": 2, "mcp:jcodemunch": 1, "mcp": 1}
 
 
 # ── apply_permissions: merge without clobbering agy's own keys ──────────────

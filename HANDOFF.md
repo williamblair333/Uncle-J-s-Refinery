@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — light tier local-first; agy self-diagnosis fixes
+
+`light` tries Heretic, then ask_local, before agy quota; agy failures now return agy's real error, a tool-use tally and a copied CLI log (`state/agy-logs/`). Known gap: with two sessions running agy at once, the log copy can pick the other session's log (match on conversation_id next). Still to do, as agy jobs: Job B — the sandbox shim recursion that stops agy running `just test` (F3), `mkdir/cp/mv/touch/sleep/ps`, a `local-health` script instead of curl; Job C — agy rules (re-read before edit, no polling, `repo=` on jcodemunch, write findings as you go). Restart Claude Code so the delegate server loads this.
+
 ## 2026-10-26 (main host) — ask_agy names the denied action
 
 A live capture confirmed a denied `touch` ran nothing; `denied` now reads "RunCommand: touch …". The build was done by agy on claude-opus-5-5-high because the code tier (flash-medium, sonnet, gpt-oss) was quota-exhausted. Next: route light work such as docs entries and summaries to Heretic/ask_local.
