@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — nightly upgrades follow releases
+
+`auto-maintain.sh` now upgrades a munch package whenever a newer release exists, as well as at
+>20 commits behind. Expect upgrades most nights (jdocmunch shipped 4 releases in 6 days). Check
+the first 03:00 run after merge: `state/auto-maintain.log` should say "release v1.150.1 is newer
+than the pin" for jdocmunch, then the venv should report 1.150.1. GitHub calls run
+unauthenticated (60/hr limit seen); a rate-limited night falls back to the threshold rule.
+
 ## 2026-10-26 (from mtw2) — agy can run its own tests
 
 `sandbox-run` (features/antigravity) is now the one way agy runs code: offline bubblewrap, empty
