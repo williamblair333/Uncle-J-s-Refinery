@@ -81,6 +81,22 @@ def test_soft_deny_is_failure(tmp_path):
     assert not out["ok"] and out["denied"] == ["RunCommand"]
 
 
+def test_soft_deny_names_the_command(tmp_path):
+    # the denied step ends DONE, not ERROR; denied_actions carries no command (2026-10-26 capture)
+    cmd = "touch /tmp/agy-deny-probe.txt"
+    out, _ = run(tmp_path, [step("ACTIVE", cmd), step("DONE", cmd),
+                            result("", denied=[{"action": "command", "display_name": "RunCommand"}])])
+    assert not out["ok"] and out["denied"] == ["RunCommand: touch /tmp/agy-deny-probe.txt"]
+
+
+def test_soft_deny_without_command_line_shows_parameters(tmp_path):
+    ev = {"event": "step_update", "step_update": {
+        "step_index": 3, "step_type": "tool", "tool_name": "write_file", "state": "DONE",
+        "tool_info": {"name": "write_file", "parameters": {"Path": "/x"}}}}
+    out, _ = run(tmp_path, [ev, result("", denied=[{"action": "write"}])])
+    assert not out["ok"] and len(out["denied"]) == 1 and '"Path"' in out["denied"][0]
+
+
 def test_empty_response_is_failure(tmp_path):
     out, _ = run(tmp_path, [result("   \n")])
     assert not out["ok"] and "empty" in out["error"]

@@ -12,7 +12,7 @@ exit 0 in all of these cases, which is why this wrapper exists:
 - a command matched a deny rule: a tool step ends in ERROR, the model often still
   answers "DONE", and `denied_actions` in the result is empty;
 - a command was on no list: print mode soft-denies it (`denied_actions` is set) and the
-  response is empty;
+  response is empty; `denied` names the command (agy's own entry says only "RunCommand");
 - the response is empty or the status is not SUCCESS.
 
 Shell access is governed by features/antigravity/permissions.json (read-only allow list),
@@ -37,6 +37,17 @@ def agy_env() -> dict:
     return env
 
 
+def describe_denied(action: dict, step: dict = None) -> str:
+    """'RunCommand: touch x' from a denied_actions entry and the tool step it denied."""
+    name = action.get("display_name") or action.get("action")
+    if not step:
+        return name
+    params = (step.get("tool_info") or {}).get("parameters") or {}
+    what = params.get("CommandLine") or (
+        json.dumps(params, separators=(",", ":")) if params else step.get("tool_name"))
+    return f"{name}: {what}" if what else name
+
+
 def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         timeout: int = 300, model: str = None) -> dict:
     agy = agy_bin or os.environ.get("AGY_BIN") or "agy"
@@ -53,13 +64,15 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": f"agy did not finish within {timeout + 60}s"}
 
-    tool_errors, final = [], None
+    tool_errors, tool_steps, final = [], {}, None
     for line in proc.stdout.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
         step = event.get("step_update") or {}
+        if step.get("step_type") == "tool":
+            tool_steps[step.get("step_index")] = step
         if step.get("step_type") == "tool" and step.get("state") == "ERROR":
             info = step.get("tool_info") or {}
             tool_errors.append({
@@ -75,7 +88,10 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         out["error"] = f"no result event (agy exit {proc.returncode}): {proc.stderr.strip()[-400:]}"
         return out
     out["response"] = (final.get("response") or "").strip()
-    out["denied"] = [a.get("display_name") or a.get("action") for a in final.get("denied_actions") or []]
+    # an auto-deny ends the turn, so the denied actions are the last tool steps
+    denied, steps = final.get("denied_actions") or [], list(tool_steps.values())
+    recent = ([None] * len(denied) + steps)[len(steps):]
+    out["denied"] = [describe_denied(a, s) for a, s in zip(denied, recent)]
     out["usage"] = final.get("usage")
     if final.get("status") != "SUCCESS":
         out["error"] = f"status {final.get('status')}"

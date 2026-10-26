@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — ask_agy names the denied action
+
+A live capture confirmed a denied `touch` ran nothing; `denied` now reads "RunCommand: touch …". The build was done by agy on claude-opus-5-5-high because the code tier (flash-medium, sonnet, gpt-oss) was quota-exhausted. Next: route light work such as docs entries and summaries to Heretic/ask_local.
+
 ## 2026-10-26 (main host) — delegate routing
 
 Delegate task tiers (light, code, hard, review) with automatic AI Pro quota fallback and reset tracking landed in scripts/delegate/server.py and config/delegate-routing.json.

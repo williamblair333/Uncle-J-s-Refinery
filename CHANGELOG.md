@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-26 — ask_agy names the denied action
+
+- **`scripts/ask_agy.py`**: auto-denied actions now name the command in `denied` (e.g. "RunCommand: touch /tmp/agy-deny-probe.txt") instead of just "RunCommand".
+- **How**: agy's `denied_actions` carries no command, but the denied tool step ends DONE (not ERROR) with its CommandLine, and an auto-deny ends the turn, so denials pair with the last tool steps. `denied` stays a list of strings; `scripts/referee.py` is unchanged.
+- **`tests/test_ask_agy.py`**: two new tests from a real 2026-10-26 capture; full suite 2488 passed, 3 skipped. Built by agy (claude-opus-5-5-high; code tier quota-exhausted), entries drafted by Heretic.
+
 ## 2026-10-26 — delegate routing: task tiers, quota fallback, offload hook
 
 - **`config/delegate-routing.json` & `scripts/delegate/server.py`**: `run_agy` now supports a `task` parameter mapping to model tiers (`light`, `code`, `hard`, `review`); models hitting AI Pro quota limits are recorded with parsed "Resets in XhYmZs" into `state/agy-quota.json` and skipped on subsequent runs until reset, with automatic fallback across the tier.
