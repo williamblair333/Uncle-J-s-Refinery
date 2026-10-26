@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-10-26 — `just offload`: how much work left Claude
+
+- **`scripts/offload_report.py` + `just offload [--days N] [--json]`**: per day and backend, the calls, ok/failed and seconds from `state/delegate.jsonl` and `state/ask_local.jsonl`. Also: agy failures by error, agy tool tally (stack vs shell share) and Claude subagent spawns allowed vs redirected. Built by agy; 2519 passed.
+- First read (7 days): agy succeeded 22 of 65 calls (31 failures were denials/tool errors, which today's PRs fixed); ask_local's Ollama model failed 8 of 8 while Heretic via ask_local answered 66 of 72.
+
 ## 2026-10-26 — agy rules and sandbox hardening
 
 - **`features/antigravity/rules-block.md`**: re-read before every edit (a failed edit ends the run), never poll or wait, a denied command ends the run, `repo=` on jcodemunch calls, write findings as you go, `local-health` instead of curl.
