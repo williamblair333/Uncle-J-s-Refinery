@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-26 — agy rules and sandbox hardening
+
+- **`features/antigravity/rules-block.md`**: re-read before every edit (a failed edit ends the run), never poll or wait, a denied command ends the run, `repo=` on jcodemunch calls, write findings as you go, `local-health` instead of curl.
+- **Sandbox**: shims detect the sandbox by `/run/sandbox-run-inside`, a directory only bwrap creates (host `/run` is root-owned), instead of the forgeable `SANDBOX_RUN` env var. `git grep` removed from agy's allow list: `-O<cmd>` ran a pager command unsandboxed, and agy's prefix rules can't catch `git grep pat -O cmd`; `grep`/`rg` remain.
+- **Fixes**: `local-health` prints `000` for a down service (was `000000`). `ask_agy` returns the run's `conversation_id`, and the failed-run log copy picks the log containing it, so two sessions running agy no longer swap logs. Built by agy (Flash high); 2513 passed, 3 skipped.
+
 ## 2026-10-26 — agy can run the test suite; local-health
 
 - **`features/antigravity/sandbox-run` & `shims/_shim`**: sandbox-run sets `SANDBOX_RUN=1`; a shim inside the sandbox runs the real binary instead of nesting bwrap (nested bwrap failed with `execvp .venv/bin/python3`). Real binaries resolve via `readlink -f`. agy's own `just test` went from 31 failures to 2506 passed.

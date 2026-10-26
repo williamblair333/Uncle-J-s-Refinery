@@ -66,11 +66,19 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
 
     tool_errors, tool_steps, final = [], {}, None
     tool_by_index = {}
+    conversation_id = None
     for line in proc.stdout.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if event.get("event") == "init":
+            init_payload = event.get("init")
+            cid = event.get("conversation_id")
+            if not cid and isinstance(init_payload, dict):
+                cid = init_payload.get("conversation_id")
+            if cid:
+                conversation_id = str(cid)
         step = event.get("step_update") or {}
         if step.get("step_type") == "tool":
             s_idx = step.get("step_index")
@@ -103,6 +111,8 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         tool_counts[k] = tool_counts.get(k, 0) + 1
 
     out = {"ok": False, "response": "", "tool_errors": tool_errors, "denied": [], "tools": tool_counts}
+    if conversation_id:
+        out["conversation_id"] = conversation_id
     stderr_tail = (proc.stderr or "").strip()[-600:]
     if final is None:
         out["error"] = f"no result event (agy exit {proc.returncode}): {proc.stderr.strip()[-400:]}"

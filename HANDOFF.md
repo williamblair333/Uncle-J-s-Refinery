@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — agy rules + sandbox hardening
+
+agy's rules now cover the ways it lost jobs today (failed edit, polling, denied command, missing `repo=`), and `git grep` is off its allow list. Applied with `bash features/antigravity/install.sh`. Restart Claude Code so this session's delegate server loads #220–#223.
+
 ## 2026-10-26 (main host) — agy runs tests; local-health
 
 agy can run `just test` now (shim recursion fixed) and check local services with `local-health`. Run `bash features/antigravity/install.sh` to apply the permissions. Follow-ups for agy: make the sandbox marker unforgeable (a dir only bwrap creates, not an env var), and close `git grep -O<cmd>`, which runs a pager command unsandboxed and predates today.

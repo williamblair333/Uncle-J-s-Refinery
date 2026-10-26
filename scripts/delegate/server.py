@@ -227,8 +227,10 @@ def _is_exhausted(out: dict) -> bool:
     return False
 
 
-def _copy_agy_log(model: str, started: float) -> str | None:
-    """Copy the agy run's CLI log on failure to state/agy-logs, keeping newest 50."""
+def _copy_agy_log(model: str, started: float, conversation_id: str | None = None) -> str | None:
+    """Copy the agy run's CLI log on failure to state/agy-logs, keeping newest 50.
+
+    Prefers a candidate whose contents contain conversation_id; falls back to newest."""
     try:
         src_env = os.environ.get("DELEGATE_AGY_LOG_SRC")
         src_dir = Path(src_env).expanduser() if src_env else (Path.home() / ".gemini" / "antigravity-cli" / "log")
@@ -245,7 +247,18 @@ def _copy_agy_log(model: str, started: float) -> str | None:
         if not candidates:
             return None
         candidates.sort(key=lambda x: x[0])
-        newest = candidates[-1][1]
+
+        chosen = None
+        if conversation_id:
+            for _, p in reversed(candidates):
+                try:
+                    if conversation_id in p.read_text(errors="ignore"):
+                        chosen = p
+                        break
+                except OSError:
+                    continue
+        if chosen is None:
+            chosen = candidates[-1][1]
 
         dest_env = os.environ.get("DELEGATE_AGY_LOG_DIR")
         dest_dir = Path(dest_env).expanduser() if dest_env else (_REPO / "state" / "agy-logs")
@@ -259,7 +272,7 @@ def _copy_agy_log(model: str, started: float) -> str | None:
             dest = dest_dir / f"{stamp}-{safe_model}-{counter}.log"
             counter += 1
 
-        shutil.copy2(newest, dest)
+        shutil.copy2(chosen, dest)
 
         # prune to newest 50
         all_logs = []
@@ -396,7 +409,7 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
         out["ok"] = bool(out.get("ok"))
         out["model"] = m
         if not out["ok"]:
-            log_path = _copy_agy_log(m, started)
+            log_path = _copy_agy_log(m, started, out.get("conversation_id"))
             if log_path:
                 out["log"] = log_path
         _log("agy", m, started, out)
