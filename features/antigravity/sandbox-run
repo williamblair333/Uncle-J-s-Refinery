@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# sandbox-run — run one command offline, seeing only the system, uv and the current directory.
+#
+#   sandbox-run uv run pytest -q
+#
+# For agents (agy) that need to run the code they write: no network (its own net namespace),
+# an empty home (a tmpfs, with only uv's tool, its Pythons and its cache bound in), and the
+# current directory the only writable path. agy's own --sandbox does not isolate the network
+# (probed 2026-10-26: same routes, same user), so this does it with bubblewrap.
+set -euo pipefail
+[[ $# -gt 0 ]] || { echo "usage: sandbox-run COMMAND [ARGS...]" >&2; exit 2; }
+command -v bwrap >/dev/null || { echo "sandbox-run: bubblewrap (bwrap) is not installed" >&2; exit 127; }
+
+here="$(pwd -P)"
+[[ "$here" != "$HOME" && "$here" != "/" ]] || { echo "sandbox-run: refusing to run with $here writable" >&2; exit 2; }
+
+args=(--ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib64 /lib64
+      --symlink usr/sbin /sbin --ro-bind /etc /etc --dev /dev --proc /proc --tmpfs /tmp
+      --tmpfs "$HOME")
+# uv itself (wherever it is installed), the Pythons it manages, and its cache (uv locks it)
+if uv="$(command -v uv)"; then
+    real="$(readlink -f "$uv")"
+    tool="$(dirname "$(dirname "$real")")"        # .../venvs/uv for a pipx install
+    case "$tool" in "$HOME"/*) args+=(--ro-bind "$tool" "$tool") ;; esac
+    case "$real" in "$HOME"/*) args+=(--ro-bind "$real" "$real") ;; esac
+    args+=(--symlink "$real" "$HOME/.local/bin/uv")
+fi
+for d in "$HOME/.local/share/uv"; do [[ -d "$d" ]] && args+=(--ro-bind "$d" "$d"); done
+[[ -d "$HOME/.cache/uv" ]] && args+=(--bind "$HOME/.cache/uv" "$HOME/.cache/uv")
+args+=(--bind "$here" "$here" --chdir "$here" --unshare-net --unshare-pid --die-with-parent
+       --setenv HOME "$HOME" --setenv PATH "$HOME/.local/bin:/usr/bin:/bin" --setenv UV_OFFLINE 1)
+
+exec bwrap "${args[@]}" "$@"

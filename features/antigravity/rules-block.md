@@ -13,6 +13,10 @@ The policy below was written for Claude Code. It applies here with these transla
 - **Claude-only mechanics do not apply:** hooks, `settings.json`, the pre-mortem clearance
   token, `refinery-doctor.sh`, and the CLAUDE.md deploy notes at the end.
 - Shell access is a read-only allow list; destructive commands are denied by rule.
+- **To run code** (tests, scripts, a build), prefix it with `sandbox-run`, e.g.
+  `sandbox-run uv run pytest -q` or `sandbox-run just test`. It runs offline and can write
+  only inside the current directory. Run the tests yourself before you say a change is done.
+- **To read a web page**, use your `read_url` tool. `curl` and `wget` are denied.
 
 @[Retrieval stack routing policy]({STACK_ROOT}/CLAUDE.md)
 <!-- UNCLE-J-AGY-END -->
