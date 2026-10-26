@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-10-26 — self-work budget: every project is pushed to delegate
+
+- **`hooks/discipline/self-work-budget.sh`** (global PreToolUse, wired by `install-reliability.sh`): counts a session's own Read/Edit/Write/Bash/Grep/Glob calls since its last delegation (ask_agy, ask_heretic, ask_openai, ask_local, summarize_local, extract_local). Past `SELF_WORK_BUDGET` (default 20) it denies once with the delegation routes, then resets — a recurring nudge, never a lock. Bash commands containing `CLAUDE-ONLY:` don't count. Fails open. Decisions logged with project to `~/.claude/state/self-work.jsonl`.
+- **`scripts/delegate/server.py`**: `state/delegate.jsonl` records `project` per call, so `just offload` can show which projects delegate. Why: written directives alone didn't change other projects' behaviour. Built by agy; 2537 passed.
+
 ## 2026-10-26 — `just offload`: how much work left Claude
 
 - **`scripts/offload_report.py` + `just offload [--days N] [--json]`**: per day and backend, the calls, ok/failed and seconds from `state/delegate.jsonl` and `state/ask_local.jsonl`. Also: agy failures by error, agy tool tally (stack vs shell share) and Claude subagent spawns allowed vs redirected. Built by agy; 2519 passed.

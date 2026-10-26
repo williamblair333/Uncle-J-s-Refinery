@@ -121,10 +121,13 @@ def local_only_block(cwd: str, prompt: str = "", roots: list[Path] | None = None
     return None
 
 
-def _log(backend: str, model: str | None, started: float, out: dict) -> None:
+def _log(backend: str, model: str | None, started: float, out: dict, cwd: str | None = None) -> None:
     if LOG_PATH is None:
         return
+    call_cwd = cwd or os.getcwd()
+    project = os.path.basename(os.path.normpath(call_cwd))
     rec = {"ts": round(time.time(), 1), "backend": backend, "model": model,
+           "project": project,
            "seconds": round(time.time() - started, 1), "ok": bool(out.get("ok"))}
     if not out.get("ok"):
         rec["error"] = str(out.get("error", ""))[:200]
@@ -346,7 +349,7 @@ def _local_result(name: str, raw) -> dict:
     return err_res
 
 
-def _call_local(name: str, prompt: str, local: dict) -> dict:
+def _call_local(name: str, prompt: str, local: dict, cwd: str | None = None) -> dict:
     fn = local.get(name)
     if fn is None:
         return {"ok": False, "error": f"unknown local backend {name!r}", "model": name}
@@ -356,7 +359,7 @@ def _call_local(name: str, prompt: str, local: dict) -> dict:
     except Exception as e:  # noqa: BLE001 — a broken local backend must fall through, not crash
         raw = {"ok": False, "error": f"{type(e).__name__}: {e}"}
     out = _local_result(name, raw)
-    _log("local", name, started, out)
+    _log("local", name, started, out, cwd=cwd)
     return out
 
 
@@ -393,7 +396,7 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
                     return {"ok": False, "error": _LOCAL_CANNOT, "model": m}
                 skipped.append({"model": m, "reason": _LOCAL_CANNOT})
                 continue
-            out = _call_local(m, prompt, local)
+            out = _call_local(m, prompt, local, cwd=cwd)
             if out["ok"] or model:
                 if skipped:
                     out["skipped"] = skipped
@@ -412,7 +415,7 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
             log_path = _copy_agy_log(m, started, out.get("conversation_id"))
             if log_path:
                 out["log"] = log_path
-        _log("agy", m, started, out)
+        _log("agy", m, started, out, cwd=cwd)
         if _is_exhausted(out):
             mark_exhausted(m, f"{out.get('error', '')} {out.get('detail', '')} {out.get('response', '')}")
             if model:  # explicit model: report its own result, no fallback
@@ -456,18 +459,18 @@ def run_openai(prompt: str, system: str | None = None, model: str | None = None,
             out["error"] = "empty answer"
     except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError) as e:
         out = {"ok": False, "error": f"openai-compatible call failed: {e}", "model": model}
-    _log("openai", model, started, out)
+    _log("openai", model, started, out, cwd=cwd)
     return out
 
 
-def run_heretic(prompt: str, system: str | None = None, think: bool = False) -> dict:
+def run_heretic(prompt: str, system: str | None = None, think: bool = False, cwd: str | None = None) -> dict:
     started = time.time()
     out = _heretic_raw(prompt, system, think)
-    _log("heretic", "heretic", started, out)
+    _log("heretic", "heretic", started, out, cwd=cwd)
     return out
 
 
-def run_media(kind: str, prompt: str) -> dict:
+def run_media(kind: str, prompt: str, cwd: str | None = None) -> dict:
     lc = local_chat()
     started = time.time()
     if kind == "speak":
@@ -480,7 +483,7 @@ def run_media(kind: str, prompt: str) -> dict:
         out = {"ok": r["ok"] and bool(files), "files": files}
         if not out["ok"]:
             out["error"] = r["output"][-1500:]
-    _log(kind, None, started, out)
+    _log(kind, None, started, out, cwd=cwd)
     return out
 
 

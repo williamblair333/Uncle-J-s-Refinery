@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — self-work budget hook
+
+Installed globally via `bash install-reliability.sh`; each project's next session gets it. Tune with `SELF_WORK_BUDGET`; kill switch is a huge value. Follow-ups for agy: rotate `~/.claude/state/self-work.jsonl` and prune old `self-work/*.count`; per-project columns in `just offload`.
+
 ## 2026-10-26 (main host) — offload report
 
 `just offload` measures delegation. Baseline: agy 34% ok, mostly lost to denials (fixed in #222/#223). Check: ask_local's `qwen3.5:9b` failed 8/8 — hand to agy to diagnose.
