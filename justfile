@@ -57,6 +57,10 @@ referee task *args:
 agy *args:
     .venv/bin/python scripts/ask_agy.py {{args}}
 
+# offload report: work sent to agy/Heretic/local vs Claude (default 7 days)
+offload *args:
+    .venv/bin/python scripts/offload_report.py {{args}}
+
 # repo scout: build the capability map once (review scout/map.md after)
 scout-seed *args:
     python3 scripts/scout/run.py seed {{args}}

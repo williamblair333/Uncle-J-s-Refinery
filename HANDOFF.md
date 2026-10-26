@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — offload report
+
+`just offload` measures delegation. Baseline: agy 34% ok, mostly lost to denials (fixed in #222/#223). Check: ask_local's `qwen3.5:9b` failed 8/8 — hand to agy to diagnose.
+
 ## 2026-10-26 (main host) — agy rules + sandbox hardening
 
 agy's rules now cover the ways it lost jobs today (failed edit, polling, denied command, missing `repo=`), and `git grep` is off its allow list. Applied with `bash features/antigravity/install.sh`. Restart Claude Code so this session's delegate server loads #220–#223.
