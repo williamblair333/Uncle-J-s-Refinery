@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# One shim for every command agy reaches for out of habit (python3, find, sed, jq...): run the
+# real one inside sandbox-run (offline, writes only in the current directory). ask_agy.py puts
+# this directory first on agy's PATH, and permissions.json allows these names; an absolute
+# path (/usr/bin/python3) stays denied. Live 2026-10-26: Flash ran `python3 -c` despite the
+# rules and the denial ended its whole job.
+set -euo pipefail
+name="$(basename "$0")"
+here="$(cd "$(dirname "$0")" && pwd -P)"
+real=""
+IFS=: read -ra dirs <<< "${PATH:-}"
+for d in "${dirs[@]}"; do
+    [[ -z "$d" || "$(cd "$d" 2>/dev/null && pwd -P)" == "$here" ]] && continue
+    if [[ -x "$d/$name" && ! -d "$d/$name" ]]; then real="$d/$name"; break; fi
+done
+[[ -n "$real" ]] || { echo "shim: no real '$name' on PATH" >&2; exit 127; }
+exec sandbox-run "$real" "$@"

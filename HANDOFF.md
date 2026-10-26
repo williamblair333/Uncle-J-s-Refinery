@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (from mtw2) — agy shims
+
+Habitual commands (python3, find, sed, jq...) are shims first on agy's PATH (set by
+`scripts/ask_agy.py`) that run through `sandbox-run`; their names are allowed. Re-run
+`bash features/antigravity/install.sh` after pulling. Rules block is 153 B under agy's 24 KB cap.
+
 ## 2026-10-26 (main host) — auditor skill
 
 New `auditor` skill: one quiet `Auditor:` line on plans that bear on Bill's seven goals, plus a

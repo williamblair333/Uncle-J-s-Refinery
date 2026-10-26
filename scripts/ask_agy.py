@@ -24,6 +24,17 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+# python3, find, sed, jq... run through sandbox-run when agy reaches for them (see _shim)
+SHIMS = Path(__file__).resolve().parent.parent / "features" / "antigravity" / "shims"
+
+
+def agy_env() -> dict:
+    """agy's environment: the shims first on PATH, so habitual commands run sandboxed."""
+    env = dict(os.environ)
+    env["PATH"] = f"{SHIMS}{os.pathsep}{env.get('PATH', '')}"
+    return env
 
 
 def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
@@ -35,7 +46,8 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     if model:
         cmd += ["--model", model]
     try:
-        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout + 60)
+        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout + 60,
+                              env=agy_env())
     except FileNotFoundError:
         return {"ok": False, "error": f"agy not found: {agy}"}
     except subprocess.TimeoutExpired:
