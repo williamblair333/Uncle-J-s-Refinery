@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-10-26 (main host) — Heretic wake retry
+
+`ask_heretic` now waits out a wake-from-sleep reload (503 / dropped connection) and retries
+once (mtw2's `review/2026-10-26-from-mtw2-heretic-wake-oom.md`, items 1 done). Item 2 open: when
+llama.cpp #30528 merges (OPEN on 2026-10-26), bump `llama-heretic` past `server-cuda12-b11459`.
+Item 3, a `RestartCount` healthcheck line, was not done. Delegate servers already running keep
+the old code until their first Heretic call loads the module, or until restart.
+
 ## 2026-10-26 (from mtw2) — agy read-only lookups
 
 agy may now run `which`, `basename`, `dirname`, `realpath`, `readlink`, `date` and `git grep`
