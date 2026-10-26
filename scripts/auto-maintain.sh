@@ -92,6 +92,35 @@ except Exception:
     print(0)" 2>/dev/null || echo 0
 }
 
+# Print the latest release tag if it contains commits the lock doesn't; else nothing.
+#
+# The commit-count threshold measures volume, not significance: jdocmunch
+# v1.150.1 (a data-loss fix, issue #196) sat unapplied while the pin was only
+# 6 commits behind. A published release is the maintainer saying "ship this",
+# so it triggers an upgrade on its own. Any API failure prints nothing, which
+# leaves the threshold rule in charge — same fail-quiet contract as above.
+release_ahead() {
+    local pkg=$1 github=$2
+    local installed_sha tag ahead
+    installed_sha=$(parse_lock_sha "$pkg")
+    [[ "$installed_sha" == "?" ]] && return 0
+    tag=$(_gh_curl "https://api.github.com/repos/$github/releases/latest" \
+        | python3 -c "import sys,json
+try:
+    print(json.load(sys.stdin).get('tag_name',''))
+except Exception:
+    pass" 2>/dev/null)
+    [[ -z "$tag" ]] && return 0
+    ahead=$(_gh_curl "https://api.github.com/repos/$github/compare/${installed_sha}...${tag}" \
+        | python3 -c "import sys,json
+try:
+    print(json.load(sys.stdin).get('ahead_by',0))
+except Exception:
+    print(0)" 2>/dev/null || echo 0)
+    [[ "${ahead:-0}" -gt 0 ]] && echo "$tag"
+    return 0
+}
+
 fetch_commit_log() {
     local pkg=$1 old_sha=$2 new_sha=$3
     _gh_curl "https://api.github.com/repos/${GITHUB[$pkg]}/compare/${old_sha}...${new_sha}" \
@@ -169,6 +198,12 @@ for pkg in jcodemunch-mcp jdatamunch-mcp jdocmunch-mcp; do
     info "$pkg: ${behind} commits behind HEAD (threshold: ${threshold})"
     if [[ "$behind" -gt "$threshold" ]]; then
         info "$pkg EXCEEDS threshold — queued for upgrade"
+        PACKAGES_TO_UPGRADE+=("$pkg")
+        continue
+    fi
+    new_release=$(release_ahead "$pkg" "$github")
+    if [[ -n "$new_release" ]]; then
+        info "$pkg: release $new_release is newer than the pin — queued for upgrade"
         PACKAGES_TO_UPGRADE+=("$pkg")
     fi
 done

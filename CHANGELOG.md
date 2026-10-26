@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-26 — auto-maintain upgrades on a new release, not just at 20 commits
+
+- **`scripts/auto-maintain.sh`**: new `release_ahead()` queues a munch package when its latest
+  published GitHub release has commits the `uv.lock` pin lacks. The >20-commits rule stays as a
+  backstop. Trigger: jdocmunch v1.150.1 (fix for Bill's #196) sat unapplied at 6 commits behind.
+  Dry run queued jdocmunch (v1.150.1) and jcodemunch (v1.108.398); jdatamunch stayed put.
+
 ## 2026-10-26 — agy rules: no wasted calls, no job-ending denials
 
 - **rules-block.md** rewritten (1,797 bytes, was 1,450 before today): the exact direct-shell
