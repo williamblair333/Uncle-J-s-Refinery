@@ -4,7 +4,8 @@
 
 `sandbox-run` (features/antigravity) is now the one way agy runs code: offline bubblewrap, empty
 home, cwd-only writes. Re-run `bash features/antigravity/install.sh` after pulling so the allow
-rule, the rules block and the `~/.local/bin` link are live. Open: other languages' toolchains
+rule, the rules block and the `~/.local/bin` link are live. agy reads the web through an
+agy-only `fetch` MCP server that `sync_mcp.py` always writes (`read_url` doesn't exist headless). Open: other languages' toolchains
 (node, cargo) are not bound in yet; add them to `sandbox-run` when a project needs them.
 
 ## 2026-10-25 (main host) — delegate by default
