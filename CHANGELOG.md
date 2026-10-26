@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-10-26 — auditor skill: quiet one-line checks, deep audits on request
+
+- **`global-skills/auditor`** (new), from Bill's "Ontological Auditor" idea (prompt drafted by
+  Gemini). Quiet mode adds one `Auditor:` line after the work when a plan trades structure for
+  looks, costs one of the seven goals, or contradicts itself. Deep mode ("challenge me",
+  "audit me", `/auditor`) runs goal → premise → structure vs. look → gaps → verdict → next.
+- **Tested** with fresh agents: baseline missed both quiet cases; with the skill, 10 scenarios
+  passed except deleting unwanted notes, which it objected to. The fix: "I don't want it" counts
+  as forget-at-will, while a cost reason gets a line. That passed 4/4 in two repeat runs.
+
 ## 2026-10-26 — auto-maintain upgrades on a new release, not just at 20 commits
 
 - **`scripts/auto-maintain.sh`**: new `release_ahead()` queues a munch package when its latest
