@@ -27,7 +27,11 @@ if uv="$(command -v uv)"; then
 fi
 for d in "$HOME/.local/share/uv"; do [[ -d "$d" ]] && args+=(--ro-bind "$d" "$d"); done
 [[ -d "$HOME/.cache/uv" ]] && args+=(--bind "$HOME/.cache/uv" "$HOME/.cache/uv")
+# The current directory's own venv, so `sandbox-run pytest` finds it. It is already inside the
+# writable bind below; nothing outside the current directory is mounted on the caller's say-so.
+spath="$HOME/.local/bin:/usr/bin:/bin"
+[[ -d "$here/.venv/bin" ]] && spath="$here/.venv/bin:$spath"
 args+=(--bind "$here" "$here" --chdir "$here" --unshare-net --unshare-pid --die-with-parent
-       --setenv HOME "$HOME" --setenv PATH "$HOME/.local/bin:/usr/bin:/bin" --setenv UV_OFFLINE 1)
+       --setenv HOME "$HOME" --setenv PATH "$spath" --setenv UV_OFFLINE 1)
 
 exec bwrap "${args[@]}" "$@"

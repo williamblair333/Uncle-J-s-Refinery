@@ -1,0 +1,9 @@
+{
+  "default": "code",
+  "tiers": {
+    "light": ["gemini-3.8-flash-low", "gpt-oss-120b-medium"],
+    "code": ["gemini-3.8-flash-medium", "claude-sonnet-5-5-medium", "gpt-oss-120b-medium"],
+    "hard": ["claude-opus-5-5-high", "gemini-4-argon-high", "claude-sonnet-5-5-high", "gemini-3.8-flash-high"],
+    "review": ["gemini-4-argon-high", "gemini-3.8-flash-high", "gpt-oss-120b-medium"]
+  }
+}
