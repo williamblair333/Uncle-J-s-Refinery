@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-10-26 — Heretic: wait out a wake-from-sleep reload, then retry once
+
+- **`scripts/local_chat/server.py` `ask_heretic`**: on HTTP 503 or a dropped/reset connection,
+  polls `/health` (up to `HERETIC_WAKE_WAIT` = 240 s) and retries the POST once. Connection
+  refused still fails at once, because it usually means Heretic is off. Covers `ask_heretic` (delegate) and the
+  :8091 chat page. Stopgap for llama.cpp #30528 (wake skips `--fit`, OOMs when the GPU is
+  busier than at boot), reported from mtw2 in `review/2026-10-26-from-mtw2-heretic-wake-oom.md`.
+- Six tests in `tests/test_local_chat.py` (50 pass). agy drafted the retry and five tests;
+  Claude excluded refused (agy's version waited 240 s on a stopped server) and added the sixth.
+
 ## 2026-10-26 — agy may run read-only lookups (`which` and friends)
 
 - **`features/antigravity/permissions.json`** allows `which`, `basename`, `dirname`, `realpath`,

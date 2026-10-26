@@ -1,6 +1,8 @@
+import http.client
 import importlib.util
 import json
 import socket
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -166,8 +168,13 @@ def test_think_flag_reaches_heretic_only(monkeypatch, tmp_path):
 
 
 class _Resp:
-    def __init__(self, payload):
-        self.payload = json.dumps(payload).encode()
+    def __init__(self, payload, status=200):
+        self.payload = json.dumps(payload).encode() if isinstance(payload, (dict, list)) else payload
+        self.status = status
+        self.code = status
+
+    def getcode(self):
+        return self.status
 
     def __enter__(self):
         return self
@@ -177,6 +184,144 @@ class _Resp:
 
     def read(self, *a):
         return self.payload
+
+
+HERETIC_ANSWER = {"choices": [{"message": {"content": "pong"}, "finish_reason": "stop"}],
+                  "usage": {"total_tokens": 10}}
+
+
+def test_ask_heretic_503_then_success(monkeypatch):
+    posts = []
+    health_polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "/health" in url:
+            health_polls.append(url)
+            return _Resp({"status": "ok"}, status=200)
+        posts.append(url)
+        if len(posts) == 1:
+            raise urllib.error.HTTPError(url, 503, "Loading model", {}, None)
+        return _Resp(HERETIC_ANSWER)
+
+    monkeypatch.setattr(lc.urllib.request, "urlopen", fake_urlopen)
+    r = lc.ask_heretic([{"role": "user", "content": "ping"}])
+    assert r["ok"] is True
+    assert r["text"] == "pong"
+    assert len(posts) == 2
+    assert len(health_polls) >= 1
+
+
+def test_ask_heretic_remote_disconnected_then_success(monkeypatch):
+    posts = []
+    health_polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "/health" in url:
+            health_polls.append(url)
+            return _Resp({"status": "ok"}, status=200)
+        posts.append(url)
+        if len(posts) == 1:
+            raise http.client.RemoteDisconnected("Remote end closed connection without response")
+        return _Resp(HERETIC_ANSWER)
+
+    monkeypatch.setattr(lc.urllib.request, "urlopen", fake_urlopen)
+    r = lc.ask_heretic([{"role": "user", "content": "ping"}])
+    assert r["ok"] is True
+    assert r["text"] == "pong"
+    assert len(posts) == 2
+    assert len(health_polls) >= 1
+
+
+def test_ask_heretic_503_twice_retries_once_only(monkeypatch):
+    posts = []
+    health_polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "/health" in url:
+            health_polls.append(url)
+            return _Resp({"status": "ok"}, status=200)
+        posts.append(url)
+        raise urllib.error.HTTPError(url, 503, "Loading model", {}, None)
+
+    monkeypatch.setattr(lc.urllib.request, "urlopen", fake_urlopen)
+    r = lc.ask_heretic([{"role": "user", "content": "ping"}])
+    assert r["ok"] is False
+    assert len(posts) == 2
+    assert "unreachable" in r["error"]
+
+
+def test_ask_heretic_health_never_200_fails_without_retry(monkeypatch):
+    posts = []
+    health_polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "/health" in url:
+            health_polls.append(url)
+            raise urllib.error.HTTPError(url, 503, "Loading model", {}, None)
+        posts.append(url)
+        raise urllib.error.HTTPError(url, 503, "Loading model", {}, None)
+
+    monkeypatch.setattr(lc.urllib.request, "urlopen", fake_urlopen)
+
+    clock_time = [0.0]
+    monkeypatch.setattr(lc, "_clock", lambda: clock_time[0])
+
+    def fake_sleep(s):
+        clock_time[0] += s
+
+    monkeypatch.setattr(lc, "_sleep", fake_sleep)
+
+    r = lc.ask_heretic([{"role": "user", "content": "ping"}])
+    assert r["ok"] is False
+    assert len(posts) == 1
+    assert len(health_polls) >= 1
+    assert "unreachable" in r["error"]
+    assert "waited" in r["error"]
+
+
+def test_ask_heretic_http_400_fails_without_retry_or_health_poll(monkeypatch):
+    posts = []
+    health_polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "/health" in url:
+            health_polls.append(url)
+            return _Resp({"status": "ok"}, status=200)
+        posts.append(url)
+        raise urllib.error.HTTPError(url, 400, "Bad Request", {}, None)
+
+    monkeypatch.setattr(lc.urllib.request, "urlopen", fake_urlopen)
+    r = lc.ask_heretic([{"role": "user", "content": "ping"}])
+    assert r["ok"] is False
+    assert len(posts) == 1
+    assert len(health_polls) == 0
+    assert "unreachable" in r["error"]
+
+
+def test_ask_heretic_connection_refused_fails_fast(monkeypatch):
+    # Refused means Heretic is off: keep the instant "start it" hint, don't wait 240 s.
+    posts = []
+    health_polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if "/health" in url:
+            health_polls.append(url)
+            return _Resp({"status": "ok"}, status=200)
+        posts.append(url)
+        raise urllib.error.URLError(ConnectionRefusedError(111, "Connection refused"))
+
+    monkeypatch.setattr(lc.urllib.request, "urlopen", fake_urlopen)
+    r = lc.ask_heretic([{"role": "user", "content": "ping"}])
+    assert r["ok"] is False
+    assert len(posts) == 1
+    assert len(health_polls) == 0
+    assert "unreachable" in r["error"]
 
 
 def test_empty_search_is_an_error_naming_blocked_engines(monkeypatch):

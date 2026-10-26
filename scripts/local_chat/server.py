@@ -43,6 +43,7 @@ import urllib.request
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from html.parser import HTMLParser
+import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -74,6 +75,10 @@ JOB_TIMEOUT = {"image": 900, "video": 3600}
 CHAT_ID = re.compile(r"^[0-9a-f]{32}$")
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")  # compose logs keep line-erase codes despite --no-color
 TIMEOUT = 600
+HERETIC_WAKE_WAIT = 240   # max seconds to wait for Heretic reload after idle sleep (llama.cpp #30528)
+HERETIC_WAKE_POLL = 2     # seconds between /health polls
+_sleep = time.sleep
+_clock = time.time
 # Each send is a fresh Claude Code session: without this, your SessionStart/Stop hooks
 # (Telegram, memweave mining) fire on every message. --bare would skip them too, but it
 # accepts only ANTHROPIC_API_KEY, not a subscription login.
@@ -210,18 +215,76 @@ def transcript(messages):
     return "\n\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages)
 
 
-def ask_heretic(messages, think=False):
+def _is_wake_error(e):
+    # Wake errors from Heretic idle sleep reload abort (llama.cpp #30528;
+    # review/2026-10-26-from-mtw2-heretic-wake-oom.md): 503 "Loading model", or a
+    # dropped/reset connection. Connection refused is not one: it usually means Heretic is
+    # off, and waiting 240 s to say so is worse than the old instant "start it" hint. The
+    # health poll already rides through the refusals of a container restart.
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code == 503
+    reason = getattr(e, "reason", e)
+    if isinstance(reason, ConnectionRefusedError):
+        return False
+    if isinstance(reason, (http.client.RemoteDisconnected, ConnectionError)):
+        return True
+    msg = str(reason).lower()
+    return any(s in msg for s in ("connection reset", "remote end closed"))
+
+
+def _wait_for_health(sleep, clock):
+    t0 = clock()
+    while True:
+        try:
+            with urllib.request.urlopen(f"{LLAMA_URL}/health", timeout=5) as resp:
+                status = getattr(resp, "status", getattr(resp, "code", None))
+                if status is None and hasattr(resp, "getcode"):
+                    status = resp.getcode()
+                if status == 200:
+                    return True
+        except (urllib.error.URLError, OSError, http.client.HTTPException):
+            pass
+        if clock() - t0 >= HERETIC_WAKE_WAIT:
+            return False
+        sleep(HERETIC_WAKE_POLL)
+
+
+def ask_heretic(messages, think=False, sleep=None, clock=None):
     # Thinking off by default: beside Klarheit's 9B Heretic runs ~11 tok/s, and its hidden
     # reasoning (1.6k–2.9k tokens measured) turned a two-sentence answer into 4–6 minutes.
+    if sleep is None:
+        sleep = _sleep
+    if clock is None:
+        clock = _clock
     body = json.dumps({"model": "heretic", "messages": messages, "max_tokens": 8192,
                        "chat_template_kwargs": {"enable_thinking": bool(think)}}).encode()
-    req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", body,
-                                 {"Content-Type": "application/json"})
-    try:
+
+    def _post():
+        req = urllib.request.Request(f"{LLAMA_URL}/v1/chat/completions", body,
+                                     {"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-            data = json.load(resp)
-    except (urllib.error.URLError, OSError) as e:
-        return {"ok": False, "error": f"heretic unreachable: {e}"}
+            return json.load(resp)
+
+    try:
+        data = _post()
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as e:
+        # Heretic sleeps when idle and can abort reload on wake if GPU memory is tighter
+        # than at boot (upstream llama.cpp #30528; review/2026-10-26-from-mtw2-heretic-wake-oom.md).
+        # On 503, dropped connection, or connection refused: wait for /health and retry once.
+        if _is_wake_error(e):
+            if not _wait_for_health(sleep, clock):
+                return {"ok": False, "error": f"heretic unreachable: {e} (waited {HERETIC_WAKE_WAIT}s for health)"}
+            try:
+                data = _post()
+            except (urllib.error.URLError, OSError, http.client.HTTPException) as retry_e:
+                return {"ok": False, "error": f"heretic unreachable: {retry_e}"}
+            except (json.JSONDecodeError, ValueError) as retry_e:
+                return {"ok": False, "error": f"heretic bad json: {retry_e}"}
+        else:
+            return {"ok": False, "error": f"heretic unreachable: {e}"}
+    except (json.JSONDecodeError, ValueError) as e:
+        return {"ok": False, "error": f"heretic bad json: {e}"}
+
     choice = data["choices"][0]
     text = (choice["message"].get("content") or "").strip()
     if not text:
