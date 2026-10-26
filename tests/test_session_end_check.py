@@ -24,6 +24,25 @@ mandatory:
   - HANDOFF.md
 """
 
+CONFIG_WITH_EXCLUDE = """\
+version: 1
+exclude_paths: ["scout/"]
+trigger:
+  file_types: [".sh", ".py", ".json"]
+mandatory:
+  - CHANGELOG.md
+  - HANDOFF.md
+"""
+
+CONFIG_WITHOUT_EXCLUDE = """\
+version: 1
+trigger:
+  file_types: [".sh", ".py", ".json"]
+mandatory:
+  - CHANGELOG.md
+  - HANDOFF.md
+"""
+
 
 def make_repo(tmp_path: Path, config: str | None = None) -> Path:
     """Create a minimal git repo, optionally with a .session-end.yml."""
@@ -136,3 +155,46 @@ def test_stop_hook_passes_when_not_triggered(tmp_path):
     subprocess.run(["git", "add", "README.md"], cwd=repo, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", "doc"], cwd=repo, check=True, capture_output=True, env=GIT_ENV)
     assert run_hook(repo, "--stop-hook").returncode == 0
+
+
+# ── exclude_paths ─────────────────────────────────────────────────────────────
+
+def test_exclude_paths_pre_commit_scout_only_passes(tmp_path):
+    """Pre-commit mode passes when only excluded scout files are staged."""
+    repo = make_repo(tmp_path, CONFIG_WITH_EXCLUDE)
+    stage(repo, "scout/answers.json", "{}")
+    assert run_hook(repo).returncode == 0
+
+
+def test_exclude_paths_stop_hook_scout_only_passes_no_warning(tmp_path):
+    """Stop hook mode exits 0 with no warning when only scout files are modified."""
+    repo = make_repo(tmp_path, CONFIG_WITH_EXCLUDE)
+    (repo / "state").mkdir(parents=True, exist_ok=True)
+    (repo / ".env").write_text("TELEGRAM_BOT_TOKEN=123456:ABC-DEF\nTELEGRAM_CHAT_ID=12345\n")
+    stage(repo, "scout/answers.json", '{"initial": true}')
+    subprocess.run(["git", "commit", "-m", "add scout answers"], cwd=repo, check=True, capture_output=True, env=GIT_ENV)
+    (repo / "scout" / "answers.json").write_text('{"modified": true}')
+    result = run_hook(repo, "--stop-hook")
+    assert result.returncode == 0
+    assert not (repo / "state" / "session-end-dedup.txt").exists()
+
+
+def test_exclude_paths_pre_commit_scout_plus_code_blocks(tmp_path):
+    """Pre-commit mode blocks when scout files plus code are staged without mandatory docs."""
+    repo = make_repo(tmp_path, CONFIG_WITH_EXCLUDE)
+    stage(repo, "scout/answers.json", "{}")
+    stage(repo, "script.py", "print('hello')")
+    result = run_hook(repo)
+    assert result.returncode == 1
+    assert "CHANGELOG.md" in result.stdout
+    assert "HANDOFF.md" in result.stdout
+
+
+def test_no_exclude_paths_scout_alone_blocks(tmp_path):
+    """Pre-commit mode blocks on scout files if exclude_paths is not configured."""
+    repo = make_repo(tmp_path, CONFIG_WITHOUT_EXCLUDE)
+    stage(repo, "scout/answers.json", "{}")
+    result = run_hook(repo)
+    assert result.returncode == 1
+    assert "CHANGELOG.md" in result.stdout
+    assert "HANDOFF.md" in result.stdout
