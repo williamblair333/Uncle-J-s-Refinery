@@ -333,6 +333,47 @@ def test_log_records_tools_counts_when_present(tmp_path, monkeypatch):
     lines = [json.loads(line) for line in log_file.read_text().splitlines()]
     assert len(lines) == 1
     assert lines[0]["tools"] == {"run_command": 2, "mcp:jcodemunch": 1}
+    assert lines[0]["project"] == os.path.basename(os.getcwd())
+
+
+def test_log_records_project_from_callers(tmp_path, monkeypatch):
+    log_file = tmp_path / "log.jsonl"
+    monkeypatch.setattr(d, "LOG_PATH", log_file)
+    monkeypatch.setattr(d, "LOCAL_ONLY_FILE", tmp_path / "none.txt")
+    monkeypatch.setenv("DELEGATE_LOCAL_ONLY", "")
+
+    custom_cwd = tmp_path / "sample_project"
+    custom_cwd.mkdir()
+
+    # 1. Direct _log with cwd
+    d._log("test_backend", "m", time.time() - 1, {"ok": True}, cwd=str(custom_cwd))
+
+    # 2. run_agy passing cwd
+    d.run_agy("hi", cwd=str(custom_cwd), model="gemini-3.8-flash-low",
+              ask=lambda *a, **k: {"ok": True, "response": "ok"})
+
+    # 3. run_heretic passing cwd
+    monkeypatch.setattr(d, "_heretic_raw", lambda *a, **k: {"ok": True, "text": "heretic ok"})
+    d.run_heretic("hi", cwd=str(custom_cwd))
+
+    # 4. run_openai passing cwd
+    monkeypatch.setenv(d.OPENAI_KEY_ENV, "k")
+    monkeypatch.setattr(d, "OPENAI_MODEL", "m")
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    d.run_openai("hi", model="m", cwd=str(custom_cwd),
+                 opener=lambda req, timeout: Resp(json.dumps({"choices": [{"message": {"content": "ok"}}]}).encode()))
+
+    lines = [json.loads(line) for line in log_file.read_text().splitlines()]
+    assert len(lines) == 4
+    for line in lines:
+        assert line["project"] == "sample_project"
 
 
 def test_agy_log_copy_and_pruning(tmp_path, monkeypatch):
