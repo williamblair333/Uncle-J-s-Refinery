@@ -65,6 +65,7 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         return {"ok": False, "error": f"agy did not finish within {timeout + 60}s"}
 
     tool_errors, tool_steps, final = [], {}, None
+    tool_by_index = {}
     for line in proc.stdout.splitlines():
         try:
             event = json.loads(line)
@@ -72,7 +73,21 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
             continue
         step = event.get("step_update") or {}
         if step.get("step_type") == "tool":
-            tool_steps[step.get("step_index")] = step
+            s_idx = step.get("step_index")
+            tool_steps[s_idx] = step
+            t_name = step.get("tool_name") or ""
+            if t_name == "call_mcp_tool":
+                params = (step.get("tool_info") or {}).get("parameters") or {}
+                server = next((v for k, v in params.items() if k.lower() in ("servername", "server", "server_name")), None)
+                if not server:
+                    info = step.get("tool_info") or {}
+                    if isinstance(info, dict):
+                        server = next((v for k, v in info.items() if k.lower() in ("servername", "server", "server_name")), None)
+                key = f"mcp:{server}" if server else "mcp"
+            else:
+                key = t_name
+            if key:
+                tool_by_index[s_idx] = key
         if step.get("step_type") == "tool" and step.get("state") == "ERROR":
             info = step.get("tool_info") or {}
             tool_errors.append({
@@ -83,9 +98,16 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         if event.get("event") == "result":
             final = event.get("result") or {}
 
-    out = {"ok": False, "response": "", "tool_errors": tool_errors, "denied": []}
+    tool_counts = {}
+    for k in tool_by_index.values():
+        tool_counts[k] = tool_counts.get(k, 0) + 1
+
+    out = {"ok": False, "response": "", "tool_errors": tool_errors, "denied": [], "tools": tool_counts}
+    stderr_tail = (proc.stderr or "").strip()[-600:]
     if final is None:
         out["error"] = f"no result event (agy exit {proc.returncode}): {proc.stderr.strip()[-400:]}"
+        if stderr_tail:
+            out["detail"] = stderr_tail
         return out
     out["response"] = (final.get("response") or "").strip()
     # an auto-deny ends the turn, so the denied actions are the last tool steps
@@ -95,12 +117,31 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     out["usage"] = final.get("usage")
     if final.get("status") != "SUCCESS":
         out["error"] = f"status {final.get('status')}"
+        err = final.get("error")
+        if isinstance(err, dict):
+            detail = err.get("message") or json.dumps(err)
+        elif err:
+            detail = str(err).strip()
+        else:
+            detail = ""
+        if not detail:
+            detail = stderr_tail
+        if not detail and tool_errors:
+            detail = tool_errors[-1].get("message") or ""
+        if detail:
+            out["detail"] = detail
     elif tool_errors:
         out["error"] = "a tool call failed (deny rule or tool error); the response may claim otherwise"
+        if stderr_tail:
+            out["detail"] = stderr_tail
     elif out["denied"]:
         out["error"] = "headless mode auto-denied an action not on the allow list"
+        if stderr_tail:
+            out["detail"] = stderr_tail
     elif not out["response"]:
         out["error"] = "empty response"
+        if stderr_tail:
+            out["detail"] = stderr_tail
     else:
         out["ok"] = True
     return out

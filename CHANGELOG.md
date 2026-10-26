@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-26 — light tier goes local first; agy failures explain themselves
+
+- **`config/delegate-routing.json` & `scripts/delegate/server.py`**: `light` is now `local:heretic`, `local:ask_local`, then Gemini Flash low. A `local:` entry runs a free local model. Locals are skipped for `edits=True` or a prompt naming a file path, since they can't read files. A failed or empty local answer falls through, and locals never touch quota. In a local-only directory the tier narrows to local entries instead of refusing.
+- **Quota fix (agy's own diagnosis, `review/2026-10-26-agy-self-diagnosis.md`)**: `ask_agy` dropped agy's error text, so "Resets in 97h…" never reached the parser and every exhausted model came back after the 1-hour default. Results now carry `detail` (agy's error, stderr tail, or last tool error). `_is_exhausted` matches `RESOURCE_EXHAUSTED` / "Individual quota reached" in error/detail only; a response that merely discusses quota no longer counts.
+- **Observability**: `ask_agy` results include `tools` (per-tool call counts, `mcp:<server>` for stack calls), logged to `state/delegate.jsonl`. On failure the run's agy CLI log is copied to `state/agy-logs/` (newest 50 kept) and returned as `log`, so agy can read its own evidence. Built by agy (Opus, then Flash high); tests 2504 passed, 3 skipped.
+
 ## 2026-10-26 — ask_agy names the denied action
 
 - **`scripts/ask_agy.py`**: auto-denied actions now name the command in `denied` (e.g. "RunCommand: touch /tmp/agy-deny-probe.txt") instead of just "RunCommand".
