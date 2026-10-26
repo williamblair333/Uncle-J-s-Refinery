@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-26 — agy rules: one command per call
+
+- `features/antigravity/rules-block.md` Shell bullet now lists the lookups allowed in permissions.json (`which realpath readlink basename dirname date`, `git grep`) and says one command per call: `&&`, `;`, `|`, `$( )` and backticks are denied as a whole.
+- Why: agy lost whole jobs to compounds. `which sandbox-run && file $(which sandbox-run) && head …` was denied while `which sandbox-run` alone ran (probed 2026-10-26). Widening permissions would let a denied command ride behind an allowed one, so the rules teach the form instead.
+- Block is 1,985 B; with CLAUDE.md it stays under agy's 24,000 B cap (`tests/test_ask_agy.py`, 17 pass).
+
 ## 2026-10-26 — Heretic: wait out a wake-from-sleep reload, then retry once
 
 - **`scripts/local_chat/server.py` `ask_heretic`**: on HTTP 503 or a dropped/reset connection,
