@@ -6,6 +6,7 @@ Delegate task tiers (light, code, hard, review) with automatic AI Pro quota fall
 hooks/discipline/offload-check.sh blocks Claude subagent calls without CLAUDE-ONLY: marker, redirecting to delegate.
 Re-run `bash install-reliability.sh` to register the hook.
 ~/.claude/state/offload-check.jsonl counts Claude subagent spawns allowed vs sent back to offload.
+Installed and live-tested 16:07: an unmarked subagent spawn was denied and logged.
 
 ## 2026-10-26 (main host) — agy: one command per call
 
