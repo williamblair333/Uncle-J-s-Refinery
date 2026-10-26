@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-26 — agy can run the test suite; local-health
+
+- **`features/antigravity/sandbox-run` & `shims/_shim`**: sandbox-run sets `SANDBOX_RUN=1`; a shim inside the sandbox runs the real binary instead of nesting bwrap (nested bwrap failed with `execvp .venv/bin/python3`). Real binaries resolve via `readlink -f`. agy's own `just test` went from 31 failures to 2506 passed.
+- **`features/antigravity/shims/local-health`**: checks Heretic, chat, ask_local (Ollama) and ComfyUI on fixed 127.0.0.1 URLs only; any other argument exits 2. Allowed in permissions.json; `curl` stays denied (prefix rules can't fence curl: `127.0.0.1:x@host` and extra URLs).
+- **`permissions.json`**: `sleep` and `ps` allowed. `mkdir/cp/mv/touch` withheld: sandbox-run also binds `~/.cache/uv` writable, so writes aren't confined to the project. Built by agy (Flash high) from its F3 diagnosis.
+
 ## 2026-10-26 — light tier goes local first; agy failures explain themselves
 
 - **`config/delegate-routing.json` & `scripts/delegate/server.py`**: `light` is now `local:heretic`, `local:ask_local`, then Gemini Flash low. A `local:` entry runs a free local model. Locals are skipped for `edits=True` or a prompt naming a file path, since they can't read files. A failed or empty local answer falls through, and locals never touch quota. In a local-only directory the tier narrows to local entries instead of refusing.

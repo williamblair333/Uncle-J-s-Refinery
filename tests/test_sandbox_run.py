@@ -1,4 +1,5 @@
 """sandbox-run: what an agent's code can and can't reach."""
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -57,6 +58,44 @@ def test_a_habitual_python3_runs_sandboxed(tmp_path):
 def test_every_shim_name_is_allowed_and_links_to_the_one_shim():
     import json
     allow = json.loads((SCRIPT.parent / "permissions.json").read_text())["allow"]
-    names = [p.name for p in SHIMS.iterdir() if p.name != "_shim"]
+    names = [p.name for p in SHIMS.iterdir() if p.name not in ("_shim", "local-health")]
     assert names and all(f"command({n})" in allow for n in names)
     assert all((SHIMS / n).resolve() == (SHIMS / "_shim").resolve() for n in names)
+    assert "command(local-health)" in allow
+    assert (SHIMS / "local-health").is_file()
+    assert os.access(SHIMS / "local-health", os.X_OK)
+
+
+def test_sandbox_run_exports_sandbox_run(tmp_path):
+    out = run(tmp_path, "sh", "-c", "echo $SANDBOX_RUN")
+    assert out.returncode == 0 and out.stdout.strip() == "1"
+
+
+def test_shim_passthrough_when_sandbox_run_set(tmp_path):
+    env = {**os.environ, "PATH": f"{SHIMS}:{SCRIPT.parent}:{os.environ['PATH']}", "SANDBOX_RUN": "1"}
+    out = subprocess.run(["python3", "-c", "import os; print(os.environ.get('SANDBOX_RUN'))"],
+                         cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0 and out.stdout.strip() == "1"
+
+
+def test_local_health_rejects_unknown_argument_and_urls(tmp_path):
+    lh = SHIMS / "local-health"
+    # Unknown argument
+    assert subprocess.run([str(lh), "unknown"], capture_output=True).returncode == 2
+    # Reject URLs
+    assert subprocess.run([str(lh), "http://127.0.0.1:8090/health"], capture_output=True).returncode == 2
+    assert subprocess.run([str(lh), "https://example.com"], capture_output=True).returncode == 2
+    assert subprocess.run([str(lh), "ftp://127.0.0.1"], capture_output=True).returncode == 2
+    # Reject extra arguments
+    assert subprocess.run([str(lh), "heretic", "chat"], capture_output=True).returncode == 2
+
+
+def test_local_health_output_format(tmp_path):
+    lh = SHIMS / "local-health"
+    out = subprocess.run([str(lh), "heretic"], capture_output=True, text=True)
+    assert out.returncode == 0
+    parts = out.stdout.strip().split()
+    assert len(parts) == 3
+    assert parts[0] == "heretic"
+    assert parts[1] in ("up", "down")
+    assert parts[2].isdigit()
