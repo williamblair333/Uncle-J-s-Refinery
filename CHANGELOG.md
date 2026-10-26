@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-26 — agy rules: no wasted calls, no job-ending denials
+
+- **rules-block.md** rewritten (1,797 bytes, was 1,450 before today): the exact direct-shell
+  list with "any other command ends your job"; everything else through `sandbox-run`; `fetch`
+  with `"raw": true`; resolve the repo id once and never `list_repos` / `doc_list_repos`
+  (agy logs showed 16 and 11 such calls in single jobs); known repo ids; cheapest call first.
+
 ## 2026-10-26 — sandbox-run: agy runs the code it writes, offline
 
 - **`features/antigravity/sandbox-run`** (new): bubblewrap around one command; no network, an

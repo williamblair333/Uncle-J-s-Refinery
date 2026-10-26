@@ -7,6 +7,10 @@ home, cwd-only writes. Re-run `bash features/antigravity/install.sh` after pulli
 rule, the rules block and the `~/.local/bin` link are live. agy reads the web through an
 agy-only `fetch` MCP server that `sync_mcp.py` always writes (`read_url` doesn't exist headless). Open: other languages' toolchains
 (node, cargo) are not bound in yet; add them to `sandbox-run` when a project needs them.
+**Watch the 24 KB cap:** CLAUDE.md (22,006 B) + the agy rules block (1,797 B) is 197 B under
+agy's per-file limit (`test_shipped_rules_block_includes_claude_md_and_fits`). The nightly
+Dreaming Notes grow CLAUDE.md; when that test fails, trim the policy or the notes, not the
+agy block's job-ending-denial and repo-id lines.
 
 ## 2026-10-25 (main host) — delegate by default
 
