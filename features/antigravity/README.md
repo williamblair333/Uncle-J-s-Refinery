@@ -19,7 +19,7 @@ bash features/antigravity/install.sh     # permissions, MCP servers, rules, skil
 | `sandbox-run` | The one way agy runs code: bubblewrap with no network, an empty home (only uv bound in) and the current directory the only writable path. agy's own `--sandbox` keeps the network and the user (probed 2026-10-26). Linked to `~/.local/bin`. |
 | `permissions.json` | Read-only shell allow list, MCP allow list (read-oriented servers, Serena read tools only, no DuckDB), deny list for destructive commands and index-deleting tools. |
 | `apply_permissions.py` | Merges those rules into `~/.gemini/antigravity-cli/settings.json` (keeps agy's own keys). |
-| `sync_mcp.py` | Copies Claude's user-scope MCP servers (`~/.claude.json`) into `~/.gemini/config/mcp_config.json` (mode 0600; agy-only servers kept). Re-run when registrations change. |
+| `sync_mcp.py` | Copies Claude's user-scope MCP servers (`~/.claude.json`) into `~/.gemini/config/mcp_config.json` (mode 0600; agy-only servers kept). Always adds the agy-only `fetch` server (pinned `mcp-server-fetch`): agy's own `read_url` is not registered in headless mode. Re-run when registrations change. |
 | `install_rules.py` + `rules-block.md` | Marker-delimited block in `~/.gemini/GEMINI.md` that includes `CLAUDE.md` via `@[...](path)` plus the Claude→agy translations. The rest of the file is left alone. |
 | `../../scripts/ask_agy.py` | Runs one prompt headless; exit 0 only when the turn really succeeded. |
 | `../../scripts/referee.py` | Gemini judges a diff, files or text against a task; JSON verdict, exit 0 pass / 2 fail / 3 unsure / 1 error. See the `referee` skill. |

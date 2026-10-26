@@ -201,4 +201,17 @@ def test_sync_mcp_never_gives_agy_delegate(tmp_path):
     target = tmp_path / "mcp_config.json"
     target.write_text(json.dumps({"mcpServers": {"delegate": {"command": "old"}}}))
     assert sync.sync(claude, target) == ["memweave"]
-    assert set(json.loads(target.read_text())["mcpServers"]) == {"memweave"}
+    assert set(json.loads(target.read_text())["mcpServers"]) == {"memweave"} | set(sync.AGY_EXTRA)
+
+
+def test_sync_mcp_always_gives_agy_a_pinned_fetch_server(tmp_path):
+    # headless agy has no web tool of its own (read_url isn't registered in print mode)
+    claude = tmp_path / "claude_user.json"
+    claude.write_text(json.dumps({"mcpServers": {}}))
+    target = tmp_path / "mcp_config.json"
+    sync.sync(claude, target)
+    fetch = json.loads(target.read_text())["mcpServers"]["fetch"]
+    assert fetch["command"] == "uvx" and fetch["args"][0].startswith("mcp-server-fetch==")
+    assert "--allow-private-ips" not in fetch["args"]
+    rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
+    assert "mcp(fetch/*)" in rules["allow"]

@@ -26,6 +26,7 @@
     "mcp(memweave/*)",
     "mcp(context7/*)",
     "mcp(ask_local/*)",
+    "mcp(fetch/*)",
     "mcp(serena/initial_instructions)",
     "mcp(serena/activate_project)",
     "mcp(serena/find_symbol)",

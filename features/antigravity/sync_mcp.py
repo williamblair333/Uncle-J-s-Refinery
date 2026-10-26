@@ -21,6 +21,10 @@ DEFAULT_CLAUDE = Path.home() / ".claude.json"
 DEFAULT_TARGET = Path.home() / ".gemini" / "config" / "mcp_config.json"
 KEEP = ("command", "args", "env", "url", "headers")
 SKIP = ("delegate",)
+# agy-only servers, always written: headless agy has no web tool of its own (read_url is not
+# registered in print mode, probed 2026-10-26). The reference fetch server refuses private
+# and LAN addresses by default. Pinned to a release more than two weeks old.
+AGY_EXTRA = {"fetch": {"command": "uvx", "args": ["mcp-server-fetch==2026.10.10"]}}
 
 
 def sync(claude: Path, target: Path) -> list:
@@ -35,6 +39,8 @@ def sync(claude: Path, target: Path) -> list:
         servers.pop(name, None)
     for name, spec in source.items():
         servers[name] = {k: spec[k] for k in KEEP if k in spec and (spec[k] or k == "args")}
+    for name, spec in AGY_EXTRA.items():
+        servers[name] = dict(spec)
     target.parent.mkdir(parents=True, exist_ok=True)
     if target.is_file():
         shutil.copy2(target, target.with_name(target.name + ".bak"))

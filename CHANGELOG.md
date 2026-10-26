@@ -10,6 +10,9 @@
 - **Permissions:** `command(sandbox-run)` allowed; curl and wget stay denied. The rules block tells
   agy to run tests through it and to read the web with `read_url` (already allowed).
 - **install.sh** step 5 links it into `~/.local/bin`. Tests: `tests/test_sandbox_run.py`.
+- **Web for agy:** `read_url` turned out not to be registered in headless mode, so `sync_mcp.py`
+  now always writes an agy-only `fetch` server (`mcp-server-fetch==2026.10.10`, private and LAN
+  addresses refused by default) and `mcp(fetch/*)` is allowed.
 
 ## 2026-10-25 — delegate MCP server: offload to agy/Gemini, Heretic, OpenAI, media by default
 

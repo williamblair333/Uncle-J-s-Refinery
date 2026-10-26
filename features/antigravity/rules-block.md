@@ -16,7 +16,9 @@ The policy below was written for Claude Code. It applies here with these transla
 - **To run code** (tests, scripts, a build), prefix it with `sandbox-run`, e.g.
   `sandbox-run uv run pytest -q` or `sandbox-run just test`. It runs offline and can write
   only inside the current directory. Run the tests yourself before you say a change is done.
-- **To read a web page**, use your `read_url` tool. `curl` and `wget` are denied.
+- **To read a web page**, call the `fetch` MCP server's `fetch` tool (pass `max_length` and
+  `start_index` to page through long pages). `curl` and `wget` are denied, and `read_url` is
+  not available in headless mode.
 
 @[Retrieval stack routing policy]({STACK_ROOT}/CLAUDE.md)
 <!-- UNCLE-J-AGY-END -->
