@@ -38,24 +38,42 @@ COUNT_FILE="$SELF_WORK_DIR/$SAFE_SESSION.count"
 STATE_LOG="${SELF_WORK_LOG:-${HOME:-/nonexistent}/.claude/state/self-work.jsonl}"
 BUDGET="${SELF_WORK_BUDGET:-20}"
 [[ "$BUDGET" =~ ^[0-9]+$ ]] || BUDGET=20
+MAX_LOG_BYTES="${SELF_WORK_LOG_MAX_BYTES:-5242880}"
+[[ "$MAX_LOG_BYTES" =~ ^[0-9]+$ ]] || MAX_LOG_BYTES=5242880
+PRUNE_DAYS="${SELF_WORK_PRUNE_DAYS:-7}"
+[[ "$PRUNE_DAYS" =~ ^[0-9]+$ ]] || PRUNE_DAYS=7
 
 log_decision() {  # $1 decision (allow/deny/delegate) — logging must never fail the hook
   local decision="$1"
-  local ts sess proj clean_tool clean_proj
+  local ts sess proj clean_tool clean_proj log_size
   {
+    if [ -d "$SELF_WORK_DIR" ]; then
+      find "$SELF_WORK_DIR" -maxdepth 1 -name "*.count" -type f -mtime +"$PRUNE_DAYS" -delete 2>/dev/null || true
+    fi
     ts=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date +%Y-%m-%dT%H:%M:%SZ)
     sess="${SESSION_ID:0:8}"
     proj=""
     if [ -n "$CWD" ]; then
       proj=$(basename "$CWD" 2>/dev/null || echo "")
+      case "$proj" in
+        parley-seat-*) proj="parley-seat" ;;
+      esac
     fi
     clean_tool=${TOOL_NAME//\\/\\\\}
     clean_tool=${clean_tool//\"/\\\"}
     clean_proj=${proj//\\/\\\\}
     clean_proj=${clean_proj//\"/\\\"}
-    mkdir -p "$(dirname "$STATE_LOG")" &&
+    mkdir -p "$(dirname "$STATE_LOG")" && {
+      if [ -f "$STATE_LOG" ]; then
+        log_size=$(wc -c < "$STATE_LOG" 2>/dev/null || echo 0)
+        log_size=${log_size//[!0-9]/}
+        if [ -n "$log_size" ] && [ "$log_size" -gt "$MAX_LOG_BYTES" ]; then
+          mv -f "$STATE_LOG" "${STATE_LOG}.1" 2>/dev/null || true
+        fi
+      fi
       printf '{"ts":"%s","decision":"%s","tool":"%s","project":"%s","session":"%s"}\n' \
         "$ts" "$decision" "$clean_tool" "$clean_proj" "$sess" >> "$STATE_LOG"
+    }
   } 2>/dev/null || true
 }
 

@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
 import pytest
 
@@ -246,5 +247,115 @@ def test_unwritable_state_fails_open(tmp_path):
     }
     payload = {"tool_name": "Read", "session_id": "sess-unwritable", "cwd": "/opt/proj/demo"}
     proc = run_hook(tmp_path, payload, env)
+    assert proc.returncode == 0
+    assert proc.stdout.strip() == ""
+
+
+def test_parley_seat_project_normalized(tmp_path):
+    session_id = "parley-sess-1"
+
+    # Seats with random 8-char suffixes should be normalized to "parley-seat"
+    run_hook(tmp_path, {"tool_name": "Read", "session_id": session_id, "cwd": "/tmp/parley-seat-a1b2c3d4"})
+    run_hook(tmp_path, {"tool_name": "Read", "session_id": session_id, "cwd": "/tmp/parley-seat-99887766"})
+    run_hook(tmp_path, {"tool_name": "Read", "session_id": session_id, "cwd": "/tmp/parley-seat-"})
+
+    # Exact "parley-seat" should remain "parley-seat"
+    run_hook(tmp_path, {"tool_name": "Read", "session_id": session_id, "cwd": "/opt/proj/parley-seat"})
+
+    # Non-parley-seat directories should not be normalized
+    run_hook(tmp_path, {"tool_name": "Read", "session_id": session_id, "cwd": "/opt/proj/my-parley-seat-foo"})
+    run_hook(tmp_path, {"tool_name": "Read", "session_id": session_id, "cwd": "/opt/proj/Uncle-J-s-Refinery"})
+
+    logs = read_logs(tmp_path)
+    assert len(logs) == 6
+    assert logs[0]["project"] == "parley-seat"
+    assert logs[1]["project"] == "parley-seat"
+    assert logs[2]["project"] == "parley-seat"
+    assert logs[3]["project"] == "parley-seat"
+    assert logs[4]["project"] == "my-parley-seat-foo"
+    assert logs[5]["project"] == "Uncle-J-s-Refinery"
+
+
+def test_log_rotation_over_5mb(tmp_path):
+    log_file = tmp_path / ".claude" / "state" / "self-work.jsonl"
+    log_file_1 = tmp_path / ".claude" / "state" / "self-work.jsonl.1"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # 1. Over 5 MB triggers rotation: creates .1 (replacing old .1) and starts fresh log
+    log_file_1.write_text('{"marker":"old_dot_one"}\n')
+    size_5mb_plus = 5 * 1024 * 1024 + 100
+    log_file.write_bytes(b"x" * size_5mb_plus)
+
+    proc1 = run_hook(tmp_path, {"tool_name": "Read", "session_id": "sess-rot-1", "cwd": "/opt/proj/demo"})
+    assert proc1.returncode == 0
+    assert proc1.stdout.strip() == ""
+
+    assert log_file_1.exists()
+    assert log_file_1.stat().st_size == size_5mb_plus
+
+    assert log_file.exists()
+    lines = [json.loads(line) for line in log_file.read_text().splitlines() if line.strip()]
+    assert len(lines) == 1
+    assert lines[0]["session"] == "sess-rot"
+
+    # 2. Under 5 MB does not rotate: appends to existing log
+    proc2 = run_hook(tmp_path, {"tool_name": "Write", "session_id": "sess-rot-2", "cwd": "/opt/proj/demo"})
+    assert proc2.returncode == 0
+    assert proc2.stdout.strip() == ""
+
+    # .1 still has size from first rotation
+    assert log_file_1.stat().st_size == size_5mb_plus
+    # Live log now has 2 lines
+    lines2 = [json.loads(line) for line in log_file.read_text().splitlines() if line.strip()]
+    assert len(lines2) == 2
+
+
+def test_prune_old_count_files(tmp_path):
+    sw_dir = tmp_path / ".claude" / "state" / "self-work"
+    sw_dir.mkdir(parents=True, exist_ok=True)
+
+    old_count = sw_dir / "old-session-1.count"
+    new_count = sw_dir / "new-session-2.count"
+    other_old = sw_dir / "old-session-3.txt"
+
+    old_count.write_text("5\n")
+    new_count.write_text("3\n")
+    other_old.write_text("keep me\n")
+
+    now = time.time()
+    t_8_days_ago = now - (8 * 86400)
+    t_2_days_ago = now - (2 * 86400)
+
+    os.utime(old_count, (t_8_days_ago, t_8_days_ago))
+    os.utime(new_count, (t_2_days_ago, t_2_days_ago))
+    os.utime(other_old, (t_8_days_ago, t_8_days_ago))
+
+    proc = run_hook(tmp_path, {"tool_name": "Read", "session_id": "active-sess-xyz", "cwd": "/opt/proj/demo"})
+    assert proc.returncode == 0
+    assert proc.stdout.strip() == ""
+
+    # .count file older than 7 days is deleted
+    assert not old_count.exists()
+    # .count file within 7 days is preserved
+    assert new_count.exists()
+    # Non-.count file older than 7 days is preserved
+    assert other_old.exists()
+    # Active session count file was created/updated
+    active_count = sw_dir / "active-sess-xyz.count"
+    assert active_count.exists()
+
+
+def test_rotation_failure_does_not_fail_hook(tmp_path):
+    log_file = tmp_path / ".claude" / "state" / "self-work.jsonl"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    # Make .1 a directory so mv fails
+    log_file_1 = tmp_path / ".claude" / "state" / "self-work.jsonl.1"
+    log_file_1.mkdir(parents=True, exist_ok=True)
+
+    size_5mb_plus = 5 * 1024 * 1024 + 100
+    log_file.write_bytes(b"x" * size_5mb_plus)
+
+    proc = run_hook(tmp_path, {"tool_name": "Read", "session_id": "sess-rot-err", "cwd": "/opt/proj/demo"})
+    # Hook must not fail or crash
     assert proc.returncode == 0
     assert proc.stdout.strip() == ""
