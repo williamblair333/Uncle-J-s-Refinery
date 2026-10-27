@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-27 — self-work log: one parley-seat project, rotation, counter pruning
+
+- **`hooks/discipline/self-work-budget.sh`**: `parley-seat-*` temp dirs log as one `parley-seat` project (~150 one-row "projects" before); the log rotates to `.1` past 5 MB (`SELF_WORK_LOG_MAX_BYTES`); `self-work/*.count` older than 7 days are pruned (`SELF_WORK_PRUNE_DAYS`). All inside the fail-open block. Built by agy (flash-medium, first clean run after #227); 2545 passed. Deploy: `bash install-reliability.sh`.
+
 ## 2026-10-27 — agy: recovered lookups no longer fail the job; headless skips GEMINI rules 3/6
 
 - **`scripts/ask_agy.py`**: a failed `read_file`/`call_mcp_tool`-style lookup agy worked around no longer marks the job failed; it returns `ok: true` with a `warning` and the `tool_errors` list. Failed commands, edits and writes, any permission denial, and errors with an empty response still fail. Why: agy's own diagnosis (`review/2026-10-27-agy-failure-diagnosis.md`) found 14 of the 37 failed jobs on 10-26/10-27 were marked failed this way, including a finished 603 s report.
