@@ -160,10 +160,17 @@ def load_routing(path: Path | None = None) -> dict:
         tiers = {t: ms for t, ms in tiers.items() if ms}
         if tiers:
             default = data.get("default")
-            return {"default": default if default in tiers else next(iter(tiers)), "tiers": tiers}
+            pools = [[m for m in pool if isinstance(m, str) and m]
+                     for pool in data.get("quota_pools", []) if isinstance(pool, list)]
+            pools = [p for p in pools if p]
+            return {
+                "default": default if default in tiers else next(iter(tiers)),
+                "tiers": tiers,
+                "quota_pools": pools,
+            }
     except (OSError, ValueError, KeyError, AttributeError, TypeError):
         pass
-    return {"default": "code", "tiers": {"code": [AGY_MODEL]}}
+    return {"default": "code", "tiers": {"code": [AGY_MODEL]}, "quota_pools": []}
 
 
 def read_quota(now: float | None = None) -> dict[str, float]:
@@ -190,12 +197,22 @@ def reset_seconds(text: str) -> int:
     return DEFAULT_QUOTA_SECONDS
 
 
-def mark_exhausted(model: str, text: str = "", now: float | None = None) -> float:
+def mark_exhausted(model: str, text: str = "", now: float | None = None,
+                   pools: list[list[str]] | None = None) -> float:
     """Record model as exhausted until the reset time in text; atomic write. Returns until."""
     now = time.time() if now is None else now
     until = now + reset_seconds(text)
+    if pools is None:
+        pools = load_routing().get("quota_pools", [])
+    models_to_mark = [model]
+    for pool in pools:
+        if model in pool:
+            for member in pool:
+                if member not in models_to_mark:
+                    models_to_mark.append(member)
     quota = read_quota(now)
-    quota[model] = until
+    for m in models_to_mark:
+        quota[m] = until
     tmp = None
     try:
         QUOTA_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -417,7 +434,14 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
                 out["log"] = log_path
         _log("agy", m, started, out, cwd=cwd)
         if _is_exhausted(out):
-            mark_exhausted(m, f"{out.get('error', '')} {out.get('detail', '')} {out.get('response', '')}")
+            pools = routing.get("quota_pools", [])
+            until = mark_exhausted(m, f"{out.get('error', '')} {out.get('detail', '')} {out.get('response', '')}",
+                                   pools=pools)
+            quota = read_quota()
+            for pool in pools:
+                if m in pool:
+                    for member in pool:
+                        quota[member] = until
             if model:  # explicit model: report its own result, no fallback
                 out["hint"] = _STATUS_ERROR_HINT
                 return out
