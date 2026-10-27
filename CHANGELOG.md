@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-27 — agy: recovered lookups no longer fail the job; headless skips GEMINI rules 3/6
+
+- **`scripts/ask_agy.py`**: a failed `read_file`/`call_mcp_tool`-style lookup agy worked around no longer marks the job failed; it returns `ok: true` with a `warning` and the `tool_errors` list. Failed commands, edits and writes, any permission denial, and errors with an empty response still fail. Why: agy's own diagnosis (`review/2026-10-27-agy-failure-diagnosis.md`) found 14 of the 37 failed jobs on 10-26/10-27 were marked failed this way, including a finished 603 s report.
+- **`features/gemini-integration/install.sh`** → `GEMINI.md`: rules 3 (startup-probe) and 6 (healthcheck) are interactive-only. Headless agy ran the probe as its first step, got denied, and lost the job. `just offload` error groups change name for denials.
+- Found: the qwen3.5:9b "0/8" and the four Heretic failures at 16:36/16:38 on 10-26 are test runs writing to the live `state/ask_local.jsonl` (`input_chars: 2`, bursts of 4 in one second); Ollama and the model are fine.
+
 ## 2026-10-26 — session wrap: offload-first done
 
 - README (delegate section: tiers, local-first light, `just offload`, self-work hook), ROADMAP (2026-10-26 completed + offload follow-ups), HANDOFF morning start list. PRs #218–#225 merged this session.
