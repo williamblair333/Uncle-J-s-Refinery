@@ -643,7 +643,12 @@ blocked).
 `ask_heretic`, `ask_openai` (off until `OPENAI_API_KEY` and `DELEGATE_OPENAI_MODEL` are set in
 its env), `make_image`, `make_video`, `speak`, `delegate_status`. `CLAUDE.md` makes delegating
 the default for bounded work. Off-machine calls refuse inside any root listed in
-`config/delegate-local-only.txt`. Calls are logged to `state/delegate.jsonl`.
+`config/delegate-local-only.txt`. Calls are logged to `state/delegate.jsonl`. `ask_agy(task=light|code|hard|review)`
+picks a model tier and falls back when Google quota runs out; `light` tries Heretic and the
+local Ollama model first (prompts naming no file, no edits). `just offload` reports how much
+work went to agy and the local models. The `self-work-budget` hook (installed by
+`install-reliability.sh`) blocks a session once per 20 of its own Read/Edit/Bash calls without
+a delegation, so every project is pushed to hand work off; tune with `SELF_WORK_BUDGET`.
 
 ### 23. Repo scout — one open-source find each morning (optional)
 

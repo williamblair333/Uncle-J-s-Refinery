@@ -14,6 +14,12 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Offload follow-ups** (opened 2026-10-26). Re-run `just offload` after a day (baseline: agy
+  22/65 ok). agy to diagnose ask_local `qwen3.5:9b` failing 8/8. Rotate
+  `~/.claude/state/self-work.jsonl` and prune `self-work/*.count`. Per-project columns in
+  `just offload`. Give agy `mkdir/cp/mv/touch` once sandbox-run stops binding `~/.cache/uv`
+  writable.
+
 - **Per-repo deny in the servers agy calls** (opened 2026-10-25). agy keeps full use of the stack
   (Bill's call), so it can still reach anatomy-lab through jcodemunch, and its transcripts through
   memweave. Closing that needs a repo filter inside those servers when agy is the caller. The
@@ -323,6 +329,15 @@ Completed items age out after ~4 weeks.
   `openai-compatible` is not in `_EMBED_AUTO_DETECT_ORDER` and is never auto-selected.
   Corrected in SECURITY.md with the evidence. If the narrower version is worth tracking,
   it needs its own issue.
+## Recently completed (2026-10-26 — offload first)
+
+- **agy and Heretic do the work** (PRs #218–#225): task tiers with quota fallback and correct
+  reset parsing; `light` goes to Heretic/ask_local first; agy diagnosed its own failures
+  (`review/2026-10-26-agy-self-diagnosis.md`) and built the fixes — denied commands named, tool
+  tally, failed-run logs copied to `state/agy-logs/`, `just test` works in its sandbox,
+  `local-health`, rules for how it lost jobs, `git grep` closed. `just offload` measures it;
+  the `self-work-budget` hook enforces it in every project.
+
 ## Recently completed (2026-10-25 — delegate by default)
 
 - **`delegate` MCP server** (PRs #203–#206). Every project gets `ask_agy`, `ask_heretic`,

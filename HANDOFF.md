@@ -1,5 +1,20 @@
 # Handoff — Uncle J's Refinery
 
+
+## NEXT SESSION (2026-10-27 morning) — start here
+
+Offload-first (top priority) is built: PRs #218–#225 merged, `main` == origin. In order:
+1. **Check the self-work hook is live.** `~/.claude/state/self-work.jsonl` should be filling with
+   per-project lines from other sessions. The installer said "already wired" on first install;
+   confirm `~/.claude/settings.json` has exactly one `self-work-budget` PreToolUse entry.
+2. **`just offload`** — compare to the baseline (agy 22/65 ok; Heretic via ask_local 66/72).
+3. **Hand to agy:** diagnose ask_local `qwen3.5:9b` (0/8); rotate the self-work log.
+4. Quota: Opus/Sonnet in agy back after the 5-hour window; argon and the medium models weekly-capped
+   until ~2026-10-30. `delegate_status` shows what's open.
+Working pattern that worked today: run agy jobs via `.venv/bin/python scripts/ask_agy.py
+--prompt-file … --edits --model …` in the background with "only these commands" rules; when agy
+fails, give the failure back to agy (`feedback_agy-diagnoses-agy` memory).
+
 ## 2026-10-26 (main host) — self-work budget hook
 
 Installed globally via `bash install-reliability.sh`; each project's next session gets it. Tune with `SELF_WORK_BUDGET`; kill switch is a huge value. Follow-ups for agy: rotate `~/.claude/state/self-work.jsonl` and prune old `self-work/*.count`; per-project columns in `just offload`.
