@@ -31,6 +31,7 @@ def routing(tmp_path, monkeypatch):
     f = tmp_path / "routing.json"
     f.write_text(json.dumps(AGY_ONLY))
     monkeypatch.setattr(d, "ROUTING_FILE", f)
+    monkeypatch.setenv("ASK_LOCAL_LOG", str(tmp_path / "ask_local.jsonl"))
 
     def no_network(prompt):
         raise AssertionError("real local backend called")

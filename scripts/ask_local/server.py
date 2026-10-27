@@ -72,6 +72,16 @@ DEFAULT_MODEL = _setting("ASK_LOCAL_MODEL", "qwen3.5:9b")
 TIMEOUT_S = float(_setting("ASK_LOCAL_TIMEOUT", "300"))
 _log_env = _setting("ASK_LOCAL_LOG")
 LOG_PATH = None if _log_env == "" else Path(_log_env or _REPO / "state" / "ask_local.jsonl")
+_DEFAULT_LOG = object()
+
+
+def _resolve_log_path() -> Path | None:
+    env = os.environ.get("ASK_LOCAL_LOG")
+    if env is not None:
+        return None if env == "" else Path(env)
+    return LOG_PATH
+
+
 MAX_INPUT_BYTES = 256_000  # ~64k tokens; above that a 16k-context model truncates
 
 
@@ -83,12 +93,12 @@ class LocalClient:
     """Ollama or llama-server HTTP client plus the measurement log. `http` is injectable for tests."""
 
     def __init__(self, http: httpx.Client, model: str = DEFAULT_MODEL,
-                 log_path: Path | None = LOG_PATH, backend: str = BACKEND):
+                 log_path: Path | None | object = _DEFAULT_LOG, backend: str = BACKEND):
         if backend not in BACKENDS:
             raise ValueError(f"ASK_LOCAL_BACKEND must be one of {BACKENDS}, not {backend!r}")
         self.http = http
         self.model = model
-        self.log_path = log_path
+        self.log_path = _resolve_log_path() if log_path is _DEFAULT_LOG else log_path
         self.backend = backend
 
     def _log(self, rec: dict) -> None:

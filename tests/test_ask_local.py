@@ -20,6 +20,15 @@ os.environ["ASK_LOCAL_CONFIG"] = ""
 import server  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def isolate_ask_local_log(tmp_path, monkeypatch):
+    """Ensure tests never write to the repo's live state/ask_local.jsonl."""
+    test_log = tmp_path / "ask_local.jsonl"
+    monkeypatch.setattr(server, "LOG_PATH", test_log)
+    monkeypatch.setenv("ASK_LOCAL_LOG", str(test_log))
+    return test_log
+
+
 def _chat_reply(content, prompt_tokens=40, out_tokens=12):
     return {
         "model": "qwen3.5:9b",
@@ -271,6 +280,48 @@ def test_results_strip_null_fields(tmp_path):
     c = _client(lambda r: httpx.Response(200, json=reply), tmp_path)
     out = server.ask(c, "hi")
     assert "tokens_in" not in out
+
+
+def test_test_call_never_writes_to_real_log(tmp_path):
+    """A test call using default LocalClient must never touch repo's state/ask_local.jsonl."""
+    real_log = _REPO / "state" / "ask_local.jsonl"
+    mtime_before = real_log.stat().st_mtime_ns if real_log.exists() else None
+    size_before = real_log.stat().st_size if real_log.exists() else None
+
+    seen = {}
+
+    def handler(request):
+        seen["called"] = True
+        return httpx.Response(200, json=_chat_reply("ok"))
+
+    http = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://ollama.test")
+    client = server.LocalClient(http=http)
+    assert client.log_path != real_log, f"LocalClient default log_path points to live log: {real_log}"
+
+    out = server.ask(client, "hi")
+    assert out["text"] == "ok"
+    assert seen.get("called") is True
+
+    if real_log.exists():
+        assert real_log.stat().st_mtime_ns == mtime_before, "real log was touched!"
+        assert real_log.stat().st_size == size_before, "real log size changed!"
+
+    lines = [json.loads(line) for line in client.log_path.read_text().splitlines()]
+    assert len(lines) == 1
+    assert lines[0]["tool"] == "ask"
+
+
+def test_ask_local_log_env_redirects_default_client(tmp_path, monkeypatch):
+    custom = tmp_path / "custom.jsonl"
+    monkeypatch.setenv("ASK_LOCAL_LOG", str(custom))
+    c = server.LocalClient(http=httpx.Client())
+    assert c.log_path == custom
+
+
+def test_ask_local_log_empty_disables_logging(monkeypatch):
+    monkeypatch.setenv("ASK_LOCAL_LOG", "")
+    c = server.LocalClient(http=httpx.Client())
+    assert c.log_path is None
 
 
 # --- openai backend (llama-server) -----------------------------------------
