@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-27 — tests stop writing to the live ask_local log
+
+- **`scripts/ask_local/server.py`**: `LocalClient` resolves its log path when built (`ASK_LOCAL_LOG`, else the default), not when the module loads, so tests can redirect it. **`tests/test_ask_local.py`** (autouse fixture + a test that the live log is untouched) and **`tests/test_delegate.py`** point it at a temp file. Why: the qwen3.5:9b "0/8" and 4 Heretic failures in `just offload` were test rows. Verified: a full `just test` left `state/ask_local.jsonl` at 80 lines. Built by agy; 2548 passed. The 12 old test rows stay and drop out of the 7-day report by 11-02.
+
 ## 2026-10-27 — self-work log: one parley-seat project, rotation, counter pruning
 
 - **`hooks/discipline/self-work-budget.sh`**: `parley-seat-*` temp dirs log as one `parley-seat` project (~150 one-row "projects" before); the log rotates to `.1` past 5 MB (`SELF_WORK_LOG_MAX_BYTES`); `self-work/*.count` older than 7 days are pruned (`SELF_WORK_PRUNE_DAYS`). All inside the fail-open block. Built by agy (flash-medium, first clean run after #227); 2545 passed. Deploy: `bash install-reliability.sh`.
