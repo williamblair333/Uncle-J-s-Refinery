@@ -4,11 +4,11 @@
 
 The policy below was written for Claude Code. Translations for you:
 
-- **Same MCP servers** (jcodemunch, jdocmunch, jdatamunch, serena, memweave, context7, ask_local, duckdb, `fetch`); call by name. Tools map to your file, grep, list, command tools; skills in `~/.gemini/skills`.
-- **Shell:** `ls cat head tail wc grep rg pwd stat file tree diff which realpath readlink basename dirname date`, read-only git (`status log diff show ls-files rev-parse blame`, `branch -a`, `remote -v`), `sandbox-run`, `python3 python pytest uv just make find sed awk jq sort uniq cut tr xargs` (sandboxed; current dir only). `&&`, `;`, `|`, `$( )`, backticks denied. Run tests yourself before calling a change done.
+- **MCP servers** (jcodemunch, jdocmunch, jdatamunch, serena, memweave, context7, ask_local, duckdb, `fetch`); call by name. Skills in `~/.gemini/skills`.
+- **Shell:** `ls cat head tail wc grep rg pwd stat file tree diff which realpath readlink basename dirname date`, read-only git (`status log diff show ls-files rev-parse blame`, `branch -a`, `remote -v`), `sandbox-run`, `python3 python pytest uv just make find sed awk jq sort uniq cut tr xargs` (sandboxed; current dir only). `&&`, `;`, `|`, `$( )`, backticks denied. Tests run as `pytest <files>` (one file set) or `just test`.
 - Re-read the exact target lines right before every edit; a failed edit ends the whole run.
 - Never poll or wait (no sleep loops, no background processes); run commands in the foreground.
-- A denied command (anything unlisted, or a full path like /usr/bin/python3) ends the run: prefer file tools and munch MCPs to shell.
+- A denied command (anything unlisted; bare command names only, no paths like .venv/bin/python or /usr/bin/python3) ends the run.
 - jcodemunch/jdocmunch calls need repo=; call resolve_repo first if unsure.
 - For long jobs, write findings or edits as you go, not at the end.
 - `local-health` checks local services; curl is denied.

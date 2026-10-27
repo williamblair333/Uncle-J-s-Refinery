@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-10-27 — agy shims actually run pytest/python; rule names bare commands only
+
+- **`features/antigravity/shims/_shim`**: outside the sandbox it now hands `sandbox-run` the bare name, so bwrap resolves it on its own PATH (project `.venv/bin` first). Before, the shim passed a host path: `pytest` → `~/.local/bin/pytest` (hidden by the sandbox's tmpfs $HOME), `python` → none, `python3` → system Python without pytest. Every test run through a shim failed, so agy reached for `.venv/bin/python` and was denied (2 jobs lost today). Verified: shimmed `pytest -q tests/test_ask_agy.py` 32 passed.
+- **`features/antigravity/rules-block.md`**: "bare command names only, no paths like .venv/bin/python"; tests run as `pytest <files>` or `just test`. Diagnosis: `review/2026-10-27-agy-venv-habit.md` (agy). Built by agy; 2553 passed. Deploy: `bash features/antigravity/install.sh`.
+
 ## 2026-10-27 — delegate: models sharing a quota pool are marked exhausted together
 
 - **`config/delegate-routing.json`** `quota_pools` (Opus-high + Sonnet-high) and **`scripts/delegate/server.py`**: when one member hits its quota, every member is marked with the same reset time and the tier loop skips them in the same call. Why: on 10-27 the router spent a call probing Sonnet right after Opus ran out (same 147h reset). `claude-sonnet-5-5-medium` is not pooled — unproven. Built by agy; 2551 passed. Running delegate servers pick it up on restart. (#231; #230 was opened empty and closed.)
