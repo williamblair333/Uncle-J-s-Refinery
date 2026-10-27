@@ -79,6 +79,39 @@ def test_hard_deny_is_failure_even_when_model_says_done(tmp_path):
     assert out["tool_errors"] and "deny rule" in out["tool_errors"][0]["message"]
 
 
+def read_error(tool, message):
+    return {"event": "step_update", "step_update": {
+        "step_type": "tool", "tool_name": tool, "state": "ERROR",
+        "tool_info": {"name": tool, "parameters": {"Path": "/x"}, "error": {"message": message}}}}
+
+
+def test_recovered_lookup_error_is_success_with_warning(tmp_path):
+    # 2026-10-27: a 603 s flash-high job wrote its full report and was marked failed for
+    # a guessed path and a wrong MCP argument it had already worked around
+    out, _ = run(tmp_path, [read_error("read_file", "file does not exist"),
+                            read_error("call_mcp_tool", "'file_path' is a required property"),
+                            result("the report\n")])
+    assert out["ok"] and out["response"] == "the report"
+    assert len(out["tool_errors"]) == 2 and "warning" in out
+
+
+def test_denied_read_is_still_failure(tmp_path):
+    msg = "permission check failed for read_file \"/home/x/.gemini/log\": Permission denied"
+    out, _ = run(tmp_path, [read_error("read_file", msg), result("the report\n")])
+    assert not out["ok"]
+
+
+def test_failed_command_or_edit_is_still_failure(tmp_path):
+    for tool in ("run_command", "edit_file"):
+        out, _ = run(tmp_path, [read_error(tool, "target content not found"), result("DONE\n")])
+        assert not out["ok"], tool
+
+
+def test_lookup_error_with_empty_response_is_failure(tmp_path):
+    out, _ = run(tmp_path, [read_error("read_file", "file does not exist"), result("")])
+    assert not out["ok"]
+
+
 def test_soft_deny_is_failure(tmp_path):
     out, _ = run(tmp_path, [result("", denied=[{"action": "command", "display_name": "RunCommand"}])])
     assert not out["ok"] and out["denied"] == ["RunCommand"]

@@ -22,12 +22,22 @@ applied with features/antigravity/apply_permissions.py. `--edits` adds
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 # python3, find, sed, jq... run through sandbox-run when agy reaches for them (see _shim)
 SHIMS = Path(__file__).resolve().parent.parent / "features" / "antigravity" / "shims"
+
+# A failed lookup agy then worked around (a guessed path, a wrong MCP argument) does not fail
+# the job; a failed command, edit or write does, since the response may claim it worked.
+READ_TOOLS = {"read_file", "view_file", "list_dir", "grep_search", "find_by_name", "call_mcp_tool"}
+_DENY_ERROR = re.compile(r"permission denied|deny rule|permission check failed", re.I)
+
+
+def fatal_tool_error(err: dict) -> bool:
+    return err.get("tool") not in READ_TOOLS or bool(_DENY_ERROR.search(err.get("message") or ""))
 
 
 def agy_env() -> dict:
@@ -140,7 +150,7 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
             detail = tool_errors[-1].get("message") or ""
         if detail:
             out["detail"] = detail
-    elif tool_errors:
+    elif any(fatal_tool_error(e) for e in tool_errors) or (tool_errors and not out["response"]):
         out["error"] = "a tool call failed (deny rule or tool error); the response may claim otherwise"
         if stderr_tail:
             out["detail"] = stderr_tail
@@ -154,6 +164,8 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
             out["detail"] = stderr_tail
     else:
         out["ok"] = True
+        if tool_errors:
+            out["warning"] = f"{len(tool_errors)} lookup(s) failed and agy worked around them"
     return out
 
 
