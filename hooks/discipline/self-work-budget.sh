@@ -9,22 +9,24 @@ command -v jq >/dev/null 2>&1 || exit 0
 INPUT=$(cat) || exit 0
 [ -n "$INPUT" ] || exit 0
 
-# Parse tool_name, session_id, cwd, and whether a Bash command contains CLAUDE-ONLY: in one jq call
+# Parse tool_name, session_id, cwd, CLAUDE-ONLY flag, and delegation command flag in one jq call
 readarray -t PARSED < <(
   printf '%s' "$INPUT" | jq -r '
     (.tool_name // ""),
     (.session_id // ""),
     (.cwd // ""),
-    (if (.tool_name == "Bash" and ((.tool_input.command // "") | contains("CLAUDE-ONLY:"))) then "1" else "0" end)
+    (if (.tool_name == "Bash" and ((.tool_input.command // "") | contains("CLAUDE-ONLY:"))) then "1" else "0" end),
+    (if (.tool_name == "Bash" and (((.tool_input.command // "") | try test("(^|[\n;&|])\\s*([A-Za-z_][A-Za-z0-9_]*=\\S*\\s+)*((\\S*python[0-9.]*|uv\\s+run)\\s+([^\n;&|]*\\s+)?\\S*scripts/(ask_agy|referee)\\.py|just\\s+([^\n;&|]*\\s+)?(agy|referee|\\S*scripts/(ask_agy|referee)\\.py)|(\\./|/\\S*/)?scripts/(ask_agy|referee)\\.py)\\b") catch false))) then "1" else "0" end)
   ' 2>/dev/null
 ) || exit 0
 
-[ "${#PARSED[@]}" -ge 4 ] || exit 0
+[ "${#PARSED[@]}" -ge 5 ] || exit 0
 
 TOOL_NAME="${PARSED[0]}"
 SESSION_ID="${PARSED[1]}"
 CWD="${PARSED[2]}"
 HAS_CLAUDE_ONLY="${PARSED[3]}"
+IS_BASH_DELEGATE="${PARSED[4]}"
 
 # session_id and tool_name are required to track state; fail open if missing
 [ -n "$TOOL_NAME" ] && [ -n "$SESSION_ID" ] || exit 0
@@ -77,18 +79,27 @@ log_decision() {  # $1 decision (allow/deny/delegate) — logging must never fai
   } 2>/dev/null || true
 }
 
-# 1. Delegation tool: reset counter to 0, log delegate, allow
+# 1. Delegation tool or Bash running delegation scripts: reset counter to 0, log delegate, allow
+is_delegation=0
 case "$TOOL_NAME" in
   mcp__delegate__ask_agy|mcp__delegate__ask_heretic|mcp__delegate__ask_openai|\
   mcp__ask_local__ask_local|mcp__ask_local__summarize_local|mcp__ask_local__extract_local)
-    if ! { mkdir -p "$SELF_WORK_DIR" && echo 0 > "$COUNT_FILE"; } 2>/dev/null; then
-      log_decision allow
-      exit 0
-    fi
-    log_decision delegate
-    exit 0
+    is_delegation=1
     ;;
 esac
+
+if [ "$TOOL_NAME" = "Bash" ] && [ "$IS_BASH_DELEGATE" = "1" ]; then
+  is_delegation=1
+fi
+
+if [ "$is_delegation" = "1" ]; then
+  if ! { mkdir -p "$SELF_WORK_DIR" && echo 0 > "$COUNT_FILE"; } 2>/dev/null; then
+    log_decision allow
+    exit 0
+  fi
+  log_decision delegate
+  exit 0
+fi
 
 # 2. Bash command containing CLAUDE-ONLY: allowed without counting
 if [ "$TOOL_NAME" = "Bash" ] && [ "$HAS_CLAUDE_ONLY" = "1" ]; then

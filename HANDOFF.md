@@ -17,7 +17,7 @@ fails, give the failure back to agy (`feedback_agy-diagnoses-agy` memory).
 
 ## 2026-10-27 (main host) — why agy jobs failed
 
-agy diagnosed 10-26/10-27 failures (`review/2026-10-27-agy-failure-diagnosis.md`, untracked): 14 were finished jobs marked failed over recovered lookup errors (fixed in ask_agy.py), 13 headless auto-denials, 10 quota, 2 timeouts. GEMINI.md rules 3/6 made headless agy run denied commands first (fixed). qwen "0/8" was test pollution of `state/ask_local.jsonl`. Done: tests use a temp ask_local log (#229). Opus+Sonnet quota pool done (#231). Open for agy: the self-work hook should count `scripts/ask_agy.py` run from Bash as delegating; agy's `.venv/bin/python` habit fixed at the cause — broken shims (#232). Self-work rotation + parley-seat normalization done (deploy with `bash install-reliability.sh`).
+agy diagnosed 10-26/10-27 failures (`review/2026-10-27-agy-failure-diagnosis.md`, untracked): 14 were finished jobs marked failed over recovered lookup errors (fixed in ask_agy.py), 13 headless auto-denials, 10 quota, 2 timeouts. GEMINI.md rules 3/6 made headless agy run denied commands first (fixed). qwen "0/8" was test pollution of `state/ask_local.jsonl`. Done: tests use a temp ask_local log (#229). Opus+Sonnet quota pool done (#231). Self-work hook counts Bash agy launches as delegating (#233). agy's `.venv/bin/python` habit fixed at the cause — broken shims (#232). Self-work rotation + parley-seat normalization done (deploy with `bash install-reliability.sh`).
 
 ## 2026-10-26 (main host) — self-work budget hook
 

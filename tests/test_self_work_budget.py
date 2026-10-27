@@ -359,3 +359,105 @@ def test_rotation_failure_does_not_fail_hook(tmp_path):
     # Hook must not fail or crash
     assert proc.returncode == 0
     assert proc.stdout.strip() == ""
+
+
+@pytest.mark.parametrize("bash_cmd", [
+    ".venv/bin/python scripts/ask_agy.py --prompt-file x.md --edits",
+    "python3 scripts/ask_agy.py",
+    "python scripts/ask_agy.py",
+    "python scripts/referee.py --task 'review code'",
+    ".venv/bin/python scripts/referee.py",
+    "just agy 'review this diff'",
+    "just agy",
+])
+def test_bash_delegation_commands_reset_counter(tmp_path, bash_cmd):
+    env = {"SELF_WORK_BUDGET": "2"}
+    session_id = "bash-delegation-session"
+    cwd = "/opt/proj/Uncle-J-s-Refinery"
+
+    # 2 tool calls to reach budget limit
+    for tool in ("Read", "Bash"):
+        proc = run_hook(
+            tmp_path,
+            {"tool_name": tool, "session_id": session_id, "cwd": cwd, "tool_input": {"command": "pwd"}},
+            env,
+        )
+        assert proc.returncode == 0
+        assert proc.stdout.strip() == ""
+
+    count_file = tmp_path / ".claude" / "state" / "self-work" / f"{session_id}.count"
+    assert count_file.read_text().strip() == "2"
+
+    # Bash delegation command resets counter to 0 and logs 'delegate'
+    proc_del = run_hook(
+        tmp_path,
+        {"tool_name": "Bash", "session_id": session_id, "cwd": cwd, "tool_input": {"command": bash_cmd}},
+        env,
+    )
+    assert proc_del.returncode == 0
+    assert proc_del.stdout.strip() == ""
+    assert count_file.read_text().strip() == "0"
+
+    logs = read_logs(tmp_path)
+    assert len(logs) == 3
+    assert logs[2]["decision"] == "delegate"
+    assert logs[2]["tool"] == "Bash"
+
+    # Next self-work calls should be allowed without hitting budget
+    for tool in ("Grep", "Glob"):
+        proc = run_hook(tmp_path, {"tool_name": tool, "session_id": session_id, "cwd": cwd}, env)
+        assert proc.returncode == 0
+        assert proc.stdout.strip() == ""
+
+    assert count_file.read_text().strip() == "2"
+
+
+@pytest.mark.parametrize("bash_cmd", [
+    "ls scripts/ask_agy.py",
+    "cat scripts/ask_agy.py",
+    "head -n 5 scripts/ask_agy.py",
+    "ls scripts/referee.py",
+    "cat scripts/referee.py",
+    "just test",
+])
+def test_bash_unrelated_commands_stay_self_work(tmp_path, bash_cmd):
+    env = {"SELF_WORK_BUDGET": "2"}
+    session_id = "bash-self-work-session"
+    cwd = "/opt/proj/Uncle-J-s-Refinery"
+
+    # 1. First self-work call (count=1)
+    proc1 = run_hook(
+        tmp_path,
+        {"tool_name": "Bash", "session_id": session_id, "cwd": cwd, "tool_input": {"command": bash_cmd}},
+        env,
+    )
+    assert proc1.returncode == 0
+    assert proc1.stdout.strip() == ""
+
+    count_file = tmp_path / ".claude" / "state" / "self-work" / f"{session_id}.count"
+    assert count_file.read_text().strip() == "1"
+
+    # 2. Second self-work call (count=2)
+    proc2 = run_hook(
+        tmp_path,
+        {"tool_name": "Bash", "session_id": session_id, "cwd": cwd, "tool_input": {"command": bash_cmd}},
+        env,
+    )
+    assert proc2.returncode == 0
+    assert proc2.stdout.strip() == ""
+    assert count_file.read_text().strip() == "2"
+
+    # 3. Third self-work call exceeds budget 2 -> denied
+    proc3 = run_hook(
+        tmp_path,
+        {"tool_name": "Bash", "session_id": session_id, "cwd": cwd, "tool_input": {"command": bash_cmd}},
+        env,
+    )
+    assert proc3.returncode == 0
+    data = json.loads(proc3.stdout)
+    assert data["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+    logs = read_logs(tmp_path)
+    assert len(logs) == 3
+    assert [l["decision"] for l in logs] == ["allow", "allow", "deny"]
+    assert all(l["tool"] == "Bash" for l in logs)

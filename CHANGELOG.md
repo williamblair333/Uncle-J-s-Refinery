@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-27 — self-work hook: launching agy from Bash counts as delegating
+
+- **`hooks/discipline/self-work-budget.sh`**: a Bash call that runs `scripts/ask_agy.py`, `scripts/referee.py` or `just agy` resets the count and logs `delegate`, like the MCP delegation tools. Reading the scripts (`ls`, `cat`) still counts as self-work. Why: the hook nudged this session three times while it was handing jobs to agy. Built by agy; 34 hook tests, 2566 passed. Live on merge (the hook is linked).
+
 ## 2026-10-27 — agy shims actually run pytest/python; rule names bare commands only
 
 - **`features/antigravity/shims/_shim`**: outside the sandbox it now hands `sandbox-run` the bare name, so bwrap resolves it on its own PATH (project `.venv/bin` first). Before, the shim passed a host path: `pytest` → `~/.local/bin/pytest` (hidden by the sandbox's tmpfs $HOME), `python` → none, `python3` → system Python without pytest. Every test run through a shim failed, so agy reached for `.venv/bin/python` and was denied (2 jobs lost today). Verified: shimmed `pytest -q tests/test_ask_agy.py` 32 passed.
