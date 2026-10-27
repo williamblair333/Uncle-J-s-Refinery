@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# One shim for every command agy reaches for out of habit (python3, find, sed, jq...): run the
-# real one inside sandbox-run (offline, writes only in the current directory). ask_agy.py puts
-# this directory first on agy's PATH, and permissions.json allows these names; an absolute
-# path (/usr/bin/python3) stays denied. Live 2026-10-26: Flash ran `python3 -c` despite the
-# rules and the denial ended its whole job.
+# One shim for every command agy reaches for out of habit (python3, pytest, find, sed, jq...):
+# outside the sandbox, hand off to sandbox-run with the bare command name so sandbox-run's
+# internal PATH (.venv/bin first, then system) resolves it inside bwrap. Inside the sandbox,
+# find and exec the real binary skipping this shim directory without recursing.
 set -euo pipefail
 name="$(basename "$0")"
+
+if [[ ! -d "/run/sandbox-run-inside" ]]; then
+    exec sandbox-run "$name" "$@"
+fi
+
 here="$(cd "$(dirname "$0")" && pwd -P)"
 real=""
 IFS=: read -ra dirs <<< "${PATH:-}"
@@ -15,7 +19,4 @@ for d in "${dirs[@]}"; do
 done
 [[ -n "$real" ]] || { echo "shim: no real '$name' on PATH" >&2; exit 127; }
 real="$(readlink -f "$real")"
-if [[ -d "/run/sandbox-run-inside" ]]; then
-    exec "$real" "$@"
-fi
-exec sandbox-run "$real" "$@"
+exec "$real" "$@"

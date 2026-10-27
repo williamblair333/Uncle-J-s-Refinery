@@ -5,8 +5,12 @@ shapes are copied from real agy 1.3.5 runs (2026-10-15)."""
 import importlib.util
 import json
 import os
+import shutil
 import stat
+import subprocess
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).parent.parent
 
@@ -340,3 +344,72 @@ def test_sync_mcp_always_gives_agy_a_pinned_fetch_server(tmp_path):
     assert "--allow-private-ips" not in fetch["args"]
     rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
     assert "mcp(fetch/*)" in rules["allow"]
+
+
+# ── shims: sandboxed habitual commands ──────────────────────────────────────
+
+def test_shimmed_pytest_resolves_to_local_venv(tmp_path):
+    if shutil.which("bwrap") is None:
+        pytest.skip("bubblewrap not installed")
+    venv_bin = tmp_path / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    fake_pytest = venv_bin / "pytest"
+    fake_pytest.write_text("#!/bin/sh\necho 'local-venv-pytest'\n")
+    fake_pytest.chmod(fake_pytest.stat().st_mode | stat.S_IXUSR | stat.S_IRUSR)
+
+    sandbox_dir = REPO / "features" / "antigravity"
+    shims_dir = sandbox_dir / "shims"
+
+    # Simulate running outside sandbox (where /run/sandbox-run-inside does not exist).
+    # If the test runner is itself in a sandbox, mask /run with a tmpfs so the shim
+    # executes its outside-sandbox branch (exec sandbox-run pytest).
+    run_marker = Path("/run/sandbox-run-inside")
+    if run_marker.exists():
+        cmd = [
+            "bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
+            "--tmpfs", "/run", "--bind", str(tmp_path), str(tmp_path),
+            "--chdir", str(tmp_path),
+            "--setenv", "PATH", f"{shims_dir}:{sandbox_dir}:{os.environ['PATH']}",
+            "pytest",
+        ]
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    else:
+        env = {**os.environ, "PATH": f"{shims_dir}:{sandbox_dir}:{os.environ['PATH']}"}
+        out = subprocess.run(["pytest"], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
+
+    assert out.returncode == 0
+    assert out.stdout.strip() == "local-venv-pytest"
+
+
+def test_shimmed_command_never_reenters_shim(tmp_path):
+    if shutil.which("bwrap") is None:
+        pytest.skip("bubblewrap not installed")
+    sandbox_script = REPO / "features" / "antigravity" / "sandbox-run"
+    shims_dir = REPO / "features" / "antigravity" / "shims"
+
+    # Inside sandbox-run with shims first on PATH:
+    # 1. Python executes system python directly, not re-invoking the shim
+    check_code = (
+        "import os, sys; "
+        f"shim = {str(shims_dir / 'python3')!r}; "
+        "assert os.path.realpath(sys.executable) != os.path.realpath(shim); "
+        "print('direct-exec')"
+    )
+    cmd = f"PATH={shims_dir}:$PATH python3 -c {check_code!r}"
+    out = subprocess.run(["bash", str(sandbox_script), "sh", "-c", cmd],
+                         cwd=tmp_path, capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0
+    assert out.stdout.strip() == "direct-exec"
+
+    # 2. Inside sandbox, a shimmed tool finds the next binary on PATH and does not recurse
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_tool = bin_dir / "pytest"
+    fake_tool.write_text("#!/bin/sh\necho 'real-binary'\n")
+    fake_tool.chmod(fake_tool.stat().st_mode | stat.S_IXUSR | stat.S_IRUSR)
+
+    cmd2 = f"PATH={shims_dir}:{bin_dir}:$PATH pytest"
+    out2 = subprocess.run(["bash", str(sandbox_script), "sh", "-c", cmd2],
+                          cwd=tmp_path, capture_output=True, text=True, timeout=60)
+    assert out2.returncode == 0
+    assert out2.stdout.strip() == "real-binary"
