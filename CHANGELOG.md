@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-27 — delegate: models sharing a quota pool are marked exhausted together
+
+- **`config/delegate-routing.json`** `quota_pools` (Opus-high + Sonnet-high) and **`scripts/delegate/server.py`**: when one member hits its quota, every member is marked with the same reset time and the tier loop skips them in the same call. Why: on 10-27 the router spent a call probing Sonnet right after Opus ran out (same 147h reset). `claude-sonnet-5-5-medium` is not pooled — unproven. Built by agy; 2551 passed. Running delegate servers pick it up on restart. (#231; #230 was opened empty and closed.)
+
 ## 2026-10-27 — tests stop writing to the live ask_local log
 
 - **`scripts/ask_local/server.py`**: `LocalClient` resolves its log path when built (`ASK_LOCAL_LOG`, else the default), not when the module loads, so tests can redirect it. **`tests/test_ask_local.py`** (autouse fixture + a test that the live log is untouched) and **`tests/test_delegate.py`** point it at a temp file. Why: the qwen3.5:9b "0/8" and 4 Heretic failures in `just offload` were test rows. Verified: a full `just test` left `state/ask_local.jsonl` at 80 lines. Built by agy; 2548 passed. The 12 old test rows stay and drop out of the 7-day report by 11-02.

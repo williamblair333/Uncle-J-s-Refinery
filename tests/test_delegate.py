@@ -483,3 +483,111 @@ def test_response_mentioning_quota_is_not_exhaustion():
     out = {"ok": False, "error": "a tool call failed", "response": "F2: quota was the cause",
            "usage": {"total_tokens": 900}}
     assert d._is_exhausted(out) is False
+
+
+def test_quota_pools_opus_exhausted_skips_sonnet_same_and_next_call(routing, tmp_path, monkeypatch):
+    cfg = {
+        "default": "hard",
+        "tiers": {
+            "hard": ["claude-opus-5-5-high", "claude-sonnet-5-5-high", "gemini-3.8-flash-high"]
+        },
+        "quota_pools": [["claude-opus-5-5-high", "claude-sonnet-5-5-high"]]
+    }
+    routing.write_text(json.dumps(cfg))
+    quota_file = tmp_path / "quota.json"
+    monkeypatch.setattr(d, "QUOTA_PATH", quota_file)
+    monkeypatch.setattr(d, "LOCAL_ONLY_FILE", tmp_path / "none.txt")
+    monkeypatch.setattr(d, "LOG_PATH", None)
+    now = 1700000000.0
+    monkeypatch.setattr(time, "time", lambda: now)
+
+    calls = []
+
+    def fake(prompt, **kw):
+        m = kw.get("model")
+        calls.append(m)
+        if m == "claude-opus-5-5-high":
+            return {"ok": False, "error": "status ERROR", "response": "Resource exhausted. Resets in 2h"}
+        return {"ok": True, "response": "done from flash"}
+
+    out1 = d.run_agy("hi", task="hard", cwd=str(tmp_path), ask=fake)
+    assert calls == ["claude-opus-5-5-high", "gemini-3.8-flash-high"]
+    assert out1["ok"] is True
+    assert out1["model"] == "gemini-3.8-flash-high"
+    skipped_models = [s["model"] for s in out1["skipped"]]
+    assert skipped_models == ["claude-opus-5-5-high", "claude-sonnet-5-5-high"]
+    assert out1["skipped"][0]["reason"] == "quota exhausted"
+    assert "exhausted until" in out1["skipped"][1]["reason"]
+
+    quota = json.loads(quota_file.read_text())
+    assert quota["claude-opus-5-5-high"] == now + 7200
+    assert quota["claude-sonnet-5-5-high"] == now + 7200
+
+    calls.clear()
+    out2 = d.run_agy("hi second time", task="hard", cwd=str(tmp_path), ask=fake)
+    assert calls == ["gemini-3.8-flash-high"]
+    assert out2["ok"] is True
+    assert out2["model"] == "gemini-3.8-flash-high"
+    assert [s["model"] for s in out2["skipped"]] == ["claude-opus-5-5-high", "claude-sonnet-5-5-high"]
+    assert all("exhausted until" in s["reason"] for s in out2["skipped"])
+
+
+def test_model_in_no_pool_behaves_as_before(routing, tmp_path, monkeypatch):
+    cfg = {
+        "default": "hard",
+        "tiers": {
+            "hard": ["gemini-4-argon-high", "claude-opus-5-5-high"]
+        },
+        "quota_pools": [["claude-opus-5-5-high", "claude-sonnet-5-5-high"]]
+    }
+    routing.write_text(json.dumps(cfg))
+    quota_file = tmp_path / "quota.json"
+    monkeypatch.setattr(d, "QUOTA_PATH", quota_file)
+    monkeypatch.setattr(d, "LOCAL_ONLY_FILE", tmp_path / "none.txt")
+    monkeypatch.setattr(d, "LOG_PATH", None)
+
+    calls = []
+
+    def fake(prompt, **kw):
+        m = kw.get("model")
+        calls.append(m)
+        if m == "gemini-4-argon-high":
+            return {"ok": False, "error": "status ERROR", "response": "Resource exhausted. Resets in 1h"}
+        return {"ok": True, "response": "done from opus"}
+
+    out = d.run_agy("hi", task="hard", cwd=str(tmp_path), ask=fake)
+    assert calls == ["gemini-4-argon-high", "claude-opus-5-5-high"]
+    assert out["ok"] is True
+    assert out["model"] == "claude-opus-5-5-high"
+    quota = json.loads(quota_file.read_text())
+    assert "gemini-4-argon-high" in quota
+    assert "claude-opus-5-5-high" not in quota
+    assert "claude-sonnet-5-5-high" not in quota
+
+
+def test_missing_quota_pools_key_works(routing, tmp_path, monkeypatch):
+    quota_file = tmp_path / "quota.json"
+    monkeypatch.setattr(d, "QUOTA_PATH", quota_file)
+    monkeypatch.setattr(d, "LOCAL_ONLY_FILE", tmp_path / "none.txt")
+    monkeypatch.setattr(d, "LOG_PATH", None)
+
+    r = d.load_routing()
+    assert r.get("quota_pools") == []
+
+    calls = []
+
+    def fake(prompt, **kw):
+        m = kw.get("model")
+        calls.append(m)
+        if m == "gemini-3.8-flash-low":
+            return {"ok": False, "error": "status ERROR", "response": "Resource exhausted. Resets in 1h"}
+        return {"ok": True, "response": "done"}
+
+    out = d.run_agy("hi", task="light", cwd=str(tmp_path), ask=fake)
+    assert calls == ["gemini-3.8-flash-low", "gpt-oss-120b-medium"]
+    assert out["ok"] is True
+    assert out["model"] == "gpt-oss-120b-medium"
+    quota = json.loads(quota_file.read_text())
+    assert "gemini-3.8-flash-low" in quota
+    assert "gpt-oss-120b-medium" not in quota
+
