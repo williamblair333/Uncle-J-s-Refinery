@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-26 — session wrap: offload-first done
+
+- README (delegate section: tiers, local-first light, `just offload`, self-work hook), ROADMAP (2026-10-26 completed + offload follow-ups), HANDOFF morning start list. PRs #218–#225 merged this session.
+
 ## 2026-10-26 — self-work budget: every project is pushed to delegate
 
 - **`hooks/discipline/self-work-budget.sh`** (global PreToolUse, wired by `install-reliability.sh`): counts a session's own Read/Edit/Write/Bash/Grep/Glob calls since its last delegation (ask_agy, ask_heretic, ask_openai, ask_local, summarize_local, extract_local). Past `SELF_WORK_BUDGET` (default 20) it denies once with the delegation routes, then resets — a recurring nudge, never a lock. Bash commands containing `CLAUDE-ONLY:` don't count. Fails open. Decisions logged with project to `~/.claude/state/self-work.jsonl`.
