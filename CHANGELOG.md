@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-29 — session wrap: agy failure causes fixed
+
+- HANDOFF next-session block (restart first, then `just offload` against the fixes in #227–#233). Scout finds and answers committed; `.claude/settings.json` carries Claude Code's own plugin rename (`ralph-wiggum` → `ralph-loop`).
+
 ## 2026-10-27 — self-work hook: launching agy from Bash counts as delegating
 
 - **`hooks/discipline/self-work-budget.sh`**: a Bash call that runs `scripts/ask_agy.py`, `scripts/referee.py` or `just agy` resets the count and logs `delegate`, like the MCP delegation tools. Reading the scripts (`ls`, `cat`) still counts as self-work. Why: the hook nudged this session three times while it was handing jobs to agy. Built by agy; 34 hook tests, 2566 passed. Live on merge (the hook is linked).

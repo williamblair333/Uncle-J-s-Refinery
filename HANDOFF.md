@@ -1,19 +1,19 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION (2026-10-27 morning) — start here
+## NEXT SESSION — start here (written 2026-10-29)
 
-Offload-first (top priority) is built: PRs #218–#225 merged, `main` == origin. In order:
-1. **Check the self-work hook is live.** `~/.claude/state/self-work.jsonl` should be filling with
-   per-project lines from other sessions. The installer said "already wired" on first install;
-   confirm `~/.claude/settings.json` has exactly one `self-work-budget` PreToolUse entry.
-2. **`just offload`** — compare to the baseline (agy 22/65 ok; Heretic via ask_local 66/72).
-3. **Hand to agy:** diagnose ask_local `qwen3.5:9b` (0/8); rotate the self-work log.
-4. Quota: Opus/Sonnet in agy back after the 5-hour window; argon and the medium models weekly-capped
-   until ~2026-10-30. `delegate_status` shows what's open.
-Working pattern that worked today: run agy jobs via `.venv/bin/python scripts/ask_agy.py
---prompt-file … --edits --model …` in the background with "only these commands" rules; when agy
-fails, give the failure back to agy (`feedback_agy-diagnoses-agy` memory).
+10-27 session: every agy failure cause I could trace got a fix, PRs #227–#233 merged (#230 empty, closed). `main` == origin.
+1. **Restart Claude Code first.** The delegate MCP server in old sessions still runs pre-#227/#231 code.
+2. **`just offload`** — the first run since the fixes. Expect agy success to jump: recovered lookups no longer fail
+   jobs (#227), shims run pytest/python (#232). The qwen 0/8 test rows drop out of the window by 11-02.
+3. **Quota:** argon back ~10-30, Opus/Sonnet-high ~11-02 (`delegate_status`). Flash-medium/high carried all 10-27 work.
+4. Open, not started: the 2 agy 20-minute timeouts from 10-26 (unexamined); `claude-sonnet-5-5-medium` may share
+   the Opus pool (unproven, so not in `quota_pools`); `uv.lock` has been modified in the working tree since before
+   10-27, origin unknown, left uncommitted — check before any `uv sync` (`feedback_uv-sync-inexact` memory).
+How agy jobs ran cleanly: `.venv/bin/python scripts/ask_agy.py --prompt-file … --edits --model gemini-3.8-flash-medium`
+in the background, main checkout on a feature branch, one editing job at a time; review diff + `just test` before
+merge (`feedback_agy-job-briefs` memory).
 
 ## 2026-10-27 (main host) — why agy jobs failed
 
