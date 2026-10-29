@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-29 — `just gpu`: give the GPU to mtw2's Heretic seats or share it with Klarheit
+
+- **`scripts/gpu-mode.sh`** (`just gpu mtw2|shared|status`): `mtw2` disables Klarheit's rv/cycle/m12 timers, stops Ollama, and restarts Heretic at `--fit-target 1024 -c 65536 -np 2`. `shared` restores the old setup (fit 7300, 1 slot × 32k, Ollama + timers). Both models on the GPU crash-looped Heretic on 10-23, so they take turns. Measured in mtw2 mode: Heretic 8.8 GB VRAM (was 0.96 GB asleep / ~2.9 GB awake), 2 slots × 32k, 38.1 tok/s generation (was 27.7).
+- **`docker/llama-heretic/compose.yaml`**: fit/ctx/np read `HERETIC_FIT/CTX/NP`, defaulting to the shared values. **`scripts/heretic.sh`** sets them from `state/gpu-mode`, so any `just heretic up` keeps the mode.
+- Found while switching: `disable` deletes a `systemctl link`ed timer's unit link (rv, m12), so mtw2 mode saves each timer's resolved file path to `state/gpu-mode.timers` and `shared` enables by path. Relink round trip tested on `klarheit-m12`.
+
 ## 2026-10-29 — session wrap: agy timeout label, CLI logging, git grep rule
 
 - HANDOFF next-session block rewritten for #235–#237. README: shell runs of `ask_agy.py` are logged too. ROADMAP offload follow-ups: done items marked, re-measure note updated.

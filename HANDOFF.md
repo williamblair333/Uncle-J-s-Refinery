@@ -5,6 +5,9 @@
 
 10-29 session: PRs #235 (timeout label + uv.lock), #236 (CLI jobs logged), #237 (`git grep` rule) merged; all three built
 by agy on flash-medium (3 jobs, 2 clean first tries, 1 retry after a `git grep` denial), checked by Claude.
+0. **GPU is in mtw2 mode (since 2026-10-29 14:02):** Ollama stopped, Klarheit rv/cycle/m12 timers disabled, Heretic
+   2 × 32k at fit 1024. `just gpu shared` restores Klarheit (re-links the timers from `state/gpu-mode.timers`); `just gpu status`.
+   While in mtw2 mode, ask_local's qwen3.5:9b is unreachable.
 1. **Restart Claude Code first.** Sessions started before #235/#236 run the old wrapper in the delegate server.
 2. **`just offload` after a few days of jobs.** It now counts shell-started agy jobs (`"via": "cli"`) from 10-29 on;
    before that, only MCP calls (last one 10-27). So the first real post-fix success rate needs new jobs. 10-28 work stays uncounted.

@@ -98,6 +98,10 @@ ask-local-up:
 heretic *args:
     ./scripts/heretic.sh {{args}}
 
+# who gets the GPU: just gpu mtw2 (Heretic takes it; Ollama + Klarheit paused) | shared | status
+gpu *args:
+    ./scripts/gpu-mode.sh {{args}}
+
 # image/video generation (ComfyUI, 127.0.0.1:8188): just comfy up -d | down | logs | build (up via dcup)
 comfy *args:
     ./scripts/comfy.sh {{args}}
