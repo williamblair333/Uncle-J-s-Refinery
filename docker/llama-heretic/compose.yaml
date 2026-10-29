@@ -17,6 +17,8 @@
 #   On GPU it costs +1.2 GB (7.24 GB, no room for lc0) for a 19 s first image; on CPU it
 #   costs no VRAM, the first image takes 42 s, and text prefill is unchanged (23.8 s).
 # cuda12 image: the cuda13 builds need driver CUDA >= 13.4 (this host: 13.0).
+# HERETIC_FIT/CTX/NP: set by scripts/heretic.sh from `just gpu` mode. The defaults are shared
+# mode (above). mtw2 mode stops Ollama + Klarheit's timers, so Heretic can take the GPU.
 services:
   llama-heretic:
     image: ghcr.io/ggml-org/llama.cpp:server-cuda12-b11459
@@ -32,11 +34,11 @@ services:
       - --alias
       - heretic
       - --fit-target
-      - "7300"
+      - "${HERETIC_FIT:-7300}"
       - -c
-      - "32768"
+      - "${HERETIC_CTX:-32768}"
       - -np
-      - "1"
+      - "${HERETIC_NP:-1}"
       - -b
       - "2048"
       - -ub
