@@ -14,11 +14,11 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Offload follow-ups** (opened 2026-10-26). Re-run `just offload` after a day (baseline: agy
-  22/65 ok). agy to diagnose ask_local `qwen3.5:9b` failing 8/8. Rotate
-  `~/.claude/state/self-work.jsonl` and prune `self-work/*.count`. Per-project columns in
-  `just offload`. Give agy `mkdir/cp/mv/touch` once sandbox-run stops binding `~/.cache/uv`
-  writable.
+- **Offload follow-ups** (opened 2026-10-26). Re-run `just offload` after a few days of jobs: the
+  first real post-fix number (baseline: agy 22/65 ok; CLI jobs counted only from 2026-10-29, #236).
+  Per-project columns in `just offload`. Give agy `mkdir/cp/mv/touch` once sandbox-run stops
+  binding `~/.cache/uv` writable. Done: qwen 8/8 was test pollution (#229), self-work rotation,
+  timeout label (#235), CLI logging (#236), `git grep` rule (#237).
 
 - **Per-repo deny in the servers agy calls** (opened 2026-10-25). agy keeps full use of the stack
   (Bill's call), so it can still reach anatomy-lab through jcodemunch, and its transcripts through

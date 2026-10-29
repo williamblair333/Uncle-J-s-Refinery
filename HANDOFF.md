@@ -1,19 +1,18 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (written 2026-10-29)
+## NEXT SESSION — start here (written 2026-10-29, second session)
 
-10-27 session: every agy failure cause I could trace got a fix, PRs #227–#233 merged (#230 empty, closed). `main` == origin.
-1. **Restart Claude Code first.** The delegate MCP server in old sessions still runs pre-#227/#231 code.
-2. **`just offload`** — the first run since the fixes. Expect agy success to jump: recovered lookups no longer fail
-   jobs (#227), shims run pytest/python (#232). The qwen 0/8 test rows drop out of the window by 11-02.
-3. **Quota:** argon back ~10-30, Opus/Sonnet-high ~11-02 (`delegate_status`). Flash-medium/high carried all 10-27 work.
-4. Open: `claude-sonnet-5-5-medium` may share the Opus pool (unproven, so not in `quota_pools`; testable 11-02).
-   Done 10-29: the 2 timeouts left no logs; ask_agy now labels timeouts by name. uv.lock was auto-maintain's #211 bump, committed.
-5. Done 10-29: CLI agy jobs (`scripts/ask_agy.py`, `just agy`) now log to `state/delegate.jsonl` (`"via": "cli"`), so
-   `just offload` counts them from 10-29 on; 10-28 work stays uncounted. agy's rules now say "no `git grep`, use rg".
-6. **CLAUDE.md size cap:** CLAUDE.md + agy rules-block = 23,951 / 24,000 bytes. The next CLAUDE.md addition needs
-   a trim first, or agy silently loses the routing policy (the test catches it in `just test`).
+10-29 session: PRs #235 (timeout label + uv.lock), #236 (CLI jobs logged), #237 (`git grep` rule) merged; all three built
+by agy on flash-medium (3 jobs, 2 clean first tries, 1 retry after a `git grep` denial), checked by Claude.
+1. **Restart Claude Code first.** Sessions started before #235/#236 run the old wrapper in the delegate server.
+2. **`just offload` after a few days of jobs.** It now counts shell-started agy jobs (`"via": "cli"`) from 10-29 on;
+   before that, only MCP calls (last one 10-27). So the first real post-fix success rate needs new jobs. 10-28 work stays uncounted.
+3. **Quota:** argon back 10-30 17:41 UTC, Opus/Sonnet/gpt-oss 11-02 15:13 UTC (`delegate_status`).
+4. Open: `claude-sonnet-5-5-medium` may share the Opus pool (unproven, so not in `quota_pools`; testable from 11-02).
+5. **CLAUDE.md size cap:** CLAUDE.md + agy rules-block = 23,951 / 24,000 bytes. The next CLAUDE.md addition needs
+   a trim first, or agy silently loses the routing policy (`just test` catches it).
+Closed 10-29: the two 10-26 timeouts left no logs (predate `state/agy-logs`); uv.lock was auto-maintain's #211 bump.
 How agy jobs ran cleanly: `.venv/bin/python scripts/ask_agy.py --prompt-file … --edits --model gemini-3.8-flash-medium`
 in the background, main checkout on a feature branch, one editing job at a time; review diff + `just test` before
 merge (`feedback_agy-job-briefs` memory).
