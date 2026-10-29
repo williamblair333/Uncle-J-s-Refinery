@@ -124,8 +124,11 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     if conversation_id:
         out["conversation_id"] = conversation_id
     stderr_tail = (proc.stderr or "").strip()[-600:]
+    timed_out = "print timeout" in (proc.stderr or "")
     if final is None:
-        out["error"] = f"no result event (agy exit {proc.returncode}): {proc.stderr.strip()[-400:]}"
+        out["error"] = (f"agy hit its print timeout ({timeout}s); the response is partial"
+                        if timed_out else
+                        f"no result event (agy exit {proc.returncode}): {proc.stderr.strip()[-400:]}")
         if stderr_tail:
             out["detail"] = stderr_tail
         return out
@@ -135,7 +138,11 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     recent = ([None] * len(denied) + steps)[len(steps):]
     out["denied"] = [describe_denied(a, s) for a, s in zip(denied, recent)]
     out["usage"] = final.get("usage")
-    if final.get("status") != "SUCCESS":
+    if timed_out:
+        out["error"] = f"agy hit its print timeout ({timeout}s); the response is partial"
+        if stderr_tail:
+            out["detail"] = stderr_tail
+    elif final.get("status") != "SUCCESS":
         out["error"] = f"status {final.get('status')}"
         err = final.get("error")
         if isinstance(err, dict):

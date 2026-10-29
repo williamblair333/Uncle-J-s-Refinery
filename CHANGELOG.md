@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-10-29 — ask_agy names agy's print timeout
+
+- **`scripts/ask_agy.py`**: when agy's stderr says `print timeout`, the outcome is `agy hit its print timeout (Ns); the response is partial`, ahead of every other branch, result event or not. Why: the two 20-minute timeouts on 10-26 were logged as "a tool call failed", so `just offload` counted them as tool errors. Their logs predate `state/agy-logs`, so nothing more can be learned about them. Built by agy (flash-medium, second try: the first was auto-denied on `git grep`); 3 new tests, 2569 passed.
+- **`uv.lock`**: committed the jcodemunch 1.108.399 / jdocmunch 1.150.1 bump auto-maintain installed (#211) but left uncommitted.
+
 ## 2026-10-29 — session wrap: agy failure causes fixed
 
 - HANDOFF next-session block (restart first, then `just offload` against the fixes in #227–#233). Scout finds and answers committed; `.claude/settings.json` carries Claude Code's own plugin rename (`ralph-wiggum` → `ralph-loop`).
