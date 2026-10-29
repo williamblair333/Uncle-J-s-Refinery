@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-29 — session wrap: agy timeout label, CLI logging, git grep rule
+
+- HANDOFF next-session block rewritten for #235–#237. README: shell runs of `ask_agy.py` are logged too. ROADMAP offload follow-ups: done items marked, re-measure note updated.
+
 ## 2026-10-29 — agy rules: no `git grep`, use rg
 
 - **`features/antigravity/rules-block.md`**: the shell line now says `no \`git grep\`, use rg`. Why: today's first agy job died on `git grep "ask_agy"`, which stays denied on purpose (`-O` opens a pager). Deployed with `install_rules.py`. **Size warning:** the block plus the @-included CLAUDE.md is 23,951 of agy's 24,000-byte cap; any CLAUDE.md growth of more than ~49 bytes fails `test_shipped_rules_block_includes_claude_md_and_fits`, and agy itself would drop the policy silently.
