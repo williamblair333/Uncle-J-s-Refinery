@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-29 — agy rules: no `git grep`, use rg
+
+- **`features/antigravity/rules-block.md`**: the shell line now says `no \`git grep\`, use rg`. Why: today's first agy job died on `git grep "ask_agy"`, which stays denied on purpose (`-O` opens a pager). Deployed with `install_rules.py`. **Size warning:** the block plus the @-included CLAUDE.md is 23,951 of agy's 24,000-byte cap; any CLAUDE.md growth of more than ~49 bytes fails `test_shipped_rules_block_includes_claude_md_and_fits`, and agy itself would drop the policy silently.
+
 ## 2026-10-29 — agy jobs run from a shell now count in `just offload`
 
 - **`scripts/ask_agy.py`**: `main()` appends the delegate server's record shape to `state/delegate.jsonl`, tagged `"via": "cli"` (model `agy-default` when `--model` is omitted). `DELEGATE_LOG` overrides the path; `""` turns it off. `ask()` stays log-free, so server calls aren't counted twice. Why: every agy job on 10-28/10-29 ran from Bash and the offload report never saw it. Tests point `DELEGATE_LOG` at a temp file (autouse fixture) so the suite can't pollute the real log; the full run left it at 92 lines. Built by agy (flash-medium, first try); 4 new tests, 2573 passed.
