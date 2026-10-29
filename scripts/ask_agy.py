@@ -25,10 +25,12 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
+_REPO = Path(__file__).resolve().parent.parent
 # python3, find, sed, jq... run through sandbox-run when agy reaches for them (see _shim)
-SHIMS = Path(__file__).resolve().parent.parent / "features" / "antigravity" / "shims"
+SHIMS = _REPO / "features" / "antigravity" / "shims"
 
 # A failed lookup agy then worked around (a guessed path, a wrong MCP argument) does not fail
 # the job; a failed command, edit or write does, since the response may claim it worked.
@@ -176,6 +178,27 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     return out
 
 
+def _log(args, out: dict, elapsed: float) -> None:
+    log_env = os.environ.get("DELEGATE_LOG")
+    if log_env == "":
+        return
+    log_path = Path(log_env) if log_env else _REPO / "state" / "delegate.jsonl"
+    project = os.path.basename(os.path.normpath(args.cwd))
+    rec = {"ts": round(time.time(), 1), "backend": "agy", "model": args.model or "agy-default",
+           "project": project, "via": "cli",
+           "seconds": round(elapsed, 1), "ok": bool(out["ok"])}
+    if not out.get("ok"):
+        rec["error"] = str(out.get("error", ""))[:200]
+    if out.get("tools"):
+        rec["tools"] = out["tools"]
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a") as f:
+            f.write(json.dumps(rec) + "\n")
+    except OSError:
+        pass
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("prompt", nargs="?")
@@ -189,8 +212,10 @@ def main(argv=None) -> int:
     prompt = open(args.prompt_file, encoding="utf-8").read() if args.prompt_file else args.prompt
     if not prompt:
         ap.error("a prompt or --prompt-file is required")
+    started = time.time()
     out = ask(prompt, agy_bin=args.agy_bin, cwd=args.cwd, edits=args.edits,
               timeout=args.timeout, model=args.model)
+    _log(args, out, time.time() - started)
     if out["ok"]:
         print(out["response"])
         return 0

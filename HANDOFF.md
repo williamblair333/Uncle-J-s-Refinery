@@ -10,8 +10,8 @@
 3. **Quota:** argon back ~10-30, Opus/Sonnet-high ~11-02 (`delegate_status`). Flash-medium/high carried all 10-27 work.
 4. Open: `claude-sonnet-5-5-medium` may share the Opus pool (unproven, so not in `quota_pools`; testable 11-02).
    Done 10-29: the 2 timeouts left no logs; ask_agy now labels timeouts by name. uv.lock was auto-maintain's #211 bump, committed.
-5. **`just offload` is blind to CLI jobs**: `scripts/ask_agy.py` run from Bash doesn't write `state/delegate.jsonl`
-   (only the MCP server does), so 10-28/10-29 agy work is uncounted. Fix next. agy also reaches for `git grep`
+5. Done 10-29: CLI agy jobs (`scripts/ask_agy.py`, `just agy`) now log to `state/delegate.jsonl` (`"via": "cli"`), so
+   `just offload` counts them from 10-29 on; 10-28 work stays uncounted. Open: agy reaches for `git grep`
    (deliberately not allowed) — consider a GEMINI.md line: search with rg/grep.
 How agy jobs ran cleanly: `.venv/bin/python scripts/ask_agy.py --prompt-file … --edits --model gemini-3.8-flash-medium`
 in the background, main checkout on a feature branch, one editing job at a time; review diff + `just test` before
