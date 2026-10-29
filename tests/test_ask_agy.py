@@ -28,6 +28,14 @@ sync = load("sync_mcp", "features/antigravity/sync_mcp.py")
 rules_mod = load("install_rules", "features/antigravity/install_rules.py")
 
 
+@pytest.fixture(autouse=True)
+def _temp_delegate_log(tmp_path, monkeypatch):
+    # main() logs to state/delegate.jsonl; tests must never write the real one (#229)
+    log = tmp_path / "delegate-test.jsonl"
+    monkeypatch.setenv("DELEGATE_LOG", str(log))
+    return log
+
+
 def step(state, cmd="ls", error=None):
     info = {"name": "run_command", "parameters": {"CommandLine": cmd}}
     if error:
@@ -436,3 +444,40 @@ def test_print_timeout_with_partial_response_is_failure(tmp_path):
 def test_print_timeout_without_result_event_is_named(tmp_path):
     out, _ = run(tmp_path, [step("DONE")], exit_code=1, stderr=TIMEOUT_STDERR)
     assert not out["ok"] and "print timeout" in out["error"]
+
+
+# ── CLI runs land in delegate.jsonl so `just offload` counts them ─────────────
+# 2026-10-29: every agy job of 10-28/10-29 ran from Bash and the report never saw it.
+
+def read_log(path):
+    return [json.loads(line) for line in path.read_text().splitlines()]
+
+
+def test_cli_success_is_logged(tmp_path, _temp_delegate_log):
+    script, _ = fake_agy(tmp_path, [result("fine")])
+    ask.main(["--agy-bin", str(script), "--cwd", str(tmp_path), "--model", "m1", "q"])
+    (rec,) = read_log(_temp_delegate_log)
+    assert rec["backend"] == "agy" and rec["model"] == "m1" and rec["ok"] is True
+    assert rec["via"] == "cli" and rec["project"] == tmp_path.name
+    assert isinstance(rec["seconds"], float) and "error" not in rec
+
+
+def test_cli_failure_is_logged_with_error(tmp_path, _temp_delegate_log):
+    script, _ = fake_agy(tmp_path, [result("")])
+    ask.main(["--agy-bin", str(script), "--cwd", str(tmp_path), "q"])
+    (rec,) = read_log(_temp_delegate_log)
+    assert rec["ok"] is False and rec["error"] == "empty response"
+    assert rec["model"] == "agy-default"
+
+
+def test_cli_log_disabled_by_empty_env(tmp_path, monkeypatch, _temp_delegate_log):
+    monkeypatch.setenv("DELEGATE_LOG", "")
+    script, _ = fake_agy(tmp_path, [result("fine")])
+    assert ask.main(["--agy-bin", str(script), "--cwd", str(tmp_path), "q"]) == 0
+    assert not _temp_delegate_log.exists()
+
+
+def test_library_ask_does_not_log(tmp_path, _temp_delegate_log):
+    # the delegate server calls ask() and logs itself; logging there too would double-count
+    run(tmp_path, [result("fine")])
+    assert not _temp_delegate_log.exists()

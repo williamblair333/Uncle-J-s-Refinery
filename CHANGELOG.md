@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-29 — agy jobs run from a shell now count in `just offload`
+
+- **`scripts/ask_agy.py`**: `main()` appends the delegate server's record shape to `state/delegate.jsonl`, tagged `"via": "cli"` (model `agy-default` when `--model` is omitted). `DELEGATE_LOG` overrides the path; `""` turns it off. `ask()` stays log-free, so server calls aren't counted twice. Why: every agy job on 10-28/10-29 ran from Bash and the offload report never saw it. Tests point `DELEGATE_LOG` at a temp file (autouse fixture) so the suite can't pollute the real log; the full run left it at 92 lines. Built by agy (flash-medium, first try); 4 new tests, 2573 passed.
+
 ## 2026-10-29 — ask_agy names agy's print timeout
 
 - **`scripts/ask_agy.py`**: when agy's stderr says `print timeout`, the outcome is `agy hit its print timeout (Ns); the response is partial`, ahead of every other branch, result event or not. Why: the two 20-minute timeouts on 10-26 were logged as "a tool call failed", so `just offload` counted them as tool errors. Their logs predate `state/agy-logs`, so nothing more can be learned about them. Built by agy (flash-medium, second try: the first was auto-denied on `git grep`); 3 new tests, 2569 passed.
