@@ -413,3 +413,26 @@ def test_shimmed_command_never_reenters_shim(tmp_path):
                           cwd=tmp_path, capture_output=True, text=True, timeout=60)
     assert out2.returncode == 0
     assert out2.stdout.strip() == "real-binary"
+
+
+# ── agy's own --print-timeout: name it, never file it under tool errors ───────
+# 2026-10-26: two 20-minute timeouts were logged as "a tool call failed", so
+# `just offload` counted them as tool failures and nobody looked at them.
+
+TIMEOUT_STDERR = "poll.go:188: Print mode: print timeout after 20m0s\n"
+
+
+def test_print_timeout_with_lookup_error_is_named(tmp_path):
+    out, _ = run(tmp_path, [read_error("read_file", "file does not exist"), result("")],
+                 stderr=TIMEOUT_STDERR)
+    assert not out["ok"] and "print timeout" in out["error"]
+
+
+def test_print_timeout_with_partial_response_is_failure(tmp_path):
+    out, _ = run(tmp_path, [step("DONE"), result("half a report\n")], stderr=TIMEOUT_STDERR)
+    assert not out["ok"] and "print timeout" in out["error"]
+
+
+def test_print_timeout_without_result_event_is_named(tmp_path):
+    out, _ = run(tmp_path, [step("DONE")], exit_code=1, stderr=TIMEOUT_STDERR)
+    assert not out["ok"] and "print timeout" in out["error"]
