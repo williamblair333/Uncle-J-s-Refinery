@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 76 repo, 1 workflows.
+Totals: 77 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -78,6 +78,7 @@ Totals: 76 repo, 1 workflows.
 | `review-queue-triage` | Audit _review/ items, classify by completion signals (status: resolved, REPO-ASSESSMENT + landing commit), auto-move resolved items to _reviewed/, leave uncert… | auto | any agent | repo |
 | `session-end-checklist` | Session wrap-up checklist — updates CHANGELOG, HANDOFF, considers ROADMAP/README, then commits. | auto | Refinery stack | repo |
 | `session-status-briefing` | Produce a comprehensive session-start status report combining git state, HANDOFF, every open ROADMAP/memory/scout item waiting to be done, code health metrics,… | auto | Refinery stack | repo |
+| `slowest-loop-first` | Use when a fix or change can't be proven until something outside your control happens — a random roll, a live user or event, a nightly or scheduled run, a real… | auto | any agent | repo |
 | `smart-review` | Auto-classifying code review router — rules floor + shadow classifier → dispatches code-review (low/medium/high) or adversarial-review (critical). | auto | Refinery stack | repo |
 | `stack-not-at-head-remediation` | Remediate a HEALTHCHECK fail on stack-not-at-head — upgrade uv packages, re-index, pin embedding canary, run post-upgrade integration, update docs, commit, sna… | auto | Refinery stack | repo |
 | `stale-lock-diagnosis` | Diagnose and fix stale lock directories blocking background automation scripts (mine, index, sync jobs). | auto | Refinery stack | repo |
