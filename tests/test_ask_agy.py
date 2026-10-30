@@ -24,6 +24,20 @@ def load(name, rel):
 
 ask = load("ask_agy", "scripts/ask_agy.py")
 perms = load("apply_permissions", "features/antigravity/apply_permissions.py")
+
+
+@pytest.mark.parametrize("cmd,fix", [
+    # .venv is not a .env file, and a relative path is inside the repo (review, 2026-10-30)
+    (".venv/bin/python -m pytest", 'add "command(.venv/bin/python)"'),
+    ("sed -n 1p scripts/foo.py", 'add "command(sed)"'),
+    ("git stash", 'add "command(git stash)"'),
+    ("cat /etc/passwd", "ask Bill"),
+    ("cat stack.env", "ask Bill"),
+    ("printenv", "ask Bill"),
+    ("cat /opt/proj/x/README.md", 'add "command(cat)"'),
+])
+def test_fix_cause_advice(cmd, fix):
+    assert ask._compute_fix("RunCommand", cmd).startswith(fix)
 sync = load("sync_mcp", "features/antigravity/sync_mcp.py")
 rules_mod = load("install_rules", "features/antigravity/install_rules.py")
 
@@ -33,6 +47,8 @@ def _temp_delegate_log(tmp_path, monkeypatch):
     # main() logs to state/delegate.jsonl; tests must never write the real one (#229)
     log = tmp_path / "delegate-test.jsonl"
     monkeypatch.setenv("DELEGATE_LOG", str(log))
+    denials_log = tmp_path / "agy-denials-test.jsonl"
+    monkeypatch.setenv("AGY_DENIALS_LOG", str(denials_log))
     return log
 
 
@@ -143,6 +159,112 @@ def test_soft_deny_without_command_line_shows_parameters(tmp_path):
         "tool_info": {"name": "write_file", "parameters": {"Path": "/x"}}}}
     out, _ = run(tmp_path, [ev, result("", denied=[{"action": "write"}])])
     assert not out["ok"] and len(out["denied"]) == 1 and '"Path"' in out["denied"][0]
+
+
+def test_soft_deny_fix_cause_names_allow_rule(tmp_path):
+    cmd = "git stash"
+    out, _ = run(tmp_path, [step("ACTIVE", cmd), step("DONE", cmd),
+                            result("", denied=[{"action": "command", "display_name": "RunCommand"}])])
+    assert not out["ok"]
+    assert "fix_cause" in out
+    fixes = out["fix_cause"]
+    assert len(fixes) == 1
+    assert fixes[0]["tool"] == "RunCommand"
+    assert fixes[0]["input"] == "git stash"
+    assert fixes[0]["fix"] == 'add "command(git stash)" to allow in features/antigravity/permissions.json'
+
+
+def test_deny_rule_tool_error_fix_cause(tmp_path):
+    msg = "Permission denied for unsandboxed(just test). Matches user-configured deny rule."
+    out, _ = run(tmp_path, [step("ERROR", "just test", msg), result("DONE\n")])
+    assert not out["ok"]
+    assert "fix_cause" in out
+    fixes = out["fix_cause"]
+    assert len(fixes) == 1
+    assert fixes[0]["tool"] == "run_command"
+    assert fixes[0]["input"] == "just test"
+    assert fixes[0]["fix"] == 'add "command(just test)" to allow in features/antigravity/permissions.json'
+
+
+def test_path_outside_opt_proj_asks_bill(tmp_path):
+    cmd = "touch /tmp/probe.txt"
+    out, _ = run(tmp_path, [step("ACTIVE", cmd), step("DONE", cmd),
+                            result("", denied=[{"action": "command", "display_name": "RunCommand"}])])
+    assert not out["ok"]
+    assert "fix_cause" in out
+    fixes = out["fix_cause"]
+    assert len(fixes) == 1
+    assert fixes[0]["input"] == "touch /tmp/probe.txt"
+    assert fixes[0]["fix"] == "ask Bill before allowing: outside /opt/proj or secret-like"
+
+    # Secret-like word
+    out_sec = ask.fix_cause({"denied": ["RunCommand: cat .env"]})
+    assert len(out_sec) == 1
+    assert out_sec[0]["fix"] == "ask Bill before allowing: outside /opt/proj or secret-like"
+
+
+def test_ok_with_warning_carries_fix_cause_only_when_deny_matched(tmp_path):
+    # Lookup error without deny does not set fix_cause
+    out1, _ = run(tmp_path, [read_error("read_file", "file does not exist"),
+                             result("the report\n")])
+    assert out1["ok"]
+    assert "warning" in out1
+    assert "fix the cause (see fix_cause) or file it" in out1["warning"]
+    assert "fix_cause" not in out1
+
+    # When fix_cause is computed on an ok dictionary, it carries fix_cause only if a deny matched
+    out2 = {
+        "ok": True,
+        "tool_errors": [{"tool": "read_file", "input": '{"Path":"/opt/proj/x"}', "message": "permission check failed"}],
+        "denied": []
+    }
+    causes = ask.fix_cause(out2)
+    assert causes == [{"tool": "read_file", "input": '{"Path":"/opt/proj/x"}', "fix": "agy was refused read_file; check features/antigravity/permissions.json"}]
+
+
+def test_log_denials_writes_and_disabled_by_empty_env(tmp_path, monkeypatch):
+    log_file = tmp_path / "custom-denials.jsonl"
+    monkeypatch.setenv("AGY_DENIALS_LOG", str(log_file))
+    out = {
+        "ok": False,
+        "fix_cause": [
+            {"tool": "RunCommand", "input": "git stash", "fix": 'add "command(git stash)" to allow in features/antigravity/permissions.json'}
+        ]
+    }
+    ask.log_denials(out, "my-proj")
+    assert log_file.is_file()
+    lines = [json.loads(line) for line in log_file.read_text().splitlines() if line]
+    assert len(lines) == 1
+    assert lines[0]["project"] == "my-proj"
+    assert lines[0]["tool"] == "RunCommand"
+    assert lines[0]["input"] == "git stash"
+    assert lines[0]["fix"] == 'add "command(git stash)" to allow in features/antigravity/permissions.json'
+    assert isinstance(lines[0]["ts"], (int, float))
+
+    # Empty env disables logging
+    monkeypatch.setenv("AGY_DENIALS_LOG", "")
+    log_file2 = tmp_path / "disabled-denials.jsonl"
+    ask.log_denials(out, "my-proj", path=log_file2)
+    assert not log_file2.exists()
+
+
+def test_delegate_run_agy_logs_denials(tmp_path, monkeypatch):
+    del_server = load("delegate_server", "scripts/delegate/server.py")
+    denials_log = tmp_path / "agy-denials-del.jsonl"
+    monkeypatch.setenv("AGY_DENIALS_LOG", str(denials_log))
+    fake_ask = lambda *a, **kw: {
+        "ok": False,
+        "error": "headless mode auto-denied an action not on the allow list",
+        "denied": ["RunCommand: git stash"],
+        "fix_cause": [{"tool": "RunCommand", "input": "git stash", "fix": 'add "command(git stash)" to allow in features/antigravity/permissions.json'}]
+    }
+    del_server.run_agy("hello", cwd=str(tmp_path), ask=fake_ask, model="gemini-3.8-flash-medium")
+    assert denials_log.is_file()
+    lines = [json.loads(line) for line in denials_log.read_text().splitlines() if line]
+    assert len(lines) == 1
+    assert lines[0]["tool"] == "RunCommand"
+    assert lines[0]["input"] == "git stash"
+    assert lines[0]["project"] == tmp_path.name
 
 
 def test_empty_response_is_failure(tmp_path):

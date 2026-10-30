@@ -74,3 +74,12 @@ def test_main_flags_repo_without_handoff_and_lists_roadmap(tmp_path):
                         "--memory-root", str(tmp_path / "nomem")], capture_output=True, text=True, check=True)
     assert "## nohandoff  [no HANDOFF.md" in p.stdout
     assert "### ROADMAP open items (1)\n- Image models" in p.stdout
+
+
+def test_flag_waits_marks_external_waits_without_a_plan():
+    assert ws.flag_waits("- verify the fix: waiting on the next spy roll").endswith(ws.NO_PLAN)
+    assert ws.flag_waits("- blocked on llama.cpp #30528").endswith(ws.NO_PLAN)
+    # a plan to force it, or waiting on Bill himself, is not flagged
+    assert ws.flag_waits("- waiting on llama.cpp #30528; watch it, then bump").endswith("bump")
+    assert ws.flag_waits("- waiting on Bill's go") == "- waiting on Bill's go"
+    assert ws.flag_waits("- ship the docs") == "- ship the docs"

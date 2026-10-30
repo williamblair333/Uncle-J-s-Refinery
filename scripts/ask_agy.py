@@ -60,6 +60,76 @@ def describe_denied(action: dict, step: dict = None) -> str:
     return f"{name}: {what}" if what else name
 
 
+# absolute paths only: a path starts the line or follows whitespace, a quote or '='
+# (so the '/foo.py' inside 'scripts/foo.py' is not one)
+_PATH_RE = re.compile(r"(?:^|(?<=[\s'\"=]))(?:~|/)[^\s'\"`<>|;,)]+")
+# .env files (stack.env, .env) but not .venv; the words themselves; env dumps
+_SECRET_RE = re.compile(
+    r"\.env\b|\bsecrets?\b|\btokens?\b|credential|password|api[_-]?key|private[_-]?key|\bprintenv\b|\benviron\b",
+    re.I,
+)
+
+
+def _is_outside_opt_proj(inp: str) -> bool:
+    for m in _PATH_RE.findall(inp):
+        m = m.rstrip(".?!:\"'")
+        norm = os.path.normpath(m)
+        if norm == "/opt/proj" or norm.startswith("/opt/proj/"):
+            continue
+        return True
+    return False
+
+
+def _is_secret_like(inp: str) -> bool:
+    return bool(_SECRET_RE.search(inp))
+
+
+def _compute_fix(tool: str | None, inp: str | None) -> str:
+    if inp and (_is_outside_opt_proj(inp) or _is_secret_like(inp)):
+        return "ask Bill before allowing: outside /opt/proj or secret-like"
+
+    is_command = bool(tool and tool.lower() in ("run_command", "runcommand", "command", "bash", "sh"))
+    if is_command and inp:
+        words = inp.strip().split()
+        if words:
+            if words[0] in ("git", "uv", "just") and len(words) >= 2:
+                cmd_spec = f"{words[0]} {words[1]}"
+            else:
+                cmd_spec = words[0]
+            return f'add "command({cmd_spec})" to allow in features/antigravity/permissions.json'
+
+    return f"agy was refused {tool or 'action'}; check features/antigravity/permissions.json"
+
+
+def _parse_denied_entry(entry) -> tuple[str, str | None]:
+    if isinstance(entry, dict):
+        tool = entry.get("tool") or entry.get("display_name") or entry.get("action") or ""
+        inp = entry.get("input")
+        if inp is None and "parameters" in entry:
+            params = entry["parameters"] or {}
+            inp = params.get("CommandLine") or (json.dumps(params, separators=(",", ":")) if params else None)
+        return str(tool), inp
+    if isinstance(entry, str):
+        if ": " in entry:
+            tool, inp = entry.split(": ", 1)
+            return tool.strip(), inp.strip() or None
+        return entry.strip(), None
+    return str(entry), None
+
+
+def fix_cause(out: dict) -> list[dict]:
+    items = []
+    for entry in out.get("denied") or []:
+        tool, inp = _parse_denied_entry(entry)
+        items.append({"tool": tool, "input": inp, "fix": _compute_fix(tool, inp)})
+    for err in out.get("tool_errors") or []:
+        if _DENY_ERROR.search(err.get("message") or ""):
+            tool = err.get("tool")
+            inp = err.get("input")
+            items.append({"tool": tool, "input": inp, "fix": _compute_fix(tool, inp)})
+    return items
+
+
 def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         timeout: int = 300, model: str = None) -> dict:
     agy = agy_bin or os.environ.get("AGY_BIN") or "agy"
@@ -110,9 +180,10 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
                 tool_by_index[s_idx] = key
         if step.get("step_type") == "tool" and step.get("state") == "ERROR":
             info = step.get("tool_info") or {}
+            params = info.get("parameters") or {}
             tool_errors.append({
                 "tool": step.get("tool_name"),
-                "input": (info.get("parameters") or {}).get("CommandLine"),
+                "input": params.get("CommandLine") or (json.dumps(params, separators=(",", ":")) if params else None),
                 "message": (info.get("error") or {}).get("message", ""),
             })
         if event.get("event") == "result":
@@ -133,6 +204,8 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
                         f"no result event (agy exit {proc.returncode}): {proc.stderr.strip()[-400:]}")
         if stderr_tail:
             out["detail"] = stderr_tail
+        if causes := fix_cause(out):
+            out["fix_cause"] = causes
         return out
     out["response"] = (final.get("response") or "").strip()
     # an auto-deny ends the turn, so the denied actions are the last tool steps
@@ -174,8 +247,35 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     else:
         out["ok"] = True
         if tool_errors:
-            out["warning"] = f"{len(tool_errors)} lookup(s) failed and agy worked around them"
+            out["warning"] = f"{len(tool_errors)} lookup(s) failed and agy worked around them; fix the cause (see fix_cause) or file it"
+    if causes := fix_cause(out):
+        out["fix_cause"] = causes
     return out
+
+
+def log_denials(out: dict, project: str, path: Path | None = None) -> None:
+    causes = out.get("fix_cause") or fix_cause(out)
+    if not causes:
+        return
+    log_env = os.environ.get("AGY_DENIALS_LOG")
+    if log_env == "":
+        return
+    log_path = Path(path) if path is not None else (Path(log_env) if log_env else _REPO / "state" / "agy-denials.jsonl")
+    ts = round(time.time(), 1)
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as f:
+            for cause in causes:
+                rec = {
+                    "ts": ts,
+                    "project": project,
+                    "tool": cause.get("tool"),
+                    "input": cause.get("input"),
+                    "fix": cause.get("fix"),
+                }
+                f.write(json.dumps(rec) + "\n")
+    except OSError:
+        pass
 
 
 def _log(args, out: dict, elapsed: float) -> None:
@@ -216,6 +316,7 @@ def main(argv=None) -> int:
     out = ask(prompt, agy_bin=args.agy_bin, cwd=args.cwd, edits=args.edits,
               timeout=args.timeout, model=args.model)
     _log(args, out, time.time() - started)
+    log_denials(out, os.path.basename(os.path.normpath(args.cwd)))
     if out["ok"]:
         print(out["response"])
         return 0

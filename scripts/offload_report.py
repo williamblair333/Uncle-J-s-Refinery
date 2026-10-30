@@ -23,6 +23,7 @@ _REPO = Path(__file__).resolve().parent.parent
 DEFAULT_DELEGATE = _REPO / "state" / "delegate.jsonl"
 DEFAULT_ASK_LOCAL = _REPO / "state" / "ask_local.jsonl"
 DEFAULT_OFFLOAD_CHECK = Path.home() / ".claude" / "state" / "offload-check.jsonl"
+DEFAULT_DENIALS = _REPO / "state" / "agy-denials.jsonl"
 
 
 def parse_ts(val: Any) -> tuple[float, str] | None:
@@ -118,6 +119,7 @@ def generate_report(
     delegate_path: Path | str = DEFAULT_DELEGATE,
     ask_local_path: Path | str = DEFAULT_ASK_LOCAL,
     offload_check_path: Path | str = DEFAULT_OFFLOAD_CHECK,
+    denials_path: Path | str = DEFAULT_DENIALS,
     days: int = 7,
     now: float | None = None,
 ) -> dict[str, Any]:
@@ -245,6 +247,49 @@ def generate_report(
         elif decision == "deny":
             subagents_denied += 1
 
+    # 4. Process agy-denials.jsonl
+    denials_groups: dict[tuple[Any, Any], dict[str, Any]] = {}
+    for rec in read_jsonl(denials_path):
+        ts_res = parse_ts(rec.get("ts"))
+        if ts_res is None:
+            continue
+        unix_ts, day_str = ts_res
+        if days > 0 and unix_ts < cutoff_ts:
+            continue
+        tool = rec.get("tool")
+        inp = rec.get("input")
+        fix = rec.get("fix")
+        key = (tool, inp)
+        if key not in denials_groups:
+            denials_groups[key] = {
+                "tool": tool,
+                "input": inp,
+                "count": 0,
+                "fix": fix,
+                "last": day_str,
+                "_last_ts": unix_ts,
+            }
+        grp = denials_groups[key]
+        grp["count"] += 1
+        if unix_ts >= grp["_last_ts"]:
+            grp["_last_ts"] = unix_ts
+            grp["last"] = day_str
+            if fix:
+                grp["fix"] = fix
+
+    repeat_denials = [
+        {
+            "tool": g["tool"],
+            "input": g["input"],
+            "count": g["count"],
+            "fix": g["fix"],
+            "last": g["last"],
+        }
+        for g in denials_groups.values()
+        if g["count"] >= 2
+    ]
+    repeat_denials.sort(key=lambda x: (-x["count"], str(x["tool"]), str(x["input"])))
+
     # Round seconds in data structures
     total_stats["seconds"] = round(total_stats["seconds"], 1)
     for b in total_backends.values():
@@ -308,6 +353,7 @@ def generate_report(
             "total": tool_total,
             "mcp_share": mcp_share,
         },
+        "repeat_denials": repeat_denials,
         "subagents": {
             "allowed": subagents_allowed,
             "denied": subagents_denied,
@@ -377,6 +423,17 @@ def format_text_report(report: dict[str, Any]) -> str:
         for err_str, count in by_err.items():
             lines.append(f"    {err_str:<62} {count:>5}")
 
+    # Repeat agy denials
+    repeat = report.get("repeat_denials") or []
+    if repeat:
+        lines.append("")
+        lines.append("Repeat agy denials (fix the cause):")
+        for item in repeat:
+            cmd_display = item["input"] or "(none)"
+            lines.append(f"  {item['count']:>3}x  {item['tool']}: {cmd_display} (last {item['last']})")
+            if item.get("fix"):
+                lines.append(f"       Fix: {item['fix']}")
+
     # Claude subagents
     subs = report.get("subagents", {})
     lines.append("")
@@ -395,12 +452,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--delegate", default=str(DEFAULT_DELEGATE), help="path to delegate.jsonl")
     ap.add_argument("--ask-local", default=str(DEFAULT_ASK_LOCAL), help="path to ask_local.jsonl")
     ap.add_argument("--offload-check", default=str(DEFAULT_OFFLOAD_CHECK), help="path to offload-check.jsonl")
+    ap.add_argument("--denials", default=str(DEFAULT_DENIALS), help="path to agy-denials.jsonl")
     args = ap.parse_args(argv)
 
     report = generate_report(
         delegate_path=args.delegate,
         ask_local_path=args.ask_local,
         offload_check_path=args.offload_check,
+        denials_path=args.denials,
         days=args.days,
     )
     if args.json:

@@ -425,6 +425,8 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
             continue
         started = time.time()
         out = ask(prompt, cwd=cwd, edits=edits, timeout=timeout or AGY_TIMEOUT, model=m)
+        if isinstance(out, dict):
+            ask_agy.log_denials(out, os.path.basename(os.path.normpath(cwd or os.getcwd())))
         out = {k: v for k, v in out.items() if v is not None and v != [] and v != {} and v != ""}
         out["ok"] = bool(out.get("ok"))
         out["model"] = m

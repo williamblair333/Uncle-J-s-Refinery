@@ -14,7 +14,8 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Workarounds must surface the cause** (opened 2026-10-30, top priority, Bill). Claude routes around blocks to
+- **[DONE 2026-10-30] Workarounds must surface the cause** — built as below (CHANGELOG 2026-10-30); open: RED/GREEN
+  test of the skill trigger (3), and tuning the Stop hook from `~/.claude/state/workaround-scan.jsonl` hit counts. Claude routes around blocks to
   finish today's task and doesn't fix why it was blocked; Bill caught it twice on 10-30 (live campaign as test bed,
   hand-feeding agy game data). Skills fire on the same judgment that fails, so add mechanical detectors that turn
   workaround signals into a required "fix the cause or file it" step:
