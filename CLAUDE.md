@@ -123,7 +123,9 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   `get_file_content`, `get_symbol_source` (one id or an array), `get_context_bundle`,
   `get_ranked_context` ("how does X work" in one budgeted call), `assemble_task_context`.
 - `search_text` for strings/comments/config (`context_lines` like `grep -C`); `winnow_symbols`
-  for multi-constraint queries.
+  for multi-constraint queries. When the matches sit in a few small symbols, `search_text`
+  returns their code in `sources` — skip the `get_symbol_source` follow-up. A non-zero
+  `sources_omitted` (reason in `sources_omitted_reason`) means some were left out; fetch those.
 - Also: `index_file` (surgical re-index after an edit; a file the folder walk excludes is
   refused with `success: false` and the reason in `skipped`), `get_session_snapshot` (after
   compaction), `index_dependency` (the *installed* version's source — prefer over context7
