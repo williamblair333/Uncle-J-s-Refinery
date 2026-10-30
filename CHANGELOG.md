@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-10-30 — CLAUDE.md back under agy's cap, `slowest-loop-first` skill, agy reads the M2TW install
+
+- **#240:** landed the 03:00 auto-maintain commit beb7e9b (never pushed) + its `uv.lock` (jcodemunch-mcp 1.108.402). Its search_text note put CLAUDE.md + agy rules block at 24,195 / 24,000 bytes (`test_shipped_rules_block_includes_claude_md_and_fits` failed); trimmed that note and the footer → 23,840. Deployed with `doctor --fix`. ROADMAP: usage-% via status line.
+- **#241 `global-skills/slowest-loop-first`:** when a fix can only be proven by chance, a schedule or live traffic, build a reusable test bench before the next fix. From the mtw2 retro (proving fixes on the live campaign, one waiting on a 25% roll). RED/GREEN tested with sonnet subagents: 3 baselines, 2 with-skill runs, 1 counter-example (40 s suite → correctly declined). mtw2 adopted it (its #260 test-bench spec).
+- **`features/antigravity/permissions.json`:** `read_file(…/Medieval II Total War/)`, read-only, Bill approved. agy had died twice on game data with `headless mode auto-denied ReadFile`. Verified: agy read `mods/bare_geomod/data/export_descr_character_traits.txt` with read_file alone, answer matched line 9.
+
 ## 2026-10-29 — `just gpu`: give the GPU to mtw2's Heretic seats or share it with Klarheit
 
 - **`scripts/gpu-mode.sh`** (`just gpu mtw2|shared|status`): `mtw2` disables Klarheit's rv/cycle/m12 timers, stops Ollama, and restarts Heretic at `--fit-target 1024 -c 65536 -np 2`. `shared` restores the old setup (fit 7300, 1 slot × 32k, Ollama + timers). Both models on the GPU crash-looped Heretic on 10-23, so they take turns. Measured in mtw2 mode: Heretic 8.8 GB VRAM (was 0.96 GB asleep / ~2.9 GB awake), 2 slots × 32k, 38.1 tok/s generation (was 27.7).

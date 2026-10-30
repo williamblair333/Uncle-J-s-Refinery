@@ -64,6 +64,7 @@
     "mcp(serena/get_diagnostics_for_file)",
     "read_file(/opt/proj/)",
     "read_file(/tmp/claude-1000/)",
+    "read_file(/home/bill/.local/share/Steam/steamapps/common/Medieval II Total War/)",
     "read_url(*)"
   ],
   "deny": [
