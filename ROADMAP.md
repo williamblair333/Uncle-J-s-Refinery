@@ -14,6 +14,20 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Workarounds must surface the cause** (opened 2026-10-30, top priority, Bill). Claude routes around blocks to
+  finish today's task and doesn't fix why it was blocked; Bill caught it twice on 10-30 (live campaign as test bed,
+  hand-feeding agy game data). Skills fire on the same judgment that fails, so add mechanical detectors that turn
+  workaround signals into a required "fix the cause or file it" step:
+  1. **delegate wrapper:** `tool_errors` with `auto-denied` → result carries `fix_cause` (the denied tool + path,
+     the allow rule to add in `features/antigravity/permissions.json`, ask Bill if outside /opt/proj or secret-like);
+     log to `state/agy-denials.jsonl`; `just offload` lists repeat denials. The signal already exists
+     (`"warning": "… agy worked around them"`) and nothing acts on it.
+  2. **Stop hook:** scan the turn for workaround phrases ("worked around", "hand-fed", "waiting on", "pending live",
+     "can't … so") → end-of-turn reminder naming the cause to fix. False positives are cheap.
+  3. **Skill trigger** (mtw2's suggestion): "you just worked around something → fix why, or send it to its owner,
+     before continuing", in `slowest-loop-first` or a sibling, RED/GREEN tested.
+  4. **Status sweeps** flag any "waiting on X" item with no plan to force X.
+
 - **Usage % readable by Claude** (opened 2026-10-30). `/usage` is a built-in dialog Claude can't run or read.
   The status line JSON carries `rate_limits.five_hour|seven_day.used_percentage` + `resets_at` (Pro/Max, after the
   first reply). Plan: a repo status-line script that prints them and saves the block to `~/.cache/claude/usage.json`,

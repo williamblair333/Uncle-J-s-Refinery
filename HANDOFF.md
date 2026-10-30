@@ -1,21 +1,19 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (written 2026-10-29, second session)
+## NEXT SESSION — start here (written 2026-10-30)
 
-10-29 session: PRs #235 (timeout label + uv.lock), #236 (CLI jobs logged), #237 (`git grep` rule) merged; all three built
-by agy on flash-medium (3 jobs, 2 clean first tries, 1 retry after a `git grep` denial), checked by Claude.
-0. **GPU is in mtw2 mode (since 2026-10-29 14:02):** Ollama stopped, Klarheit rv/cycle/m12 timers disabled, Heretic
-   2 × 32k at fit 1024. `just gpu shared` restores Klarheit (re-links the timers from `state/gpu-mode.timers`); `just gpu status`.
-   While in mtw2 mode, ask_local's qwen3.5:9b is unreachable.
-1. **Restart Claude Code first.** Sessions started before #235/#236 run the old wrapper in the delegate server.
-2. **`just offload` after a few days of jobs.** It now counts shell-started agy jobs (`"via": "cli"`) from 10-29 on;
-   before that, only MCP calls (last one 10-27). So the first real post-fix success rate needs new jobs. 10-28 work stays uncounted.
-3. **Quota:** argon back 10-30 17:41 UTC, Opus/Sonnet/gpt-oss 11-02 15:13 UTC (`delegate_status`).
-4. Open: `claude-sonnet-5-5-medium` may share the Opus pool (unproven, so not in `quota_pools`; testable from 11-02).
-5. **CLAUDE.md size cap:** CLAUDE.md + agy rules-block = 23,951 / 24,000 bytes. The next CLAUDE.md addition needs
-   a trim first, or agy silently loses the routing policy (`just test` catches it).
-Closed 10-29: the two 10-26 timeouts left no logs (predate `state/agy-logs`); uv.lock was auto-maintain's #211 bump.
+10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install.
+0. **FIRST: build the workaround detector** (ROADMAP "Workarounds must surface the cause", top of Planned). Bill,
+   10-30: Claude keeps routing around blocks (hand-feeding agy, clicking past popups, waiting on dice) instead of
+   fixing why it's blocked; he had to engineer it twice in one day. A skill alone can't fix this, since it fires on the
+   same in-the-moment judgment that fails. Make it mechanical. Design is in the ROADMAP item; brainstorm briefly, then build.
+1. **CLAUDE.md headroom is 160 bytes** (23,840 / 24,000 with agy's block). auto-maintain appends notes and doesn't run
+   `just test` before committing; the next sync will likely break the cap again. Fix: make auto-maintain run the cap test, or trim further.
+2. **GPU still in mtw2 mode** unless Bill switched it: `just gpu status`; `just gpu shared` restores Klarheit.
+3. **`just offload` after a few days of jobs** (CLI jobs counted from 10-29).
+4. **Quota:** Opus/Sonnet/gpt-oss back 11-02 15:13 UTC; then test whether `claude-sonnet-5-5-medium` shares the Opus pool.
+5. `slowest-loop-first` may over-fire on mtw2's frequent wakes (untested live); watch mtw2 sessions for it stalling fixes.
 How agy jobs ran cleanly: `.venv/bin/python scripts/ask_agy.py --prompt-file … --edits --model gemini-3.8-flash-medium`
 in the background, main checkout on a feature branch, one editing job at a time; review diff + `just test` before
 merge (`feedback_agy-job-briefs` memory).
