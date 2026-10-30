@@ -14,6 +14,12 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Usage % readable by Claude** (opened 2026-10-30). `/usage` is a built-in dialog Claude can't run or read.
+  The status line JSON carries `rate_limits.five_hour|seven_day.used_percentage` + `resets_at` (Pro/Max, after the
+  first reply). Plan: a repo status-line script that prints them and saves the block to `~/.cache/claude/usage.json`,
+  wired into `statusLine` by `refinery-doctor.sh --fix` (merge with any existing status line, don't replace it).
+  Claude then reads the file on "what's my usage?". Numbers are only as fresh as the last reply in some session.
+
 - **Offload follow-ups** (opened 2026-10-26). Re-run `just offload` after a few days of jobs: the
   first real post-fix number (baseline: agy 22/65 ok; CLI jobs counted only from 2026-10-29, #236).
   Per-project columns in `just offload`. Give agy `mkdir/cp/mv/touch` once sandbox-run stops

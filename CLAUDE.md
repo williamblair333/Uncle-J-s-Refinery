@@ -123,9 +123,8 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   `get_file_content`, `get_symbol_source` (one id or an array), `get_context_bundle`,
   `get_ranked_context` ("how does X work" in one budgeted call), `assemble_task_context`.
 - `search_text` for strings/comments/config (`context_lines` like `grep -C`); `winnow_symbols`
-  for multi-constraint queries. When the matches sit in a few small symbols, `search_text`
-  returns their code in `sources` — skip the `get_symbol_source` follow-up. A non-zero
-  `sources_omitted` (reason in `sources_omitted_reason`) means some were left out; fetch those.
+  for multi-constraint queries. Small matches come back with code in `sources` (no follow-up
+  fetch needed); fetch any counted in `sources_omitted`.
 - Also: `index_file` (surgical re-index after an edit; a file the folder walk excludes is
   refused with `success: false` and the reason in `skipped`), `get_session_snapshot` (after
   compaction), `index_dependency` (the *installed* version's source — prefer over context7
@@ -308,12 +307,9 @@ Then serialize: `json.dumps(result, separators=(',',':'))` (no indent; whitespac
 
 ---
 
-*Stack source and installer live at `$STACK_ROOT` (see top of file for the
-per-host path) — see `README.md` there for install / verify / re-register
-instructions. This file is deployed to `~/.claude/CLAUDE.md` by `install.sh` and
-re-synced by `scripts/refinery-doctor.sh --fix`, both of which compare against
-the repo copy and overwrite the deployed one. **Edit the repo copy. Edits made
-only to `~/.claude/CLAUDE.md` are reverted on the next install or doctor run.***
+*Install / verify / re-register: `README.md` in `$STACK_ROOT`. `install.sh` and
+`scripts/refinery-doctor.sh --fix` overwrite `~/.claude/CLAUDE.md` from the repo copy.
+**Edit the repo copy; edits only to `~/.claude/CLAUDE.md` are reverted.***
 
 <!-- Sessions inside this repo do NOT auto-load this file: .claude/settings.json lists it
      in claudeMdExcludes, so they read only the deployed ~/.claude/CLAUDE.md and the policy
