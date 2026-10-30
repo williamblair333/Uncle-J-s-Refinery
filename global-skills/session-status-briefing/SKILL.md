@@ -97,6 +97,11 @@ Every project it prints with a "Waiting on Bill" / "Blocked" / open-questions se
 Report it grouped: **in progress**, **needs Bill**, **reviews due**, **Claude can just do**,
 **other hosts/projects**. One line per item. Never stop at the latest HANDOFF entry.
 
+A sweep line ending `⚠ no plan to force it` waits on something outside our control (a roll, an
+upstream merge, a live event) with no way named to make it happen. Report it under **Claude can
+just do** with the plan: a bench or forced case (`slowest-loop-first`), a watch, or a nudge to
+the owner. Waiting is not a plan.
+
 ### 5. Risk surface (if doing code work)
 
 Call `mcp__jcodemunch__get_hotspots` (top 5) for complexity × churn scores.

@@ -16,6 +16,10 @@ ENV_FILE="$PROJ_ROOT/.env"
 LOG="$PROJ_ROOT/state/auto-maintain.log"
 CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude 2>/dev/null || echo 'claude')}"
 DRY_RUN=0
+# The workaround-scan Stop hook would force a follow-up reply, and that reply would push the
+# eval's required last line (VERDICT: ...) out of the final message. Off for this job's claude -p.
+export WORKAROUND_SCAN=off
+CAP_WARNINGS=()
 
 mkdir -p "$PROJ_ROOT/state"
 
@@ -355,7 +359,10 @@ Your tasks — do all that apply, nothing else:
 2. If new tools or routing changes are needed: update $PROJ_ROOT/CLAUDE.md. Keep
    existing formatting and section structure. Do NOT edit ~/.claude/CLAUDE.md — on
    this host it does not exist; the repo copy is the only one, and install.sh is
-   what propagates it where that path does exist.
+   what propagates it where that path does exist. CLAUDE.md has a hard size cap
+   (agy reads it with a 24,000-byte limit): after editing, run
+   '.venv/bin/python -m pytest -q tests/test_ask_agy.py -k fits'. If it fails,
+   shorten your addition (or an older line it supersedes) until it passes.
 3. If a caller-visible change is present: append a brief entry under the TOPMOST
    '## <date>' heading in $PROJ_ROOT/HANDOFF.md — that is the current session's
    section. Do not search for a heading named 'What happened'; the only literal one
@@ -437,6 +444,26 @@ Your tasks — do all that apply, nothing else:
         done < <(classify_eval_verdict \
                      "$eval_rc" "$verdict" "$touched" "$BASE_SHA" \
                      "$(tail -3 "$EVAL_OUT" | tr '\n' ' ')")
+
+        # CLAUDE.md must fit agy's per-file cap with the rules block; syncs that append
+        # notes pushed it over before (HANDOFF 2026-10-30). Checked here, not trusted to
+        # the prompt. pytest exit 1 = over cap; anything else = the check couldn't run.
+        if [[ "$touched" == *CLAUDE.md* ]]; then
+            if [[ -x "$PROJ_ROOT/.venv/bin/python" ]]; then
+                ( cd "$PROJ_ROOT" && .venv/bin/python -m pytest -q tests/test_ask_agy.py -k fits ) >> "$LOG" 2>&1
+                cap_rc=$?
+                if [[ "$cap_rc" -eq 1 ]]; then
+                    warn "$pkg: CLAUDE.md is over agy's 24,000-byte cap after this sync — trim it"
+                    CAP_WARNINGS+=("$pkg")
+                elif [[ "$cap_rc" -ne 0 ]]; then
+                    warn "$pkg: CLAUDE.md cap check skipped (pytest rc=$cap_rc)"
+                else
+                    info "$pkg: CLAUDE.md within agy's cap"
+                fi
+            else
+                warn "$pkg: CLAUDE.md cap check skipped (no .venv python)"
+            fi
+        fi
 
         rm -f "$EVAL_OUT"
         trap - EXIT
@@ -565,6 +592,7 @@ if [[ -n "${TELEGRAM_BOT_TOKEN:-}" && -n "${TELEGRAM_CHAT_ID:-}" && "$DRY_RUN" -
             SUMMARY+="upgraded ${PACKAGES_TO_UPGRADE[*]}. "
         fi
         [[ "${#BREAKING_FLAGS[@]}" -gt 0 ]] && SUMMARY+="⚠️ breaking changes in ${BREAKING_FLAGS[*]} — see HANDOFF.md. "
+        [[ "${#CAP_WARNINGS[@]}" -gt 0 ]] && SUMMARY+="⚠️ CLAUDE.md over agy's cap after ${CAP_WARNINGS[*]} sync — trim it. "
     fi
     [[ "${#SKILL_NAMES[@]}" -gt 0 ]] && SUMMARY+="drafted ${#SKILL_NAMES[@]} skill(s) for approval. "
     [[ "$UPGRADED" -eq 0 && "${#SKILL_NAMES[@]}" -eq 0 ]] && SUMMARY+="nothing to do."

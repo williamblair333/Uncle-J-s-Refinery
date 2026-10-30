@@ -3,13 +3,13 @@
 
 ## NEXT SESSION — start here (written 2026-10-30)
 
-10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install.
-0. **FIRST: build the workaround detector** (ROADMAP "Workarounds must surface the cause", top of Planned). Bill,
-   10-30: Claude keeps routing around blocks (hand-feeding agy, clicking past popups, waiting on dice) instead of
-   fixing why it's blocked; he had to engineer it twice in one day. A skill alone can't fix this, since it fires on the
-   same in-the-moment judgment that fails. Make it mechanical. Design is in the ROADMAP item; brainstorm briefly, then build.
-1. **CLAUDE.md headroom is 160 bytes** (23,840 / 24,000 with agy's block). auto-maintain appends notes and doesn't run
-   `just test` before committing; the next sync will likely break the cap again. Fix: make auto-maintain run the cap test, or trim further.
+10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install,
+then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maintain cap check — CHANGELOG).
+0. **Deploy + watch the workaround detector:** `bash install-reliability.sh`, then a new session. Unproven live:
+   check `~/.claude/state/workaround-scan.jsonl` after a few days (target: blocks are real workarounds; tighten
+   `PHRASES` if not) and `just offload` for repeat agy denials. Skill trigger still needs a RED/GREEN test.
+1. **CLAUDE.md cap:** auto-maintain now runs the cap test after a sync and WARNs + Telegrams when over; headroom
+   is still ~160 bytes, so expect that warning — trim when it comes.
 2. **GPU still in mtw2 mode** unless Bill switched it: `just gpu status`; `just gpu shared` restores Klarheit.
 3. **`just offload` after a few days of jobs** (CLI jobs counted from 10-29).
 4. **Quota:** Opus/Sonnet/gpt-oss back 11-02 15:13 UTC; then test whether `claude-sonnet-5-5-medium` shares the Opus pool.

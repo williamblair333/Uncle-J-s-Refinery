@@ -32,6 +32,19 @@ WAITING = re.compile(r"\bwaiting|next|blocked|pick up|open question|todo|to do|n
 ROADMAP_OPEN = re.compile(r"in progress|planned", re.I)
 ROADMAP_ITEM = re.compile(r"^- \*\*(.+?)\*\*")
 DONE = re.compile(r"^\[?(done|resolved|closed)\b|^~~|✅", re.I)
+# "waiting on X" where X is not Bill: something outside our control, which needs a way to force it
+WAITS_ON = re.compile(r"\b(?:waiting (?:on|for)|blocked (?:on|by)|pending (?:live|upstream|merge|release|review)"
+                      r"|until (?:the )?(?:next|upstream|it fires|it happens))\b(?! (?:Bill|you|your)\b)", re.I)
+HAS_PLAN = re.compile(r"\bwatch|cron|retry|poll|trigger|force|repro|bench|ping|nudge|deadline|by 20\d\d|"
+                      r"fake|simulat|fixture|then (?:bump|run|merge)", re.I)
+NO_PLAN = "  ⚠ no plan to force it"
+
+
+def flag_waits(line):
+    """Mark a line that waits on something outside our control with no plan to make it happen."""
+    if WAITS_ON.search(line) and not HAS_PLAN.search(line):
+        return line + NO_PLAN
+    return line
 
 
 def git(repo, *args):
@@ -172,7 +185,7 @@ def main():
         print(f"## {name}" + (f"  [{'; '.join(flags)}]" if flags else ""))
         for heading, body in sections:
             print(f"### {heading}")
-            print("\n".join(body))
+            print("\n".join(flag_waits(line) for line in body))
         if items:
             print(f"### ROADMAP open items ({len(items)})")
             print("\n".join(f"- {t}" for t in items))

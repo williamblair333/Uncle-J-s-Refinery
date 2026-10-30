@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-10-30 — workaround detector: routing around a block now has to surface the cause
+
+- **`hooks/discipline/workaround-scan.sh` → `scripts/workaround_scan.py` (Stop hook):** scans the ending turn's own text (code, inline code and quotes stripped; last 2 MB of the transcript) for "worked around", "hand-fed", "waiting on X" (not on Bill), "couldn't …, so I", "clicked past"… and blocks the stop once (`stop_hook_active`) asking to fix the cause or file it and say where. Skips `claude -p` (`CLAUDE_CODE_ENTRYPOINT=sdk-cli`, verified) because scout/dream/ralph/auto-maintain parse the final message. Kill switch `WORKAROUND_SCAN=off`; hits (cwd + count) in `~/.claude/state/workaround-scan.jsonl`. On the last 240 real turns it fired on 9.6%, mostly "waiting on" — "waiting on you/Bill" then excluded. Wired by `install-reliability.sh`. Cost: a hit fires Stop twice, so the notify hooks run twice.
+- **agy `fix_cause` (agy built, reviewed):** `ask_agy.ask` results carry `fix_cause` for each auto-denied action and deny-rule error: the `command(…)` allow rule to add, or "ask Bill" for absolute paths outside /opt/proj and secret-like inputs. Review fixed two false "ask Bill"s (`.venv` matched as `.env`; `scripts/foo.py` read as `/foo.py`) and a `cwd=None` crash in `delegate.run_agy`. Each one logs to `state/agy-denials.jsonl`; `just offload` lists repeats under "Repeat agy denials (fix the cause)".
+- **`waiting_sweep.py`:** lines waiting on something external (not Bill) with no watch/bench/retry/trigger named end in `⚠ no plan to force it` (2 today); `session-status-briefing` reports them under "Claude can just do" with the plan.
+- **`slowest-loop-first`:** also fires right after working around a block. Text only, not RED/GREEN tested.
+- **`auto-maintain.sh`:** after a sync that touched CLAUDE.md, runs the agy cap test; over the cap → WARN + Telegram line (the eval prompt also tells the agent to run it and trim). Sets `WORKAROUND_SCAN=off`.
+- First agy run of the `fix_cause` job died on a `bash -c` auto-deny while `just test` ran in the background — a gap in the brief (fixed in the brief and rerun).
+
 ## 2026-10-30 — CLAUDE.md back under agy's cap, `slowest-loop-first` skill, agy reads the M2TW install
 
 - **#240:** landed the 03:00 auto-maintain commit beb7e9b (never pushed) + its `uv.lock` (jcodemunch-mcp 1.108.402). Its search_text note put CLAUDE.md + agy rules block at 24,195 / 24,000 bytes (`test_shipped_rules_block_includes_claude_md_and_fits` failed); trimmed that note and the footer → 23,840. Deployed with `doctor --fix`. ROADMAP: usage-% via status line.

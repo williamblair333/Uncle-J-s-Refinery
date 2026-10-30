@@ -1,6 +1,6 @@
 ---
 name: slowest-loop-first
-description: Use when a fix or change can't be proven until something outside your control happens — a random roll, a live user or event, a nightly or scheduled run, a real device, a staging fleet — or when proving it takes more than a few minutes. Also use when starting work on a project with an inherited rule like "verify on the live system", and when a watch or alert wakes you to fix one more thing in a running system.
+description: Use when a fix or change can't be proven until something outside your control happens — a random roll, a live user or event, a nightly or scheduled run, a real device, a staging fleet — or when proving it takes more than a few minutes. Also use right after working around a block (hand-feeding a helper, clicking past a prompt, "waiting on" something) — fix why it was blocked first. Also use when starting work on a project with an inherited rule like "verify on the live system", and when a watch or alert wakes you to fix one more thing in a running system.
 version: 1.0.0
 platforms: [linux, macos]
 category: analysis
@@ -22,6 +22,10 @@ Any one of these:
 - Time-to-proof for a typical change is more than ~5 minutes.
 - Project memory or a team rule names the slow system as the test bed.
 - You're about to patch one more thing in a live system after a watch or alert woke you.
+- You just worked around a block: fed a helper by hand what it was refused, clicked past a
+  prompt, retried until it went through, or wrote "waiting on". Before continuing, fix why it was
+  blocked (an allow rule, a missing tool, a broken path), or send it to its owner and say where.
+  The workaround-scan Stop hook and agy's `fix_cause` field catch the ones you miss.
 
 ## The move, in order
 

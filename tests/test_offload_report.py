@@ -300,3 +300,61 @@ def test_text_report_formatting(tmp_path: Path, capsys):
     assert "Antigravity (agy) Tool Tally:" in captured.out
     assert "Antigravity (agy) Failures:" in captured.out
     assert "Claude Subagent Spawns:" in captured.out
+
+
+def test_repeat_denials_groups_and_drops_count_1(tmp_path: Path):
+    denials_file = tmp_path / "agy-denials.jsonl"
+    now = 1792940000.0
+    lines = [
+        # count 2 for (RunCommand, git stash)
+        {"ts": now - 3600, "project": "p1", "tool": "RunCommand", "input": "git stash", "fix": 'add "command(git stash)" to allow in features/antigravity/permissions.json'},
+        {"ts": now - 1800, "project": "p1", "tool": "RunCommand", "input": "git stash", "fix": 'add "command(git stash)" to allow in features/antigravity/permissions.json'},
+        # count 1 for (RunCommand, pytest) -> should be dropped
+        {"ts": now - 2000, "project": "p1", "tool": "RunCommand", "input": "pytest", "fix": 'add "command(pytest)" to allow in features/antigravity/permissions.json'},
+        # count 3 for (RunCommand, touch /tmp/x)
+        {"ts": now - 5000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask Bill before allowing: outside /opt/proj or secret-like"},
+        {"ts": now - 4000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask Bill before allowing: outside /opt/proj or secret-like"},
+        {"ts": now - 1000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask Bill before allowing: outside /opt/proj or secret-like"},
+    ]
+    denials_file.write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+
+    report = offload.generate_report(
+        delegate_path=tmp_path / "missing-del.jsonl",
+        ask_local_path=tmp_path / "missing-al.jsonl",
+        offload_check_path=tmp_path / "missing-oc.jsonl",
+        denials_path=denials_file,
+        days=7,
+        now=now,
+    )
+
+    repeat = report["repeat_denials"]
+    # pytest (count 1) is dropped
+    assert len(repeat) == 2
+    # sorted by count desc: count 3 comes first, count 2 second
+    assert repeat[0]["input"] == "touch /tmp/x"
+    assert repeat[0]["count"] == 3
+    assert repeat[0]["fix"] == "ask Bill before allowing: outside /opt/proj or secret-like"
+    assert "last" in repeat[0]
+
+    assert repeat[1]["input"] == "git stash"
+    assert repeat[1]["count"] == 2
+    assert "last" in repeat[1]
+
+    text = offload.format_text_report(report)
+    assert "Repeat agy denials (fix the cause):" in text
+    assert "touch /tmp/x" in text
+    assert "git stash" in text
+    assert "pytest" not in text
+
+
+def test_repeat_denials_empty_not_in_text_report(tmp_path: Path):
+    report = offload.generate_report(
+        delegate_path=tmp_path / "missing-del.jsonl",
+        ask_local_path=tmp_path / "missing-al.jsonl",
+        offload_check_path=tmp_path / "missing-oc.jsonl",
+        denials_path=tmp_path / "empty-denials.jsonl",
+        days=7,
+    )
+    assert report["repeat_denials"] == []
+    text = offload.format_text_report(report)
+    assert "Repeat agy denials (fix the cause):" not in text
