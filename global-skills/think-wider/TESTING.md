@@ -30,3 +30,16 @@ REFACTOR: reference class must be OUTSIDE the project (own log = inside view); a
 S3r2: A1 B½ C1 D1 — aviation checklists, medicine can't-miss list + time-out, Toyota 5-whys/poka-yoke; forecast-next-questions. FINAL green: A6/6 B4/6 C6/6 D6/6; negatives 2/2 skipped.
 
 Refactor after GREEN: reference class must be outside the project (own log = inside view).
+
+## Build step (2026-10-31, second round)
+
+Two problems with no ready-made analogy: S5 forget-at-will memory, S6 local 9B review matching the cloud model.
+
+E synthesis: names the contradiction blocking the obvious answer, splits the problem into functions, takes mechanisms from >=2 different fields, and COMPOSES them into one named design no single field has (not a list of separate analogies).
+F honesty: says plainly whether a full solution exists; if not, names the constraint that blocks it and what part is solvable.
+
+S6 RED: E½ F1 — analogies become pipeline steps (a de facto composition), but no named contradiction, no explicit composition step; honest 'straight answer' on parity.
+S5 RED: E1 F1 — composed a named 5-step design from intelligence compartments + food-recall lot genealogy + court sealing, contradiction from first principles (bytes stay => 'forget' = no key); honest limit stated. => current skill ALREADY composes when partial transfers exist. Only gap: skill text lets 'say none applied' end the search.
+S6 GREEN: E1 F1 — named contradiction (too shallow vs unlimited passes), jobs->mechanisms (manufacturing recall, drug-discovery orthogonal assay precision, radiology residue), composed 'Screen-and-Confirm', honest limit.
+
+Change: the 'say none applied' escape hatch became a build step (contradiction → jobs → one mechanism per job → composed design) plus an honest stop (blocking constraint + largest solvable part).

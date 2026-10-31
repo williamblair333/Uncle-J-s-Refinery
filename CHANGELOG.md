@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-31 — think-wider builds when no field fits
+
+- Bill asked whether the skill can *create* a solution when no field's answer fits. It now can, through a build step: name the contradiction, split the problem into jobs, take one mechanism per job from a different field, and compose them into a named design. When nothing composes, it names the blocking constraint and the largest solvable part. The test used two problems with no ready-made analogy. Without the step, the forget-at-will problem already composed (E1) and the local-review problem only half-composed (E½). With the step, local review produced a named composed design (E1). Honesty held in every run. Record in `global-skills/think-wider/TESTING.md`.
+
 ## 2026-10-31 — think-wider skill; Refinery gets its STANDARDS.md
 
 - **`think-wider` skill** (`global-skills/think-wider/`): at planning moments it writes a Wider block before the plan, with five parts: shape, 2–3 cross-field transfers with mechanism and mapping, first principles, an outside view (a reference class outside the project, never an invented number), and ideas to try (test + kill). Without the skill, 6 Sonnet planning runs scored transfer 0/6 and outside view 0/6; with it they scored 6/6 and 4/6, and it stayed out of the way on a known-cause bug fix (2/2). Record in `TESTING.md`. Refactor after GREEN: the project's own log doesn't count as a reference class.
