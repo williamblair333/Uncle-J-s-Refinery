@@ -158,4 +158,10 @@ ideas:
     test: score the forecasts against Bill's actual next messages over 10 sessions
     kill: the hit rate is under 1 in 3
     status: untested
+  - id: forget-at-will
+    idea: "Forget a topic in memweave: tag transcript segments by topic, encrypt them under a per-topic key only Bill holds, purge every derived note via source IDs, and fail the nightly rebuild if a paraphrase probe still finds it; un-forget = hand the key back"
+    from: intelligence compartments + food-recall lot tracing + court sealing (think-wider build, 10-31)
+    test: plant 50 distinctive facts across 10 topics in a copy of the store, forget 2 topics, rebuild, probe with paraphrases; then restore the key and rebuild
+    kill: paraphrase probes still find a forgotten topic after purge, or the restore doesn't bring it back identical
+    status: untested
 ```
