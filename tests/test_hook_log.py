@@ -28,6 +28,7 @@ WRITERS = [
     REPO_ROOT / "hooks" / "discipline" / "grep-guard.sh",
     REPO_ROOT / "hooks" / "discipline" / "edit-surface-guard.sh",
     REPO_ROOT / "hooks" / "pre-mortem-guard" / "surface-write-guard.sh",
+    REPO_ROOT / "hooks" / "pre-mortem-guard" / "token-guard.sh",
 ]
 SURFACE_GUARD = REPO_ROOT / "hooks" / "pre-mortem-guard" / "surface-write-guard.sh"
 BLOCK_RE = re.compile(r"^# >>> hook_log_append.*?^# <<< hook_log_append$", re.S | re.M)

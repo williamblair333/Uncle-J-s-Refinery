@@ -23,9 +23,7 @@
     "pr-gate-guard.sh": "reads the last first-run gate report",
     "git add -u": "stages files in the live checkout"
   },
-  "leaks_state": {
-    "token-guard.sh": "hardcodes /opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log; move it into the repo and honour UNCLE_J_PROJ_ROOT to bench it"
-  },
+  "leaks_state": {},
   "names": {
     "ngrok|burp|requestbin": "exfil-guard",
     "dangerously-skip-permissions": "bypass-flag-guard",
