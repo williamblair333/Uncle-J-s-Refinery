@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# SessionStart notice: a project with no PRODUCT.md has never said what it is for.
+# SessionStart notice: a project with no PRODUCT.md has never said what it is for, and its
+# STANDARDS.md gaps (the expert bar) open every session, PRODUCT.md or not.
 # Advisory only — it never blocks, and stays quiet outside git repos.
 set -uo pipefail
 
@@ -18,9 +19,9 @@ except Exception:
   else
     printf 'product-quality: PRODUCT.md present, no gate run yet for this project\n'
   fi
-  python3 "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../standards_check.py" --summary "$repo_root" 2>/dev/null || true
-  exit 0
+else
+  printf 'product-quality: no PRODUCT.md in %s — run the product-brief skill to state the core job, first-run path and success measures\n' "$(basename "$repo_root")"
 fi
 
-printf 'product-quality: no PRODUCT.md in %s — run the product-brief skill to state the core job, first-run path and success measures\n' "$(basename "$repo_root")"
+python3 "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../standards_check.py" --summary "$repo_root" 2>/dev/null || true
 exit 0

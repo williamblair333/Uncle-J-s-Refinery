@@ -5,7 +5,7 @@
 
 10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install,
 then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maintain cap check — CHANGELOG).
-0. **Expert bar (10-31):** every project with PRODUCT.md now opens with its top STANDARDS.md gaps. mtw2 has
+0. **Expert bar (10-31):** every git project now opens with its top STANDARDS.md gaps (or a nudge). mtw2 has
    one; **Refinery doesn't yet**: write it with the `expert-bar` skill next and work from its top gap. Symptom
    categories for the Stop hook (ask-user / defer / plan-without-critique / status that moves no gap) are
    prototyped in the scratchpad (recall 12/15 of Bill's meta-questions, but 14% base rate, mostly fair asks):
