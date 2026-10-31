@@ -13,6 +13,7 @@ mechanical (ROADMAP "Workarounds must surface the cause", 2026-10-30).
 Kill switch: WORKAROUND_SCAN=off (e.g. for headless `claude -p` callers). Hits are logged
 (cwd and count, no content) to ~/.claude/state/workaround-scan.jsonl.
 """
+import argparse
 import json
 import os
 import re
@@ -22,10 +23,13 @@ from pathlib import Path
 
 PHRASES = [
     r"work(?:ed|ing)? around",
-    r"workaround",
+    # "a/the workaround" as the turn's own move; not the plural topic or the detector's name
+    # ...and not denied ("wasn't a workaround")
+    r"(?<!n't )(?<!not )\b(?:a|the|this|that)\s+workaround\b(?![-\w]|\s+(?:detector|scan|scanner|check|hook)\b)",
     r"hand[- ]fe(?:d|ed|eding)",
     r"fed (?:it|them|agy) by hand",
-    r"waiting on (?!(?:you|your|Bill)\b)",  # Bill's own answer is not a block to fix
+    # the turn's own wait, not a list item or another process's; Bill's answer is not a block
+    r"\b(?:I'm|I am|I'll be|we're|we are|now|still)\s+(?:still\s+)?waiting on (?!(?:you|your|Bill)\b)",
     r"pending (?:a )?live",
     r"clicked past",
     r"\b(?:can't|cannot|couldn't)\b[^.\n]{0,80}?,? so (?:I|I'll|we|instead)\b",
@@ -33,8 +37,9 @@ PHRASES = [
     r"until (?:the )?(?:dice|roll|it happens|it fires)",
 ]
 _PHRASE_RE = re.compile("|".join(f"(?:{p})" for p in PHRASES), re.I)
-# quoted material is not the turn's own claim: code blocks, inline code, blockquotes
-_CODE_RE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+# quoted material is not the turn's own claim: code blocks, inline code, short "quoted"
+# phrases (naming the phrases the detector looks for), blockquotes
+_CODE_RE = re.compile(r"```.*?```|`[^`\n]*`|\"[^\"\n]{1,60}\"|“[^”\n]{1,60}”", re.S)
 _QUOTE_RE = re.compile(r"^\s*>.*$", re.M)
 # transcripts reach 50+ MB; one turn sits well inside the tail
 TAIL_BYTES = 2 * 1024 * 1024
@@ -69,8 +74,8 @@ def _tail_lines(path: Path) -> list[str]:
     return lines[1:] if size > TAIL_BYTES else lines  # first line may be cut
 
 
-def turn_text(transcript: Path) -> str:
-    """All assistant text since the last prompt in a Claude Code transcript (JSONL)."""
+def all_turns(transcript: Path) -> list[str]:
+    """Every turn's assistant text, split on prompts the user typed."""
     entries = []
     try:
         for line in _tail_lines(transcript):
@@ -79,13 +84,27 @@ def turn_text(transcript: Path) -> str:
             except json.JSONDecodeError:
                 continue
     except OSError:
-        return ""
-    start = max((i for i, e in enumerate(entries) if _is_prompt(e)), default=-1) + 1
-    out = []
-    for e in entries[start:]:
-        if e.get("type") == "assistant":
-            out += _texts((e.get("message") or {}).get("content"))
-    return "\n".join(out)
+        return []
+    turns = []
+    current = []
+    has_prompt = False
+    for e in entries:
+        if _is_prompt(e):
+            if has_prompt or current:
+                turns.append("\n".join(current))
+            current = []
+            has_prompt = True
+        elif e.get("type") == "assistant":
+            current.extend(_texts((e.get("message") or {}).get("content")))
+    if has_prompt or current:
+        turns.append("\n".join(current))
+    return turns
+
+
+def turn_text(transcript: Path) -> str:
+    """All assistant text since the last prompt in a Claude Code transcript (JSONL)."""
+    turns = all_turns(transcript)
+    return turns[-1] if turns else ""
 
 
 def find_hits(text: str) -> list[str]:
@@ -96,6 +115,27 @@ def find_hits(text: str) -> list[str]:
         a, b = max(0, m.start() - 60), min(len(text), m.end() + 60)
         hits.append(" ".join(text[a:b].split()))
     return hits
+
+
+def replay(paths) -> dict:
+    turns_count = 0
+    fired_count = 0
+    hits = []
+    for p in paths:
+        try:
+            path = Path(p)
+            if not path.is_file():
+                continue
+            turns = all_turns(path)
+        except OSError:
+            continue
+        for turn in turns:
+            turns_count += 1
+            h = find_hits(turn)
+            if h:
+                fired_count += 1
+                hits.append({"file": str(path), "snippet": h[0]})
+    return {"turns": turns_count, "fired": fired_count, "hits": hits}
 
 
 def decide(hook: dict) -> dict | None:
@@ -130,7 +170,36 @@ def _log(hook: dict, n: int) -> None:
         pass
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if "--replay" in argv:
+        parser = argparse.ArgumentParser(description="Workaround detector replay bench")
+        parser.add_argument("--replay", action="store_true")
+        parser.add_argument("--files", nargs="+", type=Path)
+        parser.add_argument("--days", type=int, default=7)
+        parser.add_argument("--limit", type=int, default=20)
+        args = parser.parse_args(argv)
+        if args.files:
+            files = [Path(f) for f in args.files]
+        else:
+            cutoff = time.time() - args.days * 86400
+            files = []
+            projects = Path.home() / ".claude" / "projects"
+            if projects.exists():
+                for p in projects.glob("*/*.jsonl"):
+                    try:
+                        if p.is_file() and p.stat().st_mtime >= cutoff:
+                            files.append(p)
+                    except OSError:
+                        continue
+            files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        res = replay(files)
+        pct = (res["fired"] / res["turns"] * 100) if res["turns"] else 0.0
+        print(f"fired on {res['fired']}/{res['turns']} turns ({pct:.1f}%) across {len(files)} files")
+        for h in res["hits"][:args.limit]:
+            print(f"{h['file']}: …{h['snippet']}…")
+        return 0
     try:
         hook = json.load(sys.stdin)
     except ValueError:
