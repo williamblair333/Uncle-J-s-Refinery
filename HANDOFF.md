@@ -4,8 +4,8 @@
 ## NEXT SESSION — start here (updated 2026-10-31 end)
 
 10-31 end: #251–#253 merged (think-wider, expert-bar ideas, STANDARDS.md, forget-at-will idea). Session start now
-prints Refinery's top gaps. `full-suite-in-ci`: branch `ci/full-suite` (one job runs all of tests/, shellcheck fix). Check its
-GitHub run, then merge. **Next: `meta-question-rate`.** Use `just skills`, not features/skill-manager/install.sh, until
+prints Refinery's top gaps. `full-suite-in-ci`: branch `ci/full-suite` (one job runs all of tests/, shellcheck fix, fake-agy
+shebang fix for 47 runner-only failures). Merge once its GitHub run is green. **Next: `meta-question-rate`.** Use `just skills`, not features/skill-manager/install.sh, until
 `installers-idempotent` is fixed (it rewrites the tracked .claude/settings.json).
 
 (older 10-30 notes below)

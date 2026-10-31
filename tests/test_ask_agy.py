@@ -8,6 +8,7 @@ import os
 import shutil
 import stat
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -75,8 +76,10 @@ def fake_agy(tmp_path, events, exit_code=0, stderr=""):
     err_data = tmp_path / "stderr.txt"
     err_data.write_text(stderr)
     script = tmp_path / "agy"
+    # Absolute interpreter: agy runs with features/antigravity/shims first on PATH, so
+    # `env python3` would resolve to the python3 shim and need sandbox-run (not on CI).
     script.write_text(
-        "#!/usr/bin/env python3\n"
+        f"#!{sys.executable}\n"
         "import json, sys\n"
         f"json.dump(sys.argv[1:], open({str(argv_log)!r}, 'w'))\n"
         f"sys.stderr.write(open({str(err_data)!r}).read())\n"
