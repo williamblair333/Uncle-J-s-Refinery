@@ -135,9 +135,10 @@ def test_check_cli_exits_nonzero_on_problems(tmp_path):
     assert r.returncode == 1 and "false claim" in r.stdout + r.stderr
 
 
-def _git_project(tmp_path, with_standards):
+def _git_project(tmp_path, with_standards, with_product=True):
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
-    (tmp_path / "PRODUCT.md").write_text("# p\n")
+    if with_product:
+        (tmp_path / "PRODUCT.md").write_text("# p\n")
     if with_standards:
         project(tmp_path)
     return tmp_path
@@ -147,6 +148,13 @@ def test_session_start_hook_prints_gaps_and_never_fails(tmp_path):
     p = _git_project(tmp_path, with_standards=True)
     r = subprocess.run(["bash", str(HOOK)], cwd=p, capture_output=True, text=True)
     assert r.returncode == 0 and "bench-per-system" in r.stdout
+
+
+def test_session_start_hook_prints_gaps_without_product_md(tmp_path):
+    # mtw2 (2026-10-31): STANDARDS.md but no PRODUCT.md; its gaps must still open the session
+    p = _git_project(tmp_path, with_standards=True, with_product=False)
+    r = subprocess.run(["bash", str(HOOK)], cwd=p, capture_output=True, text=True)
+    assert r.returncode == 0 and "product-brief" in r.stdout and "bench-per-system" in r.stdout
 
 
 def test_session_start_hook_nudges_when_standards_missing(tmp_path):
