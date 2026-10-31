@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 — CI runs the whole pytest suite
+
+- CI listed 19 of the 67 `tests/*.py` files by hand, one job each, so new test files never ran there. One `test-suite` job now does a full `uv sync --inexact` and runs `pytest tests`, the same run as `just test` (2708 pass, 4 skip locally). jscrub's non-pytest unit tests and audit keep their own job.
+- CI had failed at least its last 60 runs on one shellcheck error: SC1087 in `global-skills/wizard/template.sh`, where `$e[Enter…` read as an array index. Now `${e}`.
+- Pushes to `ci/**` branches trigger CI, so a workflow change runs on GitHub before it merges.
+- The first full run on the runner found 47 host-only failures in `test_ask_agy.py` and `test_referee.py`. The fake agy's `#!/usr/bin/env python3` resolved to agy's python3 shim, which needs `sandbox-run` (installed here, not on the runner). The fakes now use `sys.executable`. With `sandbox-run` off PATH, the same 47 failed before the fix and all 78 pass after it.
+
 ## 2026-10-31 — session end
 
 - ROADMAP: new Planned item, "Thinking chain" (done and open steps). HANDOFF: next session starts on `full-suite-in-ci`. README checked: no update needed (skills are listed in docs/SKILLS.md). No hardening this session.

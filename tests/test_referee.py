@@ -8,6 +8,7 @@ import importlib.util
 import json
 import stat
 import subprocess
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).parent.parent
@@ -33,7 +34,7 @@ def fake_agy(tmp_path, events):
     argv_log = tmp_path / "argv.json"
     script = tmp_path / "agy"
     script.write_text(
-        "#!/usr/bin/env python3\n"
+        f"#!{sys.executable}\n"  # not `env python3`: agy's shims are first on PATH
         "import json, sys\n"
         f"json.dump(sys.argv[1:], open({str(argv_log)!r}, 'w'))\n"
         f"sys.stdout.write(open({str(data)!r}).read())\n")
@@ -228,7 +229,7 @@ def sequenced_agy(tmp_path, runs):
     calls = tmp_path / "calls.jsonl"
     script = tmp_path / "agy"
     script.write_text(
-        "#!/usr/bin/env python3\n"
+        f"#!{sys.executable}\n"  # not `env python3`: agy's shims are first on PATH
         "import json, sys, os\n"
         f"calls = {str(calls)!r}\n"
         "n = sum(1 for _ in open(calls)) if os.path.exists(calls) else 0\n"
