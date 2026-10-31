@@ -82,6 +82,11 @@ fi
 step "Repairing upstream grep patterns"
 bash "$STACK_ROOT/scripts/fix-guardrails-grep.sh"
 
+# Upstream prompt-injection-defender reads .tool_output and prints {"message"}: it has never
+# warned. Swap in the repo's repaired copy after every install.
+step "Repairing upstream prompt-injection defender"
+bash "$STACK_ROOT/scripts/fix-guardrails-defender.sh" || warn "defender left as is — see message above"
+
 step "Guardrails installed"
 cat <<EOF
 

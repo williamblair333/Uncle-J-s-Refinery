@@ -12,8 +12,11 @@ got through.
 
 11-01 later: the hook bench now replays PostToolUse (opt-in list in config/hook-bench.json) and flags
 output the harness drops as `ignored`. It found the guardrails prompt-injection-defender dead since April
-(reads `.tool_output`, prints `{"message"}`); fix follows as a post-install repair like fix-guardrails-grep.sh.
-The upstream bug is unreported (dwarvesf/claude-guardrails); filing it is Bill's call.
+(reads `.tool_output`, prints `{"message"}`). Repaired: `scripts/fix-guardrails-defender.sh` installs the repo copy
+(`hooks/guardrails/`); install-guardrails.sh runs it. **Other hosts (pi server, tc-vmh-03): after pulling, run
+`bash scripts/fix-guardrails-defender.sh`** (check with `--check`). The upstream bug is unreported
+(dwarvesf/claude-guardrails); filing it is Bill's call. agy's denial of `git grep` is deliberate
+(`-O` runs a pager command; tests/test_ask_agy.py pins it) — brief agy to use `grep` or `git show` instead.
 
 11-01 later: STANDARDS.md had stopped parsing (unquoted `: ` in an evidence line); fixed in PR
 `fix/standards-yaml-quote` with a test on the repo's own file. Quote any `evidence:` text containing `: `.
