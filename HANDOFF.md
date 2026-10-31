@@ -5,6 +5,10 @@
 
 10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install,
 then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maintain cap check — CHANGELOG).
+0. **Think-wider + STANDARDS.md (10-31, this PR):** done. Refinery's session start now prints its top gaps.
+   Next work = top gap `full-suite-in-ci` (CI runs only test_skills.py), then `meta-question-rate` (ship the
+   scratchpad symptom detector as the weekly count, which also tests idea `foqa-transcript-sweep`). Fix
+   `installers-idempotent`: skill-manager/install.sh rewrites the tracked settings.json; use `just skills` meanwhile.
 0. **Self-check hook (10-31, #249 merged, deployed):** it forces the "check yourself" pass on long replies. The
    baseline was 10/17 manual checks finding a real error. Wired in settings.json; it goes live after a restart.
    (install-reliability.sh had been failing on every post-merge run: the plugin was renamed ralph-wiggum →

@@ -98,6 +98,61 @@ def test_unknown_status_is_a_problem(tmp_path):
     assert any("wip" in x for x in sc.validate(sc.load(p), p))
 
 
+IDEAS = """  - id: pareto-failures
+    idea: Classify failures by cause and fix the biggest class first
+    from: manufacturing
+    test: tag last week's failures from the log
+    kill: causes spread too evenly to rank
+    status: untested
+"""
+
+
+def _ideas_text(ideas=IDEAS):
+    head, sep, tail = GOOD.rpartition("```\n")
+    return head + "ideas:\n" + ideas + sep + tail
+
+
+def test_valid_ideas_list_has_no_problems(tmp_path):
+    p = project(tmp_path, text=_ideas_text())
+    assert sc.validate(sc.load(p), p) == []
+
+
+def test_load_returns_ideas(tmp_path):
+    data = sc.load(project(tmp_path, text=_ideas_text()))
+    assert [i["id"] for i in data["ideas"]] == ["pareto-failures"]
+
+
+def test_file_without_ideas_loads_empty_ideas(tmp_path):
+    assert sc.load(project(tmp_path))["ideas"] == []
+
+
+@pytest.mark.parametrize("field", ["idea", "from", "test", "kill"])
+def test_idea_missing_hypothesis_field_is_named(tmp_path, field):
+    ideas = "\n".join(l for l in IDEAS.splitlines() if not l.strip().startswith(f"{field}:")) + "\n"
+    p = project(tmp_path, text=_ideas_text(ideas))
+    problems = sc.validate(sc.load(p), p)
+    assert any("pareto-failures" in x and f"'{field}'" in x for x in problems)
+
+
+def test_idea_unknown_status_is_a_problem(tmp_path):
+    p = project(tmp_path, text=_ideas_text(IDEAS.replace("untested", "maybe")))
+    assert any("maybe" in x for x in sc.validate(sc.load(p), p))
+
+
+def test_ideas_not_a_list_is_a_problem(tmp_path):
+    p = project(tmp_path, text=_ideas_text("  pareto: yes\n"))
+    assert any("ideas" in x for x in sc.validate(sc.load(p), p))
+
+
+def test_summary_counts_untested_ideas(tmp_path):
+    out = sc.summary(project(tmp_path, text=_ideas_text()))
+    assert "1 idea untested" in out.splitlines()[0]
+
+
+def test_summary_without_ideas_says_nothing_about_ideas(tmp_path):
+    assert "idea" not in sc.summary(project(tmp_path)).splitlines()[0]
+
+
 def test_summary_lists_open_and_partial_gaps_in_rank_order_capped(tmp_path):
     out = sc.summary(project(tmp_path), top=2)
     lines = out.splitlines()

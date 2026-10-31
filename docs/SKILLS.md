@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 77 repo, 1 workflows.
+Totals: 79 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -38,6 +38,7 @@ Totals: 77 repo, 1 workflows.
 | `clean-room-rebuild` | Use when building original software that replicates the functionality of an existing app, including any use of REA (morluto/rea) to study a target, so the work… | auto | Refinery stack | repo |
 | `community-pr-stakeholder-response` | Use when tagged as a stakeholder on an open-source PR or issue comment, especially when the PR has evolved since your last review, involves architectural chang… | auto | Refinery stack | repo |
 | `deep-repo-analysis` | Full codebase health audit using jcodemunch — cycles, complexity, coupling, dead code, test gaps, and architectural debt. | auto | Refinery stack | repo |
+| `expert-bar` | Use when a project has no STANDARDS.md (the session-start notice says so), when its phase changes, before planning the next stretch of work, or when the user k… | auto | any agent | repo |
 | `first-run-gate` | Use before calling any project done, before opening a PR that changes runtime behavior, and when setup or install is suspected broken — "does this still work o… | auto | any agent | repo |
 | `fog-of-chess-engine-mode-implementation` | Implement a new engineMode variant end-to-end in Fog of Chess — types, UCI bridge, adapter, server polling, REST endpoint, and UI panel — following the validat… | auto | any agent | repo |
 | `freecad-parametric-toolkit-build` | Build a FreeCAD parametric CAD toolkit tier by tier — probe APIs first, implement modules, run tests with freecadcmd, fix stdout capture issues. | auto | any agent | repo |
@@ -89,6 +90,7 @@ Totals: 77 repo, 1 workflows.
 | `telegram-gateway-security-audit` | Diagnose and harden a Telegram → Claude CLI gateway: fix update_id deduplication failures that spawn duplicate sessions, and inject a disclosure-restriction sy… | auto | Claude Code | repo |
 | `telegram-inline-button-promote` | Wire up a Telegram inline keyboard button in a polling bot — add button to outbound notification, subscribe to callback_query updates, answer the callback, and… | auto | Refinery stack | repo |
 | `terse-reply` | Edit the most recent draft reply to strip verbosity. | auto | any agent | repo |
+| `think-wider` | Use when planning the next stretch of work, writing or rewriting a STANDARDS.md (expert-bar calls it), stuck after two fixes that didn't hold, choosing between… | auto | any agent | repo |
 | `timesfm-forecasting` | Performs zero-shot time-series forecasting with Google's TimesFM, including regular-grid CSV preparation, quantile forecasts, XReg covariates, and held-out eva… | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `to-questionnaire` | Turn a decision you can't fully answer into a questionnaire for someone else to fill in. | you | any agent | vendored: mattpocock/skills |
 | `token-economy-prompt-authoring` | Craft a minimal, effective system prompt to constrain Claude verbosity in plain web sessions (no harness tooling). | auto | Refinery stack | repo |

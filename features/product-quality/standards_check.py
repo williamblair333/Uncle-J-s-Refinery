@@ -70,9 +70,11 @@ def load(project: Path | str) -> dict:
             if not isinstance(standards_list, list):
                 raise StandardsError("`standards` key must be a list")
             phase = data.get("phase")
+            ideas = data.get("ideas") if "ideas" in data else []
             return {
                 "phase": str(phase) if phase is not None else None,
                 "standards": standards_list,
+                "ideas": ideas,
             }
 
     raise StandardsError("STANDARDS.md has no ```yaml block containing a `standards` key")
@@ -122,6 +124,29 @@ def validate(data: dict, project: Path | str) -> list[str]:
                     id_name = item_id if item_id else item_label
                     problems.append(f"{id_name}: false claim — evidence {ev} not found")
 
+    ideas = data.get("ideas") if isinstance(data, dict) and "ideas" in data else []
+    if not isinstance(ideas, list):
+        problems.append("`ideas` must be a list")
+    else:
+        valid_idea_statuses = {"untested", "testing", "paid-off", "dropped"}
+        for idx, item in enumerate(ideas):
+            if not isinstance(item, dict):
+                problems.append(f"idea item {idx}: not a mapping")
+                continue
+
+            item_id = item.get("id")
+            item_label = f"'{item_id}'" if item_id else f"at index {idx}"
+
+            for field in ("id", "idea", "from", "test", "kill"):
+                if field not in item or item[field] is None:
+                    problems.append(f"idea {item_label}: missing required field '{field}'")
+
+            status = item.get("status")
+            if status is not None and status not in valid_idea_statuses:
+                problems.append(
+                    f"idea {item_label}: invalid status '{status}' (must be untested, testing, paid-off, dropped)"
+                )
+
     return problems
 
 
@@ -153,6 +178,17 @@ def summary(project: Path | str, top: int = 5) -> str:
             first_line = f"standards: {n_open} open of {m_total} (phase: {phase})"
         else:
             first_line = f"standards: {n_open} open of {m_total}"
+
+        ideas = data.get("ideas")
+        if isinstance(ideas, list):
+            n_untested = sum(
+                1
+                for i in ideas
+                if isinstance(i, dict) and i.get("status") in {None, "untested"}
+            )
+            if n_untested > 0:
+                suffix = "idea untested" if n_untested == 1 else "ideas untested"
+                first_line += f" · {n_untested} {suffix}"
 
     gap_lines: list[str] = []
     for item in standards:
