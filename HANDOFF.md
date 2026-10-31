@@ -10,6 +10,9 @@ Both 11-01 items merged: #263 (surface-write-guard `$S` fix + agy review gaps) a
 11-06; flash-high/medium ran fine. agy's filter refuses "bypass" wording; "missing test cases (false negatives)"
 got through.
 
+11-01 later: STANDARDS.md had stopped parsing (unquoted `: ` in an evidence line); fixed in PR
+`fix/standards-yaml-quote` with a test on the repo's own file. Quote any `evidence:` text containing `: `.
+
 11-01: surface-write-guard's `$S` blind spot fixed (PR `fix/surface-write-var-heredoc`, CHANGELOG 11-01):
 labelled false 6 → 1; agy's adversarial review found 8 gaps (3 were regressions), all fixed in the same PR. The one left: a single-quoted awk regex `'/^>|x.py/'` read as a `>|` redirect (also
 any argument text such as a `--label` note saying "sed -i on x.py"). Fix only if it keeps recurring.

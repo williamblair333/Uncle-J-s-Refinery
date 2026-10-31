@@ -245,3 +245,10 @@ def test_session_start_hook_nudges_when_standards_missing(tmp_path):
     p = _git_project(tmp_path, with_standards=False)
     r = subprocess.run(["bash", str(HOOK)], cwd=p, capture_output=True, text=True)
     assert r.returncode == 0 and "expert-bar" in r.stdout
+
+
+def test_repo_standards_md_parses_and_validates():
+    # 2026-11-01: an unquoted "Gaps: skills" in an evidence line broke the YAML and
+    # merged unnoticed; every session start then printed "cannot parse STANDARDS.md".
+    data = sc.load(REPO)
+    assert sc.validate(data, REPO) == []
