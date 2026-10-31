@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 — think-wider skill; Refinery gets its STANDARDS.md
+
+- **`think-wider` skill** (`global-skills/think-wider/`): at planning moments it writes a Wider block before the plan, with five parts: shape, 2–3 cross-field transfers with mechanism and mapping, first principles, an outside view (a reference class outside the project, never an invented number), and ideas to try (test + kill). Without the skill, 6 Sonnet planning runs scored transfer 0/6 and outside view 0/6; with it they scored 6/6 and 4/6, and it stayed out of the way on a known-cause bug fix (2/2). Record in `TESTING.md`. Refactor after GREEN: the project's own log doesn't count as a reference class.
+- **expert-bar** calls think-wider. The field canon is the floor (`standards:`) and the transfers are the edge (`ideas:`), promoted to standards once a test pays off. `standards_check.py` validates `ideas:` (id/idea/from/test/kill, status untested|testing|paid-off|dropped), and the session-start line now counts untested ideas (agy built it to tests written first, reviewed).
+- **`STANDARDS.md`** for Refinery: 17 standards (16 open or partial) and 4 ideas (FOQA transcript sweep, SPC limits, audit sampling, forecasting the next questions). Top gaps: CI runs only `test_skills.py`, not the suite; the meta-question rate isn't measured; most hooks and skills have no bench.
+- Found: `features/skill-manager/install.sh` rewrites the tracked `.claude/settings.json` (reorders hooks, drops the `[ -d … ] || exit 0` guard). Reverted; logged as `installers-idempotent`. Use `just skills` to link skills.
+
 ## 2026-10-31 — install-reliability.sh completes again (ralph-wiggum → ralph-loop)
 
 - The plugin was renamed upstream to `ralph-loop` (already installed). The installer kept asking for `ralph-wiggum`, and under `set -e` the failed install aborted the whole script, so every post-merge run reported "install-reliability.sh failed". Name fixed (installer, README, RELIABILITY.md), and both plugin installs now fall through to their own `warn` line instead of killing the script.

@@ -31,6 +31,8 @@ repo, and every claim on it points at evidence.**
 3. **List what those people would already have in place** for this goal and phase: harnesses,
    fixtures, gates, telemetry, runbooks, release practice. Make each one testable, a single
    bar per item.
+   **REQUIRED SUB-SKILL:** then run `think-wider` on the goal. That list is the field's floor.
+   Its transfers are the edge: they go in `ideas:`, not `standards:`, until a test pays off.
 4. **Check the repo for each one.** Set `status` to open, partial, done or n/a. Done and partial
    need `evidence`: a repo path or `just <recipe>`. Open items say concretely what's missing.
    Count a partial as open.
@@ -54,7 +56,17 @@ standards:
     why: a game QA lead never tests on a world whose next event is unknown
     status: open                    # open | partial | done | n/a
     evidence: the bench restores the live save; a Pope died mid-suite 10-31   # done/partial: path or `just x`
+ideas:                              # optional; from think-wider, hypotheses until tested
+  - id: scripted-events
+    idea: Inject the rare event on a set turn instead of waiting for it
+    from: aviation flight testing   # the source field
+    test: one scripted plague scenario separates a known-good from a known-bad ruler
+    kill: it doesn't
+    status: untested                # untested | testing | paid-off | dropped
 ```
+
+When an idea's status is `paid-off`, promote it into `standards:`. The checker flags ideas
+that lack a `test` or a `kill`.
 
 Full example: `/opt/proj/games/mtw2/STANDARDS.md` (18 items across QA, rulers, live-ops and release).
 
