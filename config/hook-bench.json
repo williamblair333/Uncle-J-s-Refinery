@@ -1,0 +1,32 @@
+{
+  "_doc": "scripts/hook_bench.py reads hooks from .claude/settings.json and ~/.claude/settings.json. Hooks whose command contains a 'skip' substring are observability or setup, not behaviour; 'live_state' hooks depend on git or files as they are now, so replaying old events through them means nothing; 'names' labels inline commands by a substring of their text.",
+  "skip": [
+    "jcodemunch-mcp",
+    "mcp-tool-log",
+    "langfuse_hook",
+    "sync_memory.sh",
+    "session-notify.sh",
+    "skill-link.sh",
+    "skill-suggest.sh",
+    "review-check.sh",
+    "session-start-autofix.sh",
+    "echo 'STANDING INSTRUCTION"
+  ],
+  "live_state": {
+    "session-end-check.sh": "reads the repo's current CHANGELOG/HANDOFF state",
+    "unpushed-warn.sh": "reads current git branches",
+    "pr-check.sh": "reads current open PRs",
+    "commit-doc-guard.sh": "reads what is staged now",
+    "pr-gate-guard.sh": "reads the last first-run gate report",
+    "git add -u": "stages files in the live checkout"
+  },
+  "leaks_state": {
+    "token-guard.sh": "hardcodes /opt/proj/Uncle-J-s-Refinery/state/hook-blocks.log; move it into the repo and honour UNCLE_J_PROJ_ROOT to bench it"
+  },
+  "names": {
+    "ngrok|burp|requestbin": "exfil-guard",
+    "dangerously-skip-permissions": "bypass-flag-guard",
+    "curl\\s.*\\|\\s*(bash": "pipe-to-shell-guard",
+    "rm\\s+-(r|f|rf|fr)": "rm-root-guard"
+  }
+}

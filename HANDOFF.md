@@ -1,7 +1,15 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-10-31 end)
+## NEXT SESSION — start here (updated 2026-10-31 late)
+
+10-31 late: `just hook-bench` replays transcripts through every hook (fire rate, errors, labelled false hits,
+replay-vs-live). Act on its first findings: **self-check fires on 61% of turn ends** (cost check vs its value);
+grep-guard blocks reading `~/.claude/projects` and running scratch scripts (labelled false — narrow it);
+skill-name-trigger fires on compaction summaries (skip "This session is being continued"); surface-write-guard
+blocks writing `.sh` into the scratchpad. Label more fires (`just hook-bench --label KEY true|false note`).
+token-guard.sh (global-only) hardcodes the hook-blocks log, so it isn't benched: move it into the repo. 5
+`session=bench-` lines in state/hook-blocks.log are bench pollution from before the dcup fix (left for Bill).
 
 10-31 end: #251–#253 merged (think-wider, expert-bar ideas, STANDARDS.md, forget-at-will idea). Session start now
 prints Refinery's top gaps. `full-suite-in-ci` done (#255; CI green on main). Gemini's review of STANDARDS/PQS checked in

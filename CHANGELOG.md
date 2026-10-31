@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 — hook replay bench (`just hook-bench`)
+
+- **`scripts/hook_bench.py`** reads every hook from `.claude/settings.json` and `~/.claude/settings.json` and replays recent transcript events through it: each tool call (PreToolUse), each typed prompt (UserPromptSubmit), each turn's text (Stop). Per hook it reports fire rate, errors, labelled false hits (`bench/hook-labels.jsonl`, add with `--label KEY true|false note`) and where replay disagrees with what happened live. Skill invocation counts come with it. Hooks run in a sandbox (temp HOME, log env vars redirected, `bench-` session ids); hooks that depend on live git/PR state or hardcode a real log path are listed as not replayed, with the reason.
+- First 7-day run (≤800 events per hook): self-check would fire on 61% of turn ends (311/508); edit-surface-guard 35%; offload-check 13%; skill-name-trigger 6.6%, including compaction summaries that only recap skill names (2 labelled false); workaround-scan 5.7%; grep-guard 4.1%, with 2 of 2 labelled fires false (reading transcripts outside the repo, running a script).
+- The bench's own leak check found `dcup_guard.py` writing replayed blocks into the real `state/hook-blocks.log`: it now honours `UNCLE_J_PROJ_ROOT` like the other guards, with a regression test. `token-guard.sh` (global-only, not in the repo) hardcodes that log path, so it is not replayed until it moves into the repo. 5 bench lines from before the fix remain in the log (`session=bench-`).
+- `behaviour-bench-per-hook` evidence updated; still partial (skills have counts only, PostToolUse/SessionStart not replayed, few labels).
+
 ## 2026-10-31 — meta-question rate in the Monday report; CI on every branch
 
 - **`scripts/meta_questions.py`** (`just meta-questions`) counts Bill's meta-questions ("why didn't you…", "why did I have to ask", "is this the best approach", "you should have…") per session per ISO week, from transcripts. agy wrote it to tests I wrote first. The patterns were then tuned on real prompts. The first version hit 12 of 76 "why"-style candidate prompts since W40. The tuned one hits 29 of 78 (the sample grew in between), against an estimated 34 real meta-questions; only the W43–W44 hits were read one by one. Precision is 23 of 27 on W43–W44, and the 3 false hits (an instruction, a quoted phrase, a pasted old exchange) are now test cases. Quoted phrases and pasted `❯ … ●` exchanges don't count.
