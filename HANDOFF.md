@@ -1,7 +1,14 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-11-01)
+## NEXT SESSION — start here (updated 2026-11-01, session end)
+
+Both 11-01 items merged: #263 (surface-write-guard `$S` fix + agy review gaps) and #264 (hook bench
+`--export`/`--from`). Hook work can now go to agy: `just hook-bench-export`, then brief agy with
+`python3 scripts/hook_bench.py --from state/hook-bench-export`. **Next:** the top gap from session start
+(`behaviour-bench-per-hook` / `skills-red-green`), or the PR-gate-on-Gitea gap. Gemini argon quota is spent until
+11-06; flash-high/medium ran fine. agy's filter refuses "bypass" wording; "missing test cases (false negatives)"
+got through.
 
 11-01: surface-write-guard's `$S` blind spot fixed (PR `fix/surface-write-var-heredoc`, CHANGELOG 11-01):
 labelled false 6 → 1; agy's adversarial review found 8 gaps (3 were regressions), all fixed in the same PR. The one left: a single-quoted awk regex `'/^>|x.py/'` read as a `>|` redirect (also

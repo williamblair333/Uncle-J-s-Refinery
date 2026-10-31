@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-01 — session end
+
+- Merged #263 (surface-write-guard) and #264 (hook bench bundle); HANDOFF points the next session at the top STANDARDS gap. Design notes for the guard went to the memweave corpus (post-audit-memory-capture).
+
 ## 2026-11-01 — hook bench runs without a home directory (`--export` / `--from`)
 
 - agy's sandbox hides `$HOME`, so the bench saw no transcripts or global hooks (two agy jobs died on it 10-31). `just hook-bench-export [dir]` now writes events.jsonl, settings-<scope>.json and empty skill stubs. Commands that point at a hook symlinked into the repo are rewritten to the repo path. Hooks that exist only globally are copied into the bundle. `hook_bench.py --from DIR` replays it.
