@@ -1,7 +1,14 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (written 2026-10-30)
+## NEXT SESSION — start here (updated 2026-10-31 end)
+
+10-31 end: #251–#253 merged (think-wider, expert-bar ideas, STANDARDS.md, forget-at-will idea). Session start now
+prints Refinery's top gaps. **Do first: `full-suite-in-ci`** (.github/workflows/ci.yml runs only tests/test_skills.py
+under pytest). Then `meta-question-rate`. Use `just skills`, not features/skill-manager/install.sh, until
+`installers-idempotent` is fixed (it rewrites the tracked .claude/settings.json).
+
+(older 10-30 notes below)
 
 10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install,
 then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maintain cap check — CHANGELOG).

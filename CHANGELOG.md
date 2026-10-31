@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-31 — session end
+
+- ROADMAP: new Planned item, "Thinking chain" (done and open steps). HANDOFF: next session starts on `full-suite-in-ci`. README checked: no update needed (skills are listed in docs/SKILLS.md). No hardening this session.
+
 ## 2026-10-31 — STANDARDS.md idea: forget-at-will
 
 - Added the think-wider design for Bill's "forget at will" goal as an untested idea: per-topic encryption with a key only Bill holds, plus source-ID purge of derived notes and a paraphrase canary that fails the nightly rebuild. Its test is a planted-fact probe on a copy of the store.
