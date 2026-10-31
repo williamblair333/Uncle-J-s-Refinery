@@ -5,7 +5,7 @@
 
 10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install,
 then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maintain cap check — CHANGELOG).
-0. **Think-wider + STANDARDS.md (10-31, #251 + build-step PR):** done; it now composes a design when no field fits. Refinery's session start now prints its top gaps.
+0. **Think-wider + STANDARDS.md (10-31, #251 + build-step PR):** done; it now composes a design when no field fits. Idea `forget-at-will` is in STANDARDS.md (untested; planted-fact test first). Refinery's session start now prints its top gaps.
    Next work = top gap `full-suite-in-ci` (CI runs only test_skills.py), then `meta-question-rate` (ship the
    scratchpad symptom detector as the weekly count, which also tests idea `foqa-transcript-sweep`). Fix
    `installers-idempotent`: skill-manager/install.sh rewrites the tracked settings.json; use `just skills` meanwhile.

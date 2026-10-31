@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-31 — STANDARDS.md idea: forget-at-will
+
+- Added the think-wider design for Bill's "forget at will" goal as an untested idea: per-topic encryption with a key only Bill holds, plus source-ID purge of derived notes and a paraphrase canary that fails the nightly rebuild. Its test is a planted-fact probe on a copy of the store.
+
 ## 2026-10-31 — think-wider builds when no field fits
 
 - Bill asked whether the skill can *create* a solution when no field's answer fits. It now can, through a build step: name the contradiction, split the problem into jobs, take one mechanism per job from a different field, and compose them into a named design. When nothing composes, it names the blocking constraint and the largest solvable part. The test used two problems with no ready-made analogy. Without the step, the forget-at-will problem already composed (E1) and the local-review problem only half-composed (E½). With the step, local review produced a named composed design (E1). Honesty held in every run. Record in `global-skills/think-wider/TESTING.md`.
