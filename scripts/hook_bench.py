@@ -11,8 +11,11 @@ matching hook exactly as Claude Code would. Reports, per hook:
   replay-only      fires now where the live session was not blocked with the same message
   live-only        blocked live with one of its messages, but not now
 
-Replayed events: PreToolUse (every tool call), UserPromptSubmit (every prompt Bill typed),
-Stop (each turn's assistant text, passed as last_assistant_message). Hooks run in a
+Replayed events: PreToolUse (every tool call), PostToolUse (every successful tool call, with
+the transcript's toolUseResult as tool_response; only hooks listed in post_tool_replay run),
+UserPromptSubmit (every prompt Bill typed), Stop (each turn's assistant text, passed as
+last_assistant_message). A hook whose exit-0 output the harness would drop is counted as
+'ignored', not as a fire. --export leaves tool responses out unless --with-responses. Hooks run in a
 sandbox: HOME is a temp dir mirroring the real one by symlinks except ~/.claude/state, the hook-blocks log and every
 state log point into it, and session ids get a `bench-` prefix so no real pre-mortem
 clearance token is read. A hook that writes state must honour one of the env vars set in
@@ -48,8 +51,13 @@ LABELS = REPO / "bench" / "hook-labels.jsonl"
 PROJECTS = Path.home() / ".claude" / "projects"
 SETTINGS = [("project", REPO / ".claude" / "settings.json"),
             ("global", Path.home() / ".claude" / "settings.json")]
-REPLAYED = ("PreToolUse", "UserPromptSubmit", "Stop")
+REPLAYED = ("PreToolUse", "PostToolUse", "UserPromptSubmit", "Stop")
 TIMEOUT = 20
+RESPONSE_CAP = 20_000   # chars of serialised tool_response kept per PostToolUse event
+# Top-level stdout JSON fields Claude Code acts on. JSON output with none of them is dropped
+# by the harness: the hook thinks it fired, the model never sees it.
+KNOWN_OUTPUT = {"continue", "stopReason", "suppressOutput", "systemMessage", "decision",
+                "reason", "hookSpecificOutput"}
 LIVE_RE = re.compile(r"^PreToolUse:\S+ hook (?:error|blocking error)[^:]*:\s*(.*)", re.S)
 _SKIP_PROMPT = ("<command-", "<local-command", "<task-notification", "Base directory for this skill",
                 "[Request interrupted", "Caveat:", "<system-reminder>")
@@ -104,6 +112,11 @@ def load_hooks(cfg: dict, settings=SETTINGS) -> list[dict]:
                                 break
                     if status == "run" and event not in REPLAYED:
                         status, note = "not_replayed", f"{event} events are not replayed"
+                    elif (status == "run" and event == "PostToolUse"
+                          and not any(s in cmd for s in cfg.get("post_tool_replay", []))):
+                        # PostToolUse hooks usually act (stage, index, sync); run only the
+                        # ones config/hook-bench.json lists as side-effect free.
+                        status, note = "not_replayed", "PostToolUse: not in post_tool_replay"
                     hooks.append({"name": hook_name(cmd, cfg), "event": event, "scope": scope,
                                   "matcher": group.get("matcher", ""), "command": cmd,
                                   "status": status, "note": note})
@@ -202,7 +215,7 @@ def matches(matcher: str, tool: str) -> bool:
 def applies(hook: dict, ev: dict) -> bool:
     if ev["event"] != hook["event"]:
         return False
-    if hook["event"] == "PreToolUse" and not matches(hook["matcher"], ev["tool"]):
+    if hook["event"] in ("PreToolUse", "PostToolUse") and not matches(hook["matcher"], ev["tool"]):
         return False
     return hook["scope"] == "global" or (ev["cwd"] or "").startswith(str(REPO))
 
@@ -223,6 +236,14 @@ def _result_text(block: dict) -> str:
     if isinstance(c, list):
         return "\n".join(b.get("text", "") for b in c if isinstance(b, dict))
     return c if isinstance(c, str) else ""
+
+
+def _response(entry: dict, block: dict):
+    """tool_response for a PostToolUse replay: the transcript's toolUseResult, else the
+    result text. Anything over RESPONSE_CAP serialised chars becomes truncated text."""
+    r = entry.get("toolUseResult", _result_text(block))
+    s = r if isinstance(r, str) else json.dumps(r)
+    return s[:RESPONSE_CAP] if len(s) > RESPONSE_CAP else r
 
 
 def is_prompt(entry: dict) -> bool:
@@ -293,11 +314,20 @@ def events_from(path: Path, since: float) -> list[dict]:
                                    "cwd": state["cwd"], "text": _text(content)})
                 elif isinstance(content, list):
                     for b in content:
-                        if isinstance(b, dict) and b.get("type") == "tool_result" and b.get("is_error"):
+                        if not (isinstance(b, dict) and b.get("type") == "tool_result"):
+                            continue
+                        ev = by_tool_id.get(b.get("tool_use_id"))
+                        if b.get("is_error"):
                             m = LIVE_RE.match(_result_text(b))
-                            ev = by_tool_id.get(b.get("tool_use_id"))
                             if m and ev is not None:
                                 ev["live"] = m.group(1)
+                        elif ev is not None:
+                            # PostToolUse fires on success only. toolUseResult is the
+                            # structured tool_response the hook saw; older entries lack it.
+                            events.append({"event": "PostToolUse", "session": state["session"],
+                                           "cwd": state["cwd"], "tool": ev["tool"],
+                                           "input": ev["input"], "tool_use_id": b.get("tool_use_id"),
+                                           "response": _response(entry, b)})
         close_turn()
     return events
 
@@ -332,7 +362,7 @@ def load_events(path: Path) -> list[dict]:
 def export_bundle(dest: Path, days: float = 7, hook_filter: str | None = None,
                   cfg: dict | None = None, settings: list[tuple[str, Path]] | None = None,
                   projects_root: Path = PROJECTS, repo: Path = REPO,
-                  home: Path | None = None) -> tuple[int, int]:
+                  home: Path | None = None, with_responses: bool = False) -> tuple[int, int]:
     dest = Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
     if cfg is None:
@@ -341,6 +371,10 @@ def export_bundle(dest: Path, days: float = 7, hook_filter: str | None = None,
         settings = SETTINGS
 
     events = collect_events(days, root=projects_root)
+    if not with_responses:
+        # PostToolUse events carry tool output (file contents, command output). A bundle is
+        # handed to agy, i.e. off this machine; leave them out unless asked for.
+        events = [e for e in events if e["event"] != "PostToolUse"]
     with (dest / "events.jsonl").open("w", encoding="utf-8") as f:
         for ev in events:
             f.write(json.dumps(ev) + "\n")
@@ -396,7 +430,12 @@ def export_bundle(dest: Path, days: float = 7, hook_filter: str | None = None,
 
 
 def event_key(hook: str, ev: dict) -> str:
-    body = json.dumps(ev.get("input"), sort_keys=True) if ev["event"] == "PreToolUse" else ev.get("text", "")
+    if ev["event"] == "PreToolUse":
+        body = json.dumps(ev.get("input"), sort_keys=True)
+    elif ev["event"] == "PostToolUse":
+        body = ev.get("tool_use_id") or json.dumps([ev.get("input"), ev.get("response")], sort_keys=True)
+    else:
+        body = ev.get("text", "")
     return hashlib.sha1(f"{hook}\0{ev['event']}\0{body[:4000]}".encode()).hexdigest()[:12]
 
 
@@ -405,6 +444,9 @@ def payload(ev: dict) -> dict:
          "hook_event_name": ev["event"], "permission_mode": "default"}
     if ev["event"] == "PreToolUse":
         p.update(tool_name=ev["tool"], tool_input=ev["input"])
+    elif ev["event"] == "PostToolUse":
+        p.update(tool_name=ev["tool"], tool_input=ev["input"], tool_response=ev.get("response"),
+                 tool_use_id=ev.get("tool_use_id") or "")
     elif ev["event"] == "UserPromptSubmit":
         p["prompt"] = ev["text"]
     else:
@@ -452,7 +494,10 @@ def make_sandbox(bundle: Path | None = None, home: Path | None = None) -> tuple[
 
 
 def classify(event: str, rc: int, out: str, err: str) -> tuple[str, str]:
-    """('block'|'inject'|'error'|'pass', message) for one hook run."""
+    """('block'|'inject'|'ignored'|'error'|'pass', message) for one hook run.
+
+    'ignored': exit 0 with output Claude Code drops — JSON with no field it reads, or plain
+    text on an event whose stdout only reaches the debug log."""
     if rc == 2:
         return "block", err.strip() or out.strip()
     if rc != 0:
@@ -472,10 +517,12 @@ def classify(event: str, rc: int, out: str, err: str) -> tuple[str, str]:
             return "block", data.get("reason", "")
         if hso.get("additionalContext") and event != "PreToolUse":
             return "inject", hso["additionalContext"]
+        if not set(data) & KNOWN_OUTPUT:
+            return "ignored", out
         return "pass", ""
     if event in ("UserPromptSubmit", "SessionStart"):
         return "inject", out
-    return "pass", ""
+    return "ignored", out
 
 
 def run_one(hook: dict, ev: dict, env: dict) -> tuple[str, str]:
@@ -494,7 +541,7 @@ def _prefix(msg: str) -> str:
 
 def bench_hook(hook: dict, events: list[dict], env: dict) -> dict:
     """Run one hook over the events it applies to; events must already be filtered."""
-    res = {"events": len(events), "fires": [], "errors": Counter()}
+    res = {"events": len(events), "fires": [], "errors": Counter(), "ignored": 0}
     replayed, prefixes = [], set()
     for ev in events:
         verdict, msg = run_one(hook, ev, env)
@@ -505,6 +552,8 @@ def bench_hook(hook: dict, events: list[dict], env: dict) -> dict:
             prefixes.add(_prefix(msg))
         elif verdict == "error":
             res["errors"][msg[:120]] += 1
+        elif verdict == "ignored":
+            res["ignored"] += 1
     replay_only = live_only = 0
     if hook["event"] == "PreToolUse":
         for ev, verdict, msg in replayed:
@@ -545,7 +594,7 @@ def add_label(key: str, verdict: str, note: str, path: Path = LABELS) -> None:
 
 
 def snippet(ev: dict, n: int = 140) -> str:
-    if ev["event"] == "PreToolUse":
+    if ev["event"] in ("PreToolUse", "PostToolUse"):
         inp = ev["input"] if isinstance(ev["input"], dict) else {}
         body = inp.get("command") or inp.get("file_path") or inp.get("prompt") or json.dumps(ev["input"])
         s = f"{ev['tool']}: {body}"
@@ -562,6 +611,7 @@ def summarise(hook: dict, res: dict, labels: dict) -> dict:
             "events": res["events"], "fires": len(fires),
             "rate": round(len(fires) / res["events"], 4) if res["events"] else None,
             "errors": sum(res["errors"].values()), "error_kinds": dict(res["errors"].most_common(3)),
+            "ignored": res.get("ignored", 0),
             "labelled": len(lab), "false": false,
             "precision": round(1 - false / len(lab), 3) if lab else None,
             "replay_only": res["replay_only"], "live_only": res["live_only"],
@@ -586,6 +636,10 @@ def render(rows: list[dict], skipped: list[dict], skills: Counter, prompts: int,
                    f"{r['errors']:>5} {str(r['false']) + '/' + str(r['labelled']):>9} "
                    f"{r['replay_only']:>9} {r['live_only']:>9}")
     for r in rows:
+        if r.get("ignored"):
+            out.append(f"\n{r['name']} produced output Claude Code drops {r['ignored']}x "
+                       "(JSON with no field the harness reads, or stdout on an event that "
+                       "only logs it): it thinks it fires, the model never sees it")
         if r["errors"]:
             out.append(f"\n{r['name']} errored {r['errors']}x: " +
                        "; ".join(f"{k!r} ×{v}" for k, v in r["error_kinds"].items()))
@@ -616,6 +670,8 @@ def main(argv=None) -> int:
     ap.add_argument("--label", nargs="+", metavar="ARG", help="KEY true|false [note...]")
     ap.add_argument("--export", metavar="DIR", help="export events and settings to DIR")
     ap.add_argument("--from", dest="from_dir", metavar="DIR", help="read events and settings from DIR")
+    ap.add_argument("--with-responses", action="store_true",
+                    help="--export: include PostToolUse events, which carry tool output")
     a = ap.parse_args(argv)
 
     if a.export and a.from_dir:
@@ -633,7 +689,8 @@ def main(argv=None) -> int:
         if not export_dest_ok(dest):
             ap.error(f"--export {dest}: inside the repo but not git-ignored. The bundle holds "
                      "private transcript text; use state/… (ignored) or a path outside the repo")
-        n_events, n_hooks = export_bundle(dest, a.days, hook_filter=a.hook)
+        n_events, n_hooks = export_bundle(dest, a.days, hook_filter=a.hook,
+                                          with_responses=a.with_responses)
         print(f"exported {n_events} events, {n_hooks} hooks to {dest}")
         return 0
 

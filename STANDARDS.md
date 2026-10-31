@@ -48,7 +48,7 @@ standards:
     bar: Every hook or skill that changes agent behaviour has a replay bench on real transcripts that reports its fire rate and false hits
     why: an LLM-eval engineer ships no prompt change without a regression set
     status: partial
-    evidence: "just hook-bench (scripts/hook_bench.py; replays PreToolUse/UserPromptSubmit/Stop through every settings.json hook in a sandbox; labels in bench/hook-labels.jsonl). Gaps: skills get invocation counts only (no false-hit labels); PostToolUse, SessionStart and live-state hooks are not replayed; few fires labelled yet"
+    evidence: "just hook-bench (scripts/hook_bench.py; replays PreToolUse/PostToolUse/UserPromptSubmit/Stop through every settings.json hook in a sandbox, PostToolUse opt-in via post_tool_replay; counts output the harness drops as 'ignored'; labels in bench/hook-labels.jsonl). Gaps: skills get invocation counts only (no false-hit labels); SessionStart and live-state hooks are not replayed (product-md-check is covered by tests/test_standards_check.py); token-guard leaks state"
   - id: skills-red-green
     area: evaluation
     bar: Every global skill has a recorded baseline (without the skill) and a passing run with it
