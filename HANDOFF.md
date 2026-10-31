@@ -1,15 +1,17 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-10-31 session end)
+## NEXT SESSION — start here (updated 2026-10-31 night)
 
-**FIRST: label the 35 unlabelled hook-bench fires** (Bill's instruction): 28 grep-guard + 7 skill-name-trigger
-"Category: … What Uncle J already has: …" prompts. List them with
-`just hook-bench --hook grep-guard --samples 40` and `just hook-bench --hook skill-name --samples 40`, judge each
-(true = the hook was right to fire), record with `just hook-bench --label KEY true|false note`. For the Category
-prompts, find where they came from first (scripted `claude -p` job or Bill) — that decides the label. Then report
-precision per hook and pick the next false-hit fix from the false labels. (Counts are from the 7-day window
-on 10-31; a later run shifts the window, so the number may differ a little.)
+Hook-bench labelling is done and both fixes are in PR `fix/hook-precision` (see CHANGELOG 10-31 night):
+skill-name-trigger 95% precision, grep-guard labelled false 21 → 4. Next candidates:
+- **surface-write-guard** blocked `cat > $S/x.py <<'EOF'` with `S=` a scratchpad path. It doesn't follow
+  `VAR=` assignments the way grep-guard's analyzer does. Label its fires (`just hook-bench --hook surface-write
+  --samples 20`) and fix.
+- **agy can't run the hook bench**: sandbox-run hides `$HOME`, so `hook_bench.py` sees no transcripts and no
+  `~/.claude/settings.json` and returns `hooks: []`. Two agy jobs died on this 10-31. Fix before delegating hook
+  work: export labelled events to a repo fixture, or have the bench take `--projects`/`--settings` paths.
+- grep-guard's 4 residual false hits (loop/read values from command output) are accepted; see CHANGELOG.
 
 10-31 late: `just hook-bench` replays transcripts through every hook (fire rate, errors, labelled false hits,
 replay-vs-live). Its first false hits are fixed (grep-guard cd + function check, surface-write-guard /tmp

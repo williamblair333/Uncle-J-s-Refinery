@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 (night) — grep-guard and skill-name-trigger precision, from 48 labelled fires
+
+- **Labelled** every unlabelled grep-guard and skill-name-trigger fire in the 7-day window (48 labels in `bench/hook-labels.jsonl`). The "Category: … What Uncle J already has" prompts are the repo scout's `pick_prompt` (`scripts/scout/judge.py`), a scripted `claude -p` job whose inventory lists every installed skill.
+- **skill-name-trigger:** more than 3 named skills is an inventory, not a request, so the hook stays silent. Precision 64% → 95% (18/18 true still fire; 1 false left: Bill pasting text that names a skill).
+- **grep-guard** (analyzer): `function`/`alias` count only as command words the lexer saw, not inside commit messages or heredoc bodies. For real functions the walker already judges the body. The extra deny now needs a body that reads AND a call argument or assignment that is a whole source path (`SRC_PATH`), so Lua text like `..c.movePoints` no longer counts. A loop over allowed globs (`qa-*.log`) no longer taints its variable. A dynamic path is judged by its literal starting dir (new `P` record): allowed outside the repo and its ancestors, denied in it, and denied on a `..` after the unknown part. A recursive search into a repo dir holding no source file (≤2000 files, `docs/specs`) is allowed. Debug mode prints the deciding record.
+- Result, same window: grep-guard 34 → 18 fires; labelled false 21 → 4; every true-labelled fire in the window still fires. The 4 left are loop/read variables whose values come from command output (`$(grep …)`, `ls … | while read`, `find | while read`) with the repo as cwd. They stay denied because `find scripts | while read f; do cat "$f"` is a real read. 25 new regression cases (12 deny, 13 allow); 3 labels corrected to true (`grep -c` on source after a heredoc is still a source search).
+
 ## 2026-10-31 — hook false hits fixed (from the hook bench)
 
 - **self-check left unchanged, on evidence.** Its 61% fire rate is real, but 4 of 8 live fires found a real error. 3 of those 4 came from turns whose final reply was short (101–720 chars), with the wrong claim in the text between tool calls. Measuring only the final reply would cut the rate to 45% and lose 3 of the 4 catches.

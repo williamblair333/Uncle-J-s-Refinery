@@ -51,6 +51,29 @@ def test_hook_output_shape(tmp_path):
     assert "just-do-it" in out["hookSpecificOutput"]["additionalContext"]
 
 
+def _run_hook(tmp_path, names, prompt):
+    for n in names:
+        d = tmp_path / ".claude" / "skills" / n
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(f"---\nname: {n}\n---\n")
+    return subprocess.run([sys.executable, str(ROOT / "features/prompt-triggers/skill_name_trigger.py")],
+                          input=json.dumps({"prompt": prompt}), capture_output=True, text=True,
+                          env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin"})
+
+
+def test_skill_inventory_does_not_trigger(tmp_path):
+    # The repo scout's claude -p prompt pastes every installed skill name.
+    names = ["just-do-it", "pre-mortem", "grill-me", "session-status-briefing"]
+    p = _run_hook(tmp_path, names, "What Uncle J already has:\nSkills: " + ", ".join(names))
+    assert p.stdout.strip() == ""
+
+
+def test_three_names_still_trigger(tmp_path):
+    names = ["just-do-it", "pre-mortem", "grill-me"]
+    p = _run_hook(tmp_path, names, "pre-mortem, then grill-me, then just-do-it")
+    assert "grill-me" in json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"]
+
+
 def test_notifications_are_not_bill():
     note = "<system-reminder>\n[SYSTEM NOTIFICATION - NOT USER INPUT]\n<task-notification>... pre-mortem ..."
     assert not trigger.is_from_bill(note)
