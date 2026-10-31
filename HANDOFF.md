@@ -9,9 +9,13 @@ any argument text such as a `--label` note saying "sed -i on x.py"). Fix only if
 
 Hook-bench labelling is done and both fixes are in PR `fix/hook-precision` (see CHANGELOG 10-31 night):
 skill-name-trigger 95% precision, grep-guard labelled false 21 → 4. Next candidates:
-- **agy can't run the hook bench**: sandbox-run hides `$HOME`, so `hook_bench.py` sees no transcripts and no
-  `~/.claude/settings.json` and returns `hooks: []`. Two agy jobs died on this 10-31. Fix before delegating hook
-  work: export labelled events to a repo fixture, or have the bench take `--projects`/`--settings` paths.
+- **agy can run the hook bench now (11-01)**: before delegating hook work run `just hook-bench-export`
+  (→ state/hook-bench-export, gitignored), then tell agy `python3 scripts/hook_bench.py --from
+  state/hook-bench-export …`. Re-export after editing a global-only hook (token-guard, pretool-guard are
+  copies in the bundle; repo-linked hooks run from the working tree). Empty-HOME replay matches a direct
+  run except 1 HOME-dependent grep-guard fire (a labelled false hit).
+- **surface-write-guard follow-ups:** a quoted heredoc fed to `git commit -F -` or argument text that reads like a write
+  is still scanned as commands (blocked this session's own commit + a `--label` note).
 - grep-guard's 4 residual false hits (loop/read values from command output) are accepted; see CHANGELOG.
 
 10-31 late: `just hook-bench` replays transcripts through every hook (fire rate, errors, labelled false hits,

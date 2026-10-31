@@ -69,6 +69,10 @@ workaround-bench *args:
 hook-bench *args:
     python3 scripts/hook_bench.py {{args}}
 
+# hook bench export: bundle transcripts and settings for replay without ~/.claude
+hook-bench-export dir="state/hook-bench-export":
+    python3 scripts/hook_bench.py --export {{dir}}
+
 # self-check bench: how often "check yourself" turns up a real correction (all transcripts)
 check-bench *args:
     python3 scripts/check_bench.py {{args}}

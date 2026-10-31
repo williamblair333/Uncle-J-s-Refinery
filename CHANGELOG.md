@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-01 — hook bench runs without a home directory (`--export` / `--from`)
+
+- agy's sandbox hides `$HOME`, so the bench saw no transcripts or global hooks (two agy jobs died on it 10-31). `just hook-bench-export [dir]` now writes events.jsonl, settings-<scope>.json and empty skill stubs. Commands that point at a hook symlinked into the repo are rewritten to the repo path. Hooks that exist only globally are copied into the bundle. `hook_bench.py --from DIR` replays it.
+- Checked on real data: an empty-HOME `--from` run vs a direct run found 20/20 hooks and 550/550 prompts, with equal fires and errors on every hook except grep-guard (+1, a labelled false hit that depends on `~/.claude` existing).
+- `--export` refuses a path inside the repo unless git ignores it: events.jsonl is transcript text, and the Gitea mirror publishes to GitHub.
+- Built by agy (2 jobs), reviewed and verified here. 5 new tests.
+
 ## 2026-11-01 — surface-write-guard: heredoc bodies no longer cancel the `$S` exemption
 
 - **Cause:** the `/tmp` `$VAR` exemption counted assignments and rebind words (`for`, `read`, `S=`) over the whole command, heredoc bodies included. A Python body with a `for` loop, or a script body with its own `S=$1`, switched the exemption off for the outer `cat > $S/x.sh <<'EOF'`.
