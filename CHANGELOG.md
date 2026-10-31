@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-01 — session end
+
+- Merged #266 (STANDARDS.md parses again), #267 (hook bench replays PostToolUse), #268 (prompt-injection defender repaired; verified live), #269 (label), #270 (main host only). README's guardrails line said the defender "blocks"; it only warns, now corrected. ROADMAP tracks the unfiled upstream defender bug.
+
 ## 2026-11-01 — defender repair stays on the main host
 
 - Bill: skip deploying the repaired prompt-injection defender on the pi server and tc-vmh-03. HANDOFF no longer asks for it.
