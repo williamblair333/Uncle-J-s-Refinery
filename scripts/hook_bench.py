@@ -22,6 +22,8 @@ on git or files as they are now. Nor are leaks_state hooks, which write to a har
 path the sandbox cannot redirect.
 
   python3 scripts/hook_bench.py [--days N] [--max-events N] [--hook NAME] [--samples N] [--json]
+  python3 scripts/hook_bench.py --export DIR [--days N] [--hook NAME]
+  python3 scripts/hook_bench.py --from DIR [--max-events N] [--hook NAME] [--samples N] [--json]
   python3 scripts/hook_bench.py --label KEY true|false [note...]
 """
 from __future__ import annotations
@@ -106,6 +108,86 @@ def load_hooks(cfg: dict, settings=SETTINGS) -> list[dict]:
                                   "matcher": group.get("matcher", ""), "command": cmd,
                                   "status": status, "note": note})
     return hooks
+
+
+def rewrite_command(command: str, repo: Path = REPO, home: Path | None = None,
+                    bundle: Path | None = None) -> str:
+    """A `~/.claude/hooks/…` path that symlinks into the repo becomes the repo path; with
+    `bundle`, any other existing one is copied (its top-level hooks/ dir) into
+    bundle/hooks/ and the command points at the copy. Everything else is unchanged."""
+    if not command:
+        return ""
+    bundle_path = Path(bundle) if bundle is not None else None
+    if home is None:
+        home = Path.home()
+    repo_resolved = repo.resolve()
+    home_resolved = home.resolve()
+
+    prefixes = [r"~", r"\$HOME", r"\$\{HOME\}"]
+    for h in (home, home_resolved):
+        s = str(h).rstrip("/")
+        if s and re.escape(s) not in prefixes:
+            prefixes.append(re.escape(s))
+    prefix_pattern = "|".join(prefixes)
+    pattern = re.compile(rf"(?:{prefix_pattern})/\.claude/hooks/([^\s\"'>;&|()#]+)")
+
+    def replace(match: re.Match) -> str:
+        subpath = match.group(1)
+        for h in (home, home_resolved):
+            candidate = h / ".claude" / "hooks" / subpath
+            if candidate.is_symlink():
+                try:
+                    target = candidate.resolve()
+                    if target != repo_resolved:
+                        target.relative_to(repo_resolved)
+                        return str(target)
+                except (ValueError, RuntimeError):
+                    pass
+            if bundle_path is not None and (candidate.exists() or candidate.is_symlink()):
+                hooks_dir = h / ".claude" / "hooks"
+                top_name = Path(subpath).parts[0]
+                src_top = hooks_dir / top_name
+                dest_top = bundle_path / "hooks" / top_name
+                try:
+                    if src_top.is_dir():
+                        dest_top.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copytree(src_top, dest_top, dirs_exist_ok=True)
+                    elif src_top.is_file():
+                        dest_top.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(src_top, dest_top)
+                    else:
+                        continue
+                    copy_path = (bundle_path / "hooks" / subpath).resolve()
+                    return str(copy_path)
+                except OSError:
+                    pass
+        return match.group(0)
+
+    return pattern.sub(replace, command)
+
+
+def export_dest_ok(dest: Path, repo: Path = REPO) -> bool:
+    """A bundle may go outside the repo, or inside it only where git ignores it: its
+    events.jsonl is transcript text and the Gitea mirror publishes to GitHub."""
+    try:
+        Path(dest).resolve().relative_to(repo.resolve())
+    except ValueError:
+        return True
+    probe = Path(dest).resolve() / "events.jsonl"
+    r = subprocess.run(["git", "-C", str(repo), "check-ignore", "-q", str(probe)],
+                       capture_output=True)
+    return r.returncode == 0
+
+
+def load_bundle_settings(from_dir: Path) -> list[tuple[str, Path]]:
+    bundle_dir = Path(from_dir)
+    files = sorted(bundle_dir.glob("settings-*.json"),
+                   key=lambda p: (0 if p.name == "settings-project.json" else (1 if p.name == "settings-global.json" else 2), p.name))
+    settings = []
+    for p in files:
+        scope = p.name[len("settings-"):-len(".json")]
+        settings.append((scope, p))
+    return settings
 
 
 def matches(matcher: str, tool: str) -> bool:
@@ -229,6 +311,90 @@ def collect_events(days: float, root: Path = PROJECTS) -> list[dict]:
     return out
 
 
+def load_events(path: Path) -> list[dict]:
+    events = []
+    try:
+        fh = Path(path).open(errors="replace")
+    except OSError:
+        return []
+    with fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                events.append(json.loads(line))
+            except ValueError:
+                continue
+    return events
+
+
+def export_bundle(dest: Path, days: float = 7, hook_filter: str | None = None,
+                  cfg: dict | None = None, settings: list[tuple[str, Path]] | None = None,
+                  projects_root: Path = PROJECTS, repo: Path = REPO,
+                  home: Path | None = None) -> tuple[int, int]:
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    if cfg is None:
+        cfg = load_config()
+    if settings is None:
+        settings = SETTINGS
+
+    events = collect_events(days, root=projects_root)
+    with (dest / "events.jsonl").open("w", encoding="utf-8") as f:
+        for ev in events:
+            f.write(json.dumps(ev) + "\n")
+
+    total_hooks = 0
+    for scope, path in settings:
+        try:
+            data = json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        new_hooks = {}
+        for event, groups in (data.get("hooks") or {}).items():
+            new_groups = []
+            for group in groups:
+                new_h_list = []
+                for h in group.get("hooks", []):
+                    cmd = h.get("command") or ""
+                    if not cmd:
+                        continue
+                    if hook_filter and hook_filter not in hook_name(cmd, cfg):
+                        continue
+                    new_cmd = rewrite_command(cmd, repo=repo, home=home, bundle=dest)
+                    new_h = dict(h)
+                    new_h["command"] = new_cmd
+                    new_h_list.append(new_h)
+                    total_hooks += 1
+                if new_h_list:
+                    new_group = dict(group)
+                    new_group["hooks"] = new_h_list
+                    new_groups.append(new_group)
+            if new_groups:
+                new_hooks[event] = new_groups
+        out_data = dict(data)
+        out_data["hooks"] = new_hooks
+        (dest / f"settings-{scope}.json").write_text(json.dumps(out_data, indent=2) + "\n", encoding="utf-8")
+
+    skills_home = home if home is not None else Path.home()
+    skills_dir = skills_home / ".claude" / "skills"
+    if not skills_dir.is_dir():
+        skills_dir = skills_home.resolve() / ".claude" / "skills"
+    if skills_dir.is_dir():
+        for entry in sorted(skills_dir.iterdir()):
+            try:
+                skill_md = entry / "SKILL.md"
+                if skill_md.is_file():
+                    stub = dest / "skills" / entry.name / "SKILL.md"
+                    stub.parent.mkdir(parents=True, exist_ok=True)
+                    stub.write_text("", encoding="utf-8")
+            except OSError:
+                continue
+
+    return len(events), total_hooks
+
+
 def event_key(hook: str, ev: dict) -> str:
     body = json.dumps(ev.get("input"), sort_keys=True) if ev["event"] == "PreToolUse" else ev.get("text", "")
     return hashlib.sha1(f"{hook}\0{ev['event']}\0{body[:4000]}".encode()).hexdigest()[:12]
@@ -248,14 +414,15 @@ def payload(ev: dict) -> dict:
 
 # ── running ───────────────────────────────────────────────────────────────────
 
-def make_sandbox() -> tuple[Path, dict]:
+def make_sandbox(bundle: Path | None = None, home: Path | None = None) -> tuple[Path, dict]:
     box = Path(tempfile.mkdtemp(prefix="hook-bench-"))
     claude = box / ".claude"
     (claude / "state").mkdir(parents=True)
     # Mirror HOME so `~/…` resolves as it did live (a guard judging `cd ~/.claude/projects`
     # must see that it exists), but give ~/.claude/state a fresh dir: that's where hooks
     # write. Every other ~/.claude entry and every other HOME entry is a symlink.
-    home = Path.home()
+    if home is None:
+        home = Path.home()
     for real in (home.iterdir() if home.is_dir() else []):
         if real.name != ".claude":
             (box / real.name).symlink_to(real)
@@ -263,6 +430,16 @@ def make_sandbox() -> tuple[Path, dict]:
         for real in (home / ".claude").iterdir():
             if real.name != "state":
                 (claude / real.name).symlink_to(real)
+    if bundle is not None:
+        bundle_skills = Path(bundle) / "skills"
+        if bundle_skills.is_dir():
+            target_skills = claude / "skills"
+            if target_skills.is_symlink() or target_skills.exists():
+                if target_skills.is_dir() and not target_skills.is_symlink():
+                    shutil.rmtree(target_skills)
+                else:
+                    target_skills.unlink()
+            target_skills.symlink_to(bundle_skills.resolve())
     (box / "proj").mkdir()  # exists but empty: hook-blocks.log appends fail harmlessly
     env = {**os.environ, "HOME": str(box), "UNCLE_J_PROJ_ROOT": str(box / "proj"),
            "SURFACE_GUARD_LOG": str(box / "surface.log"),
@@ -332,7 +509,7 @@ def bench_hook(hook: dict, events: list[dict], env: dict) -> dict:
     if hook["event"] == "PreToolUse":
         for ev, verdict, msg in replayed:
             fired = verdict in ("block", "inject")
-            live = _prefix(ev["live"]) if ev["live"] is not None else None
+            live = _prefix(ev.get("live")) if ev.get("live") is not None else None
             if fired and live != _prefix(msg):
                 replay_only += 1
             elif not fired and live is not None and live in prefixes:
@@ -437,7 +614,12 @@ def main(argv=None) -> int:
     ap.add_argument("--samples", type=int, default=3, help="unlabelled fires shown per hook")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--label", nargs="+", metavar="ARG", help="KEY true|false [note...]")
+    ap.add_argument("--export", metavar="DIR", help="export events and settings to DIR")
+    ap.add_argument("--from", dest="from_dir", metavar="DIR", help="read events and settings from DIR")
     a = ap.parse_args(argv)
+
+    if a.export and a.from_dir:
+        ap.error("--export and --from cannot be used together")
 
     if a.label:
         if len(a.label) < 2:
@@ -446,14 +628,34 @@ def main(argv=None) -> int:
         print(f"labelled {a.label[0]} {a.label[1]}")
         return 0
 
-    hooks = load_hooks(load_config())
+    if a.export:
+        dest = Path(a.export)
+        if not export_dest_ok(dest):
+            ap.error(f"--export {dest}: inside the repo but not git-ignored. The bundle holds "
+                     "private transcript text; use state/… (ignored) or a path outside the repo")
+        n_events, n_hooks = export_bundle(dest, a.days, hook_filter=a.hook)
+        print(f"exported {n_events} events, {n_hooks} hooks to {dest}")
+        return 0
+
+    cfg = load_config()
+    if a.from_dir:
+        from_dir = Path(a.from_dir)
+        if not from_dir.is_dir():
+            ap.error(f"--from directory does not exist: {from_dir}")
+        settings = load_bundle_settings(from_dir)
+        hooks = load_hooks(cfg, settings=settings)
+        events = load_events(from_dir / "events.jsonl")
+    else:
+        from_dir = None
+        hooks = load_hooks(cfg)
+        events = collect_events(a.days)
+
     if a.hook:
         hooks = [h for h in hooks if a.hook in h["name"]]
     runnable = [h for h in hooks if h["status"] == "run"]
     skipped = [h for h in hooks if h["status"] in ("leaks_state", "live_state", "not_replayed")]
-    events = collect_events(a.days)
     labels = load_labels()
-    box, env = make_sandbox()
+    box, env = make_sandbox(bundle=from_dir)
     try:
         def go(h):
             mine = [e for e in events if applies(h, e)]
