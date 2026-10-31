@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-01 — STANDARDS.md parses again
+
+- The `behaviour-bench-per-hook` evidence line (from f3fbb15) had an unquoted `Gaps: skills`, which YAML reads as a mapping, so every session start printed "cannot parse STANDARDS.md" instead of the gaps. Quoted it. New test `test_repo_standards_md_parses_and_validates` loads and validates the repo's own STANDARDS.md (red on main, green after).
+
 ## 2026-11-01 — session end
 
 - Merged #263 (surface-write-guard) and #264 (hook bench bundle); HANDOFF points the next session at the top STANDARDS gap. Design notes for the guard went to the memweave corpus (post-audit-memory-capture).
