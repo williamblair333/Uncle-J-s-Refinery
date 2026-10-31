@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'ci/**']
   pull_request:
 
 jobs:
@@ -57,333 +57,41 @@ jobs:
             [ -f "$f" ] && bash -n "$f" && echo "OK  $f" || echo "FAIL  $f"
           done
 
-  # ── 4. Skill regression tests (static, no API calls) ─────────────────────
-  test-skills:
-    name: Skill frontmatter regression
+  # ── 4. The whole pytest suite — the same run as `just test` ──────────────
+  # Every file under tests/ runs here; there is no per-file list to forget to
+  # extend. Host-only cases (live Ollama, the memweave ONNX model, .venv-memweave)
+  # self-skip on this runner; -rfs prints every skip and failure by name.
+  # Needs uv (full sync: httpx, mcp, the munch packages), git and jq — jq ships
+  # on ubuntu-latest and the guard hooks parse their payloads with it.
+  test-suite:
+    name: pytest (full suite)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@v6
 
-      - name: Add ~/.local/bin to PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: git identity (tests build real repos and commit)
+        run: |
+          git config --global user.email ci@example.invalid
+          git config --global user.name ci
+          git config --global init.defaultBranch main
 
-      - name: Install dev dependencies
-        run: uv sync --inexact --only-group dev
+      - name: uv sync
+        run: uv sync --inexact
 
-      - name: pytest tests/test_skills.py
-        run: uv run pytest tests/test_skills.py -v
+      - name: pytest tests/
+        run: .venv/bin/python -m pytest -q tests -rfs
 
-  # ── 5. session-end-check.sh behavioural tests ────────────────────────────
-  test-session-end-check:
-    name: session-end-check tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Add ~/.local/bin to PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Install dev dependencies
-        run: uv sync --inexact --only-group dev
-
-      - name: pytest tests/test_session_end_check.py
-        run: uv run pytest tests/test_session_end_check.py -v
-
-  # ── 6. Pay-for-itself audit unit tests ───────────────────────────────────
-  test-audit:
-    name: Audit pipeline tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_audit.py
-        run: python -m pytest tests/test_audit.py -v
-
-  # ── 7. install --update unit tests ───────────────────────────────────────
-  test-install-update:
-    name: install --update section detection tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Add ~/.local/bin to PATH
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-      - name: Install dev dependencies
-        run: uv sync --inexact --only-group dev
-
-      - name: pytest tests/test_install_update.py (unit tests only)
-        run: uv run pytest tests/test_install_update.py -v -k "not guard"
-
-  # ── 8. origin/main regression detector ───────────────────────────────────
-  # Guards the guard: this detector is what catches a force-reset of origin/main
-  # (five occurred between 2026-08-04 and 2026-08-14 before anyone counted them).
-  # Needs only pytest + git — the cases build a real bare repo as `origin`.
-  test-origin-main-regression:
-    name: origin/main regression detector tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_origin_main_regression.py
-        run: python -m pytest tests/test_origin_main_regression.py -v
-
-  # ── 9. push-guard behaviour matrix ───────────────────────────────────────
-  # A security control: the BLOCK cases matter more than the ALLOW ones, since
-  # a fix for false positives that creates a false negative is worse than the
-  # bug. Needs pytest + jq (the guard parses its PreToolUse payload with jq).
-  test-push-guard:
-    name: push-guard behaviour matrix
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_push_guard.py
-        run: python -m pytest tests/test_push_guard.py -v
-
-  # ── 10. vault-session-check tests ────────────────────────────────────────
-  # A Stop hook. The exit-code invariant is the one that must never regress:
-  # a non-zero exit can trap session teardown. The content-leak cases matter
-  # equally — the vault it inspects holds a personal-context note and an
-  # archive with a plaintext credential, so warnings carry counts, never text.
-  # Needs pytest + git + jq (the hook parses its Stop payload with jq); the
-  # cases build a real vault repo and a real JSONL transcript.
-  test-vault-session-check:
-    name: vault-session-check tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_vault_session_check.py
-        run: python -m pytest tests/test_vault_session_check.py -v
-
-  # ── 11. vault-mirror tests ───────────────────────────────────────────────
-  # The mirror copies vault notes into the memweave corpus, which means it also
-  # deletes from it. Two invariants carry the job: the prune cannot escape
-  # memory/vault/ (a dest resolved one level too high would take out every
-  # transcript doc, plus the dream notes and the pre-mortem audit sink that no
-  # re-export regenerates), and the folder exclusions fail CLOSED — an
-  # unrecognised top-level folder is kept out and reported, never mirrored by
-  # default. Stdlib + pytest only; no memweave, no embeddings, no network.
-  test-mirror-vault:
-    name: vault-mirror tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_mirror_vault.py
-        run: python -m pytest tests/test_mirror_vault.py -v
-
-  # ── 12. CLAUDE.md deploy tests ───────────────────────────────────────────
-  # CI never executes install.sh, which is how a wholesale `cp` of the repo
-  # CLAUDE.md over the installed one shipped and silently deleted the
-  # global-only "Docker Port Registry" section. The invariant under test: a
-  # deploy must preserve the installed copy's dream.sh-appended "Dreaming
-  # Notes" tail, which exists in no other file. Also pins refinery-doctor's
-  # exit-1-on-migration-applied, since install.sh runs `set -e` and would
-  # otherwise abort mid-install on a working fix.
-  test-claude-md-deploy:
-    name: CLAUDE.md deploy tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_claude_md_deploy.py
-        run: python -m pytest tests/test_claude_md_deploy.py -v
-
-  # ── 13. surface-write-guard behaviour matrix ─────────────────────────────
-  # A security control, same posture as push-guard: the BLOCK cases matter more
-  # than the ALLOW ones, since a fix for a logging bug that narrows detection is
-  # strictly worse than the bug. The KNOWN_GAPS cases are strict xfails — closing
-  # a gap turns one into an unexpected pass and fails this job on purpose, so the
-  # list cannot rot silently. Needs pytest + jq (the guard parses its payload).
-  test-surface-write-guard:
-    name: surface-write-guard behaviour matrix
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_surface_write_guard.py
-        run: python -m pytest tests/test_surface_write_guard.py -v
-
-  # ── 14. grep-guard behaviour matrix ──────────────────────────────────────
-  # A PreToolUse hook that redirects brute-force grep/find/cat onto the
-  # retrieval stack. Same posture as the other guards: BLOCK cases first.
-  # Needs pytest + jq (the guard parses its payload with jq).
-  test-grep-guard:
-    name: grep-guard behaviour matrix
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_grep_guard.py
-        run: python -m pytest tests/test_grep_guard.py -v
-
-  # ── 15. auto-maintain verdict tests ──────────────────────────────────────
-  # lib/eval-verdict.sh + scripts/auto-maintain.sh: the nightly agent's
-  # pass/fail parsing and its push guard. Stdlib + pytest + bash only.
-  test-auto-maintain-verdict:
-    name: auto-maintain verdict tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_auto_maintain_verdict.py
-        run: python -m pytest tests/test_auto_maintain_verdict.py -v
-
-  # ── 16. telegram-gateway security tests ──────────────────────────────────
-  # scripts/lib/tg_security.py: chat allowlist, rate limiting, replay window.
-  # Stdlib + pytest only; no bot token, no network.
-  test-tg-security:
-    name: telegram-gateway security tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_tg_security.py
-        run: python -m pytest tests/test_tg_security.py -v
-
-  # ── 17. memweave tests ───────────────────────────────────────────────────
-  # export_transcripts runs on stdlib. The ONNX provider and mw_search cases
-  # self-skip when the all-MiniLM-L6-v2 model or .venv-memweave is absent, as
-  # on this runner, so they pin import-time correctness only until the model
-  # is cached here. The job still fails on a collection error in those files.
-  test-memweave:
-    name: memweave tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: pytest tests/test_memweave_*.py
-        run: python -m pytest tests/test_memweave_export.py tests/test_memweave_onnx_provider.py tests/test_memweave_search.py tests/test_memweave_mcp.py -v -rs
-
-  # ── 18. ask_local MCP server tests ───────────────────────────────────────
-  # scripts/ask_local/server.py against an httpx.MockTransport: error shapes,
-  # the credential-path denylist, schema checks, and the content-free
-  # measurement log. The live Ollama case self-skips here (no Ollama). The mcp
-  # package is imported only by build_server(), so httpx is the one dependency.
-  test-ask-local:
-    name: ask_local tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install pytest + httpx
-        run: pip install pytest httpx==0.28.1
-
-      - name: pytest tests/test_ask_local.py
-        run: python -m pytest tests/test_ask_local.py -v -rs
-
-  # ── 19. jscrub: unit tests + read-only repo audit ────────────────────────
+  # ── 5. jscrub: unit tests + read-only repo audit ─────────────────────────
   # audit-repo.sh runs check-vendor, then a live-positive canary (a temp file
   # with a zero-width space must be detected, else exit 3), then the sweep.
   # Exit 1 (hits) and 2 (unscannable file) both fail the job. Read-only: clean /
-  # --in-place / --follow-symlinks are deliberately not wired here. The gate
-  # tests cover the pre-commit staged-file scan and the canary itself.
-  test-jscrub:
-    name: jscrub tests + audit
+  # --in-place / --follow-symlinks are deliberately not wired here. Its pytest
+  # gate tests run in test-suite above.
+  jscrub-audit:
+    name: jscrub unit tests + audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -398,9 +106,3 @@ jobs:
 
       - name: jscrub check-vendor + canary + audit
         run: ./scripts/jscrub/audit-repo.sh
-
-      - name: Install pytest
-        run: pip install pytest
-
-      - name: jscrub gate tests (pre-commit scan, canary)
-        run: python -m pytest tests/test_jscrub_gates.py -v
