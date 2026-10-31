@@ -61,6 +61,10 @@ agy *args:
 offload *args:
     .venv/bin/python scripts/offload_report.py {{args}}
 
+# workaround detector bench: fire rate on real transcripts (default last 7 days)
+workaround-bench *args:
+    python3 scripts/workaround_scan.py --replay {{args}}
+
 # repo scout: build the capability map once (review scout/map.md after)
 scout-seed *args:
     python3 scripts/scout/run.py seed {{args}}

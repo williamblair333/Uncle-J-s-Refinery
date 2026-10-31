@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-10-31 — workaround detector: replay bench + false positives cut (8.9% → 2.9%)
+
+- **`just workaround-bench [--days N] [--files …] [--limit N]`** (`scripts/workaround_scan.py --replay`, agy built, reviewed): replays the Stop-hook scanner over real `~/.claude/projects` transcripts and prints the fire rate plus each hit. It replaces "check the log after a few days" with a number available at any time. New `all_turns()`; `turn_text()` is now its last element, so the two can't drift.
+- **Fewer false hits**, each now a regression case in `tests/test_workaround_scan.py`: "workaround" fires only as "a/the/this/that workaround" (not "workarounds", not the detector's name, not "wasn't a workaround"); "waiting on" needs the turn's own subject (I'm/we're/now/still…), so list items, instructions and other processes' waits pass; short "double-quoted" phrases are stripped like inline code. Bench over the last 3 days: 12/135 → 4/136 turns. The 4 left: one real ("hand-feeding agy"), one intended ("now waiting on agy's part 1"), and two descriptive mentions.
+
 ## 2026-10-30 — workaround detector verified live after restart
 
 - The Stop hook fired on the first real session after `install-reliability.sh` + restart, so it is installed and live. Its first hit was a false positive: it flagged a turn that only reported a permission denial ("Permissions blocked me…") and didn't route around anything. That hit is the first data point for tightening `PHRASES`.

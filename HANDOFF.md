@@ -5,10 +5,9 @@
 
 10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install,
 then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maintain cap check — CHANGELOG).
-0. **Watch the workaround detector** — deployed and confirmed live (10-30, it fired in the post-restart session; first
-   hit a false positive on a plain "Permissions blocked me" report — reporting a denial isn't a workaround). Still to do:
-   check `~/.claude/state/workaround-scan.jsonl` after a few days (target: blocks are real workarounds; tighten
-   `PHRASES` if not) and `just offload` for repeat agy denials. Skill trigger still needs a RED/GREEN test.
+0. **Workaround detector:** live since 10-30; `just workaround-bench --days 7` gives the fire rate and hits
+   (10-31: 2.9%, from 8.9%). Each new false hit → add it to `test_clean_turn_passes` first, then narrow `PHRASES`.
+   `just offload` for repeat agy denials. Skill trigger still needs a RED/GREEN test.
 1. **CLAUDE.md cap:** auto-maintain now runs the cap test after a sync and WARNs + Telegrams when over; headroom
    is still ~160 bytes, so expect that warning — trim when it comes.
 2. **GPU still in mtw2 mode** unless Bill switched it: `just gpu status`; `just gpu shared` restores Klarheit.
