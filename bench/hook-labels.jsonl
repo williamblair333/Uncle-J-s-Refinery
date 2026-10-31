@@ -1,0 +1,5 @@
+{"key": "cf72b90a015c", "verdict": "false", "note": "reads ~/.claude/projects transcripts outside the repo, no repo source", "ts": "2026-10-31"}
+{"key": "5b6ee99980f0", "verdict": "false", "note": "runs a script and wc on state logs; reads no repo source", "ts": "2026-10-31"}
+{"key": "b759a2baf96a", "verdict": "true", "note": "new file in scripts/ is a real surface; pre-mortem was owed", "ts": "2026-10-31"}
+{"key": "f3e068b16d03", "verdict": "false", "note": "compaction summary recaps old skill names; Bill did not name a skill this turn", "ts": "2026-10-31"}
+{"key": "2ea93ba0feb9", "verdict": "false", "note": "compaction summary recaps old skill names; Bill did not name a skill this turn", "ts": "2026-10-31"}

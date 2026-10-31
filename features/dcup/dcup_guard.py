@@ -677,7 +677,11 @@ def analyze(script: str, depth: int = 0) -> list[str]:
 
 def _log(line: str) -> None:
     try:
-        state = Path(__file__).resolve().parents[2] / "state"
+        # UNCLE_J_PROJ_ROOT redirects the log, as in grep-guard.sh and the other guards
+        # (tests and scripts/hook_bench.py point it at an empty dir so replays log nowhere).
+        root = os.environ.get("UNCLE_J_PROJ_ROOT")
+        state = (Path(root) / "Uncle-J-s-Refinery" / "state" if root
+                 else Path(__file__).resolve().parents[2] / "state")
         if state.is_dir():
             with open(state / "hook-blocks.log", "a", encoding="utf-8") as fh:
                 fh.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} {line}\n")
