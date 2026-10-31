@@ -11,8 +11,8 @@ from the get-go"). It is the outcome metric for STANDARDS.md `meta-question-rate
 
 Matching is lexical, so the count is an estimate. Measured 2026-10-31 on real prompts:
 precision 23/27 on the W43-W44 hits before the quote/paste/"on your own" fixes (the 3 false
-hits found are now test cases), recall 29 of ~34 meta-questions in a 78-prompt "why"-candidate
-sample since W40. Re-measure with --out when the phrasing drifts.
+hits found are now test cases); 29 hits in a 78-prompt "why"-candidate sample since W40, against
+an estimated ~34 real meta-questions (only the W43-W44 hits were read one by one). Re-measure with --out when the phrasing drifts.
 
 The --out file holds raw transcript text from every project, local-only ones included: keep it in
 the scratchpad and classify it locally (Heretic), never by pasting it to agy.

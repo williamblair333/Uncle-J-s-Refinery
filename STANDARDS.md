@@ -42,7 +42,7 @@ standards:
     bar: Bill's meta-questions ("why didn't you…", "why did I have to ask") are counted per session every week from transcripts, with a trend in the Monday report
     why: it's the outcome metric for anticipation; the expert bar and think-wider have no score without it
     status: done
-    evidence: scripts/meta_questions.py (just meta-questions; line in features/focus-check/focus-check.sh, Monday 08:00; precision 23/27, recall 29/~34 measured 10-31)
+    evidence: scripts/meta_questions.py (just meta-questions; line in features/focus-check/focus-check.sh, Monday 08:00; precision 23/27 measured 10-31; recall estimated at 29/~34)
   - id: behaviour-bench-per-hook
     area: evaluation
     bar: Every hook or skill that changes agent behaviour has a replay bench on real transcripts that reports its fire rate and false hits
