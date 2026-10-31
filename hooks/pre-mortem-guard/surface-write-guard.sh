@@ -168,6 +168,29 @@ mask_keep_outer() {
 strip_cat_heredoc_bodies() {
   mask_keep_outer "$(heredoc_body_mask cat "$1")" "$1"
 }
+
+# True when TEXT has a heredoc whose body this file can't delimit: two `<<` on one
+# line, or a delimiter with quoting other than a plain 'WORD' / "WORD" (`<<\EOF`,
+# `<<E'OF'`). Bash doesn't expand such a body, but the mask leaves it as outer text,
+# so `$S` in it would be expanded with the outer value — and a child shell's `$S` is
+# its own (`bash <<\EOF` + `${S}scripts/x.sh` writes ./scripts/x.sh). The $VAR
+# exemption is skipped then. `<<<` here-strings are not heredocs.
+heredoc_unsure() {
+  local line rest n w
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line=${line//<<</}
+    [[ "$line" == *"<<"* ]] || continue
+    n=$(printf '%s' "$line" | grep -o '<<' | wc -l)
+    [[ "$n" -ge 2 ]] && return 0
+    rest=${line#*<<}; rest=${rest#-}
+    rest="${rest#"${rest%%[![:space:]]*}"}"
+    w=${rest%%[[:space:];&|)<>]*}
+    if [[ "$w" == *[\\\'\"]* ]]; then
+      [[ "$w" =~ ^\'[A-Za-z_][A-Za-z0-9_]*\'$ || "$w" =~ ^\"[A-Za-z_][A-Za-z0-9_]*\"$ ]] || return 0
+    fi
+  done <<< "$1"
+  return 1
+}
 HEREDOC_DELIM_RE="^[[:space:]]*('([A-Za-z_][A-Za-z0-9_]*)'|\"([A-Za-z_][A-Za-z0-9_]*)\"|([A-Za-z_][A-Za-z0-9_]*))([[:space:];>&)]|\$)"
 
 # A CR is part of a word to bash (`EOF\r` is the delimiter), so with CRLF input the
@@ -206,8 +229,15 @@ if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_.-])(ln|mv)[[:space:]]'; then
     SCAN=$_p
   fi
   REBIND_TXT=${REBIND_TXT//$'\\\n'/ }
-  # `.` as a command: after line start, ; & | ( { !, or then/do/else/builtin/command.
-  if ! printf '%s' "$REBIND_TXT" | grep -qE '(^|[^[:alnum:]_])(for|read|mapfile|readarray|declare|local|typeset|eval|printf[[:space:]]+-v|getopts|unset|source|let)[[:space:]]|(^|[;&|({!])[[:space:]]*\.[[:space:]]|(^|[^[:alnum:]_])(then|do|else|builtin|command)[[:space:]]+\.[[:space:]]|\(\('; then
+  # Keywords are matched with quotes and backslashes removed: `\.`, `"."`, `r\ead`
+  # and `so'urce'` are the same commands to bash. A keyword ends at any non-word
+  # character (`read<<'EOF' S`). `.` as a command: after line start, ; & | ( { !, or
+  # after a keyword that takes a command (if/while/then/time/command -p …).
+  # (2026-11-01, from agy's review of this change: `if . /dev/stdin`, `\.`, `select`,
+  # `read<<` were not seen.)
+  KW_TXT=$(printf '%s' "$REBIND_TXT" | tr -d "'\"\\\\")
+  KW_RE='(^|[^[:alnum:]_])(for|select|read|mapfile|readarray|declare|local|typeset|eval|getopts|unset|source|let|wait)([^[:alnum:]_.-]|$)|printf[[:space:]]+-v|(^|[;&|({!])[[:space:]]*\.([[:space:]]|$)|(^|[^[:alnum:]_])(if|elif|while|until|then|do|else|time|builtin|command|exec|coproc)[[:space:]]+(-[[:alnum:]]+[[:space:]]+)*\.([[:space:]]|$)|\(\('
+  if ! printf '%s' "$KW_TXT" | grep -qE "$KW_RE" && ! heredoc_unsure "$REBIND_TXT"; then
     while IFS= read -r asg; do
       [[ -z "$asg" ]] && continue
       asg=${asg#export }

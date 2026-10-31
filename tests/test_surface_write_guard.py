@@ -318,6 +318,17 @@ SCRATCH_ESCAPE_BLOCK = [
     ("var-reassigned-after-body", "S=/tmp/x; cat > $S/x.py <<'EOF'\nfor i in x: pass\nEOF\nS=/opt/proj/R/hooks; echo x > $S/a.sh"),
     # a quoted body run by bash keeps its own $S: not expanded, still scanned
     ("var-quoted-body-to-bash", "S=/tmp/x; bash <<'EOF'\necho x > $S/a.sh\nEOF"),
+    # agy's review of the 2026-11-01 change: 3 regressions (if/while/\. before `.`),
+    # the rest also allowed on main
+    ("var-if-dot-stdin",      "S=/tmp/x; if . /dev/stdin; then true; fi <<'EOF'\nS=/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-while-dot-stdin",   "S=/tmp/x; while . /dev/stdin; do break; done <<'EOF'\nS=/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-backslash-dot",     "S=/tmp/x; \\. /dev/stdin <<'EOF'\nS=/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-quoted-source",     "S=/tmp/x; 'source' /dev/stdin <<'EOF'\nS=/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-select-reply",      "REPLY=/tmp/x; select x in a; do break; done <<'EOF'\n/opt/proj/R/hooks\nEOF\necho x > $REPLY/a.sh"),
+    ("var-read-glued",        "S=/tmp/x; read<<'EOF' S\n/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-backslash-delim",   "S=/tmp/x; bash <<\\EOF\necho x > ${S}scripts/a.sh\nEOF"),
+    ("var-pieced-delim",      "S=/tmp/x; bash <<E'OF'\necho x > ${S}scripts/a.sh\nEOF"),
+    ("var-two-heredocs",      "S=/tmp/x; bash <<'A' <<'B'\necho x > ${S}scripts/a.sh\nA\nB"),
 ]
 
 

@@ -4,7 +4,7 @@
 ## NEXT SESSION — start here (updated 2026-11-01)
 
 11-01: surface-write-guard's `$S` blind spot fixed (PR `fix/surface-write-var-heredoc`, CHANGELOG 11-01):
-labelled false 6 → 1. The one left: a single-quoted awk regex `'/^>|x.py/'` read as a `>|` redirect (also
+labelled false 6 → 1; agy's adversarial review found 8 gaps (3 were regressions), all fixed in the same PR. The one left: a single-quoted awk regex `'/^>|x.py/'` read as a `>|` redirect (also
 any argument text such as a `--label` note saying "sed -i on x.py"). Fix only if it keeps recurring.
 
 Hook-bench labelling is done and both fixes are in PR `fix/hook-precision` (see CHANGELOG 10-31 night):
