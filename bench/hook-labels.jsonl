@@ -91,3 +91,4 @@
 {"key": "5236f6b01d50", "verdict": "false", "note": "fixed-copy replay: cat of the defender script itself prints its own pattern list", "ts": "2026-10-31"}
 {"key": "65f908097974", "verdict": "false", "note": "fixed-copy replay: cat of the defender script itself prints its own pattern list", "ts": "2026-10-31"}
 {"key": "673ce606151f", "verdict": "false", "note": "fixed-copy replay: cat of the defender script itself prints its own pattern list", "ts": "2026-10-31"}
+{"key": "20ea877a1e0e", "verdict": "false", "note": "live check 2026-10-31: Read of the defender's own pattern list", "ts": "2026-10-31"}

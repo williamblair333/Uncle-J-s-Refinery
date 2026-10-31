@@ -10,7 +10,7 @@ Both 11-01 items merged: #263 (surface-write-guard `$S` fix + agy review gaps) a
 11-06; flash-high/medium ran fine. agy's filter refuses "bypass" wording; "missing test cases (false negatives)"
 got through.
 
-11-01 later: the hook bench now replays PostToolUse (opt-in list in config/hook-bench.json) and flags
+11-01 later (defender verified live: a Read fired additionalContext; installed bench 4/800, all false): the hook bench now replays PostToolUse (opt-in list in config/hook-bench.json) and flags
 output the harness drops as `ignored`. It found the guardrails prompt-injection-defender dead since April
 (reads `.tool_output`, prints `{"message"}`). Repaired: `scripts/fix-guardrails-defender.sh` installs the repo copy
 (`hooks/guardrails/`); install-guardrails.sh runs it. **Other hosts (pi server, tc-vmh-03): after pulling, run
