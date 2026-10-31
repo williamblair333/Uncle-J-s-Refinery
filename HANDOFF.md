@@ -1,7 +1,15 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-10-31 late)
+## NEXT SESSION — start here (updated 2026-10-31 session end)
+
+**FIRST: label the 35 unlabelled hook-bench fires** (Bill's instruction): 28 grep-guard + 7 skill-name-trigger
+"Category: … What Uncle J already has: …" prompts. List them with
+`just hook-bench --hook grep-guard --samples 40` and `just hook-bench --hook skill-name --samples 40`, judge each
+(true = the hook was right to fire), record with `just hook-bench --label KEY true|false note`. For the Category
+prompts, find where they came from first (scripted `claude -p` job or Bill) — that decides the label. Then report
+precision per hook and pick the next false-hit fix from the false labels. (Counts are from the 7-day window
+on 10-31; a later run shifts the window, so the number may differ a little.)
 
 10-31 late: `just hook-bench` replays transcripts through every hook (fire rate, errors, labelled false hits,
 replay-vs-live). Its first false hits are fixed (grep-guard cd + function check, surface-write-guard /tmp
