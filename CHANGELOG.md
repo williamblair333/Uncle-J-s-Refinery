@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 — standards checker reads a leading path; Gemini review checked
+
+- Checked Gemini's analysis of Parley's STANDARDS.md, expert-bar and the Product Quality System against the code: 7 confirmed, 4 confirmed with nuance, 4 wrong, 2 unverified. Write-up in `review/2026-10-31-gemini-standards-pqs-review.md`.
+- `standards_check.py` accepts evidence written as a path or `just` recipe followed by notes (`games/qa/instant.toml; siege done`). The leading token must look like a path (`/` or `.`), so prose like "tests cover it" is still a false claim. Before this change, 4 of Parley's 11 partials would have read as false claims because of the notes alone.
+- Parley's STANDARDS.md didn't parse: two evidence values had an unquoted `: `. They're quoted now (mtw2 #324), and its session start lists 17 open of 18 again.
+- `full-suite-in-ci` marked done. `clean-machine-gate` now records that the PR gate hook only matches `gh pr create`, so PRs opened through the Gitea API never meet it.
+
 ## 2026-10-31 — CI runs the whole pytest suite
 
 - CI listed 19 of the 67 `tests/*.py` files by hand, one job each, so new test files never ran there. One `test-suite` job now does a full `uv sync --inexact` and runs `pytest tests`, the same run as `just test` (2708 pass, 4 skip locally). jscrub's non-pytest unit tests and audit keep their own job.

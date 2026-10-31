@@ -85,6 +85,35 @@ def test_open_item_evidence_is_free_text(tmp_path):
     assert not any("bench-per-system" in x for x in sc.validate(sc.load(p), p))
 
 
+# mtw2 (2026-10-31): evidence is written as a path followed by notes. The leading path
+# is the claim; prose after it must not turn a real path into a "false claim".
+@pytest.mark.parametrize("evidence", [
+    "ci.yml; covers push and PR, not tags",
+    "ci.yml (push and PR)",
+    "ci.yml, run on every push",
+    "ci.yml",
+])
+def test_leading_path_with_notes_is_evidence(tmp_path, evidence):
+    p = project(tmp_path, text=GOOD.replace("evidence: ci.yml", f"evidence: {evidence}"))
+    assert not any("ci-on-push" in x for x in sc.validate(sc.load(p), p))
+
+
+@pytest.mark.parametrize("evidence", [
+    "missing.yml; covers push and PR",
+    "missing.yml (push and PR)",
+    "runs on every push",  # prose with no path at all is not evidence
+    "tests cover it",      # a bare word that happens to be a directory is still prose
+])
+def test_leading_path_that_does_not_exist_is_still_a_false_claim(tmp_path, evidence):
+    p = project(tmp_path, text=GOOD.replace("evidence: ci.yml", f"evidence: {evidence}"))
+    assert any("ci-on-push" in x and "false claim" in x for x in sc.validate(sc.load(p), p))
+
+
+def test_just_recipe_with_notes_is_evidence(tmp_path):
+    p = project(tmp_path, text=GOOD.replace("evidence: just up", "evidence: just up (start, record)"))
+    assert not any("one-command-run" in x for x in sc.validate(sc.load(p), p))
+
+
 @pytest.mark.parametrize("field", ["id", "bar", "status"])
 def test_missing_required_field_is_named(tmp_path, field):
     text = GOOD.replace(f"    {field}: " if field != "id" else "  - id: crash-capture\n",

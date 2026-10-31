@@ -35,8 +35,8 @@ standards:
     area: release
     bar: Every push runs the whole pytest suite (`just test`), not only skill frontmatter and shell lint
     why: a release engineer never merges on tests that only ran on the author's machine
-    status: partial
-    evidence: .github/workflows/ci.yml
+    status: done
+    evidence: .github/workflows/ci.yml (test-suite job runs all of tests/; green on main since #255)
   - id: meta-question-rate
     area: evaluation
     bar: Bill's meta-questions ("why didn't you…", "why did I have to ask") are counted per session every week from transcripts, with a trend in the Monday report
@@ -60,7 +60,7 @@ standards:
     bar: A clean-container install passes before any PR that touches install, hooks or settings merges
     why: PRODUCT.md promises a 900 s clone-to-working install on a fresh machine
     status: partial
-    evidence: just install-gate
+    evidence: just install-gate (by hand; the PR gate hook matches only `gh pr create`, so PRs opened through the Gitea API — every PR here — never meet it)
   - id: installers-idempotent
     area: release
     bar: Re-running any installer leaves tracked files byte-identical

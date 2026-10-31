@@ -42,6 +42,22 @@ def _has_just_recipe(project: Path, recipe: str) -> bool:
     return False
 
 
+def _evidence_ok(project: Path, ev: str) -> bool:
+    """Evidence is a path or `just <recipe>`, optionally followed by notes.
+
+    The leading token is the claim; text after it ("games/qa/instant.toml; siege and
+    towns done") is commentary. A bare leading word ("tests cover it") is prose, not a
+    path, even when a directory of that name exists, so it needs a `/` or a `.`.
+    """
+    if ev.startswith("just "):
+        rest = ev[len("just "):].strip()
+        return bool(rest) and _has_just_recipe(project, rest.split()[0])
+    if (project / ev).exists():
+        return True
+    lead = ev.split()[0].strip("`").rstrip(";,:")
+    return ("/" in lead or "." in lead) and (project / lead).exists()
+
+
 def load(project: Path | str) -> dict:
     if yaml is None:
         raise StandardsError("PyYAML is not installed")
@@ -109,16 +125,8 @@ def validate(data: dict, project: Path | str) -> list[str]:
                 )
             elif status in {"done", "partial"}:
                 ev = item.get("evidence")
-                valid_evidence = False
-                if isinstance(ev, str) and ev.strip():
-                    ev_str = ev.strip()
-                    if ev_str.startswith("just "):
-                        rest = ev_str[len("just ") :].strip()
-                        recipe = rest.split()[0] if rest else ""
-                        if recipe and _has_just_recipe(project_path, recipe):
-                            valid_evidence = True
-                    elif (project_path / ev_str).exists():
-                        valid_evidence = True
+                valid_evidence = (isinstance(ev, str) and bool(ev.strip())
+                                  and _evidence_ok(project_path, ev.strip()))
 
                 if not valid_evidence:
                     id_name = item_id if item_id else item_label
