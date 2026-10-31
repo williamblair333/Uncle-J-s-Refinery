@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-30 — workaround detector verified live after restart
+
+- The Stop hook fired on the first real session after `install-reliability.sh` + restart, so it is installed and live. Its first hit was a false positive: it flagged a turn that only reported a permission denial ("Permissions blocked me…") and didn't route around anything. That hit is the first data point for tightening `PHRASES`.
+
 ## 2026-10-30 — workaround detector: routing around a block now has to surface the cause
 
 - **`hooks/discipline/workaround-scan.sh` → `scripts/workaround_scan.py` (Stop hook):** scans the ending turn's own text (code, inline code and quotes stripped; last 2 MB of the transcript) for "worked around", "hand-fed", "waiting on X" (not on Bill), "couldn't …, so I", "clicked past"… and blocks the stop once (`stop_hook_active`) asking to fix the cause or file it and say where. Skips `claude -p` (`CLAUDE_CODE_ENTRYPOINT=sdk-cli`, verified) because scout/dream/ralph/auto-maintain parse the final message. Kill switch `WORKAROUND_SCAN=off`; hits (cwd + count) in `~/.claude/state/workaround-scan.jsonl`. On the last 240 real turns it fired on 9.6%, mostly "waiting on" — "waiting on you/Bill" then excluded. Wired by `install-reliability.sh`. Cost: a hit fires Stop twice, so the notify hooks run twice.
