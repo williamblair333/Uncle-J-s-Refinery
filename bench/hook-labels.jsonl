@@ -72,3 +72,11 @@
 {"key": "d545554f0590", "verdict": "true", "note": "ends with a grep -c on lua/parley_bridge.lua source", "ts": "2026-10-31"}
 {"key": "5ce90e414e10", "verdict": "true", "note": "ends with grep -n over tests/*.py", "ts": "2026-10-31"}
 {"key": "5ce6c909953f", "verdict": "true", "note": "greps lua/parley_bridge.lua source", "ts": "2026-10-31"}
+{"key": "6c0730877509", "verdict": "true", "note": "sed -i on games/qa/smoke.toml; toml is a surface ext", "ts": "2026-10-31"}
+{"key": "1982b1e9c737", "verdict": "true", "note": "sed -i on tests/test_lua_bridge.py", "ts": "2026-10-31"}
+{"key": "569c31d06f1e", "verdict": "false", "note": "awk regex /^>|name.py/ in single quotes read as a noclobber redirect", "ts": "2026-10-31"}
+{"key": "902da9e203c4", "verdict": "false", "note": "quoted cat heredoc body cancelled the outer $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}
+{"key": "ab16e80b653d", "verdict": "false", "note": "body's own S=$1 cancelled the outer $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}
+{"key": "de7aa64ec241", "verdict": "false", "note": "Python body for-loop cancelled the $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}
+{"key": "d5408300417d", "verdict": "false", "note": "python3 stdin body for-loop cancelled the $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}
+{"key": "5a84cba5d035", "verdict": "false", "note": "body's own S= cancelled the outer $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}

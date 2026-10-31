@@ -1,13 +1,14 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-10-31 night)
+## NEXT SESSION — start here (updated 2026-11-01)
+
+11-01: surface-write-guard's `$S` blind spot fixed (PR `fix/surface-write-var-heredoc`, CHANGELOG 11-01):
+labelled false 6 → 1; agy's adversarial review found 8 gaps (3 were regressions), all fixed in the same PR. The one left: a single-quoted awk regex `'/^>|x.py/'` read as a `>|` redirect (also
+any argument text such as a `--label` note saying "sed -i on x.py"). Fix only if it keeps recurring.
 
 Hook-bench labelling is done and both fixes are in PR `fix/hook-precision` (see CHANGELOG 10-31 night):
 skill-name-trigger 95% precision, grep-guard labelled false 21 → 4. Next candidates:
-- **surface-write-guard** blocked `cat > $S/x.py <<'EOF'` with `S=` a scratchpad path. It doesn't follow
-  `VAR=` assignments the way grep-guard's analyzer does. Label its fires (`just hook-bench --hook surface-write
-  --samples 20`) and fix.
 - **agy can't run the hook bench**: sandbox-run hides `$HOME`, so `hook_bench.py` sees no transcripts and no
   `~/.claude/settings.json` and returns `hooks: []`. Two agy jobs died on this 10-31. Fix before delegating hook
   work: export labelled events to a repo fixture, or have the bench take `--projects`/`--settings` paths.

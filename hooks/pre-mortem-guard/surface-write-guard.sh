@@ -109,16 +109,25 @@ CP_RE="(^|[[:space:];|&(\`/\\])(cp|mv)[[:space:]].*[[:space:]](['\"]?[^[:space:]
 # line) and the line has no pipe, $( or backtick that could feed the body to a
 # shell. `bash <<EOF`, `cat <<EOF | bash` and `bash -c "$(cat <<EOF…)"` stay
 # scanned. The line holding `<<`, so the write target, is always scanned.
-strip_cat_heredoc_bodies() {
-  local line delim="" dash=0 out="" pre seg w rest cmp
+# heredoc_body_mask MODE TEXT prints one char per line of TEXT: `b` for a heredoc body
+# line, `o` for every other line (the delimiter line counts as body).
+#   MODE=cat    — bodies of `cat` heredocs, any delimiter quoting (see above).
+#   MODE=quoted — bodies of ANY command's heredoc whose delimiter is fully quoted
+#                 ('EOF' / "EOF"). Bash doesn't expand such a body, so nothing in it
+#                 runs in the current shell: it can't rebind a variable there (used by
+#                 the $VAR exemption below, 2026-11-01).
+# Every bail-out leaves lines as `o`, i.e. treated as commands.
+heredoc_body_mask() {
+  local mode=$1 line delim="" dash=0 out="" pre seg w rest cmp
   while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ -n "$delim" ]]; then
+      out+="b"
       cmp="$line"
       [[ $dash -eq 1 ]] && cmp="${line#"${line%%[!$'\t']*}"}"
       [[ "$cmp" == "$delim" ]] && delim=""
       continue
     fi
-    out+="$line"$'\n'
+    out+="o"
     [[ "$line" == *"<<"* ]] || continue
     # A trailing `\` continues the command onto the next line, so the body starts
     # later than this line suggests — don't guess, keep scanning.
@@ -129,18 +138,58 @@ strip_cat_heredoc_bodies() {
     [[ "$pre" == *\\ ]] && continue
     local dq=${pre//[^\"]/} sq=${pre//[^\']/}
     (( ${#dq} % 2 == 0 && ${#sq} % 2 == 0 )) || continue
-    seg=${pre##*[;&(]}
-    read -r w _ <<< "$seg"
-    [[ "$w" == cat ]] || continue
+    if [[ "$mode" == cat ]]; then
+      seg=${pre##*[;&(]}
+      read -r w _ <<< "$seg"
+      [[ "$w" == cat ]] || continue
+    fi
     rest=${line#*<<}; dash=0
     [[ "$rest" == -* ]] && { dash=1; rest=${rest#-}; }
     # The delimiter must be exactly 'WORD', "WORD" or WORD, then a word break.
     # Bash joins pieces (`E"OF"` is EOF); reading only the first piece would end
     # the body somewhere bash doesn't.
     [[ "$rest" =~ $HEREDOC_DELIM_RE ]] || continue
+    [[ "$mode" == quoted && -n "${BASH_REMATCH[4]}" ]] && continue
     delim="${BASH_REMATCH[2]}${BASH_REMATCH[3]}${BASH_REMATCH[4]}"
-  done <<< "$1"
+  done <<< "$2"
   printf '%s' "$out"
+}
+
+# Print the lines of TEXT whose MASK char is not `b` (MASK from heredoc_body_mask).
+mask_keep_outer() {
+  local mask=$1 line out="" i=0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "${mask:i:1}" == b ]] || out+="$line"$'\n'
+    i=$((i + 1))
+  done <<< "$2"
+  printf '%s' "$out"
+}
+
+strip_cat_heredoc_bodies() {
+  mask_keep_outer "$(heredoc_body_mask cat "$1")" "$1"
+}
+
+# True when TEXT has a heredoc whose body this file can't delimit: two `<<` on one
+# line, or a delimiter with quoting other than a plain 'WORD' / "WORD" (`<<\EOF`,
+# `<<E'OF'`). Bash doesn't expand such a body, but the mask leaves it as outer text,
+# so `$S` in it would be expanded with the outer value — and a child shell's `$S` is
+# its own (`bash <<\EOF` + `${S}scripts/x.sh` writes ./scripts/x.sh). The $VAR
+# exemption is skipped then. `<<<` here-strings are not heredocs.
+heredoc_unsure() {
+  local line rest n w
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line=${line//<<</}
+    [[ "$line" == *"<<"* ]] || continue
+    n=$(printf '%s' "$line" | grep -o '<<' | wc -l)
+    [[ "$n" -ge 2 ]] && return 0
+    rest=${line#*<<}; rest=${rest#-}
+    rest="${rest#"${rest%%[![:space:]]*}"}"
+    w=${rest%%[[:space:];&|)<>]*}
+    if [[ "$w" == *[\\\'\"]* ]]; then
+      [[ "$w" =~ ^\'[A-Za-z_][A-Za-z0-9_]*\'$ || "$w" =~ ^\"[A-Za-z_][A-Za-z0-9_]*\"$ ]] || return 0
+    fi
+  done <<< "$1"
+  return 1
 }
 HEREDOC_DELIM_RE="^[[:space:]]*('([A-Za-z_][A-Za-z0-9_]*)'|\"([A-Za-z_][A-Za-z0-9_]*)\"|([A-Za-z_][A-Za-z0-9_]*))([[:space:];>&)]|\$)"
 
@@ -159,7 +208,36 @@ fi
 # Join them. Joining can only merge lines, so it never hides a match.
 SCAN=${SCAN//$'\\\n'/ }
 if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_.-])(ln|mv)[[:space:]]'; then
-  if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_])(for|read|mapfile|readarray|declare|local|typeset|eval|printf[[:space:]]+-v|getopts|unset|source|let)[[:space:]]|(^|[;&|(])[[:space:]]*\.[[:space:]]|\(\('; then
+  # Rebinding is judged on what the CURRENT shell runs (2026-11-01). A quoted-delimiter
+  # heredoc body is data to it — `cat > $S/x.py <<'EOF'` with a Python `for` loop, or a
+  # script body with its own `S=$1`, used to cancel the exemption for the outer `$S`.
+  # Unquoted bodies stay in (`$((S=0))` there runs in this shell); a body read back
+  # into this shell needs source/`.`/eval/read/mapfile OUTSIDE it, which still disables
+  # the exemption below. With a CR, bash's delimiter isn't ours: no masking at all.
+  REBIND_TXT="$CMD"
+  if [[ "$CMD" != *$'\r'* ]]; then
+    REBIND_TXT=$(mask_keep_outer "$(heredoc_body_mask quoted "$CMD")" "$CMD")
+    # Hide `$` on quoted body lines of SCAN so the expansion below can't touch them
+    # (those bodies are run, if at all, by another process with its own variables).
+    # Restored right after the expansion. Masked before SCAN's join is irrelevant:
+    # SCAN is already joined, so mask SCAN itself.
+    _m=$(heredoc_body_mask quoted "$SCAN"); _i=0; _p=""
+    while IFS= read -r _l || [[ -n "$_l" ]]; do
+      [[ "${_m:_i:1}" == b ]] && _l=${_l//\$/$'\x1f'}
+      _p+="$_l"$'\n'; _i=$((_i + 1))
+    done <<< "$SCAN"
+    SCAN=$_p
+  fi
+  REBIND_TXT=${REBIND_TXT//$'\\\n'/ }
+  # Keywords are matched with quotes and backslashes removed: `\.`, `"."`, `r\ead`
+  # and `so'urce'` are the same commands to bash. A keyword ends at any non-word
+  # character (`read<<'EOF' S`). `.` as a command: after line start, ; & | ( { !, or
+  # after a keyword that takes a command (if/while/then/time/command -p …).
+  # (2026-11-01, from agy's review of this change: `if . /dev/stdin`, `\.`, `select`,
+  # `read<<` were not seen.)
+  KW_TXT=$(printf '%s' "$REBIND_TXT" | tr -d "'\"\\\\")
+  KW_RE='(^|[^[:alnum:]_])(for|select|read|mapfile|readarray|declare|local|typeset|eval|getopts|unset|source|let|wait)([^[:alnum:]_.-]|$)|printf[[:space:]]+-v|(^|[;&|({!])[[:space:]]*\.([[:space:]]|$)|(^|[^[:alnum:]_])(if|elif|while|until|then|do|else|time|builtin|command|exec|coproc)[[:space:]]+(-[[:alnum:]]+[[:space:]]+)*\.([[:space:]]|$)|\(\('
+  if ! printf '%s' "$KW_TXT" | grep -qE "$KW_RE" && ! heredoc_unsure "$REBIND_TXT"; then
     while IFS= read -r asg; do
       [[ -z "$asg" ]] && continue
       asg=${asg#export }
@@ -169,16 +247,17 @@ if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_.-])(ln|mv)[[:space:]]'; then
         \'*) [[ ${#raw} -gt 1 && "$raw" == *\' ]] || continue; val=${raw:1:${#raw}-2} ;;
       esac
       [[ "$val" =~ ^/tmp/[A-Za-z0-9._/+@%:,=-]*$ ]] || continue
-      n=$(printf '%s' "$CMD" | grep -oE "(^|[^[:alnum:]_])${var}\+?=" | wc -l)
+      n=$(printf '%s' "$REBIND_TXT" | grep -oE "(^|[^[:alnum:]_])${var}\+?=" | wc -l)
       [[ "$n" -eq 1 ]] || continue
       SCAN=${SCAN//"\${$var}"/$val}
       SCAN=${SCAN//"\$$var/"/$val/}
     # Statement-form assignments only: at line start or after ; & | (, and followed by
     # end of statement. grep -o is per line, so ^ and $ are line boundaries.
-    done < <(printf '%s' "$CMD" \
+    done < <(printf '%s' "$REBIND_TXT" \
       | grep -oE "(^|[;&|(])[[:space:]]*(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=[^[:space:];&|)]+[[:space:]]*(;|&&|\|\||$)" \
       | sed -E 's/^[;&|(]?[[:space:]]*//; s/[[:space:]]*(;|&&|\|\|)?$//')
   fi
+  SCAN=${SCAN//$'\x1f'/\$}
   # `cd /tmp/X && …` (2026-10-31): relative operands resolve under /tmp/X — but only
   # when the whole command is ONE `&&` chain (a failed cd then runs nothing), on one
   # line, with no second cd/pushd/popd and nothing that could run hidden code (eval,

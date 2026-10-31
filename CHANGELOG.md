@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-01 — surface-write-guard: heredoc bodies no longer cancel the `$S` exemption
+
+- **Cause:** the `/tmp` `$VAR` exemption counted assignments and rebind words (`for`, `read`, `S=`) over the whole command, heredoc bodies included. A Python body with a `for` loop, or a script body with its own `S=$1`, switched the exemption off for the outer `cat > $S/x.sh <<'EOF'`.
+- **Fix:** rebinding is judged only on what the current shell runs: text outside quoted-delimiter heredoc bodies (`<<'EOF'`, any command). Unquoted bodies stay in, because `$((S=0))` there runs in this shell. `$S` is no longer expanded inside quoted bodies: a child shell has its own `$S`. That also closes an old false negative, where `bash <<'EOF'\necho x > $S/a.sh` was allowed. The source detector now also sees `{ .`, `! .` and `then/do/else/builtin/command .`; without that, `{ . /dev/stdin; } <<'EOF'` could rebind `$S` unseen (checked: both allowed without the widening). `strip_cat_heredoc_bodies` is now `heredoc_body_mask cat|quoted`.
+- **agy review** (Gemini, adversarial) found 3 regressions in the first cut: `if . /dev/stdin`, `while .`, `\.`. It also found older gaps open on main: `select` sets REPLY, `read<<'EOF' S` (no space), `<<\EOF` / `<<E'OF'` delimiters, two heredocs on one line (`${S}scripts/x.sh` in a child-shell body is a real repo write). All verified against both guards, then fixed. Keywords are matched with quotes and backslashes removed and end at any word break. `select` and `wait` were added, and `.` is also recognised after if/elif/while/until/time/exec/coproc. The `$VAR` exemption is skipped when a heredoc can't be delimited (`heredoc_unsure`). 9 more BLOCK tests.
+- **Bench:** labelled all 8 fires (2 true: `sed -i` on a `.toml` and a test `.py`). Labelled false 6 → 1. The one left is an awk regex `'/^>|x.py/'` in single quotes read as a `>|` redirect. 5 ALLOW + 8 BLOCK cases added; the 4 bench ALLOWs and the bash-body BLOCK were RED on main.
+
 ## 2026-10-31 (night) — grep-guard and skill-name-trigger precision, from 48 labelled fires
 
 - **Labelled** every unlabelled grep-guard and skill-name-trigger fire in the 7-day window (48 labels in `bench/hook-labels.jsonl`). The "Category: … What Uncle J already has" prompts are the repo scout's `pick_prompt` (`scripts/scout/judge.py`), a scripted `claude -p` job whose inventory lists every installed skill.
