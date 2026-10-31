@@ -46,6 +46,15 @@ required.
    hypothesis: `idea`, `from` (the field), `test` (the cheapest run that would show it
    works), `kill` (the result that drops it).
 
+**If no transfer solves the whole shape, build one.** This applies whenever every transfer
+is partial or none fits. Name the contradiction that blocks the obvious answer ("it must be
+forgotten, yet the source stays"). Split the problem into the jobs a solution must do, and
+take a mechanism from a different field for each job. Compose them into one named design and
+show which job each part covers. The composed design goes in ideas-to-try like any other.
+**If nothing composes either,** say plainly that no full solution was found. Name the
+constraint that blocks it, then name the largest part that *can* be solved. Never pass off a
+weak analogy as a solution.
+
 Then write the plan, and name the idea each step uses.
 
 ## Where the output goes
@@ -68,7 +77,8 @@ Then write the plan, and name the idea each step uses.
 | A base rate that sounds right ("most projects fail") | Give a number with its source, or write "unknown: get it by <cheapest check>" |
 | Using this project's own history as the reference class | That's the inside view. Ask how this kind of thing goes for *other people*, then compare |
 | Putting a transfer straight into the plan as fact | It goes in ideas-to-try with a test and a kill result first |
-| A Wider block that changes nothing in the plan | If no step uses an idea, the block was decoration. Either find a transfer that matters or say none applied |
+| A Wider block that changes nothing in the plan | If no step uses an idea, the block was decoration. Build a composed design from the jobs, or name the constraint that blocks every option |
+| Stopping at "no field has solved this" | That's when you build: contradiction, jobs, one mechanism per job, compose |
 
 ## Limits
 

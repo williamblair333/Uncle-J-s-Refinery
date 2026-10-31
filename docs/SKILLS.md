@@ -90,7 +90,7 @@ Totals: 79 repo, 1 workflows.
 | `telegram-gateway-security-audit` | Diagnose and harden a Telegram → Claude CLI gateway: fix update_id deduplication failures that spawn duplicate sessions, and inject a disclosure-restriction sy… | auto | Claude Code | repo |
 | `telegram-inline-button-promote` | Wire up a Telegram inline keyboard button in a polling bot — add button to outbound notification, subscribe to callback_query updates, answer the callback, and… | auto | Refinery stack | repo |
 | `terse-reply` | Edit the most recent draft reply to strip verbosity. | auto | any agent | repo |
-| `think-wider` | Use when planning the next stretch of work, writing or rewriting a STANDARDS.md (expert-bar calls it), stuck after two fixes that didn't hold, choosing between… | auto | any agent | repo |
+| `think-wider` | Use when planning the next stretch of work, writing or rewriting a STANDARDS.md (expert-bar calls it), stuck after two fixes that didn't hold, choosing between… | auto | Refinery stack | repo |
 | `timesfm-forecasting` | Performs zero-shot time-series forecasting with Google's TimesFM, including regular-grid CSV preparation, quantile forecasts, XReg covariates, and held-out eva… | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `to-questionnaire` | Turn a decision you can't fully answer into a questionnaire for someone else to fill in. | you | any agent | vendored: mattpocock/skills |
 | `token-economy-prompt-authoring` | Craft a minimal, effective system prompt to constrain Claude verbosity in plain web sessions (no harness tooling). | auto | Refinery stack | repo |
