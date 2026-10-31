@@ -123,6 +123,33 @@ def test_applies_scope_and_matcher():
     assert hb.applies({**proj, "matcher": "*", "scope": "global"}, {**ev, "tool": "Read", "cwd": "/x"})
 
 
+def test_sandbox_removal_never_follows_home_symlinks(tmp_path):
+    """The sandbox mirrors HOME with symlinks; removing it must unlink them, not recurse."""
+    import shutil
+    real = tmp_path / "realhome" / "keep"
+    real.mkdir(parents=True)
+    (real / "file.txt").write_text("x")
+    box = tmp_path / "box"
+    (box / ".claude").mkdir(parents=True)
+    (box / "keep").symlink_to(real)
+    (box / ".claude" / "hooks").symlink_to(real)
+    shutil.rmtree(box, ignore_errors=True)
+    assert not box.exists()
+    assert (real / "file.txt").read_text() == "x"
+
+
+def test_sandbox_mirrors_home_except_state():
+    box, env = hb.make_sandbox()
+    try:
+        assert env["HOME"] == str(box)
+        assert (box / ".claude" / "state").is_dir() and not (box / ".claude" / "state").is_symlink()
+        assert (box / ".claude" / "projects").is_symlink() == (Path.home() / ".claude" / "projects").exists()
+    finally:
+        import shutil
+        shutil.rmtree(box)
+    assert (Path.home() / ".claude").is_dir()
+
+
 def test_labels_roundtrip_and_precision(tmp_path):
     lab = tmp_path / "labels.jsonl"
     hb.add_label("k1", "false", "reads transcripts", lab)

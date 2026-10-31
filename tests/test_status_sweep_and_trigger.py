@@ -58,6 +58,15 @@ def test_notifications_are_not_bill():
     assert trigger.is_from_bill("just-do-it the rest")
 
 
+def test_compaction_summary_is_not_bill():
+    # hook bench 2026-10-31: 6 of 34 fires were compaction summaries recapping old skill names
+    summary = ("This session is being continued from a previous conversation that ran out of "
+               "context. The summary below covers the earlier portion of the conversation.\n"
+               "Bill said just-do-it; I ran pre-mortem before the push.")
+    assert not trigger.is_from_bill(summary)
+    assert trigger.is_from_bill("This session is being slow, just-do-it")
+
+
 def test_hook_silent_on_garbage():
     p = subprocess.run([sys.executable, str(ROOT / "features/prompt-triggers/skill_name_trigger.py")],
                        input="not json", capture_output=True, text=True)

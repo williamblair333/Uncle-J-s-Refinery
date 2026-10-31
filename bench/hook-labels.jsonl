@@ -3,3 +3,21 @@
 {"key": "b759a2baf96a", "verdict": "true", "note": "new file in scripts/ is a real surface; pre-mortem was owed", "ts": "2026-10-31"}
 {"key": "f3e068b16d03", "verdict": "false", "note": "compaction summary recaps old skill names; Bill did not name a skill this turn", "ts": "2026-10-31"}
 {"key": "2ea93ba0feb9", "verdict": "false", "note": "compaction summary recaps old skill names; Bill did not name a skill this turn", "ts": "2026-10-31"}
+{"key": "1facaa66de0e", "verdict": "false", "note": "compaction summary recaps old skill names", "ts": "2026-10-31"}
+{"key": "5a1042c9eee4", "verdict": "false", "note": "compaction summary recaps old skill names", "ts": "2026-10-31"}
+{"key": "846d14541ba3", "verdict": "false", "note": "compaction summary recaps old skill names", "ts": "2026-10-31"}
+{"key": "3c5e7a98ce15", "verdict": "false", "note": "compaction summary recaps old skill names", "ts": "2026-10-31"}
+{"key": "eed440395879", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "86ed6bb9bad0", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "4ce884943d50", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "e390c515daba", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "1dd53bc23652", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "2ec3b34b38f2", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "d4e2958d72e2", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "3a5e2c21db35", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "e40b5572fb4b", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "d147ce41d9fa", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "1dc5dd991047", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "d7a414248bb9", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "7c3df83a1d7b", "verdict": "false", "note": "pasted STANDARDS doc names skills; Bill asked to analyze, not invoke", "ts": "2026-10-31"}
+{"key": "1cbbdea98fce", "verdict": "false", "note": "Bill quoted my message naming expert-bar; asked for an explanation", "ts": "2026-10-31"}
