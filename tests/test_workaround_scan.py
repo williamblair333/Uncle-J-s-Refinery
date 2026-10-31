@@ -81,7 +81,9 @@ def test_main_logs_hit_without_content(tmp_path, monkeypatch, capsys):
                                   "- **Heretic:** waiting on llama.cpp #30528 before bumping.",
                                   "It's waiting on the last Heretic turn run in the SAGA layout.",
                                   # 2026-10-31 live hit: a table describing the check categories
-                                  "| Hand-feeds a helper or works around a block | 1, then fix the access |"])
+                                  "| Hand-feeds a helper or works around a block | 1, then fix the access |",
+                                  "agy reports one failure in the workaround tests.",
+                                  "The workaround bench fired on 4.1% of turns."])
 def test_clean_turn_passes(tmp_path, text):
     assert ws.decide(transcript(tmp_path, [prompt("go"), say(text)])) is None
 

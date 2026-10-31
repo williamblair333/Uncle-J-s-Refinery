@@ -10,6 +10,7 @@ then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maint
    categories for the Stop hook (ask-user / defer / plan-without-critique / status that moves no gap) are
    prototyped in the scratchpad (recall 12/15 of Bill's meta-questions, but 14% base rate, mostly fair asks):
    cut the noise before shipping.
+   Live false hits so far are all the detector naming itself; each is a regression case in `test_clean_turn_passes`.
 0. **Workaround detector:** live since 10-30; `just workaround-bench --days 7` gives the fire rate and hits
    (10-31: 2.9%, from 8.9%). Each new false hit → add it to `test_clean_turn_passes` first, then narrow `PHRASES`.
    `just offload` for repeat agy denials. Skill trigger still needs a RED/GREEN test.
