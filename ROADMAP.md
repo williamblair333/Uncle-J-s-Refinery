@@ -14,6 +14,11 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Thinking chain** (agreed 2026-10-31: goal → problem choice → floor → ideas → proof → learning). Done:
+  self-check hook (#249), `think-wider` skill with a build step (#251, #252), Refinery `STANDARDS.md` (#251, #253).
+  Open: `meta-question-rate` (the outcome metric, ranked #2 in STANDARDS.md); testing the 5 untested ideas in
+  STANDARDS.md (forget-at-will first: planted-fact probe); problem choice (step 2), a separate conversation
+  tied to the life goals.
 - **[DONE 2026-10-30] Workarounds must surface the cause** — built as below (CHANGELOG 2026-10-30); open: RED/GREEN
   test of the skill trigger (3), and tuning the Stop hook from `~/.claude/state/workaround-scan.jsonl` hit counts. Claude routes around blocks to
   finish today's task and doesn't fix why it was blocked; Bill caught it twice on 10-30 (live campaign as test bed,
