@@ -326,7 +326,7 @@ Installs `jq` if missing, then delegates to dwarvesf's `install.sh`, which does 
 
 This adds two new hooks:
 - `UserPromptSubmit` → `scan-secrets.sh` — blocks pasted credentials before they reach Claude
-- `PostToolUse` (Read/WebFetch/Bash/mcp__.*) → `prompt-injection-defender.sh` — detects and blocks prompt-injection attempts in tool results
+- `PostToolUse` (Read/WebFetch/Bash/mcp__.*) → `prompt-injection-defender.sh` — warns the model (never blocks) when tool output contains prompt-injection phrasing. The upstream copy never fired; `scripts/fix-guardrails-defender.sh` (run by `install-guardrails.sh`) installs the repaired copy from `hooks/guardrails/`
 
 Plus five `PreToolUse` bash-matcher rules that block:
 - Destructive `rm` commands

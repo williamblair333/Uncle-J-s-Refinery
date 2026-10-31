@@ -1,14 +1,18 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-11-01, session end)
+## NEXT SESSION — start here (updated 2026-11-01, second session end)
 
-Both 11-01 items merged: #263 (surface-write-guard `$S` fix + agy review gaps) and #264 (hook bench
-`--export`/`--from`). Hook work can now go to agy: `just hook-bench-export`, then brief agy with
-`python3 scripts/hook_bench.py --from state/hook-bench-export`. **Next:** the top gap from session start
-(`behaviour-bench-per-hook` / `skills-red-green`), or the PR-gate-on-Gitea gap. Gemini argon quota is spent until
-11-06; flash-high/medium ran fine. agy's filter refuses "bypass" wording; "missing test cases (false negatives)"
-got through.
+Merged #266–#270, all below. `behaviour-bench-per-hook` is still partial: PostToolUse is now replayed; left are
+false-hit labels for skills and token-guard (leaks_state: hardcoded log path). **Next:** finish those, or
+`skills-red-green`, or the PR-gate-on-Gitea gap. PostToolUse events stay out of `--export` bundles unless
+`--with-responses` (they hold tool output, and bundles go to agy). Gemini argon quota is spent until 11-06;
+flash-high ran fine (the bench review came back "no findings"). Run `just test` with its exit code checked,
+not piped into `tail`: a pipe hid a failure this session.
+
+Earlier 11-01: #263 (surface-write-guard `$S` fix) and #264 (hook bench `--export`/`--from`). Hook work can go
+to agy: `just hook-bench-export`, then `python3 scripts/hook_bench.py --from state/hook-bench-export`.
+agy's filter refuses "bypass" wording; "missing test cases (false negatives)" got through.
 
 11-01 later (defender verified live: a Read fired additionalContext; installed bench 4/800, all false): the hook bench now replays PostToolUse (opt-in list in config/hook-bench.json) and flags
 output the harness drops as `ignored`. It found the guardrails prompt-injection-defender dead since April

@@ -144,6 +144,10 @@ Completed items age out after ~4 weeks.
   `install-guardrails.sh`) keeps the local copy repaired. Status 2026-10-23: #17 and #20 are both
   open with zero comments. The repo's last push was 2026-09-08 (#18/#19), so the maintainer is
   quiet rather than declining.
+- **Upstream defender bug, not filed** (found 2026-10-31; filing is Bill's call). dwarvesf/claude-guardrails
+  `full/prompt-injection-defender.sh` reads `.tool_output` (Claude Code sends `tool_response`) and prints
+  `{"message"}`, which the harness ignores, so it never warns. Unchanged at upstream HEAD 590bc5d.
+  `scripts/fix-guardrails-defender.sh` keeps the local copy repaired (main host only).
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
