@@ -13,8 +13,9 @@ got through.
 11-01 later (defender verified live: a Read fired additionalContext; installed bench 4/800, all false): the hook bench now replays PostToolUse (opt-in list in config/hook-bench.json) and flags
 output the harness drops as `ignored`. It found the guardrails prompt-injection-defender dead since April
 (reads `.tool_output`, prints `{"message"}`). Repaired: `scripts/fix-guardrails-defender.sh` installs the repo copy
-(`hooks/guardrails/`); install-guardrails.sh runs it. **Other hosts (pi server, tc-vmh-03): after pulling, run
-`bash scripts/fix-guardrails-defender.sh`** (check with `--check`). The upstream bug is unreported
+(`hooks/guardrails/`); install-guardrails.sh runs it. Main host only: Bill said skip pi server and tc-vmh-03 (2026-10-31),
+so they keep the silent upstream copy; don't prompt for it. (A re-run of install-guardrails.sh there would
+install the repair anyway.) The upstream bug is unreported
 (dwarvesf/claude-guardrails); filing it is Bill's call. agy's denial of `git grep` is deliberate
 (`-O` runs a pager command; tests/test_ask_agy.py pins it) — brief agy to use `grep` or `git show` instead.
 

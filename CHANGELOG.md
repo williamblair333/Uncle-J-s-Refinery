@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-01 — defender repair stays on the main host
+
+- Bill: skip deploying the repaired prompt-injection defender on the pi server and tc-vmh-03. HANDOFF no longer asks for it.
+
 ## 2026-11-01 — prompt-injection-defender repaired (it had never warned) — verified live
 
 - `hooks/guardrails/prompt-injection-defender.sh` is a repo-owned copy of the upstream guardrails hook. It reads `tool_response` (string or object), answers with `hookSpecificOutput.additionalContext`, and drops the `\x..\x..` pattern that caused 8 of 11 false hits. It stays silent without jq. Bench on 7 days: 3 fires on 5819 tool results, all labelled false (reads of the defender's own source). The upstream copy fired 0 times, ever.
