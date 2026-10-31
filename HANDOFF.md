@@ -5,8 +5,10 @@
 
 10-30: #240 (CLAUDE.md trim + auto-maintain sync), #241 (`slowest-loop-first`), agy reads the M2TW install,
 then the workaround detector (Stop hook, agy `fix_cause`, sweep flag, auto-maintain cap check — CHANGELOG).
-0. **Self-check hook (10-31, PR feat/self-check-bench):** it forces the "check yourself" pass on long replies.
-   The baseline was 10/17 manual checks finding a real error. Deploy with `bash install-reliability.sh` + restart.
+0. **Self-check hook (10-31, #249 merged, deployed):** it forces the "check yourself" pass on long replies. The
+   baseline was 10/17 manual checks finding a real error. Wired in settings.json; it goes live after a restart.
+   (install-reliability.sh had been failing on every post-merge run: the plugin was renamed ralph-wiggum →
+   ralph-loop, fixed in the follow-up PR.)
    Then measure: `just check-bench` over turns after deploy should show few corrections. Each block costs one
    extra pass, so check `~/.claude/state/self-check.jsonl` volume alongside it. Next in the chain, agreed with Bill
    10-31: a "think wider" skill (cross-domain transfer, first principles, outside view) that expert-bar calls, then
