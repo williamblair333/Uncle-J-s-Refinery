@@ -1,5 +1,8 @@
 {
-  "_doc": "scripts/hook_bench.py reads hooks from .claude/settings.json and ~/.claude/settings.json. Hooks whose command contains a 'skip' substring are observability or setup, not behaviour; 'live_state' hooks depend on git or files as they are now, so replaying old events through them means nothing; 'names' labels inline commands by a substring of their text.",
+  "_doc": "scripts/hook_bench.py reads hooks from .claude/settings.json and ~/.claude/settings.json. Hooks whose command contains a 'skip' substring are observability or setup, not behaviour; 'live_state' hooks depend on git or files as they are now, so replaying old events through them means nothing; 'names' labels inline commands by a substring of their text. PostToolUse hooks run only if listed in 'post_tool_replay': list a hook there only after reading it and confirming it reads stdin and writes stdout, nothing else (most PostToolUse hooks stage, index or sync).",
+  "post_tool_replay": [
+    "prompt-injection-defender.sh"
+  ],
   "skip": [
     "jcodemunch-mcp",
     "mcp-tool-log",

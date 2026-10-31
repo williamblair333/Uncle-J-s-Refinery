@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-01 — hook bench replays PostToolUse; prompt-injection-defender found dead
+
+- **PostToolUse replay:** each successful tool call becomes a PostToolUse event with the transcript's `toolUseResult` as `tool_response` (capped at 20k chars). PostToolUse hooks run only if listed in `post_tool_replay` in `config/hook-bench.json`, because most of them stage, index or sync. `--export` leaves these events out unless `--with-responses`: they carry file contents and command output, and bundles go to agy.
+- **New verdict `ignored`:** exit-0 output that Claude Code drops, meaning JSON with no field the harness reads, or plain stdout on an event that only logs it. Such a hook thinks it fires, but the model never sees it.
+- **Finding:** the global `prompt-injection-defender.sh` (upstream dwarvesf/claude-guardrails, unchanged at HEAD 590bc5d) has never warned once. It reads `.tool_output` (the field is `tool_response`) and prints `{"message": …}`, which Claude Code ignores. Bench: 0 fires on 800 events. A copy with both fixed fires 11 times on 5780 events in 7 days, and all 11 are false (8 from the `\x..\x..` hex pattern on code, logs and game data; 3 from reading the defender itself). Labelled in `bench/hook-labels.jsonl`. The fix lands separately.
+- 7 new tests (30 in test_hook_bench.py).
+
 ## 2026-11-01 — STANDARDS.md parses again
 
 - The `behaviour-bench-per-hook` evidence line (from f3fbb15) had an unquoted `Gaps: skills`, which YAML reads as a mapping, so every session start printed "cannot parse STANDARDS.md" instead of the gaps. Quoted it. New test `test_repo_standards_md_parses_and_validates` loads and validates the repo's own STANDARDS.md (red on main, green after).

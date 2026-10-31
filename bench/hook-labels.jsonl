@@ -80,3 +80,14 @@
 {"key": "de7aa64ec241", "verdict": "false", "note": "Python body for-loop cancelled the $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}
 {"key": "d5408300417d", "verdict": "false", "note": "python3 stdin body for-loop cancelled the $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}
 {"key": "5a84cba5d035", "verdict": "false", "note": "body's own S= cancelled the outer $S exemption; fixed 2026-11-01", "ts": "2026-10-31"}
+{"key": "b66192b8602f", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "392cd6eeabcb", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "2bb64fc64ed0", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "44d0540c472a", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "58ff8d472848", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "d50b27ef21db", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "7bbaba34b8cc", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "2e819c2990d8", "verdict": "false", "note": "fixed-copy replay: \\x..\\x.. hex-escape pattern on code/log/game-data text, no injection", "ts": "2026-10-31"}
+{"key": "5236f6b01d50", "verdict": "false", "note": "fixed-copy replay: cat of the defender script itself prints its own pattern list", "ts": "2026-10-31"}
+{"key": "65f908097974", "verdict": "false", "note": "fixed-copy replay: cat of the defender script itself prints its own pattern list", "ts": "2026-10-31"}
+{"key": "673ce606151f", "verdict": "false", "note": "fixed-copy replay: cat of the defender script itself prints its own pattern list", "ts": "2026-10-31"}

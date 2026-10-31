@@ -10,6 +10,11 @@ Both 11-01 items merged: #263 (surface-write-guard `$S` fix + agy review gaps) a
 11-06; flash-high/medium ran fine. agy's filter refuses "bypass" wording; "missing test cases (false negatives)"
 got through.
 
+11-01 later: the hook bench now replays PostToolUse (opt-in list in config/hook-bench.json) and flags
+output the harness drops as `ignored`. It found the guardrails prompt-injection-defender dead since April
+(reads `.tool_output`, prints `{"message"}`); fix follows as a post-install repair like fix-guardrails-grep.sh.
+The upstream bug is unreported (dwarvesf/claude-guardrails); filing it is Bill's call.
+
 11-01 later: STANDARDS.md had stopped parsing (unquoted `: ` in an evidence line); fixed in PR
 `fix/standards-yaml-quote` with a test on the repo's own file. Quote any `evidence:` text containing `: `.
 

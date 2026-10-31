@@ -60,8 +60,12 @@ def test_load_hooks_statuses_and_names(tmp_path):
                                   "permissionDecisionReason": "offload"}}), "", ("block", "offload")),
     ("Stop", 0, json.dumps({"decision": "block", "reason": "check"}), "", ("block", "check")),
     ("UserPromptSubmit", 0, "use skill X", "", ("inject", "use skill X")),
-    ("PreToolUse", 0, "chatter", "", ("pass", "")),
+    ("PreToolUse", 0, "chatter", "", ("ignored", "chatter")),   # stdout only reaches the debug log
     ("PreToolUse", 0, "", "", ("pass", "")),
+    ("PostToolUse", 0, json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse",
+                                   "additionalContext": "untrusted"}}), "", ("inject", "untrusted")),
+    ("PostToolUse", 0, '{"message": "warn"}', "", ("ignored", '{"message": "warn"}')),
+    ("PostToolUse", 0, json.dumps({"suppressOutput": True}), "", ("pass", "")),
     ("Stop", 1, "", "Traceback", ("error", "Traceback")),
 ])
 def test_classify(event, rc, out, err, want):
@@ -124,6 +128,70 @@ def test_bench_hook_counts_fires_and_live_agreement(tmp_path):
     assert res["events"] == 4 and len(res["fires"]) == 2
     assert res["replay_only"] == 1 and res["live_only"] == 1
     assert not res["errors"]
+
+
+def test_posttooluse_events_carry_structured_response(tmp_path):
+    big = "x" * (hb.RESPONSE_CAP + 50)
+    lines = [
+        _entry("user", "go"),
+        _entry("assistant", [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "ls"}},
+                             {"type": "tool_use", "id": "t2", "name": "Read", "input": {"file_path": "/a"}},
+                             {"type": "tool_use", "id": "t3", "name": "Read", "input": {"file_path": "/b"}}]),
+        _entry("user", [{"type": "tool_result", "tool_use_id": "t1", "content": "a\nb"}],
+               toolUseResult={"stdout": "a\nb", "stderr": "", "interrupted": False}),
+        _entry("user", [{"type": "tool_result", "tool_use_id": "t2", "content": "plain text"}]),
+        _entry("user", [{"type": "tool_result", "tool_use_id": "t3", "content": "x"}],
+               toolUseResult={"type": "text", "file": {"content": big}}),
+    ]
+    p = tmp_path / "t.jsonl"
+    p.write_text("\n".join(json.dumps(x) for x in lines))
+    post = [e for e in hb.events_from(p, since=0) if e["event"] == "PostToolUse"]
+    assert [e["tool"] for e in post] == ["Bash", "Read", "Read"]
+    assert post[0]["response"]["stdout"] == "a\nb"            # structured, as Claude Code sends it
+    assert post[1]["response"] == "plain text"                # no toolUseResult: result text
+    assert isinstance(post[2]["response"], str) and len(post[2]["response"]) == hb.RESPONSE_CAP
+    pl = hb.payload(post[0])
+    assert pl["tool_response"]["stdout"] == "a\nb" and pl["tool_use_id"] == "t1"
+    assert hb.event_key("h", post[0]) != hb.event_key("h", post[1])
+
+
+def test_posttooluse_hooks_are_opt_in(tmp_path):
+    """Pre-mortem mitigation: PostToolUse hooks usually act; only listed ones replay."""
+    s = _settings(tmp_path, {"PostToolUse": [{"matcher": "Read|Bash", "hooks": [
+        {"command": "bash ~/.claude/hooks/pid/prompt-injection-defender.sh"},
+        {"command": "git add -u"}]}]})
+    hooks = {h["name"]: h for h in hb.load_hooks({**CFG, "post_tool_replay": ["prompt-injection-defender"]}, s)}
+    assert hooks["prompt-injection-defender.sh"]["status"] == "run"
+    unlisted = [h for h in hooks.values() if h["command"] == "git add -u"][0]
+    assert unlisted["status"] == "not_replayed" and "post_tool_replay" in unlisted["note"]
+    assert all(h["status"] == "not_replayed" for h in hb.load_hooks(CFG, s))
+
+
+def test_export_leaves_tool_output_out_by_default(tmp_path):
+    proj = tmp_path / "projects" / "p"
+    proj.mkdir(parents=True)
+    (proj / "t.jsonl").write_text("\n".join(json.dumps(x) for x in [
+        _entry("user", "go"),
+        _entry("assistant", [{"type": "tool_use", "id": "t1", "name": "Read", "input": {"file_path": "/s"}}]),
+        _entry("user", [{"type": "tool_result", "tool_use_id": "t1", "content": "SECRET=1"}])]))
+    kw = dict(cfg=CFG, settings=[], projects_root=tmp_path / "projects", home=tmp_path)
+    hb.export_bundle(tmp_path / "a", days=36500, **kw)
+    assert "SECRET" not in (tmp_path / "a" / "events.jsonl").read_text()
+    hb.export_bundle(tmp_path / "b", days=36500, with_responses=True, **kw)
+    assert "SECRET" in (tmp_path / "b" / "events.jsonl").read_text()
+
+
+def test_bench_counts_ignored_output(tmp_path):
+    box, env = hb.make_sandbox()
+    try:
+        hook = {"name": "dead", "event": "PostToolUse", "matcher": "Read", "scope": "global",
+                "command": "echo '{\"message\": \"warn\"}'"}
+        ev = {"event": "PostToolUse", "session": "s", "cwd": str(tmp_path), "tool": "Read",
+              "input": {}, "tool_use_id": "t", "response": "x"}
+        res = hb.bench_hook(hook, [ev], env)
+    finally:
+        shutil.rmtree(box)
+    assert res["ignored"] == 1 and not res["fires"]
 
 
 def test_applies_scope_and_matcher():
