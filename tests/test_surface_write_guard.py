@@ -231,6 +231,12 @@ SCRATCH_ALLOW = [
     ("cp-backup-to-scratch", "cp /opt/proj/hearth/house/house.yaml /tmp/claude-1000/s/house.yaml.bak"),
     ("scratch-var-heredoc", "S=/tmp/claude-1000/s/scratchpad; cat > $S/rehearsal.yaml <<'EOF'\na: 1\nEOF"),
     ("scratch-var-braced",  'S=/tmp/claude-1000/s; echo x > "${S}/run.sh" && bash ${S}/run.sh'),
+    # hook bench false hits, 2026-10-31
+    ("var-operand-then-semicolon", "S=/tmp/claude-1000/s/scratchpad; sed -i 's/a/b/' $S/b.py; echo hi"),
+    ("abs-operand-then-semicolon", "sed -i 's/a/b/' /tmp/claude-1000/s/g.py; echo hi"),
+    ("cd-tmp-and-relative",  "cd /tmp/claude-1000/s/scratchpad && sed -i 's/a/b/' g.py && python3 g.py"),
+    # a stripped /tmp target must not leave its `>` to bind the next argument
+    ("stripped-target-keeps-redirect", "python3 p.py 'x > /tmp/r.txt' 'y; python3 scripts/hook_bench.py'"),
 ]
 
 
@@ -284,6 +290,16 @@ SCRATCH_ESCAPE_BLOCK = [
     ("group-cat-bash",        "{ cat; bash; } <<EOF\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
     ("no-space-then-write",   "cat<<EOF\nx\nEOF\necho y > /opt/proj/x/hooks/a.sh"),
     ("sh-dash-s",             "sh -s <<EOF\necho x > /opt/proj/x/hooks/a.sh\nEOF"),
+    # neighbours of the 2026-10-31 narrowing: a failed cd leaves relative writes in the repo
+    ("cd-tmp-then-semicolon", "cd /tmp/claude-1000/s; sed -i 's/a/b/' scripts/g.py"),
+    ("cd-tmp-or",             "cd /tmp/claude-1000/s || sed -i 's/a/b/' g.py"),
+    ("cd-tmp-newline",        "cd /tmp/x && true\nsed -i 's/a/b/' g.py"),
+    ("cd-tmp-background",     "cd /tmp/x & sed -i 's/a/b/' g.py"),
+    ("cd-tmp-subshell",       "(cd /tmp/x && true) && sed -i 's/a/b/' g.py"),
+    ("cd-tmp-then-cd-away",   "cd /tmp/x && cd /opt/proj/R && sed -i 's/a/b/' scripts/g.py"),
+    ("cd-tmp-dotdot",         "cd /tmp/x && sed -i 's/a/b/' ../../opt/proj/R/scripts/g.py"),
+    ("stripped-then-surface", "echo x > /tmp/a.txt && echo y > scripts/g.py"),
+    ("semicolon-then-surface", "sed -i 's/a/b/' /tmp/x/g.py; sed -i 's/a/b/' scripts/h.py"),
 ]
 
 

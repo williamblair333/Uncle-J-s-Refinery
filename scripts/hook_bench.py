@@ -13,7 +13,7 @@ matching hook exactly as Claude Code would. Reports, per hook:
 
 Replayed events: PreToolUse (every tool call), UserPromptSubmit (every prompt Bill typed),
 Stop (each turn's assistant text, passed as last_assistant_message). Hooks run in a
-sandbox: HOME is a temp dir (hooks and skills symlinked in), the hook-blocks log and every
+sandbox: HOME is a temp dir mirroring the real one by symlinks except ~/.claude/state, the hook-blocks log and every
 state log point into it, and session ids get a `bench-` prefix so no real pre-mortem
 clearance token is read. A hook that writes state must honour one of the env vars set in
 make_sandbox(), or the bench writes real state (tests/test_hook_bench.py checks the log).
@@ -252,10 +252,17 @@ def make_sandbox() -> tuple[Path, dict]:
     box = Path(tempfile.mkdtemp(prefix="hook-bench-"))
     claude = box / ".claude"
     (claude / "state").mkdir(parents=True)
-    for sub in ("hooks", "skills"):
-        real = Path.home() / ".claude" / sub
-        if real.exists():
-            (claude / sub).symlink_to(real)
+    # Mirror HOME so `~/…` resolves as it did live (a guard judging `cd ~/.claude/projects`
+    # must see that it exists), but give ~/.claude/state a fresh dir: that's where hooks
+    # write. Every other ~/.claude entry and every other HOME entry is a symlink.
+    home = Path.home()
+    for real in (home.iterdir() if home.is_dir() else []):
+        if real.name != ".claude":
+            (box / real.name).symlink_to(real)
+    if (home / ".claude").is_dir():          # absent on a clean machine (CI)
+        for real in (home / ".claude").iterdir():
+            if real.name != "state":
+                (claude / real.name).symlink_to(real)
     (box / "proj").mkdir()  # exists but empty: hook-blocks.log appends fail harmlessly
     env = {**os.environ, "HOME": str(box), "UNCLE_J_PROJ_ROOT": str(box / "proj"),
            "SURFACE_GUARD_LOG": str(box / "surface.log"),

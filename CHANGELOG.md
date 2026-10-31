@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-10-31 — hook false hits fixed (from the hook bench)
+
+- **self-check left unchanged, on evidence.** Its 61% fire rate is real, but 4 of 8 live fires found a real error. 3 of those 4 came from turns whose final reply was short (101–720 chars), with the wrong claim in the text between tool calls. Measuring only the final reply would cut the rate to 45% and lose 3 of the 4 catches.
+- **grep-guard:** `cd DIR; …` is now definite when DIR exists and can be entered (it was always "may fail", so `cd /tmp; grep -r .` was judged as reading the repo). A function definition no longer runs the whole-text check over the full command: only function bodies, call arguments and variable assignments count, so a function reading `state/` logs no longer denies a later `python3 scripts/x.py`. Bodies containing `cd`, aliases, and bodies that can't be cut out keep the old check. `x || y` now always merges cwd state (y runs only if x failed). 4 allow and 7 deny regression cases. Still a false hit: a loop variable over `.sh`/`.py` names is tainted wherever the path points.
+- **surface-write-guard:** a stripped `/tmp` target becomes a placeholder, so its `>` no longer binds the next quoted argument. Operands may end in `;`, `&`, `|` or `)`. Relative operands are exempt in a single-line `cd /tmp/X && …` chain with no `;`, `||`, `&`, second cd, eval, source or shell. 4 allow and 9 deny regression cases.
+- **skill-name-trigger** ignores compaction summaries (6 of 34 fires). Pasted text that names skills still fires (2 labelled false).
+- **hook bench:** the sandbox HOME now mirrors the real one by symlinks (except `~/.claude/state`), so `~` paths resolve as they did live. A test pins that removing the sandbox unlinks the symlinks instead of following them. 23 fires labelled. CI (a machine with no `~/.claude`) caught the bench crashing when that dir is missing; fixed, and the tests now pass with an empty HOME.
+- After the fixes, same 7 days: grep-guard 33 → 28 fires, surface-write-guard 10 → 8, skill-name-trigger 34 → 28; no labelled-false fires left in either guard.
+- `docs/research-later.md` started: topics Bill flags for later (first entry: Manifold-Augmented Graph Embedding).
+
 ## 2026-10-31 — hook replay bench (`just hook-bench`)
 
 - **`scripts/hook_bench.py`** reads every hook from `.claude/settings.json` and `~/.claude/settings.json` and replays recent transcript events through it: each tool call (PreToolUse), each typed prompt (UserPromptSubmit), each turn's text (Stop). Per hook it reports fire rate, errors, labelled false hits (`bench/hook-labels.jsonl`, add with `--label KEY true|false note`) and where replay disagrees with what happened live. Skill invocation counts come with it. Hooks run in a sandbox (temp HOME, log env vars redirected, `bench-` session ids); hooks that depend on live git/PR state or hardcode a real log path are listed as not replayed, with the reason.

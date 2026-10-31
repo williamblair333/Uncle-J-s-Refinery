@@ -321,6 +321,45 @@ def loose(text):
     return bool(LOOSE_TOOL.search(flat) and SRC_EXT.search(flat))
 
 
+FUNC_NAME = re.compile(r"(?:^|[;&|({\s])(?:function\s+([A-Za-z_][\w.:-]*)\s*(?:\(\s*\))?|([A-Za-z_][\w.:-]*)\s*\(\s*\))\s*")
+ASSIGN_VAL = re.compile(r"(?:^|[;&|({\s])(?:export\s+|local\s+|readonly\s+|declare\s+(?:-\w+\s+)*)?[A-Za-z_]\w*\+?=(\S*)")
+
+
+def function_reach(text):
+    """Text that can reach a defined function's commands: each body, the arguments of
+    each call, and every variable assignment. None when a body can't be cut out (the
+    caller then falls back to the whole text — fail closed)."""
+    names, parts = [], []
+    for m in FUNC_NAME.finditer(text):
+        name = m.group(1) or m.group(2)
+        i = m.end()
+        if i >= len(text) or text[i] not in "{(":
+            return None
+        opener, closer = text[i], "}" if text[i] == "{" else ")"
+        depth, j = 0, i
+        while j < len(text):
+            if text[j] == opener:
+                depth += 1
+            elif text[j] == closer:
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        if depth != 0:
+            return None
+        if re.search(r"(^|[;&|({\s])(cd|pushd|popd)(\s|;|$)", text[i + 1:j]):
+            return None      # a body that moves the cwd changes how later reads resolve
+        names.append(name)
+        parts.append(text[i + 1:j])
+    if not names:
+        return None
+    for n in names:
+        for m in re.finditer(r"(?:^|[;&|(`{\s])" + re.escape(n) + r"[ \t]+([^;&|\n)]*)", text):
+            parts.append(m.group(1))
+    parts.extend(ASSIGN_VAL.findall(text))
+    return "\n".join(parts)
+
+
 def base(word):
     b = word.replace("\\", "/").rsplit("/", 1)[-1]
     return b[:-4] if b.lower().endswith(".exe") else b
@@ -1062,9 +1101,16 @@ class Analyzer:
     def run(self, text, depth, state):
         lx = Lexer(text, depth)
         items = lx.run()
-        if lx.funcdef or re.search(r"(^|[;&|(\s])(function\s+\w|alias\s|shopt\s+-s\s+expand_aliases)", text):
-            # A function/alias runs code under a name the guard can't follow.
-            if loose(text):
+        alias = re.search(r"(^|[;&|(\s])(alias\s|shopt\s+-s\s+expand_aliases)", text)
+        func = lx.funcdef or re.search(r"(^|[;&|(\s])function\s+\w", text)
+        if alias or func:
+            # A function/alias runs code under a name the guard can't follow. Aliases, and
+            # functions whose bodies can't be cut out, get the whole-text check. Otherwise
+            # only the text that can reach a function's read counts: its body, the arguments
+            # it's called with, and variable assignments (2026-10-31: a function reading
+            # state/ logs denied an unrelated `python3 scripts/x.py` later in the command).
+            reach = None if alias else function_reach(text)
+            if loose(text if reach is None else reach):
                 self.emit("D", None, "function or alias wrapping a read")
             state = State({""} | state.cwds, {k: None for k in state.vars})
         self.walk(items, depth, state, text)
@@ -1103,7 +1149,8 @@ class Analyzer:
                                 cur.vars[k] = RISKY
                     elif o == "&&" and not chain_or:
                         cur = succ
-                    elif may_fail or not definite:
+                    elif may_fail or not definite or o == "||":
+                        # `x || y`: y runs only when x failed, so x's effects may not apply
                         cur = old.merge(succ)
                     else:
                         cur = succ
@@ -1189,7 +1236,11 @@ class Analyzer:
         if words and base(words[0]) in ("cd", "pushd"):
             succ = cur.copy()
             succ.cwds = cd_target(cur, words[1:])
-            return succ, True
+            # A cd into a directory that exists and can be entered now won't fail, so
+            # `cd /tmp; grep -r .` reads /tmp, not the repo (2026-10-31 hook bench false hit).
+            # Unknown targets ("") and missing dirs stay may-fail: fail closed.
+            sure = all(c and os.path.isdir(c) and os.access(c, os.X_OK) for c in succ.cwds)
+            return succ, not sure
         if words and base(words[0]) == "popd":
             succ = cur.copy()
             succ.cwds = {""}

@@ -179,19 +179,68 @@ if ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_.-])(ln|mv)[[:space:]]'; then
       | grep -oE "(^|[;&|(])[[:space:]]*(export[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*=[^[:space:];&|)]+[[:space:]]*(;|&&|\|\||$)" \
       | sed -E 's/^[;&|(]?[[:space:]]*//; s/[[:space:]]*(;|&&|\|\|)?$//')
   fi
+  # `cd /tmp/X && …` (2026-10-31): relative operands resolve under /tmp/X — but only
+  # when the whole command is ONE `&&` chain (a failed cd then runs nothing), on one
+  # line, with no second cd/pushd/popd and nothing that could run hidden code (eval,
+  # source, `.`, sh -c, backticks, $( )). Anything else leaves relative operands as is.
+  CD_TMP=""
+  first=${SCAN%%$'\n'*}; rest=${SCAN#"$first"}
+  if [[ -z "${rest//[$'\n']/}" && "$first" =~ ^[[:space:]]*cd[[:space:]]+(/tmp/[A-Za-z0-9._/+@%:,=-]+)[[:space:]]*\&\& ]]; then
+    cdr=$(realpath -m -- "${BASH_REMATCH[1]}" 2>/dev/null) || cdr=""
+    ncd=$(printf '%s' "$CMD" | grep -oE '(^|[^[:alnum:]_.-])(cd|pushd|popd)([[:space:]]|;|$)' | wc -l)
+    sepbad=$(printf '%s' "$first" | awk '{
+      q = ""; n = length($0); bad = 0
+      for (i = 1; i <= n; i++) {
+        c = substr($0, i, 1)
+        if (q == "") {
+          if (c == "\\") { i++; continue }
+          if (c == "\047" || c == "\"") { q = c; continue }
+          if (c == ";" || c == "`") bad = 1
+          if (c == "$" && substr($0, i + 1, 1) == "(") bad = 1
+          if (c == "|" && substr($0, i + 1, 1) == "|") bad = 1
+          if (c == "&") {
+            if (substr($0, i + 1, 1) == "&") { i++; continue }
+            if (substr($0, i - 1, 1) == ">" || substr($0, i + 1, 1) == ">") continue
+            bad = 1
+          }
+        } else if (q == "\"" && c == "\\") { i++ }
+        else if (c == q) q = ""
+      }
+      print bad
+    }')
+    if [[ "$cdr" == /tmp/?* && "$cdr" != /tmp/premortem-cleared* && "$ncd" -eq 1 && "$sepbad" == 0 ]] \
+       && ! printf '%s' "$CMD" | grep -qE '(^|[^[:alnum:]_])(eval|source|exec|bash|sh|zsh|dash|ksh)[[:space:]]|(^|[;&|(])[[:space:]]*\.[[:space:]]'; then
+      CD_TMP="$cdr"
+    fi
+  fi
   OUT=""
   set -f
   while IFS= read -r line || [[ -n "$line" ]]; do
     newline=""
     for tok in $line; do
       keep="$tok"
-      pre=${tok%%/tmp/*}                      # redirect/quote prefix, e.g. `>` `2>` `"`
-      if [[ "$pre" =~ ^[0-9]?\>{0,2}[\"\']?$ ]]; then
-        t=${tok:${#pre}}; t=${t%\"}; t=${t%\'}
+      # Separators glued to the END of an operand stay as syntax (`$S/b.py;`); glued
+      # anywhere else (`>/tmp/a;cp`) the token is left whole and stays scanned.
+      core="$tok"; post=""
+      if [[ "$core" =~ ^(.*[^\;\&\|\)])([\;\&\|\)]+)$ ]]; then
+        core=${BASH_REMATCH[1]}; post=${BASH_REMATCH[2]}
+      fi
+      pre=${core%%/tmp/*}                     # redirect/quote prefix, e.g. `>` `2>` `"`
+      t=""
+      if [[ "$pre" != "$core" && "$pre" =~ ^[0-9]?\>{0,2}[\"\']?$ ]]; then
+        t=${core:${#pre}}
+      elif [[ -n "$CD_TMP" && "$core" =~ ^([0-9]?\>{0,2}[\"\']?)([A-Za-z0-9._+@%:,=][A-Za-z0-9._/+@%:,=-]*)[\"\']?$ \
+              && "${BASH_REMATCH[2]}" == *[./]* ]]; then
+        pre=${BASH_REMATCH[1]}; t="$CD_TMP/${BASH_REMATCH[2]}${core:${#BASH_REMATCH[1]}+${#BASH_REMATCH[2]}}"
+      fi
+      if [[ -n "$t" ]]; then
+        q=""; [[ "$t" == *[\"\'] ]] && q=${t: -1}
+        t=${t%\"}; t=${t%\'}
         if [[ "$t" =~ ^/tmp/[A-Za-z0-9._/+@%:,=-]+$ ]]; then
           r=$(realpath -m -- "$t" 2>/dev/null) || r=""
           if [[ "$r" == /tmp/?* && "$r" != /tmp/premortem-cleared* ]]; then
-            keep="${pre%[\"\']}"
+            # A placeholder, not nothing: a bare `>` would bind the next word.
+            keep="${pre}__tmp__${q}${post}"
           fi
         fi
       fi

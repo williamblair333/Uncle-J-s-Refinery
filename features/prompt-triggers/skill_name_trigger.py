@@ -44,10 +44,12 @@ def named_skills(prompt, skills):
 
 
 def is_from_bill(prompt):
-    """Background-task notifications also arrive as prompts; their text is agent output."""
+    """Background-task notifications and compaction summaries also arrive as prompts; their
+    text is agent output (a summary recaps skill names from earlier turns)."""
     head = prompt.lstrip()[:400]
     return not (head.startswith("<task-notification") or "<task-notification>" in head
-                or "[SYSTEM NOTIFICATION" in head or head.startswith("<system-reminder>"))
+                or "[SYSTEM NOTIFICATION" in head or head.startswith("<system-reminder>")
+                or head.startswith("This session is being continued from a previous conversation"))
 
 
 def main():

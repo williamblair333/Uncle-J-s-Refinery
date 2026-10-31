@@ -518,6 +518,14 @@ ANALYZER_DENY = [
     "git ls-files | xargs grep foo",
     "find scripts -name '*.py' -exec cat {} \\;",
     "f() { cat \"$@\"; }; f scripts/referee.py",
+    # neighbours of the 2026-10-31 narrowing (hook bench false hits) that must stay denied
+    "F=scripts/referee.py; f(){ cat $F; }; f",              # body reads a var set outside
+    "f(){ cat scripts/referee.py; }; f",                     # body reads source directly
+    "b=$(f(){ head \"$1\"; }; f scripts/referee.py)",        # call inside a substitution
+    "function f { cat \"$1\"; }; f scripts/referee.py",      # `function` keyword form
+    "f(){ cat \"$1\"; ; python3 scripts/referee.py",         # unbalanced body: whole-text check
+    f"cd {REPO}/scripts; cat referee.py",                    # existing dir, but in the repo
+    "cd scripts; grep -rn foo .",                            # relative existing dir in the repo
 ]
 
 
@@ -559,6 +567,12 @@ ANALYZER_ALLOW = [
     "tail -n 20 state/hook-blocks.log",
     "for f in docs/a.md docs/b.md; do cat $f; done",
     "command -v cat",
+    # hook bench false hits, 2026-10-31: `cd` into a directory that exists is not "may fail"
+    "cd /tmp; grep -rn foo .",
+    "cd /usr; grep -m2 -o 'hook error' -r --include=*.jsonl . | head -3",  # exists on every host
+    # a function that reads logs must not taint a later, unrelated script run
+    "c(){ cat state/hook-blocks.log | grep -c x; }; b=$(c); python3 scripts/hook_bench.py > /tmp/r.txt",
+    "snap(){ wc -c state/hook-blocks.log; }; before=$(snap); time python3 scripts/hook_bench.py | tail -70",
 ]
 
 
