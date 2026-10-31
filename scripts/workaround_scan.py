@@ -26,7 +26,7 @@ PHRASES = [
     # "a/the workaround" as the turn's own move; not the plural topic or the detector's name
     # ...and not denied ("wasn't a workaround")
     r"(?<!n't )(?<!not )\b(?:a|the|this|that)\s+workaround\b(?![-\w]|\s+(?:detector|scan|scanner|check|hook)\b)",
-    r"hand[- ]fe(?:d|ed|eding)",
+    r"hand[- ]fe(?:d|eding)\b",  # the turn's own act; "hand-feeds" describes the habit
     r"fed (?:it|them|agy) by hand",
     # the turn's own wait, not a list item or another process's; Bill's answer is not a block
     r"\b(?:I'm|I am|I'll be|we're|we are|now|still)\s+(?:still\s+)?waiting on (?!(?:you|your|Bill)\b)",
