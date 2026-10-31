@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-01 — prompt-injection-defender repaired (it had never warned)
+
+- `hooks/guardrails/prompt-injection-defender.sh` is a repo-owned copy of the upstream guardrails hook. It reads `tool_response` (string or object), answers with `hookSpecificOutput.additionalContext`, and drops the `\x..\x..` pattern that caused 8 of 11 false hits. It stays silent without jq. Bench on 7 days: 3 fires on 5819 tool results, all labelled false (reads of the defender's own source). The upstream copy fired 0 times, ever.
+- `scripts/fix-guardrails-defender.sh [--check]` installs it over the upstream file. It only replaces a known broken upstream version (sha256 `40762f36…`) or an older repo copy. Anything else is left alone with a warning, so an upstream change gets reviewed instead of being overwritten. Atomic, with a `.bak`. `install-guardrails.sh` runs it after every install.
+- 12 tests (`tests/test_fix_guardrails_defender.py`).
+
 ## 2026-11-01 — hook bench replays PostToolUse; prompt-injection-defender found dead
 
 - **PostToolUse replay:** each successful tool call becomes a PostToolUse event with the transcript's `toolUseResult` as `tool_response` (capped at 20k chars). PostToolUse hooks run only if listed in `post_tool_replay` in `config/hook-bench.json`, because most of them stage, index or sync. `--export` leaves these events out unless `--with-responses`: they carry file contents and command output, and bundles go to agy.
