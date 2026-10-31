@@ -237,6 +237,14 @@ SCRATCH_ALLOW = [
     ("cd-tmp-and-relative",  "cd /tmp/claude-1000/s/scratchpad && sed -i 's/a/b/' g.py && python3 g.py"),
     # a stripped /tmp target must not leave its `>` to bind the next argument
     ("stripped-target-keeps-redirect", "python3 p.py 'x > /tmp/r.txt' 'y; python3 scripts/hook_bench.py'"),
+    # hook bench false hits, 2026-11-01: a quoted heredoc body is not run by this shell,
+    # so its `for`, `S=$1` or Python code can't rebind the outer $S
+    ("var-heredoc-body-own-S", "S=/tmp/claude-1000/s; cat > $S/b.sh <<'EOF'\nS=$1\necho hi > $S/o.txt\nEOF\nbash $S/b.sh $S"),
+    ("var-heredoc-body-py-for", "S=/tmp/claude-1000/s; cat > $S/x.py <<'EOF'\nfor i in range(3):\n    print(i)\nEOF\npython3 $S/x.py"),
+    ("var-python-stdin-for", "S=/tmp/claude-1000/s; git show main:hooks/x.sh > $S/x.sh\npython3 - $S <<'EOF'\nfor v in 'ab': print(v)\nEOF"),
+    ("var-cat-body-reassigns", "S=/tmp/claude-1000/s; cat > $S/r.sh <<'EOF'\nS=/tmp/claude-1000/s\nuntil true; do sleep 1; done\nEOF\nchmod +x $S/r.sh"),
+    # an UNQUOTED body is expanded by this shell, with this shell's $S
+    ("var-unquoted-body-expands", "S=/tmp/claude-1000/s; bash <<EOF\necho x > $S/a.sh\nEOF"),
 ]
 
 
@@ -300,6 +308,16 @@ SCRATCH_ESCAPE_BLOCK = [
     ("cd-tmp-dotdot",         "cd /tmp/x && sed -i 's/a/b/' ../../opt/proj/R/scripts/g.py"),
     ("stripped-then-surface", "echo x > /tmp/a.txt && echo y > scripts/g.py"),
     ("semicolon-then-surface", "sed -i 's/a/b/' /tmp/x/g.py; sed -i 's/a/b/' scripts/h.py"),
+    # neighbours of the 2026-11-01 narrowing: a body read back INTO this shell rebinds $S
+    ("var-dot-brace-stdin",   "S=/tmp/x; { . /dev/stdin; } <<'EOF'\nS=/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-then-dot-stdin",    "S=/tmp/x; if true; then . /dev/stdin; fi <<'EOF'\nS=/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-source-stdin",      "S=/tmp/x; source /dev/stdin <<'EOF'\nS=/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-read-heredoc",      "S=/tmp/x; read S <<'EOF'\n/opt/proj/R/hooks\nEOF\necho x > $S/a.sh"),
+    ("var-eval-cat",          "S=/tmp/x; eval \"$(cat <<'EOF'\nS=/opt/proj/R/hooks\nEOF\n)\"\necho x > $S/a.sh"),
+    ("var-unquoted-arith",    "S=/tmp/x; cat > /tmp/n.txt <<EOF\n$((S=0))\nEOF\necho x > $S/a.sh"),
+    ("var-reassigned-after-body", "S=/tmp/x; cat > $S/x.py <<'EOF'\nfor i in x: pass\nEOF\nS=/opt/proj/R/hooks; echo x > $S/a.sh"),
+    # a quoted body run by bash keeps its own $S: not expanded, still scanned
+    ("var-quoted-body-to-bash", "S=/tmp/x; bash <<'EOF'\necho x > $S/a.sh\nEOF"),
 ]
 
 
