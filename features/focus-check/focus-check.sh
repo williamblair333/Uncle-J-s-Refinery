@@ -59,6 +59,13 @@ print("\n".join([
 ]))
 ' "$ESTATE" "$QUESTIONS")" || { warn "couldn't build the scoreboard"; exit 1; }
 
+# STANDARDS.md meta-question-rate: Bill's "why didn't you…" questions per session, with a
+# trend. Counts only — no prompt text reaches Telegram. A failure here must not cost the
+# scoreboard, so it degrades to a one-line note.
+META_LINE="$(python3 "$STACK_ROOT/scripts/meta_questions.py" --line 2>/dev/null)" \
+    || META_LINE="Meta-questions: counter failed (run: just meta-questions)"
+MESSAGE="$(printf '%s\n\n%s' "$MESSAGE" "$META_LINE")"
+
 if [ "$DRY_RUN" -eq 1 ]; then
     printf '%s\n' "$MESSAGE"
     exit 0

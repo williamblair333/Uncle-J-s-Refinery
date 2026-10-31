@@ -69,6 +69,10 @@ workaround-bench *args:
 check-bench *args:
     python3 scripts/check_bench.py {{args}}
 
+# Bill's meta-questions ("why didn't you…") per session per week, with the Monday trend line
+meta-questions *args:
+    python3 scripts/meta_questions.py {{args}}
+
 # repo scout: build the capability map once (review scout/map.md after)
 scout-seed *args:
     python3 scripts/scout/run.py seed {{args}}

@@ -1,8 +1,10 @@
 name: CI
 
 on:
+  # Every branch: PRs are opened on Gitea, which mirrors branches here, so a branch push is
+  # the only point where CI can run before the merge.
   push:
-    branches: [main, 'ci/**']
+    branches: ['**']
   pull_request:
 
 jobs:
