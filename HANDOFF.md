@@ -3,6 +3,12 @@
 
 ## NEXT SESSION — start here (updated 2026-11-01, second session end)
 
+11-01 late: token-guard.sh is versioned (`hooks/pre-mortem-guard/`, PR `fix/token-guard-versioned`) and no
+longer blocks token reads; `leaks_state` is empty. After merge, run install-reliability.sh's pre-mortem-guard
+section so `~/.claude/hooks/pre-mortem-guard/token-guard.sh` becomes a symlink, then
+`just hook-bench --hook token-guard --days 30` should show 0 fires (old copy: 2, both false).
+Left of `behaviour-bench-per-hook`: false-hit labels for skills.
+
 Merged #266–#270, all below. `behaviour-bench-per-hook` is still partial: PostToolUse is now replayed; left are
 false-hit labels for skills and token-guard (leaks_state: hardcoded log path). **Next:** finish those, or
 `skills-red-green`, or the PR-gate-on-Gitea gap. PostToolUse events stay out of `--export` bundles unless

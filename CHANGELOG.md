@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-01 — token-guard versioned, read false hits fixed
+
+- `token-guard.sh` moves into `hooks/pre-mortem-guard/` (install-reliability.sh symlinks it, like surface-write-guard). It was a real file in `~/.claude` that hardcoded the log path, so the hook bench couldn't replay it (`leaks_state`).
+- Reads are no longer blocked: `cat` left the write list (it writes only through a redirect, which is still caught) and python needs a write call. state/hook-blocks.log held about a dozen such blocks since June. Bench baseline (old copy, 30 days): 2 fires in 800, both labelled false.
+- Closed: the writer's call anywhere in a command exempted the whole command (`bash write-clearance-token.sh T && touch T`). Only its own call is exempt now, matched by realpath, not by the `/home/bill` spelling. Added `mv`, `ln`, `pathlib.write_text`, quoted and `&>`/`>|` redirects.
+- Patterns still span `;`/`&&`/`|`: a segment-local match misses `touch ';' T` (pre-mortem finding). Log honours `UNCLE_J_PROJ_ROOT` through `hook_log_append`. Tests: tests/test_token_guard.py; the old copy fails 7 of its cases.
+- The baseline replay of the old copy wrote 3 `session=bench-` lines into state/hook-blocks.log (left for Bill with the earlier 5).
+
 ## 2026-11-01 — session end
 
 - Merged #266 (STANDARDS.md parses again), #267 (hook bench replays PostToolUse), #268 (prompt-injection defender repaired; verified live), #269 (label), #270 (main host only). README's guardrails line said the defender "blocks"; it only warns, now corrected. ROADMAP tracks the unfiled upstream defender bug.
