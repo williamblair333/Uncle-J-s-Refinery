@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 — self-check: the "check yourself" pass runs before the turn ends, not when Bill asks
+
+- **Why:** Bill noticed that asking "check yourself" almost always turned up "I got something wrong". **`just check-bench`** (`scripts/check_bench.py`) measured it: transcripts back to 2026-08-02 hold 20 re-check prompts, 17 of them real, and **10 of 17 second passes found a real error**. Hand-labelled; the lexical admit-regex agrees 8/10 (precision and recall). Of the 10: 7 were facts about code, docs or systems stated without reading the source, 1 misread tool output, 1 skipped constraint, and 1 test of the easy property instead of fit. A scanner for "nothing exists"-type words would have caught about 1, so the fix forces the pass itself.
+- **`self-check` Stop hook** (`scripts/self_check.py`, `hooks/discipline/self-check.sh`, agy built, reviewed): it blocks once on replies of ≥1500 chars (excluding code blocks) and asks for evidence-backed corrections or a one-line "Checked: nothing to correct." It skips on `stop_hook_active`, `SELF_CHECK=off`, `claude -p` (sdk entrypoint) and short replies; `SELF_CHECK_MIN_CHARS` tunes the threshold. Blocks are logged to `~/.claude/state/self-check.jsonl` (no content). It's wired by `install-reliability.sh`, and auto-maintain exports `SELF_CHECK=off`.
+- **Threshold, from data:** 8 of the 10 erroneous answers were ≥1500 chars (2500 would catch 4). Cost: over the last 7 days of turns, 1500 fires on 44%, 2500 on 30%, 4000 on 11%. Each fire is one extra pass.
+- **Success measure:** with the hook live, Bill's manual "check yourself" should rarely find anything. Re-run `just check-bench` and compare post-deploy pairs with the 10/17 baseline.
+
 ## 2026-10-31 — expert bar: every project states what a senior practitioner of its field would have in place
 
 - **Why:** Bill's recurring meta-questions ("why didn't you…", "why did I have to ask", "is this the best approach") were replayed over 21 days of transcripts: about 17 real ones across 9 projects. The cause: no project wrote down what good looks like in its domain, so each session works the next ticket and expertise only shows up when asked. Retro and proposal came from the mtw2 session.

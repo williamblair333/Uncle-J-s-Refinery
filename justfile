@@ -65,6 +65,10 @@ offload *args:
 workaround-bench *args:
     python3 scripts/workaround_scan.py --replay {{args}}
 
+# self-check bench: how often "check yourself" turns up a real correction (all transcripts)
+check-bench *args:
+    python3 scripts/check_bench.py {{args}}
+
 # repo scout: build the capability map once (review scout/map.md after)
 scout-seed *args:
     python3 scripts/scout/run.py seed {{args}}
