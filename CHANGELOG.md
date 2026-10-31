@@ -11,6 +11,7 @@
 - **hook bench:** the sandbox HOME now mirrors the real one by symlinks (except `~/.claude/state`), so `~` paths resolve as they did live. A test pins that removing the sandbox unlinks the symlinks instead of following them. 23 fires labelled. CI (a machine with no `~/.claude`) caught the bench crashing when that dir is missing; fixed, and the tests now pass with an empty HOME.
 - After the fixes, same 7 days: grep-guard 33 → 28 fires, surface-write-guard 10 → 8, skill-name-trigger 34 → 28; no labelled-false fires left in either guard.
 - `docs/research-later.md` started: topics Bill flags for later (Manifold-Augmented Graph Embedding, vectorfall).
+- Session end: the next session starts by labelling the 35 remaining unlabelled hook-bench fires (HANDOFF). Guard invariants and closed paths recorded in the memweave audit baselines.
 
 ## 2026-10-31 — hook replay bench (`just hook-bench`)
 
