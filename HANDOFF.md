@@ -7,8 +7,9 @@
 prints Refinery's top gaps. `full-suite-in-ci` done (#255; CI green on main). Gemini's review of STANDARDS/PQS checked in
 review/2026-10-31-gemini-standards-pqs-review.md (7 confirmed, 4 nuance, 4 wrong): standards_check now reads a leading path +
 notes; mtw2 STANDARDS.md parses again (mtw2 #324). Open from it: PR gate never fires on Gitea-API PRs (logged on
-`clean-machine-gate`). **Next: `meta-question-rate`** — branch `feat/meta-question-rate`, scripts/meta_questions.py + tests
-uncommitted, 32 tests pass; it undercounts (0–6/week), tune patterns on real prompts, then the Monday line. Use `just skills`, not features/skill-manager/install.sh, until
+`clean-machine-gate`). `meta-question-rate` done: `just meta-questions` (precision 23/27; recall an estimate), line in Monday focus-check (first live send
+Mon 11-02 08:00 — check it arrived). CI now runs on every branch push. **Next: top gap from session start**
+(`behaviour-bench-per-hook` / `skills-red-green`), or the PR-gate-on-Gitea gap. Use `just skills`, not features/skill-manager/install.sh, until
 `installers-idempotent` is fixed (it rewrites the tracked .claude/settings.json).
 
 (older 10-30 notes below)

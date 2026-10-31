@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 — meta-question rate in the Monday report; CI on every branch
+
+- **`scripts/meta_questions.py`** (`just meta-questions`) counts Bill's meta-questions ("why didn't you…", "why did I have to ask", "is this the best approach", "you should have…") per session per ISO week, from transcripts. agy wrote it to tests I wrote first. The patterns were then tuned on real prompts. The first version hit 12 of 76 "why"-style candidate prompts since W40. The tuned one hits 29 of 78 (the sample grew in between), against an estimated 34 real meta-questions; only the W43–W44 hits were read one by one. Precision is 23 of 27 on W43–W44, and the 3 false hits (an instruction, a quoted phrase, a pasted old exchange) are now test cases. Quoted phrases and pasted `❯ … ●` exchanges don't count.
+- The Monday focus-check Telegram message gets one line: last week's count per session against the 4 weeks before. If the counter fails, a one-line note replaces it and the scoreboard still goes out. Only counts are sent, never prompt text. Today's line reads: 13 in 225 sessions (0.06/session), 4-week average 0.05, flat.
+- CI runs on pushes to every branch. PRs are opened on Gitea, which mirrors branches to GitHub, so a branch push is the only point where CI can run before a merge. #256 merged with no pre-merge CI run.
+- `meta-question-rate` marked done.
+
 ## 2026-10-31 — standards checker reads a leading path; Gemini review checked
 
 - Checked Gemini's analysis of Parley's STANDARDS.md, expert-bar and the Product Quality System against the code: 7 confirmed, 4 confirmed with nuance, 4 wrong, 2 unverified. Write-up in `review/2026-10-31-gemini-standards-pqs-review.md`.
