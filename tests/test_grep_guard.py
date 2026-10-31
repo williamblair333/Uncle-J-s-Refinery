@@ -569,7 +569,7 @@ ANALYZER_ALLOW = [
     "command -v cat",
     # hook bench false hits, 2026-10-31: `cd` into a directory that exists is not "may fail"
     "cd /tmp; grep -rn foo .",
-    "cd ~/.claude/projects; grep -m2 -o 'hook error' -r --include=*.jsonl . | head -3",
+    "cd /usr; grep -m2 -o 'hook error' -r --include=*.jsonl . | head -3",  # exists on every host
     # a function that reads logs must not taint a later, unrelated script run
     "c(){ cat state/hook-blocks.log | grep -c x; }; b=$(c); python3 scripts/hook_bench.py > /tmp/r.txt",
     "snap(){ wc -c state/hook-blocks.log; }; before=$(snap); time python3 scripts/hook_bench.py | tail -70",

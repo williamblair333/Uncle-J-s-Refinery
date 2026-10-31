@@ -139,6 +139,7 @@ def test_sandbox_removal_never_follows_home_symlinks(tmp_path):
 
 
 def test_sandbox_mirrors_home_except_state():
+    had_claude = (Path.home() / ".claude").is_dir()
     box, env = hb.make_sandbox()
     try:
         assert env["HOME"] == str(box)
@@ -147,7 +148,7 @@ def test_sandbox_mirrors_home_except_state():
     finally:
         import shutil
         shutil.rmtree(box)
-    assert (Path.home() / ".claude").is_dir()
+    assert (Path.home() / ".claude").is_dir() == had_claude   # removal left HOME as it was
 
 
 def test_labels_roundtrip_and_precision(tmp_path):

@@ -11,7 +11,8 @@ heredoc (e.g. a commit message) as a shell function; skill-name-trigger on paste
 when a heredoc body rebinds `$S`; label the 28 grep-guard and 7 "Category:" trigger fires. token-guard.sh
 (global-only) hardcodes the hook-blocks log and flagged `ls /tmp/premortem-cleared-*` as a token write: move it
 into the repo, then fix. 5 `session=bench-` lines in state/hook-blocks.log are pollution from before the dcup fix
-(left for Bill). Research list: `docs/research-later.md`.
+(left for Bill). Research list: `docs/research-later.md`. Run `just hook-bench` tests with an empty HOME too:
+CI has no `~/.claude`, which is how #259's first CI run failed.
 
 10-31 end: #251–#253 merged (think-wider, expert-bar ideas, STANDARDS.md, forget-at-will idea). Session start now
 prints Refinery's top gaps. `full-suite-in-ci` done (#255; CI green on main). Gemini's review of STANDARDS/PQS checked in

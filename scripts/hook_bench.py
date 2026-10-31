@@ -256,12 +256,13 @@ def make_sandbox() -> tuple[Path, dict]:
     # must see that it exists), but give ~/.claude/state a fresh dir: that's where hooks
     # write. Every other ~/.claude entry and every other HOME entry is a symlink.
     home = Path.home()
-    for real in home.iterdir():
+    for real in (home.iterdir() if home.is_dir() else []):
         if real.name != ".claude":
             (box / real.name).symlink_to(real)
-    for real in (home / ".claude").iterdir():
-        if real.name != "state":
-            (claude / real.name).symlink_to(real)
+    if (home / ".claude").is_dir():          # absent on a clean machine (CI)
+        for real in (home / ".claude").iterdir():
+            if real.name != "state":
+                (claude / real.name).symlink_to(real)
     (box / "proj").mkdir()  # exists but empty: hook-blocks.log appends fail harmlessly
     env = {**os.environ, "HOME": str(box), "UNCLE_J_PROJ_ROOT": str(box / "proj"),
            "SURFACE_GUARD_LOG": str(box / "surface.log"),
