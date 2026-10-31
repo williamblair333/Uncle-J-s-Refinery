@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-10-31 — install-reliability.sh completes again (ralph-wiggum → ralph-loop)
+
+- The plugin was renamed upstream to `ralph-loop` (already installed). The installer kept asking for `ralph-wiggum`, and under `set -e` the failed install aborted the whole script, so every post-merge run reported "install-reliability.sh failed". Name fixed (installer, README, RELIABILITY.md), and both plugin installs now fall through to their own `warn` line instead of killing the script.
+
 ## 2026-10-31 — self-check: the "check yourself" pass runs before the turn ends, not when Bill asks
 
 - **Why:** Bill noticed that asking "check yourself" almost always turned up "I got something wrong". **`just check-bench`** (`scripts/check_bench.py`) measured it: transcripts back to 2026-08-02 hold 20 re-check prompts, 17 of them real, and **10 of 17 second passes found a real error**. Hand-labelled; the lexical admit-regex agrees 8/10 (precision and recall). Of the 10: 7 were facts about code, docs or systems stated without reading the source, 1 misread tool output, 1 skipped constraint, and 1 test of the easy property instead of fit. A scanner for "nothing exists"-type words would have caught about 1, so the fix forces the pass itself.

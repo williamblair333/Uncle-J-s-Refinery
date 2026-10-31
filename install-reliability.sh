@@ -343,18 +343,18 @@ else
     ok "claude-guardrails cloned"
 fi
 
-# ── Claude plugins (superpowers, ralph-wiggum) ───────────────────────────────
-step "Installing Claude plugins (superpowers, ralph-wiggum)"
+# ── Claude plugins (superpowers, ralph-loop) ───────────────────────────────
+step "Installing Claude plugins (superpowers, ralph-loop)"
 if ! has claude; then
     warn "claude CLI not found — plugins NOT installed. After installing Claude Code, run:"
     warn "  claude plugin marketplace add anthropics/claude-code"
     warn "  claude plugin install superpowers@claude-plugins-official --scope user"
-    warn "  claude plugin install ralph-wiggum@claude-code-plugins --scope user"
+    warn "  claude plugin install ralph-loop@claude-code-plugins --scope user"
 else
     _mkts_json="${CLAUDE_DIR}/plugins/known_marketplaces.json"
     _plugins_json="${CLAUDE_DIR}/plugins/installed_plugins.json"
 
-    # Register claude-code-plugins marketplace (for ralph-wiggum)
+    # Register claude-code-plugins marketplace (for ralph-loop)
     if [ ! -f "$_mkts_json" ] || ! jq -e '.["claude-code-plugins"]' "$_mkts_json" >/dev/null 2>&1; then
         claude plugin marketplace add anthropics/claude-code >/dev/null 2>&1 \
             && ok "marketplace registered: claude-code-plugins" \
@@ -376,22 +376,24 @@ else
     _sp_user=0
     [ -f "$_plugins_json" ] && _sp_user=$(jq -r '(.plugins["superpowers@claude-plugins-official"] // []) | map(select(.scope == "user")) | length' "$_plugins_json" 2>/dev/null || echo 0)
     if [ "$_sp_user" -eq 0 ]; then
-        claude plugin install superpowers@claude-plugins-official --scope user >/dev/null 2>&1
+        claude plugin install superpowers@claude-plugins-official --scope user >/dev/null 2>&1 || true
         _sp_verify=$(jq -r '(.plugins["superpowers@claude-plugins-official"] // []) | map(select(.scope == "user")) | length' "$_plugins_json" 2>/dev/null || echo 0)
         [ "$_sp_verify" -gt 0 ] && ok "plugin installed (user scope): superpowers" || warn "FAIL: superpowers install did not register — run /plugin install superpowers@claude-plugins-official manually"
     else
         ok "plugin already installed (user scope): superpowers"
     fi
 
-    # Install ralph-wiggum at user scope if not already
+    # Install ralph-loop at user scope if not already
     _rw_user=0
-    [ -f "$_plugins_json" ] && _rw_user=$(jq -r '(.plugins["ralph-wiggum@claude-code-plugins"] // []) | map(select(.scope == "user")) | length' "$_plugins_json" 2>/dev/null || echo 0)
+    [ -f "$_plugins_json" ] && _rw_user=$(jq -r '(.plugins["ralph-loop@claude-code-plugins"] // []) | map(select(.scope == "user")) | length' "$_plugins_json" 2>/dev/null || echo 0)
     if [ "$_rw_user" -eq 0 ]; then
-        claude plugin install ralph-wiggum@claude-code-plugins --scope user >/dev/null 2>&1
-        _rw_verify=$(jq -r '(.plugins["ralph-wiggum@claude-code-plugins"] // []) | map(select(.scope == "user")) | length' "$_plugins_json" 2>/dev/null || echo 0)
-        [ "$_rw_verify" -gt 0 ] && ok "plugin installed (user scope): ralph-wiggum" || warn "FAIL: ralph-wiggum install did not register — run /plugin install ralph-wiggum@claude-code-plugins manually"
+        # `|| true`: under set -e a failed install (e.g. a renamed plugin) aborted the whole
+        # installer before the warn below could say why; ralph-wiggum → ralph-loop did, 2026-10-31
+        claude plugin install ralph-loop@claude-code-plugins --scope user >/dev/null 2>&1 || true
+        _rw_verify=$(jq -r '(.plugins["ralph-loop@claude-code-plugins"] // []) | map(select(.scope == "user")) | length' "$_plugins_json" 2>/dev/null || echo 0)
+        [ "$_rw_verify" -gt 0 ] && ok "plugin installed (user scope): ralph-loop" || warn "FAIL: ralph-loop install did not register — run /plugin install ralph-loop@claude-code-plugins manually"
     else
-        ok "plugin already installed (user scope): ralph-wiggum"
+        ok "plugin already installed (user scope): ralph-loop"
     fi
 fi
 

@@ -568,6 +568,6 @@ rm -rf /opt/proj/Uncle-J-s-Refinery/claude-guardrails
 
 # Remove Superpowers / Ralph
 # Inside claude: /plugin uninstall superpowers
-# Inside claude: /plugin uninstall ralph-wiggum
+# Inside claude: /plugin uninstall ralph-loop
 ```
 

@@ -312,7 +312,7 @@ If `claude` is not on your PATH when `install-reliability.sh` runs, install the 
 ```
 /plugin marketplace add anthropics/claude-code
 /plugin install superpowers@claude-plugins-official --scope user
-/plugin install ralph-wiggum@claude-code-plugins --scope user
+/plugin install ralph-loop@claude-code-plugins --scope user
 /reload-plugins
 ```
 
