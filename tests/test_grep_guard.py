@@ -406,6 +406,8 @@ GLOB_ALLOW = [
     "grep -rn foo README.md",                # -r on a plain non-source file
     "grep -n foo docs/*.md",
     "cat docs/*",
+    "grep -rn foo docs",                     # a repo dir holding no source (2026-10-31 bench)
+    "grep -rn foo many docs/",               # 205 .txt files is under the 2000-file scan cap
 ]
 GLOB_DENY = [
     "grep -rn foo scripts/*.py",             # glob of source
@@ -417,6 +419,8 @@ GLOB_DENY = [
     "grep -rn foo scripts/tool.py",          # a source file named directly under -r
     "grep -rn foo .",                        # the cwd itself
     "grep -rn foo nomatch/*.md",             # no match: the literal rule, never looser
+    "grep -rn foo dir.md",                   # a dir holding a .py file
+    "grep -rn foo scripts",                  # a source dir
 ]
 
 
@@ -526,6 +530,19 @@ ANALYZER_DENY = [
     "f(){ cat \"$1\"; ; python3 scripts/referee.py",         # unbalanced body: whole-text check
     f"cd {REPO}/scripts; cat referee.py",                    # existing dir, but in the repo
     "cd scripts; grep -rn foo .",                            # relative existing dir in the repo
+    # neighbours of the second 2026-10-31 narrowing (labelled bench fires) that must stay denied
+    "x=$(cat scripts/referee.py)",                           # read inside a substitution
+    "cat scripts/referee.py > /tmp/out",                     # read plus redirect is still a read
+    "grep -n foo scripts/referee.py | head",
+    "S=scripts; cat $S/referee.py",                          # literal var into the repo
+    "p(){ just lua \"$1\" | sed -n '$p'; }; cat scripts/referee.py",   # a function doesn't hide a later read
+    "rd(){ sed -n 1,5p \"$1\"; }; rd scripts/referee.py",    # source path as a call argument
+    "for f in a.py b.py; do cat $f; done",                   # loop over source names, cwd = repo
+    "for f in scripts/*; do cat \"$f\"; done",               # non-allowed glob in the repo
+    "find scripts | while read f; do cat \"$f\"; done",      # names from output, cwd = repo
+    f"for f in x y; do cat {REPO}/scripts/$f.py; done",      # literal prefix inside the repo
+    "cat /tmp/$X/../../opt/proj/Uncle-J-s-Refinery/scripts/referee.py",  # .. after the unknown part
+    "grep -rn foo $D",                                       # unknown dir, cwd = repo
 ]
 
 
@@ -573,6 +590,19 @@ ANALYZER_ALLOW = [
     # a function that reads logs must not taint a later, unrelated script run
     "c(){ cat state/hook-blocks.log | grep -c x; }; b=$(c); python3 scripts/hook_bench.py > /tmp/r.txt",
     "snap(){ wc -c state/hook-blocks.log; }; before=$(snap); time python3 scripts/hook_bench.py | tail -70",
+    # labelled hook-bench false hits, second pass 2026-10-31
+    # (1) "function" as text, not a keyword
+    "printf 'no matching\\nfunction call\\n' > /tmp/m.txt; git commit -F /tmp/m.txt",
+    "git commit -F - <<'EOF'\nfix: a function wrapping sed\nEOF",
+    # (2) a real function whose body reads only stdin; Lua text with `..c.` is not a path
+    "p(){ just lua \"$1\" 2>&1 | sed -n '$p'; }; p 'return at(c)..\" mp=\"..c.movePoints'",
+    "pt(){ just lua \"$1\" 4 2>&1|tail -1; }; t=$(pt 'return M.qa.free_tile(1, 2)')",
+    "L(){ python3 scripts/hook_bench.py --label \"$@\" || echo \"FAIL $1\"; }; L k1 false 'greps and sed -n notes'",
+    # (3) loop over allowed globs, dynamic tails under a dir outside the repo
+    "cd /tmp && for f in qa-*.log; do tail -n 4 \"$f\"; done",
+    "S=/tmp/gg-scratch; for f in $S/qa-*.log $S/field.log; do head -c 19 \"$f\"; done",
+    "for f in a.sh b.sh; do grep -n x /usr/share/gg-none/$f; done",
+    "cd /usr && f=$(ls | head -1); rg -o -m1 foo \"$f\"",
 ]
 
 

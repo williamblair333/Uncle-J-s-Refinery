@@ -360,6 +360,37 @@ def function_reach(text):
     return "\n".join(parts)
 
 
+# A whole word that is a path to a source file (`x.py`, `scripts/a.sh`), not Lua or
+# Python text that merely contains `.c` or `.h`.
+SRC_PATH = re.compile(r"^[\w.~/+@%-]*\.(py|sh|bash|js|mjs|cjs|jsx|ts|tsx|go|rs|rb|php|java|c|h|cpp|hpp|swift|kt|lua|pl)$")
+
+
+def function_parts(text):
+    """(bodies, call arguments + assignment values) for every defined function, or None
+    when a body can't be cut out (same rules as function_reach)."""
+    whole = function_reach(text)
+    if whole is None:
+        return None
+    bodies = []
+    for m in FUNC_NAME.finditer(text):
+        i = m.end()
+        opener, closer = text[i], "}" if text[i] == "{" else ")"
+        depth, j = 0, i
+        while j < len(text):
+            if text[j] == opener:
+                depth += 1
+            elif text[j] == closer:
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        bodies.append(text[i + 1:j])
+    rest = whole
+    for b in bodies:
+        rest = rest.replace(b, " ", 1)
+    return "\n".join(bodies), rest
+
+
 def base(word):
     b = word.replace("\\", "/").rsplit("/", 1)[-1]
     return b[:-4] if b.lower().endswith(".exe") else b
@@ -1012,9 +1043,24 @@ class Analyzer:
                 return
             if DYN in path:
                 # Unknown at guard time. A source extension, or a recursive walk of an
-                # unknown place, is denied; anything else stays allowed (unknowable).
+                # unknown place, is judged by the literal directory it starts in (P):
+                # under a dir that is outside the repo and holds no repo, it can't read
+                # repo source (`~/.claude/hooks/x/$f`, `$f` after `cd /tmp/…`). With no
+                # known starting dir, or a `..` after the unknown part, deny.
                 if kind != "F" or SRC_EXT.search(path.replace(DYN, "")):
-                    self.records.append(("D", "", "dynamic path"))
+                    head, tail = path.split(DYN, 1)
+                    pdir = head if (head == "" or head.endswith("/")) else posixpath.dirname(head)
+                    if pdir == "~" or pdir.startswith("~/"):
+                        pdir = (HOME + pdir[1:]) if HOME else ""
+                    if ".." in re.split(r"[/\x00]", tail):
+                        self.records.append(("D", "", "dynamic path"))
+                    elif pdir.startswith("/"):
+                        self.records.append(("P", "", pdir))
+                    elif pdir.startswith("~") or not cwds or "" in cwds:
+                        self.records.append(("D", "", "dynamic path"))
+                    else:
+                        for c in sorted(cwds):
+                            self.records.append(("P", c, pdir or "."))
                 return
             if path.startswith(("/", "~")):
                 cwds = {""}
@@ -1101,16 +1147,26 @@ class Analyzer:
     def run(self, text, depth, state):
         lx = Lexer(text, depth)
         items = lx.run()
-        alias = re.search(r"(^|[;&|(\s])(alias\s|shopt\s+-s\s+expand_aliases)", text)
-        func = lx.funcdef or re.search(r"(^|[;&|(\s])function\s+\w", text)
+        # Keywords count only in command position, as the lexer saw them: "function" or
+        # "alias" inside a quoted commit message or a heredoc body is data (2026-10-31
+        # bench: 4 false hits on commit/PR text).
+        lead = [it[1]["words"][0] for it in items if it[0] == "cmd" and it[1]["words"]]
+        alias = any(w in ("alias", "shopt") for w in lead)
+        func = lx.funcdef or "function" in lead
         if alias or func:
             # A function/alias runs code under a name the guard can't follow. Aliases, and
-            # functions whose bodies can't be cut out, get the whole-text check. Otherwise
-            # only the text that can reach a function's read counts: its body, the arguments
-            # it's called with, and variable assignments (2026-10-31: a function reading
-            # state/ logs denied an unrelated `python3 scripts/x.py` later in the command).
-            reach = None if alias else function_reach(text)
-            if loose(text if reach is None else reach):
+            # functions whose bodies can't be cut out, get the whole-text check. A body is
+            # walked below like any command, so a literal source read inside it is judged
+            # there; what the walk can't see is a source path handed in as a call argument
+            # (`rd(){ cat "$1"; }; rd x.py`). Deny when a body reads and a call argument or
+            # assignment names source (2026-10-31: `p(){ just lua "$1" | sed -n '$p'; }`
+            # denied on `..c.moveTo` in Lua call text).
+            reach = None if alias else function_parts(text)
+            if reach is None:
+                if loose(text):
+                    self.emit("D", None, "function or alias wrapping a read")
+            elif LOOSE_TOOL.search(re.sub(r"[\\\"'\n]", "", reach[0])) and \
+                    any(SRC_PATH.search(w) for w in re.split(r"[\s\"'=]+", reach[1])):
                 self.emit("D", None, "function or alias wrapping a read")
             state = State({""} | state.cwds, {k: None for k in state.vars})
         self.walk(items, depth, state, text)
@@ -1189,7 +1245,9 @@ class Analyzer:
         if len(raw) >= 2 and raw[0] in ("for", "select"):
             succ = cur.copy()
             items = [expand(w, cur) for w in raw[3:]] if len(raw) > 2 and raw[2] == "in" else [DYN]
-            risky = any(DYN in w or SRC_EXT.search(w) or re.search(r"[*?\[]", w) for w in items)
+            # A glob of allowed files (`qa-*.log`, `/tmp/…/*`) can't name source.
+            risky = any(DYN in w or SRC_EXT.search(w)
+                        or (re.search(r"[*?\[]", w) and not ALLOWED.search(w)) for w in items)
             succ.vars[raw[1]] = RISKY if risky else None
             return succ, False
         words = [x for w in raw for x in brace_expand(expand(w, cur))]
@@ -1383,12 +1441,35 @@ judge_recursive() {
     reads_repo_source "$probe" recursive
     return
   fi
+  dir_has_no_source "$(resolve_path "$probe")" && return 1
   in_repo "$probe" || is_repo_ancestor "$probe"
 }
 
 judge_cwd() {
   [[ -z "$CWD_REAL" ]] && return 0
   in_repo "$CWD_REAL" || is_repo_ancestor "$CWD_REAL"
+}
+
+# P: a path whose tail is computed at run time, judged by the literal dir it starts in.
+# Deny when that dir is in the repo or holds one; an allowed location, or a dir outside
+# every repo, can't yield repo source.
+judge_prefix() {
+  local tok="$1" probe
+  allowed_loc "$tok" && return 1
+  probe=$(abs_of "$tok")
+  [[ -z "$probe" ]] && return 0
+  allowed_loc "$probe" && return 1
+  in_repo "$probe" || is_repo_ancestor "$probe"
+}
+
+# A directory in the repo holding no source file (docs/specs of .md) can be searched
+# without reading source. Bounded: past the cap, assume it holds source.
+dir_has_no_source() {
+  local d="$1" n
+  [[ -d "$d" ]] || return 1
+  is_repo_ancestor "$d" && return 1
+  n=$(find "$d" -type f 2>/dev/null | head -n 2001 | grep -cE "$SRC_EXT")
+  [[ $(find "$d" -type f 2>/dev/null | head -n 2001 | wc -l) -le 2000 && "$n" -eq 0 ]]
 }
 
 deny=0
@@ -1411,9 +1492,13 @@ if command -v python3 >/dev/null 2>&1; then
         F) judge_file "$r_path" && deny=1 ;;
         R) judge_recursive "$r_path" && deny=1 ;;
         C) judge_cwd && deny=1 ;;
+        P) judge_prefix "$r_path" && deny=1 ;;
         *) deny=1 ;;                         # unknown record: fail closed
       esac
-      [[ $deny -eq 1 ]] && break
+      if [[ $deny -eq 1 ]]; then
+        [[ -n "${GREP_GUARD_DEBUG:-}" ]] && echo "grep-guard: record=$r_kind cwd=$r_cwd path=$r_path" >&2
+        break
+      fi
     done <<< "$RECORDS"
     CWD_REAL="$SESSION_CWD_REAL"
   fi

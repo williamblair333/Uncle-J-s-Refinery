@@ -21,3 +21,54 @@
 {"key": "d7a414248bb9", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
 {"key": "7c3df83a1d7b", "verdict": "false", "note": "pasted STANDARDS doc names skills; Bill asked to analyze, not invoke", "ts": "2026-10-31"}
 {"key": "1cbbdea98fce", "verdict": "false", "note": "Bill quoted my message naming expert-bar; asked for an explanation", "ts": "2026-10-31"}
+{"key": "3253bcd640cb", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "23248988a5fa", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "774bf3d0dccd", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "30a87d2c5a10", "verdict": "true", "note": "Bill typed just-do-it", "ts": "2026-10-31"}
+{"key": "255751ee7375", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "2cc385e3c040", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "33da98b8be0a", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "df2265bb4647", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "9db09d73b0cc", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "81bcd64afacd", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "5e804407de32", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "672f72779788", "verdict": "false", "note": "scout pick_prompt (scripted claude -p) lists every installed skill in its inventory", "ts": "2026-10-31"}
+{"key": "30ab2c637c0a", "verdict": "true", "note": "reads repo source", "ts": "2026-10-31"}
+{"key": "83d3985703c4", "verdict": "true", "note": "searches repo source", "ts": "2026-10-31"}
+{"key": "137c9186dabe", "verdict": "true", "note": "searches repo source", "ts": "2026-10-31"}
+{"key": "e0f73644399b", "verdict": "true", "note": "reads repo source", "ts": "2026-10-31"}
+{"key": "3ee43af2d5d2", "verdict": "true", "note": "searches repo source", "ts": "2026-10-31"}
+{"key": "728701b5affb", "verdict": "true", "note": "reads scripts/probe.sh", "ts": "2026-10-31"}
+{"key": "91b3c670a049", "verdict": "true", "note": "line range of lua/parley_bridge.lua", "ts": "2026-10-31"}
+{"key": "09dee5f4877d", "verdict": "true", "note": "searches hooks/ source", "ts": "2026-10-31"}
+{"key": "d8abab6bfddf", "verdict": "true", "note": "searches parley/config.py", "ts": "2026-10-31"}
+{"key": "aed08bdde7b0", "verdict": "true", "note": "searches scripts/crash_watch.sh", "ts": "2026-10-31"}
+{"key": "345a13d35bbc", "verdict": "true", "note": "line range of a test file (new worktree, unindexed)", "ts": "2026-10-31"}
+{"key": "e47be5d79a3c", "verdict": "true", "note": "recursive search across scripts/", "ts": "2026-10-31"}
+{"key": "f976d0fbe29f", "verdict": "false", "note": "scratchpad/tmp task logs and game dir files", "ts": "2026-10-31"}
+{"key": "3581a3176bac", "verdict": "false", "note": "scratchpad task output via $S variable", "ts": "2026-10-31"}
+{"key": "48c16cc14323", "verdict": "false", "note": "scratchpad logs via $S variable", "ts": "2026-10-31"}
+{"key": "c8eef3c54d21", "verdict": "false", "note": "cd into scratchpad, logs only", "ts": "2026-10-31"}
+{"key": "50962af35a6a", "verdict": "false", "note": "cd into scratchpad, logs only", "ts": "2026-10-31"}
+{"key": "e8805e7ede2f", "verdict": "false", "note": "cd into scratchpad, logs only", "ts": "2026-10-31"}
+{"key": "7522efbccc0b", "verdict": "false", "note": "write: printf commit message", "ts": "2026-10-31"}
+{"key": "d545554f0590", "verdict": "false", "note": "write: python heredoc edit", "ts": "2026-10-31"}
+{"key": "5ce90e414e10", "verdict": "false", "note": "write: python heredoc edit in new worktree", "ts": "2026-10-31"}
+{"key": "236d94b8979e", "verdict": "false", "note": "write: python heredoc edit of CHANGELOG", "ts": "2026-10-31"}
+{"key": "33c531eb3022", "verdict": "false", "note": "runs just lua, reads no file", "ts": "2026-10-31"}
+{"key": "aeb5bdaa19ee", "verdict": "false", "note": "runs just lua, reads no file", "ts": "2026-10-31"}
+{"key": "ec6e7a3aac4a", "verdict": "false", "note": "git add/commit, reads no file", "ts": "2026-10-31"}
+{"key": "e7e46fc3ea56", "verdict": "false", "note": "just test + push, reads no file", "ts": "2026-10-31"}
+{"key": "22641f1d5db7", "verdict": "false", "note": "counts conflict markers in working tree; index copy cannot answer", "ts": "2026-10-31"}
+{"key": "95c43e0c339b", "verdict": "false", "note": "find in game install dir and runs/, not repo source", "ts": "2026-10-31"}
+{"key": "cd9adbdf3903", "verdict": "false", "note": "runs/qa report .md files (run output)", "ts": "2026-10-31"}
+{"key": "4febb3080941", "verdict": "false", "note": "docs/*.md and HANDOFF.md, non-source", "ts": "2026-10-31"}
+{"key": "15875f8b6936", "verdict": "false", "note": "~/.claude/hooks installed copies, outside repo", "ts": "2026-10-31"}
+{"key": "440a408f364c", "verdict": "true", "note": "cat of a hook source file", "ts": "2026-10-31"}
+{"key": "7e5aa114aa68", "verdict": "true", "note": "second command searched skill_name_trigger.py source", "ts": "2026-10-31"}
+{"key": "9b7e47fdaa14", "verdict": "false", "note": "cd ~ into transcripts outside repo; tilde path not resolved", "ts": "2026-10-31"}
+{"key": "ee0d987fe451", "verdict": "false", "note": "label notes in quoted args contain grep/sed words; no file read", "ts": "2026-10-31"}
+{"key": "22641f1d5db7", "verdict": "true", "note": "greps runner.py source (conflict-marker count is still a source search)", "ts": "2026-10-31"}
+{"key": "d545554f0590", "verdict": "true", "note": "ends with a grep -c on lua/parley_bridge.lua source", "ts": "2026-10-31"}
+{"key": "5ce90e414e10", "verdict": "true", "note": "ends with grep -n over tests/*.py", "ts": "2026-10-31"}
+{"key": "5ce6c909953f", "verdict": "true", "note": "greps lua/parley_bridge.lua source", "ts": "2026-10-31"}

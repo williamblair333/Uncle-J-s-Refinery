@@ -52,6 +52,9 @@ def is_from_bill(prompt):
                 or head.startswith("This session is being continued from a previous conversation"))
 
 
+MAX_NAMED = 3
+
+
 def main():
     try:
         data = json.load(sys.stdin)
@@ -61,7 +64,9 @@ def main():
         names = named_skills(prompt, installed_skills())
     except Exception:
         return 0
-    if not names:
+    # More than MAX_NAMED names is an inventory (a scripted prompt pasting the skill list,
+    # e.g. the repo scout's judge), not Bill asking for those skills.
+    if not names or len(names) > MAX_NAMED:
         return 0
     listed = ", ".join(names)
     msg = (f"The user named skill(s): {listed}. Invoke each one with the Skill tool "
