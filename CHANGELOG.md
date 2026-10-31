@@ -4,8 +4,8 @@
 
 ## 2026-10-31 — CI runs the whole pytest suite
 
-- CI listed 20 of 67 test files by hand, one job each, so new test files never ran there. One `test-suite` job now does a full `uv sync --inexact` and runs `pytest tests`, the same run as `just test` (2708 pass, 4 skip locally). jscrub's non-pytest unit tests and audit keep their own job.
-- CI had failed 60 runs in a row on one shellcheck error: SC1087 in `global-skills/wizard/template.sh`, where `$e[Enter…` read as an array index. Now `${e}`.
+- CI listed 19 of the 67 `tests/*.py` files by hand, one job each, so new test files never ran there. One `test-suite` job now does a full `uv sync --inexact` and runs `pytest tests`, the same run as `just test` (2708 pass, 4 skip locally). jscrub's non-pytest unit tests and audit keep their own job.
+- CI had failed at least its last 60 runs on one shellcheck error: SC1087 in `global-skills/wizard/template.sh`, where `$e[Enter…` read as an array index. Now `${e}`.
 - Pushes to `ci/**` branches trigger CI, so a workflow change runs on GitHub before it merges.
 
 ## 2026-10-31 — session end
