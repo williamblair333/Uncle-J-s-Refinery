@@ -18,6 +18,7 @@ except Exception:
   else
     printf 'product-quality: PRODUCT.md present, no gate run yet for this project\n'
   fi
+  python3 "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../standards_check.py" --summary "$repo_root" 2>/dev/null || true
   exit 0
 fi
 

@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-10-31 — expert bar: every project states what a senior practitioner of its field would have in place
+
+- **Why:** Bill's recurring meta-questions ("why didn't you…", "why did I have to ask", "is this the best approach") were replayed over 21 days of transcripts: about 17 real ones across 9 projects. The cause: no project wrote down what good looks like in its domain, so each session works the next ticket and expertise only shows up when asked. Retro and proposal came from the mtw2 session.
+- **`expert-bar` skill** (`global-skills/expert-bar/`): name the goal, the field and its senior seats, list that field's practices first (not the repo's habits), check each against the repo, rank by impact, and write `STANDARDS.md` (one yaml block: `phase` plus `standards` items with id/area/bar/why/status/evidence). The first instance is `/opt/proj/games/mtw2/STANDARDS.md` (18 items).
+- **`features/product-quality/standards_check.py`** (agy built against `tests/test_standards_check.py`, reviewed): `--check` flags missing fields, bad statuses, and false claims (a done/partial item whose evidence path or `just` recipe doesn't exist); `--summary` gives the open-gap count and phase plus the top 5 gaps by rank. It degrades to one line without PyYAML. `product-md-check.sh` (SessionStart) now prints it, so every session in a project with PRODUCT.md opens with the top gaps or a nudge to write the bar.
+- **Workaround scan:** `hand-feed` matches only the turn's own act ("hand-fed", "hand-feeding"), not "hand-feeds" in a description (live false hit, now a regression case).
+
 ## 2026-10-31 — workaround detector: replay bench + false positives cut (8.9% → 2.9%)
 
 - **`just workaround-bench [--days N] [--files …] [--limit N]`** (`scripts/workaround_scan.py --replay`, agy built, reviewed): replays the Stop-hook scanner over real `~/.claude/projects` transcripts and prints the fire rate plus each hit. It replaces "check the log after a few days" with a number available at any time. New `all_turns()`; `turn_text()` is now its last element, so the two can't drift.

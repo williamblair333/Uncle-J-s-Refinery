@@ -79,7 +79,9 @@ def test_main_logs_hit_without_content(tmp_path, monkeypatch, capsys):
                                   'The hook fires when a turn says "worked around", "hand-fed" or "waiting on X".',
                                   "Tell the user the push is waiting on it.",
                                   "- **Heretic:** waiting on llama.cpp #30528 before bumping.",
-                                  "It's waiting on the last Heretic turn run in the SAGA layout."])
+                                  "It's waiting on the last Heretic turn run in the SAGA layout.",
+                                  # 2026-10-31 live hit: a table describing the check categories
+                                  "| Hand-feeds a helper or works around a block | 1, then fix the access |"])
 def test_clean_turn_passes(tmp_path, text):
     assert ws.decide(transcript(tmp_path, [prompt("go"), say(text)])) is None
 
