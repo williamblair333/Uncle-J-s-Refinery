@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-01 — verify-before-delegate gate
+
+- Why: CLAUDE.md says to always run verifiable-task before delegating. Over 14 days, 31 of 34 delegating sessions skipped it, and mtw2 called it 0 times in 5 sessions.
+- `hooks/discipline/verify-before-delegate.sh` (PreToolUse, wired by `install-reliability.sh`): the first delegation per session is denied once if the transcript has no verifiable-task Skill call. A retry passes. Subagents and read-only Agent types are exempt. It fails open. 13 tests.
+
 ## 2026-11-01 — drift complaints caught; order check at every session start
 
 - Why: skill-adoption audit of mtw2 session c15c0ea2. It took item 1 of a pasted handoff (quiet world) against its phase and the no-clicks-first rule (kept only in memory). It merged three fixes on code-regex proof, and made 2 Skill calls in 47 min. The meta trigger missed both of Bill's drift complaints (replayed: silent).
