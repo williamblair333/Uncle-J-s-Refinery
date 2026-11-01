@@ -5,6 +5,7 @@
 # a re-run changes nothing:
 #   skill_name_trigger.py  Bill names a skill -> invoke it
 #   meta_trigger.py        Bill asks why he had to catch something -> expert-bar + a real check
+#   skill_router.py        Bill's prompt matches a judgment skill's triggers -> name it
 # Written atomically after a backup, the same way features/product-quality/install.sh does it.
 #
 # Usage: install.sh [--uninstall]
@@ -15,13 +16,14 @@ SETTINGS="${HOME}/.claude/settings.json"
 ACTION=install
 [[ "${1:-}" == "--uninstall" ]] && ACTION=uninstall
 
-chmod +x "$SCRIPT_DIR/skill_name_trigger.py" "$SCRIPT_DIR/meta_trigger.py"
+chmod +x "$SCRIPT_DIR/skill_name_trigger.py" "$SCRIPT_DIR/meta_trigger.py" "$SCRIPT_DIR/skill_router.py"
 python3 - "$SETTINGS" "$ACTION" "$SCRIPT_DIR" <<'PYEOF'
 import json, os, sys, tempfile, shutil
 
 settings_path, action, script_dir = sys.argv[1:4]
 TRIGGERS = [("skill_name_trigger.py", "prompt-triggers:skill-name-trigger"),
-            ("meta_trigger.py", "prompt-triggers:meta-trigger")]
+            ("meta_trigger.py", "prompt-triggers:meta-trigger"),
+            ("skill_router.py", "prompt-triggers:skill-router")]
 os.makedirs(os.path.dirname(settings_path), exist_ok=True)
 try:
     with open(settings_path) as fh:
