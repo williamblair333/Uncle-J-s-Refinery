@@ -43,6 +43,26 @@ repo, and every claim on it points at evidence.**
 7. **Work from it.** The next work is the top open gap unless the user picks another. Every
    status report names the gap it moved.
 
+## After a meta-question: make it mechanical
+
+A bar on paper is read only when someone remembers to read it. mtw2 had `forced-events` in
+STANDARDS and still ran a turn-playing test into a papal election (2026-11-01), then answered
+Bill's complaint with one more memory note. When the user asks why they had to catch
+something:
+
+1. Name the step a senior practitioner takes there, and why it didn't happen.
+2. Land a check a program runs, so the step no longer depends on recall:
+   - **"Before running X, Y must hold"** → a gate in `<repo>/.claude/preflight.toml`
+     (`[[gate]]` with `id` = the STANDARDS id, `match` = a regex on the command, `run` = the
+     check, `why`). The global preflight-gate hook runs it before every matching Bash command,
+     in every session. The repo root must be listed in the Refinery's
+     `config/preflight-trusted.txt`. Format: the docstring of `scripts/preflight_gate.py`.
+   - **"This must never break again"** → a test that fails without the fix.
+   - **"The agent must do this on its own"** → a hook.
+3. Point the STANDARDS item's `evidence` at that check.
+
+A memory note alone is not a fix. Say which check now catches the miss.
+
 ## Format
 
 Prose header (whose seat, the goal, "ranked by impact"), then one fenced yaml block:

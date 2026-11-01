@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-01 — preflight gates + meta-question trigger (all projects)
+
+- Why: mtw2 had the skills installed and `forced-events` in STANDARDS, yet a 15-hour session called only `pre-mortem`, ran a turn-playing test into a papal election, and answered Bill's "why did I have to request this" with a memory note. Bench: over 14 days Bill made 22 such complaints and `expert-bar` ran twice.
+- `scripts/preflight_gate.py` + `hooks/discipline/preflight-gate.sh`: global PreToolUse (Bash) hook. A repo listed in `config/preflight-trusted.txt` declares `[[gate]]`s in `.claude/preflight.toml` (`id`, `match` regex, `run` check, `why`, `timeout` ≤ 100 s); a failing check denies the command with its output. A broken config denies all Bash in that repo (fail closed, Edit still works); untrusted repos never run their gates. Wired by `install-reliability.sh` (timeout 120). 15 tests.
+- `features/prompt-triggers/meta_trigger.py`: UserPromptSubmit hook on `meta_questions.is_meta` plus "tired of having to" phrasings; tells the model to run `expert-bar` and land a check a program runs, not a memory note. `install.sh` registers both prompt triggers. 13 tests. Hook bench, 14 days: 22/800 prompts (2.8%), one false hit labelled.
+- `global-skills/expert-bar/SKILL.md`: new section "After a meta-question: make it mechanical" (gate / test / hook, evidence points at the check).
+- First user: mtw2's `forced-events` gate (mtw2 PR) refuses turn-playing `just qa` runs until each interrupting event is held with code proof or ruled out.
+
 ## 2026-11-01 — session end (fourth)
 
 - Merged #274 (skill false-hit labels). README checked: it doesn't cover the hook bench; no update. ROADMAP checked: no update. Open item filed in HANDOFF: self-work-budget denies one Edit inside a parallel batch.

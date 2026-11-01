@@ -1,5 +1,16 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-01 — preflight gates + meta-question trigger (deployed)
+
+Deployed live via `features/prompt-triggers/install.sh` and `install-reliability.sh`; end-to-end
+checked against the installed settings entries. **Any repo can now turn "before X, Y must hold" into a gate**:
+add `.claude/preflight.toml` and list the root in `config/preflight-trusted.txt`. mtw2 is the
+first user (forced-events). Complaints like "why did I have to ask" now push `expert-bar` + a real
+check (bench 22/800 prompts over 14 days, 1 false labelled). Not yet seen in a live mtw2 session:
+check the next mtw2 transcript for a `meta-trigger` fire followed by an `expert-bar` Skill call,
+and `grep preflight-gate state/hook-blocks.log` for real denies. Untracked
+`global-skills/skill-adoption-audit/` appeared during this session from elsewhere: not mine, not committed.
+
 
 ## NEXT SESSION — start here (updated 2026-11-01, fourth session end)
 
