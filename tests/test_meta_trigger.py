@@ -25,6 +25,29 @@ HITS = [
     "guidance:  i'm tired of having to solve the problems all the time",
     "this is what i was talking about before.  any project manager would be smart enough to see "
     "that if something is slowing down a process or test, fix it, mitigate it, something..",
+    # mtw2 drift, 2026-11-01: both went unflagged
+    "have you tested everything that doesn't require a click now? if not, why are you doing this?",
+    "are you drifting from the goal and how to get there? are you using the new skills we built?  "
+    "would you check yourself while the other process runs?",
+    "I'm getting frustrated you know",
+]
+ORDER_HITS = [
+    "from last session  First up next session:\n  1. Quiet world for turn tests\n  2. Far boarding",
+    "continue",
+    "what's next?",
+    "just-do-it so long as this is moving towards our goal",
+    "**Next (in order):** 1. the quiet world; 2. prove and merge far-board",
+]
+ORDER_MISSES = [
+    "build it",
+    "continue the qa run after the pope fix lands",
+    "what's the status of the qa run?",
+    "<task-notification> continue </task-notification>",
+    # sign-offs, bench 2026-11-01
+    "session end I'll read this next session",
+    "session end pick up next session",
+    "ok put firecrawl in review and we'll have you dig into it next session.",
+    "fyi Uncle J is working on some agy struggles and hopefully will be better next session",
 ]
 MISSES = [
     "build it",
@@ -45,6 +68,22 @@ def test_complaints_trigger(prompt):
 @pytest.mark.parametrize("prompt", MISSES)
 def test_ordinary_prompts_do_not(prompt):
     assert not mt.triggered(prompt)
+
+
+@pytest.mark.parametrize("prompt", ORDER_HITS)
+def test_order_prompts_trigger_order_check(prompt):
+    assert mt.order_triggered(prompt)
+
+
+@pytest.mark.parametrize("prompt", ORDER_MISSES)
+def test_order_check_quiet_otherwise(prompt):
+    assert not mt.order_triggered(prompt)
+
+
+def test_hook_joins_both_messages_when_both_fire():
+    r = run(json.dumps({"prompt": "from last session First up: 1. x. why are you doing this?"}))
+    ctx = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "expert-bar" in ctx and "STANDARDS.md phase line" in ctx
 
 
 def run(stdin: str):

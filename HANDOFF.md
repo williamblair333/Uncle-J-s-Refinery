@@ -1,5 +1,14 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-01 — mtw2 drift audit: global fixes (merged, live)
+
+The meta trigger now catches drift complaints, and an order check fires when a session picks its first item:
+pasted handoff, "continue", "now what". The SessionStart standards list ends with the same reminder. **Not built
+yet, both generic:** (1) a gate that refuses `ask_agy`/`Agent` delegation until verifiable-task ran in the session
+(mtw2: 0 calls in 5 sessions); (2) merges proven to a weaker bar than STANDARDS' phase rule. This is the existing
+PR-gate-on-Gitea gap: a merge check would read the phase line. mtw2's own three fixes sit with mtw2-ca until Bill
+confirms them to it. Check the next mtw2 start for an order-check fire followed by a phase statement.
+
 ## 2026-11-01 — agy brief lint (merged; live from the next session)
 
 `ask_agy` now refuses briefs agy can't follow (`error: brief_lint`, one fix per problem), from

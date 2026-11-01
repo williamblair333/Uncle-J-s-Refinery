@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-01 — drift complaints caught; order check at every session start
+
+- Why: skill-adoption audit of mtw2 session c15c0ea2. It took item 1 of a pasted handoff (quiet world) against its phase and the no-clicks-first rule (kept only in memory). It merged three fixes on code-regex proof, and made 2 Skill calls in 47 min. The meta trigger missed both of Bill's drift complaints (replayed: silent).
+- `features/prompt-triggers/meta_trigger.py`: now catches "why are you doing this", "drifting from the goal", "are you using the new skills" and "I'm getting frustrated". A new order check fires on a pasted handoff or next-up list, a bare "continue"/"now what", or a goal-conditional go-ahead. It makes the session check item 1 against STANDARDS phase and the project's ordering rules, name the proving check, and run verifiable-task before delegating. Bench, 14 days: 1218 prompts, 12 order fires, all session starts.
+- `features/product-quality/standards_check.py`: the SessionStart gap list ends with the same reminder in every project with a phase.
+- mtw2's own three fixes (phase-order STANDARDS entry + gate, bench-log proof for `interrupts.toml`) were handed to mtw2-ca; it holds them until Bill confirms.
+
 ## 2026-11-01 — self-work budget never denies an edit
 
 - Why: the budget denied one Edit in a parallel batch while the rest applied, leaving hook_bench.py half-edited (tests caught it).
