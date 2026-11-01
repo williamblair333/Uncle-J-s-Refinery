@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-01 — agy brief lint
+
+- Why: this session sent 4 agy briefs that broke the written agy-job rules (memory note only): `.venv/bin/python` instead of a bare command (one denied), `git checkout -b` (denied), a read under ~/.code-index (outside agy's roots). Two jobs failed and burned quota.
+- `scripts/delegate/brief_lint.py`, called first in `run_agy`: refuses a brief that asks agy to run a denied or unlisted command, a non-bare interpreter path, to make/switch a branch, or to read an existing path outside its `read_file` roots. Rules are read from `features/antigravity/permissions.json`, so the allow list stays the single source. Negations ("do not run git"), non-existent and top-level paths, and URLs pass. Returns `error: brief_lint` with one fix per problem, before any model call. 16 tests, replaying the 4 real briefs (all flagged; the corrected one passes). The delegate MCP server picks it up on the next session start.
+
 ## 2026-11-01 — cross-session edit guard; preflight gate follows `cd`; trigger catches "any PM would"
 
 - Why: right after #276 this session and an agy job it launched edited mtw2's bridge and runner while a live mtw2 session built the same feature in the same checkout (branch switched under it, edits overwritten). Bill also had to point out that "fix what slows the test" belonged to mtw2, and the meta-trigger missed his "any project manager would be smart enough to see".

@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-01 — agy brief lint (merged; live from the next session)
+
+`ask_agy` now refuses briefs agy can't follow (`error: brief_lint`, one fix per problem), from
+`features/antigravity/permissions.json`. The running delegate MCP server still has the old code until
+a session restart. If it refuses a good brief, the false hit goes in `tests/test_brief_lint.py` and the
+rule gets narrowed, never bypassed.
+
 ## 2026-11-01 — cross-session edit guard (deployed)
 
 A session can no longer edit a checkout another live session works in (`scripts/session_edit_guard.py`;

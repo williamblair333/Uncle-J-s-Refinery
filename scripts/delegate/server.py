@@ -42,7 +42,9 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_REPO / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import ask_agy  # noqa: E402
+import brief_lint  # noqa: E402
 
 AGY_MODEL = os.environ.get("DELEGATE_AGY_MODEL", "gemini-3.8-flash-medium")
 AGY_TIMEOUT = int(os.environ.get("DELEGATE_AGY_TIMEOUT", "300"))
@@ -387,6 +389,13 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
     if local is None:
         local = {"local:heretic": _heretic_raw, "local:ask_local": run_ask_local}
     refused = _refused(cwd, prompt)
+    if problems := brief_lint.lint(prompt, cwd):
+        # agy would hit these denials mid-run and burn quota (2 failed jobs, 11-01); say so now
+        out = {"ok": False, "error": "brief_lint", "problems": problems,
+               "hint": "rewrite the brief: bare commands, no branching, paste out-of-repo content; "
+                       "have agy read checks and run them yourself"}
+        _log("agy", model, time.time(), out, cwd=cwd)
+        return out
     routing = load_routing()
     tier = task or routing["default"]
     if model:
