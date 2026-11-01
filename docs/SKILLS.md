@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 79 repo, 1 workflows.
+Totals: 80 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -38,7 +38,7 @@ Totals: 79 repo, 1 workflows.
 | `clean-room-rebuild` | Use when building original software that replicates the functionality of an existing app, including any use of REA (morluto/rea) to study a target, so the work… | auto | Refinery stack | repo |
 | `community-pr-stakeholder-response` | Use when tagged as a stakeholder on an open-source PR or issue comment, especially when the PR has evolved since your last review, involves architectural chang… | auto | Refinery stack | repo |
 | `deep-repo-analysis` | Full codebase health audit using jcodemunch — cycles, complexity, coupling, dead code, test gaps, and architectural debt. | auto | Refinery stack | repo |
-| `expert-bar` | Use when a project has no STANDARDS.md (the session-start notice says so), when its phase changes, before planning the next stretch of work, or when the user k… | auto | any agent | repo |
+| `expert-bar` | Use when a project has no STANDARDS.md (the session-start notice says so), when its phase changes, before planning the next stretch of work, or when the user k… | auto | Claude Code | repo |
 | `first-run-gate` | Use before calling any project done, before opening a PR that changes runtime behavior, and when setup or install is suspected broken — "does this still work o… | auto | any agent | repo |
 | `fog-of-chess-engine-mode-implementation` | Implement a new engineMode variant end-to-end in Fog of Chess — types, UCI bridge, adapter, server polling, REST endpoint, and UI panel — following the validat… | auto | any agent | repo |
 | `freecad-parametric-toolkit-build` | Build a FreeCAD parametric CAD toolkit tier by tier — probe APIs first, implement modules, run tests with freecadcmd, fix stdout capture issues. | auto | any agent | repo |
@@ -79,6 +79,7 @@ Totals: 79 repo, 1 workflows.
 | `review-queue-triage` | Audit _review/ items, classify by completion signals (status: resolved, REPO-ASSESSMENT + landing commit), auto-move resolved items to _reviewed/, leave uncert… | auto | any agent | repo |
 | `session-end-checklist` | Session wrap-up checklist — updates CHANGELOG, HANDOFF, considers ROADMAP/README, then commits. | auto | Refinery stack | repo |
 | `session-status-briefing` | Produce a comprehensive session-start status report combining git state, HANDOFF, every open ROADMAP/memory/scout item waiting to be done, code health metrics,… | auto | Refinery stack | repo |
+| `skill-adoption-audit` | Use when a skill or memory note was installed to fix a recurring agent failure, but the failure happened again. | auto | any agent | repo |
 | `slowest-loop-first` | Use when a fix or change can't be proven until something outside your control happens — a random roll, a live user or event, a nightly or scheduled run, a real… | auto | any agent | repo |
 | `smart-review` | Auto-classifying code review router — rules floor + shadow classifier → dispatches code-review (low/medium/high) or adversarial-review (critical). | auto | Refinery stack | repo |
 | `stack-not-at-head-remediation` | Remediate a HEALTHCHECK fail on stack-not-at-head — upgrade uv packages, re-index, pin embedding canary, run post-upgrade integration, update docs, commit, sna… | auto | Refinery stack | repo |

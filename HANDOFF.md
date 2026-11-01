@@ -47,7 +47,7 @@ and `grep preflight-gate state/hook-blocks.log` for real denies. Untracked
 
 ## NEXT SESSION — start here (updated 2026-11-01, fourth session end)
 
-**Next:** `skills-red-green` or the PR-gate-on-Gitea gap. Skill false-hit labels are done (11-01, PR
+**Next:** `skills-red-green` or the PR-gate-on-Gitea gap. Check `~/.claude/state/verify-gate/denies.jsonl` for the first real denies (the gate hasn't fired live yet). mtw2-ca holds its three mtw2 fixes until Bill confirms them to it. `skill-adoption-audit` is now tracked (healthcheck clean). Skill false-hit labels are done (11-01, PR
 `feat/skill-false-hit-labels`): `just hook-bench --skill X` shows a skill's calls and precision; new calls show
 as unlabelled samples. agy labels skills from the prompt alone and misses context (commit next, delegation
 next): check its falses against the transcript before importing. token-guard is done: #272 merged and deployed (symlink into
