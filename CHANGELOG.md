@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-01 — skill-adoption-audit skill committed
+
+- `global-skills/skill-adoption-audit/` (written 04:16, already symlinked into ~/.claude/skills) is now tracked, which clears the `untracked-skills` healthcheck fail. `docs/SKILLS.md` regenerated (80 repo skills). Nightly scout state staged.
+
 ## 2026-11-01 — verify-before-delegate gate
 
 - Why: CLAUDE.md says to always run verifiable-task before delegating. Over 14 days, 31 of 34 delegating sessions skipped it, and mtw2 called it 0 times in 5 sessions.
