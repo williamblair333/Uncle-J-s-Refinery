@@ -424,3 +424,5 @@
 {"key": "b14b815d0113", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies and relocates token guard hook", "ts": "2026-11-01"}
 {"key": "400c0e3f7f07", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after hardening token guard control", "ts": "2026-11-01"}
 {"key": "fc130a7bc657", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies hook bench script", "ts": "2026-11-01"}
+{"key": "4403542a40af", "verdict": "false", "note": "go-ahead with conditions, not a complaint", "ts": "2026-11-01"}
+{"key": "d91ed8dd73de", "verdict": "true", "note": "the mtw2 papal-election complaint", "ts": "2026-11-01"}

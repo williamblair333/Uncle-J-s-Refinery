@@ -258,6 +258,26 @@ else
             ok "self-work-budget PreToolUse hook already wired in settings.json"
         fi
 
+        # Wire preflight-gate (Bash) on its own key, for the same reason as credential-guard.
+        # Runs a trusted repo's .claude/preflight.toml checks (scripts/preflight_gate.py).
+        # Timeout 120 s: the script caps each check at 100 s so a kill never lands first.
+        # `|| exit 1` keeps a broken script (bash exit 2 = block) from denying every command.
+        _pf_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("preflight-gate"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_pf_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/preflight-gate.sh || exit 1","timeout":120}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "preflight-gate PreToolUse hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "preflight-gate PreToolUse hook already wired in settings.json"
+        fi
+
         # Wire Stop hook (unpushed-warn) if not already present
         _stop_already=$(jq '[.hooks.Stop[]?.hooks[]?.command // ""] | map(select(contains("unpushed"))) | length' "$_settings" 2>/dev/null || echo 0)
         if [ "$_stop_already" -eq 0 ]; then

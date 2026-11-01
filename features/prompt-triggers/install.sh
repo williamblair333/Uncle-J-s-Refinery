@@ -1,24 +1,27 @@
 #!/usr/bin/env bash
 # prompt-triggers — install/uninstall
 #
-# Registers skill_name_trigger.py as a UserPromptSubmit hook in ~/.claude/settings.json,
-# keyed on a marker so a re-run changes nothing. Written atomically after a backup,
-# the same way features/product-quality/install.sh does it.
+# Registers the UserPromptSubmit hooks in ~/.claude/settings.json, each keyed on a marker so
+# a re-run changes nothing:
+#   skill_name_trigger.py  Bill names a skill -> invoke it
+#   meta_trigger.py        Bill asks why he had to catch something -> expert-bar + a real check
+# Written atomically after a backup, the same way features/product-quality/install.sh does it.
 #
 # Usage: install.sh [--uninstall]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SETTINGS="${HOME}/.claude/settings.json"
-MARKER="prompt-triggers:skill-name-trigger"
 ACTION=install
 [[ "${1:-}" == "--uninstall" ]] && ACTION=uninstall
 
-chmod +x "$SCRIPT_DIR/skill_name_trigger.py"
-python3 - "$SETTINGS" "$ACTION" "$SCRIPT_DIR" "$MARKER" <<'PYEOF'
+chmod +x "$SCRIPT_DIR/skill_name_trigger.py" "$SCRIPT_DIR/meta_trigger.py"
+python3 - "$SETTINGS" "$ACTION" "$SCRIPT_DIR" <<'PYEOF'
 import json, os, sys, tempfile, shutil
 
-settings_path, action, script_dir, marker = sys.argv[1:5]
+settings_path, action, script_dir = sys.argv[1:4]
+TRIGGERS = [("skill_name_trigger.py", "prompt-triggers:skill-name-trigger"),
+            ("meta_trigger.py", "prompt-triggers:meta-trigger")]
 os.makedirs(os.path.dirname(settings_path), exist_ok=True)
 try:
     with open(settings_path) as fh:
@@ -30,15 +33,17 @@ except json.JSONDecodeError as exc:
     raise SystemExit(1)
 
 hooks = config.setdefault("hooks", {})
+markers = [m for _, m in TRIGGERS]
 kept = [e for e in hooks.get("UserPromptSubmit", [])
-        if not any(marker in h.get("command", "") for h in e.get("hooks", []))]
+        if not any(m in h.get("command", "") for m in markers for h in e.get("hooks", []))]
 if action == "install":
-    kept.append({"hooks": [{
-        "type": "command",
-        "command": f"[ -f {script_dir}/skill_name_trigger.py ] || exit 0; "
-                   f"python3 {script_dir}/skill_name_trigger.py  # {marker}",
-        "timeout": 5,
-    }]})
+    for script, marker in TRIGGERS:
+        kept.append({"hooks": [{
+            "type": "command",
+            "command": f"[ -f {script_dir}/{script} ] || exit 0; "
+                       f"python3 {script_dir}/{script}  # {marker}",
+            "timeout": 5,
+        }]})
 if kept:
     hooks["UserPromptSubmit"] = kept
 else:
@@ -55,5 +60,5 @@ with tempfile.NamedTemporaryFile("w", dir=os.path.dirname(settings_path), delete
     os.fsync(tmp.fileno())
     name = tmp.name
 os.replace(name, settings_path)
-print(f"    OK  skill-name trigger {action}ed in {settings_path}")
+print(f"    OK  prompt triggers ({len(TRIGGERS)}) {action}ed in {settings_path}")
 PYEOF

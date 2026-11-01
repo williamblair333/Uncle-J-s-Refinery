@@ -1,0 +1,5 @@
+# Repo roots whose .claude/preflight.toml gates may run (scripts/preflight_gate.py).
+# A gate runs shell, so only Bill's own repos go here; scout and review/ clones never do.
+# One absolute path per line.
+/opt/proj/games/mtw2
+/opt/proj/Uncle-J-s-Refinery
