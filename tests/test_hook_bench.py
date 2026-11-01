@@ -590,3 +590,62 @@ def test_skills_stub_dir_in_sandbox_under_from(tmp_path, monkeypatch):
     finally:
         shutil.rmtree(box2, ignore_errors=True)
 
+
+# ── skills: invocation rows with keys and labels (2026-11-01) ───────────────────
+
+def _skill_transcript(tmp_path):
+    lines = [
+        _entry("user", "session end"),
+        _entry("assistant", [{"type": "tool_use", "id": "k1", "name": "Skill",
+                              "input": {"skill": "session-end-checklist"}}]),
+        _entry("user", "what is 2+2"),
+        _entry("assistant", [{"type": "tool_use", "id": "k2", "name": "Skill",
+                              "input": {"skill": "pre-mortem", "args": "answer 2+2"}}]),
+        _entry("assistant", [{"type": "tool_use", "id": "k3", "name": "Skill",
+                              "input": {"skill": "pre-mortem", "args": "edit hooks/x.sh"}}]),
+    ]
+    p = tmp_path / "s.jsonl"
+    p.write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+    return p
+
+
+def test_skill_events_carry_the_prompt_that_led_to_them(tmp_path):
+    evs = [e for e in hb.events_from(_skill_transcript(tmp_path), 0) if e.get("tool") == "Skill"]
+    assert [e["prompt"] for e in evs] == ["session end", "what is 2+2", "what is 2+2"]
+
+
+def test_skill_rows_count_label_and_list_unlabelled(tmp_path):
+    evs = hb.events_from(_skill_transcript(tmp_path), 0)
+    pm = [e for e in evs if e.get("tool") == "Skill" and e["input"]["skill"] == "pre-mortem"]
+    labels = {hb.skill_key(pm[0]): {"verdict": "false"}, hb.skill_key(pm[1]): {"verdict": "true"}}
+    rows = {r["name"]: r for r in hb.skill_rows(evs, labels)}
+    assert rows["pre-mortem"]["invocations"] == 2
+    assert (rows["pre-mortem"]["labelled"], rows["pre-mortem"]["false"]) == (2, 1)
+    assert rows["pre-mortem"]["precision"] == 0.5 and rows["pre-mortem"]["unlabelled"] == []
+    se = rows["session-end-checklist"]
+    assert se["labelled"] == 0 and se["precision"] is None
+    assert len(se["unlabelled"]) == 1 and "session end" in se["unlabelled"][0]["event"]
+
+
+def test_skill_keys_differ_by_prompt_and_from_hook_keys(tmp_path):
+    evs = [e for e in hb.events_from(_skill_transcript(tmp_path), 0) if e.get("tool") == "Skill"]
+    keys = {hb.skill_key(e) for e in evs}
+    assert len(keys) == 3
+    assert not keys & {hb.event_key("pre-mortem", e) for e in evs}
+
+
+def test_render_shows_skill_table_and_samples(tmp_path):
+    evs = hb.events_from(_skill_transcript(tmp_path), 0)
+    out = hb.render([], [], hb.skill_rows(evs, {}), 2, 7, samples=3)
+    assert "skill" in out and "pre-mortem" in out and "false/lab" in out
+    assert "--label KEY" in out and "answer 2+2" in out
+
+
+def test_skill_filter_on_cli(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(hb, "collect_events", lambda days: hb.events_from(_skill_transcript(tmp_path), 0))
+    monkeypatch.setattr(hb, "load_hooks", lambda cfg, settings=None: [])
+    monkeypatch.setattr(hb, "load_labels", lambda: {})
+    hb.main(["--skill", "pre-mortem", "--json"])
+    data = json.loads(capsys.readouterr().out)
+    assert [r["name"] for r in data["skills"]] == ["pre-mortem"]
+

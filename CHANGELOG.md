@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-01 — skill false-hit labels in the hook bench
+
+- `scripts/hook_bench.py`: each Skill call carries the user prompt before it (`prompt`), gets a label key (`skill_key`, `skill:` prefix, prompt included) and a row in a per-skill table (calls, false/labelled, precision) with unlabelled samples; `--skill NAME` shows skills only. `--json` `skills` is now a list of rows (was a name→count dict; no consumers).
+- Labelled 404 of 408 skill calls from the last 30 days into bench/hook-labels.jsonl: agy proposed (366 true, 39 false, 3 unsure). I checked every false and 20 random trues: 27 falses were wrong (pre-mortem on CLAUDE.md edits is Infrastructure by the skill's own table; session-end before a commit is its stated trigger; verifiable-task calls that were followed by delegation) and became true. 9 false remain; pre-mortem 2/140, just-do-it 1/41.
+- The export bundle already carried prompts (UserPromptSubmit events), so the new field exposes nothing new.
+
 ## 2026-11-01 — session end (third)
 
 - Merged #272 (token-guard versioned, read false hits fixed). Deployed via install-reliability.sh: `~/.claude/hooks/pre-mortem-guard/token-guard.sh` is a symlink into the repo; a live `cat` of a clearance token passes; `just hook-bench --hook token-guard --days 30` shows 0/800 fires, 0 real-log lines.
