@@ -258,6 +258,23 @@ else
             ok "self-work-budget PreToolUse hook already wired in settings.json"
         fi
 
+        # Wire verify-before-delegate: the first delegation per session waits for verifiable-task.
+        _vbd_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("verify-before-delegate"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_vbd_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"Agent|Task|mcp__delegate__ask_.*|mcp__ask_local__(ask|summarize|extract)_local","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/verify-before-delegate.sh || exit 1","timeout":10}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "verify-before-delegate PreToolUse hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "verify-before-delegate PreToolUse hook already wired in settings.json"
+        fi
+
         # Wire preflight-gate (Bash) on its own key, for the same reason as credential-guard.
         # Runs a trusted repo's .claude/preflight.toml checks (scripts/preflight_gate.py).
         # Timeout 120 s: the script caps each check at 100 s so a kill never lands first.
