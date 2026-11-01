@@ -206,6 +206,12 @@ def summary(project: Path | str, top: int = 5) -> str:
                 break
 
     lines = [first_line] + gap_lines
+    if gap_lines and data.get("phase"):
+        # mtw2, 2026-11-01: the gaps were printed, but the session took the handoff's item 1
+        # without checking it against the phase or the project's no-clicks-first rule.
+        lines.append("  before the handoff's next item: say which gap it moves and whether this "
+                     "phase allows it; an earlier phase's open failures and the project's ordering "
+                     "rules come first")
     return "\n".join(lines)
 
 
