@@ -473,8 +473,9 @@ Two properties follow, and both are worth preserving in any new guard that write
 - **Rotation archives, never truncates.** The log is not reconstructible.
 
 Since 2026-10-22 every hook that writes the log does it through one inline function,
-`hook_log_append`, byte-identical in `grep-guard.sh`, `edit-surface-guard.sh` and
-`surface-write-guard.sh` (`tests/test_hook_log.py` pins the copies). It turns every C0
+`hook_log_append`, byte-identical in `grep-guard.sh`, `edit-surface-guard.sh`,
+`surface-write-guard.sh` and (since 2026-10-31) `token-guard.sh` (`tests/test_hook_log.py`
+pins the copies). It turns every C0
 control byte and DEL into a space, drops invalid UTF-8, and past 1 MiB
 (`HOOK_LOG_MAX_BYTES`) renames the log to `hook-blocks.log.YYYYMMDD` (or
 `.YYYYMMDD-HHMMSS-PID` if that exists) under a `mkdir` lock, with `mv -n` so no archive
