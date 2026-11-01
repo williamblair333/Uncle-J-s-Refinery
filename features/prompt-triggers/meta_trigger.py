@@ -24,7 +24,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 EXTRA = re.compile(
     r"\b(?:tired|sick)\s+of\s+(?:having\s+to|always|doing|telling|asking|solving)\b"
     r"|\bI\s+(?:always\s+)?(?:have|had)\s+to\s+(?:solve|figure|catch|spot|think\s+of)\b"
-    r"|\bcan['’]?t\s+figure\s+(?:shit|anything|it)\s+out\b",
+    r"|\bcan['’]?t\s+figure\s+(?:shit|anything|it)\s+out\b"
+    # "any project manager would be smart enough to see that…" (2026-11-01)
+    r"|\b(?:any|a\s+(?:real|good|senior))\s+(?:project\s+manager|manager|engineer|expert|senior|pm|lead|professional)\s+would\b"
+    r"|\bsmart\s+enough\s+to\s+(?:see|know|notice|realize|figure)\b"
+    r"|\bthis\s+is\s+what\s+I\s+was\s+talking\s+about\b",
     re.I,
 )
 

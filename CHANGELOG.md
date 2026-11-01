@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-01 — cross-session edit guard; preflight gate follows `cd`; trigger catches "any PM would"
+
+- Why: right after #276 this session and an agy job it launched edited mtw2's bridge and runner while a live mtw2 session built the same feature in the same checkout (branch switched under it, edits overwritten). Bill also had to point out that "fix what slows the test" belonged to mtw2, and the meta-trigger missed his "any project manager would be smart enough to see".
+- `scripts/session_edit_guard.py` + `hooks/discipline/session-edit-guard.sh`: global PreToolUse (Edit|Write|MultiEdit|NotebookEdit). Denies an edit into a checkout that isn't this session's own while another live Claude session (cc-socks socket, argv0 `claude`, not an ancestor, cwd via /proc) works there. Worktrees are their own checkout; `.claude/allow-cross-session-edits` overrides; `--selftest` lists the sessions it sees (the socket path is undocumented). 12 tests (agy-written, 7/7 mutants killed). Live: blocks this session editing mtw2, allows its own repo.
+- `preflight_gate.py`: also checks the repos a command `cd`/`pushd`/`-C`s into, so `cd mtw2 && just qa` from another repo meets mtw2's gate. 2 tests.
+- `meta_trigger.py`: "any/a good <PM|engineer|expert|senior…> would", "smart enough to see", "this is what I was talking about". Bench 14 days: 23/800 (2.9%).
+
 ## 2026-11-01 — preflight gates + meta-question trigger (all projects)
 
 - Why: mtw2 had the skills installed and `forced-events` in STANDARDS, yet a 15-hour session called only `pre-mortem`, ran a turn-playing test into a papal election, and answered Bill's "why did I have to request this" with a memory note. Bench: over 14 days Bill made 22 such complaints and `expert-bar` ran twice.
