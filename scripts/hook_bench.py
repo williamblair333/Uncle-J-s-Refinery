@@ -269,7 +269,7 @@ def events_from(path: Path, since: float) -> list[dict]:
     """PreToolUse, UserPromptSubmit and Stop events from one transcript, in order."""
     events, by_tool_id = [], {}
     turn: list[str] = []
-    state = {"session": None, "cwd": None}
+    state = {"session": None, "cwd": None, "prompt": ""}
 
     def close_turn():
         if turn and state["session"]:
@@ -305,11 +305,14 @@ def events_from(path: Path, since: float) -> list[dict]:
                     elif b.get("type") == "tool_use":
                         ev = {"event": "PreToolUse", "session": state["session"], "cwd": state["cwd"],
                               "tool": b.get("name", ""), "input": b.get("input") or {}, "live": None}
+                        if ev["tool"] == "Skill":  # what the user asked, to judge the call by
+                            ev["prompt"] = state["prompt"]
                         by_tool_id[b.get("id")] = ev
                         events.append(ev)
             elif entry.get("type") == "user":
                 if is_prompt(entry):
                     close_turn()
+                    state["prompt"] = _text(content)[:400]
                     events.append({"event": "UserPromptSubmit", "session": state["session"],
                                    "cwd": state["cwd"], "text": _text(content)})
                 elif isinstance(content, list):
@@ -620,12 +623,40 @@ def summarise(hook: dict, res: dict, labels: dict) -> dict:
                            for f in fires if f["key"] not in labels]}
 
 
-def skill_counts(events: list[dict]) -> Counter:
-    return Counter((e["input"] or {}).get("skill", "?") for e in events
-                   if e["event"] == "PreToolUse" and e["tool"] == "Skill" and isinstance(e["input"], dict))
+def skill_events(events: list[dict]) -> list[dict]:
+    return [e for e in events if e["event"] == "PreToolUse" and e["tool"] == "Skill"
+            and isinstance(e["input"], dict)]
 
 
-def render(rows: list[dict], skipped: list[dict], skills: Counter, prompts: int, days: float,
+def skill_key(ev: dict) -> str:
+    """Label key for one skill invocation. The prompt is part of it: the same call can be
+    right after one request and a false hit after another. `skill:` keeps it apart
+    from hook keys."""
+    body = json.dumps([ev["input"], ev.get("prompt", "")], sort_keys=True)
+    return hashlib.sha1(f"skill:{ev['input'].get('skill', '?')}\0{body[:4000]}".encode()).hexdigest()[:12]
+
+
+def skill_rows(events: list[dict], labels: dict) -> list[dict]:
+    """Per skill: invocations, and precision over the labelled ones. A false hit is a call
+    the request did not need (pre-mortem on a read-only answer, a skill whose trigger
+    matched a word, not the task)."""
+    by: dict[str, list[dict]] = {}
+    for e in skill_events(events):
+        by.setdefault(e["input"].get("skill", "?"), []).append(e)
+    rows = []
+    for name, evs in by.items():
+        keyed = [(skill_key(e), e) for e in evs]
+        lab = [labels[k] for k, _ in keyed if k in labels]
+        false = sum(1 for d in lab if d.get("verdict") == "false")
+        rows.append({"name": name, "invocations": len(evs), "labelled": len(lab), "false": false,
+                     "precision": round(1 - false / len(lab), 3) if lab else None,
+                     "unlabelled": [{"key": k, "event": re.sub(r"\s+", " ", f"asked: {e.get('prompt', '')[:110]}"
+                                                                  f" | args: {e['input'].get('args', '')}")[:220]}
+                                    for k, e in keyed if k not in labels]})
+    return sorted(rows, key=lambda r: -r["invocations"])
+
+
+def render(rows: list[dict], skipped: list[dict], skills: list[dict], prompts: int, days: float,
            samples: int) -> str:
     out = [f"hook bench — last {days:g} days, transcripts in {PROJECTS}", ""]
     out.append(f"{'hook':28} {'event':16} {'events':>7} {'fires':>6} {'rate':>7} {'err':>5} "
@@ -654,8 +685,22 @@ def render(rows: list[dict], skipped: list[dict], skills: Counter, prompts: int,
         out.append("\nnot replayed:")
         for h in skipped:
             out.append(f"  {h['name'][:28]:28} {h['event']:16} {h['status']}: {h['note']}")
-    out.append(f"\nskills invoked ({prompts} prompts): " +
-               (", ".join(f"{k} {v}" for k, v in skills.most_common()) or "none"))
+    out.append(f"\nskills invoked ({prompts} prompts):")
+    if not skills:
+        out.append("  none")
+    else:
+        out.append(f"  {'skill':38} {'calls':>6} {'false/lab':>9} {'precision':>9}")
+        for s in skills:
+            p = f"{s['precision']:.0%}" if s["precision"] is not None else "—"
+            out.append(f"  {s['name'][:38]:38} {s['invocations']:>6} "
+                       f"{str(s['false']) + '/' + str(s['labelled']):>9} {p:>9}")
+    if samples:
+        for s in skills:
+            if s["unlabelled"]:
+                out.append(f"\nskill {s['name']}: {len(s['unlabelled'])} unlabelled calls "
+                           f"(label with: just hook-bench --label KEY true|false note)")
+                for u in s["unlabelled"][-samples:]:
+                    out.append(f"  {u['key']}  {u['event']}")
     return "\n".join(out)
 
 
@@ -665,6 +710,7 @@ def main(argv=None) -> int:
     ap.add_argument("--max-events", type=int, default=800,
                     help="most recent matching events per hook (0 = all)")
     ap.add_argument("--hook", help="only hooks whose name contains this")
+    ap.add_argument("--skill", help="only skills whose name contains this (and no hooks)")
     ap.add_argument("--samples", type=int, default=3, help="unlabelled fires shown per hook")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--label", nargs="+", metavar="ARG", help="KEY true|false [note...]")
@@ -709,6 +755,8 @@ def main(argv=None) -> int:
 
     if a.hook:
         hooks = [h for h in hooks if a.hook in h["name"]]
+    if a.skill:
+        hooks = []
     runnable = [h for h in hooks if h["status"] == "run"]
     skipped = [h for h in hooks if h["status"] in ("leaks_state", "live_state", "not_replayed")]
     labels = load_labels()
@@ -724,10 +772,12 @@ def main(argv=None) -> int:
     finally:
         shutil.rmtree(box, ignore_errors=True)
     prompts = sum(1 for e in events if e["event"] == "UserPromptSubmit")
-    skills = skill_counts(events)
+    skills = skill_rows(events, labels)
+    if a.skill:
+        skills = [s for s in skills if a.skill in s["name"]]
     if a.json:
         print(json.dumps({"days": a.days, "hooks": rows, "not_replayed": skipped,
-                          "skills": dict(skills), "prompts": prompts}, indent=1, default=str))
+                          "skills": skills, "prompts": prompts}, indent=1, default=str))
     else:
         print(render(rows, skipped, skills, prompts, a.days, a.samples))
     return 0

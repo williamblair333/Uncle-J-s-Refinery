@@ -3,11 +3,15 @@
 
 ## NEXT SESSION — start here (updated 2026-11-01, third session end)
 
-**Next:** the last open part of `behaviour-bench-per-hook` is false-hit labels for skills; then
-`skills-red-green` or the PR-gate-on-Gitea gap. token-guard is done: #272 merged and deployed (symlink into
+**Next:** `skills-red-green` or the PR-gate-on-Gitea gap. Skill false-hit labels are done (11-01, PR
+`feat/skill-false-hit-labels`): `just hook-bench --skill X` shows a skill's calls and precision; new calls show
+as unlabelled samples. agy labels skills from the prompt alone and misses context (commit next, delegation
+next): check its falses against the transcript before importing. token-guard is done: #272 merged and deployed (symlink into
 the repo, verified live; bench 0/800, old copy 2/800 both false; `leaks_state` empty). Direct `ln`/`cp` on
 `~/.claude/hooks/*` is blocked by surface-write-guard: deploy with `bash install-reliability.sh`.
 Pre-mortem kept `.*` matching in token-guard on purpose (segment-local misses `touch ';' T`).
+**Open (11-01):** self-work-budget.sh denies a single Edit inside a parallel batch while the rest apply, leaving
+a file half-edited (hook_bench.py; tests caught it). Fix: deny every call in the batch, or exempt Edit/Write.
 
 Merged #266–#270, all below. `behaviour-bench-per-hook` is still partial: PostToolUse is now replayed; left are
 false-hit labels for skills and token-guard (leaks_state: hardcoded log path). **Next:** finish those, or

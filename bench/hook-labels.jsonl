@@ -94,3 +94,333 @@
 {"key": "20ea877a1e0e", "verdict": "false", "note": "live check 2026-10-31: Read of the defender's own pattern list", "ts": "2026-10-31"}
 {"key": "d563d0d2169f", "verdict": "false", "note": "reads hook-blocks.log and jsonl via cat; old cat-on-write-list + .* across segments", "ts": "2026-10-31"}
 {"key": "dcf340bb6aba", "verdict": "false", "note": "python json.load(open(token)) is a read, not a write", "ts": "2026-10-31"}
+{"key": "bf005582f19d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "060651384249", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly asked for status", "ts": "2026-11-01"}
+{"key": "0e75fe66fd93", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user reported unexpected bug with screenshot", "ts": "2026-11-01"}
+{"key": "d7f1abe6e2b0", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies application runtime code and event handling", "ts": "2026-11-01"}
+{"key": "d6c966378f46", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only edit committed locally without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "563c44826f87", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates new standalone script", "ts": "2026-11-01"}
+{"key": "03a7b2c77d66", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: plans branch commit and pull request", "ts": "2026-11-01"}
+{"key": "10341082e724", "verdict": "true", "note": "skill: reviewed, agy said false (user asked to do work without stopping); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "2b1971dfafcc", "verdict": "false", "note": "skill: reviewed false: scratchpad spike with no repo edits or pushes", "ts": "2026-11-01"}
+{"key": "07c0b8059223", "verdict": "true", "note": "skill: reviewed, agy said false (user asked to research ideas not end session); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "e58a8f05d56a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "aaacc777a960", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested pull from github resolving conflicts", "ts": "2026-11-01"}
+{"key": "fcfefb2765a4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes to origin and gitea with pr merge", "ts": "2026-11-01"}
+{"key": "ab8aeb9b5446", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: checks claude model pricing and documentation", "ts": "2026-11-01"}
+{"key": "eb1bc3ef897f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies build scripts and runtime generators", "ts": "2026-11-01"}
+{"key": "8afda69e18aa", "verdict": "true", "note": "skill: reviewed, agy said false (user explicitly told agent not to stop); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "d75d89c1a558", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: deploys new docker compose service and models", "ts": "2026-11-01"}
+{"key": "44749522ee52", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "1e8a8303f2c0", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested to use gttp", "ts": "2026-11-01"}
+{"key": "2d8b2f64c5c8", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adversarial review of preregistration specification", "ts": "2026-11-01"}
+{"key": "0555a68bff3f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes to remote and opens pull request", "ts": "2026-11-01"}
+{"key": "6eedc76dbf0c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested comprehensive session end", "ts": "2026-11-01"}
+{"key": "c30ccc898f65", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates configuration settings and runner script", "ts": "2026-11-01"}
+{"key": "af541703f2d4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies sync script used by crons and hooks", "ts": "2026-11-01"}
+{"key": "9c3fefb9098e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming reusable marketing pipeline", "ts": "2026-11-01"}
+{"key": "359328b3dd6d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan from design spec", "ts": "2026-11-01"}
+{"key": "bc3f2cb30a3e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: executing implementation plan", "ts": "2026-11-01"}
+{"key": "1118359d19ae", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: test-driven implementation of marketing package", "ts": "2026-11-01"}
+{"key": "df80c653e173", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: implements package with project hooks", "ts": "2026-11-01"}
+{"key": "327426e3eabe", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: finishing development branch", "ts": "2026-11-01"}
+{"key": "e20982d7a7eb", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates remote repo pushes and merges pull request", "ts": "2026-11-01"}
+{"key": "d393869689aa", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming math answer editor design", "ts": "2026-11-01"}
+{"key": "4ae3410f82a0", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies build script and runtime modules with pr", "ts": "2026-11-01"}
+{"key": "3ba9f4fa99ee", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan for answer editor", "ts": "2026-11-01"}
+{"key": "4d6f3acad481", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: performs live database import and data mutation", "ts": "2026-11-01"}
+{"key": "1c15249c5940", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "8f6f3a557d00", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: deploys live home assistant automations and helpers", "ts": "2026-11-01"}
+{"key": "7f58ea2d98ca", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies live home assistant configuration and tokens", "ts": "2026-11-01"}
+{"key": "a62f3e0284df", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user reported broken voice automation failure", "ts": "2026-11-01"}
+{"key": "7d10076ee391", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates new standalone cli package", "ts": "2026-11-01"}
+{"key": "d8d233d8e0c5", "verdict": "false", "note": "skill: reviewed false: creates scratch data file and runs script", "ts": "2026-11-01"}
+{"key": "d1b0b0f85e68", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested status check", "ts": "2026-11-01"}
+{"key": "e07830ee31b9", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: starts new repo skeleton and product review", "ts": "2026-11-01"}
+{"key": "d23ab4714058", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: scaffolds new repository with configuration files", "ts": "2026-11-01"}
+{"key": "dc7e46f66728", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "549c2ab76d3e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming new engaging test design", "ts": "2026-11-01"}
+{"key": "2d0781c4e9ca", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds write support and mutates live devices", "ts": "2026-11-01"}
+{"key": "82486daee2ea", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: verifies clean install after build backend change", "ts": "2026-11-01"}
+{"key": "3b0fd4588d23", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after hardening write access controls", "ts": "2026-11-01"}
+{"key": "76fbf3e3915b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies library primitive shape code", "ts": "2026-11-01"}
+{"key": "89a80b50d923", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested pull request merge and session end", "ts": "2026-11-01"}
+{"key": "abfc6300a3a8", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies library primitive shape modules", "ts": "2026-11-01"}
+{"key": "46806031fd8d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies library tier code and merges pull request", "ts": "2026-11-01"}
+{"key": "5de1f1f6cb20", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested pr merge and session end", "ts": "2026-11-01"}
+{"key": "42c1c928f270", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested status report", "ts": "2026-11-01"}
+{"key": "8941553bb4d0", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested to load gttp", "ts": "2026-11-01"}
+{"key": "b0ef1f657ecd", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming candidate seed prediction methods", "ts": "2026-11-01"}
+{"key": "68cc9815e2aa", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies cli and adds new method modules", "ts": "2026-11-01"}
+{"key": "354a17afb694", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested to load gttp", "ts": "2026-11-01"}
+{"key": "9de1a875a119", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges via api", "ts": "2026-11-01"}
+{"key": "62e35eb4711e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "bbbf1ed618ea", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies cli and adds exploration modules", "ts": "2026-11-01"}
+{"key": "ede3268271e5", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: commits pinned snapshot data and adds module", "ts": "2026-11-01"}
+{"key": "e6b7cb53d0e9", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates systemd service timer and cycle script", "ts": "2026-11-01"}
+{"key": "a63e3373976c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "b103e45811d1", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only change committed locally without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "11bed09916c5", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: defines product purpose for new repository", "ts": "2026-11-01"}
+{"key": "8351be05828f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates remote repo with api token and pushes", "ts": "2026-11-01"}
+{"key": "509810525bee", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: designing visual simulation artifact", "ts": "2026-11-01"}
+{"key": "e62c07ae0846", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: visualizing simulation data", "ts": "2026-11-01"}
+{"key": "31c8aa116edb", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: audits and synchronizes readme documentation", "ts": "2026-11-01"}
+{"key": "52d55a74cd3a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked to create a new skill", "ts": "2026-11-01"}
+{"key": "ba8ff990936f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked whether to do session end now", "ts": "2026-11-01"}
+{"key": "06ec58a65a1c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming llm remote viewing feature", "ts": "2026-11-01"}
+{"key": "5921f27901c5", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "a160f167e43d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adversarial review of preregistration specification", "ts": "2026-11-01"}
+{"key": "9cbcddd13aca", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan for code pr", "ts": "2026-11-01"}
+{"key": "ea97661bfdae", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested subagent driven development", "ts": "2026-11-01"}
+{"key": "22bad367eb22", "verdict": "true", "note": "skill: reviewed, agy said false (user did not request session end); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "d0b36cbbf732", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after adversarial review", "ts": "2026-11-01"}
+{"key": "0c26674999c7", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested to use gttp", "ts": "2026-11-01"}
+{"key": "6db14c2e1fb5", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only edits to instructions and readme); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "1c7c8335fb18", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds benchmark runner scripts", "ts": "2026-11-01"}
+{"key": "affccb80ee6a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: fixes serialization bug in library core", "ts": "2026-11-01"}
+{"key": "17c8c92e6119", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested merge and session end", "ts": "2026-11-01"}
+{"key": "8307bb302034", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies presets and delivers via pull request", "ts": "2026-11-01"}
+{"key": "2a526f1ce266", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: updates anthropic messages api client", "ts": "2026-11-01"}
+{"key": "e499c3cb6af2", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: physical 3d print fit and tolerance decision", "ts": "2026-11-01"}
+{"key": "ffb19f478565", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: delivers new runtime generator modules via pr", "ts": "2026-11-01"}
+{"key": "f9214ea92919", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested publish and session end", "ts": "2026-11-01"}
+{"key": "b2f80d7c761d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies core physics model and loss state", "ts": "2026-11-01"}
+{"key": "04487df56dcc", "verdict": "true", "note": "skill: reviewed, agy said false (user asked to start phase not end session); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "ca2d9d79f58a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds new energy integrator module to repo", "ts": "2026-11-01"}
+{"key": "8fec402a2b9f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "fd4a8ebcab00", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch opens and merges pull request", "ts": "2026-11-01"}
+{"key": "823cae28037e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked to review repo directory", "ts": "2026-11-01"}
+{"key": "5690ba79c284", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested gttp skill", "ts": "2026-11-01"}
+{"key": "4052d86eb993", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user stated code review replied", "ts": "2026-11-01"}
+{"key": "2067067dd47c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after adversarial security finding", "ts": "2026-11-01"}
+{"key": "c51e51d0d37e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked to write up design artifact", "ts": "2026-11-01"}
+{"key": "7e5289e8190a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly asked for status", "ts": "2026-11-01"}
+{"key": "0c8b9b492b64", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: force pushes to remotes and updates public pr", "ts": "2026-11-01"}
+{"key": "c7c1571bb81c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming dashboard and auto off timer design", "ts": "2026-11-01"}
+{"key": "131950b76f2e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: implements home assistant automation recipe", "ts": "2026-11-01"}
+{"key": "741ddcd69c1a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan for plug automation", "ts": "2026-11-01"}
+{"key": "21f01671686b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "c693d392b523", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "b7c4e14f92df", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan for run manager", "ts": "2026-11-01"}
+{"key": "4a49c1409a51", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds new execution and sensitivity modules", "ts": "2026-11-01"}
+{"key": "1a01ba764c29", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: subagent driven execution of plan tasks", "ts": "2026-11-01"}
+{"key": "35e45fab9030", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: evaluates proposed game feature against product focus", "ts": "2026-11-01"}
+{"key": "28535ed93970", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming remote viewing prediction pipeline", "ts": "2026-11-01"}
+{"key": "1eba4e9499b9", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan from specification", "ts": "2026-11-01"}
+{"key": "97ea89390783", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "7834a276eabc", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: subagent driven execution of implementation plan", "ts": "2026-11-01"}
+{"key": "4183539fc447", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked for session end", "ts": "2026-11-01"}
+{"key": "069feb4e3452", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and creates pull request", "ts": "2026-11-01"}
+{"key": "6670edb684e8", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: reorganizes skills and manages symlinks", "ts": "2026-11-01"}
+{"key": "0bb799da2033", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "6564a5534b71", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only routing edit committed locally without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "b7f6d8e29d12", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies ci workflow script and opens pr", "ts": "2026-11-01"}
+{"key": "1e1d78e54f27", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming server shutdown and power management", "ts": "2026-11-01"}
+{"key": "7be0f0a583c7", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "12a51a1d0fd4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: physical product purchase versus 3d print decision", "ts": "2026-11-01"}
+{"key": "9a7e9b43ce0e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds new example part script and tests", "ts": "2026-11-01"}
+{"key": "d7aff9634f1f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan incorporating handoff", "ts": "2026-11-01"}
+{"key": "112e30668878", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: subagent driven execution of tasks", "ts": "2026-11-01"}
+{"key": "572162c47d53", "verdict": "false", "note": "skill: reviewed false: running planned comparison not debugging failure", "ts": "2026-11-01"}
+{"key": "04508f9e862d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "7ebea945cbcf", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user instructed to create skills", "ts": "2026-11-01"}
+{"key": "217880a31ecf", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds script installs symlinks and merges pr", "ts": "2026-11-01"}
+{"key": "811346b3268f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "4f5977fc2f40", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming prediction ideas", "ts": "2026-11-01"}
+{"key": "70b55aebfab1", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan from design spec", "ts": "2026-11-01"}
+{"key": "cd619281e796", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: subagent driven execution of plan", "ts": "2026-11-01"}
+{"key": "d7a0809a56a0", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "87b8506326e0", "verdict": "true", "note": "skill: reviewed, agy said false (user reported crash rather than session end); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "3e9c22844aae", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies local device configuration file", "ts": "2026-11-01"}
+{"key": "6935e9353ba6", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just do it", "ts": "2026-11-01"}
+{"key": "91d5d69fdeda", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds shutdown script and systemd timer with pr", "ts": "2026-11-01"}
+{"key": "5f17c4d5364f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "ebe05123f3fc", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "09260ff756ce", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "97e3ec9fb97d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming dashboard visibility features", "ts": "2026-11-01"}
+{"key": "f2e6012615fc", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly invoked just do it skill", "ts": "2026-11-01"}
+{"key": "28e0da88038b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan for dashboard", "ts": "2026-11-01"}
+{"key": "e474db2575e1", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates systemd timer and dashboard package", "ts": "2026-11-01"}
+{"key": "6da4e2c4180e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "264f46af6ffe", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested merge and session end", "ts": "2026-11-01"}
+{"key": "e5d4e613987b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked to create a new skill", "ts": "2026-11-01"}
+{"key": "99cdcbfae723", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and creates pull request", "ts": "2026-11-01"}
+{"key": "02ca32602167", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just do it now", "ts": "2026-11-01"}
+{"key": "883b15985bbc", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after adversarial review of guards", "ts": "2026-11-01"}
+{"key": "682b638beeb2", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming github repository scour", "ts": "2026-11-01"}
+{"key": "b447bf821ab6", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "79a1faaf8c46", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan for repo scout", "ts": "2026-11-01"}
+{"key": "e4daa2e1e98f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: executes implementation plan", "ts": "2026-11-01"}
+{"key": "e09e6222d490", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: test-driven implementation of repo scout", "ts": "2026-11-01"}
+{"key": "b503b4f2723d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after security review", "ts": "2026-11-01"}
+{"key": "f0a5873a7037", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies cli wiring and writes state file", "ts": "2026-11-01"}
+{"key": "23e146503718", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "8bca5e221c99", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked to configure a compelled hook", "ts": "2026-11-01"}
+{"key": "d0fc24a92ebe", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates hook script and configures settings", "ts": "2026-11-01"}
+{"key": "b474c85e5fb6", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies core physics modules and merges pr", "ts": "2026-11-01"}
+{"key": "e4b6c25e9b29", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming local models", "ts": "2026-11-01"}
+{"key": "7f7baf32922a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "3a2073f4b445", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds new scripts and mcp server", "ts": "2026-11-01"}
+{"key": "dc7ee506d7b8", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after hardening security controls", "ts": "2026-11-01"}
+{"key": "757c46e11d94", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "f53dd6cf5848", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: physical 3d print battery holder decision", "ts": "2026-11-01"}
+{"key": "42b5cbcf0f6e", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only edit committed locally without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "71613c96f5f3", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly asked for status report", "ts": "2026-11-01"}
+{"key": "e7013f5c4adf", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: installs reboot crontab and catchup script", "ts": "2026-11-01"}
+{"key": "e33af7d8d742", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: edits script pushes branch and merges pr", "ts": "2026-11-01"}
+{"key": "496e2100e48f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked now what", "ts": "2026-11-01"}
+{"key": "2c8b517b4c21", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: merges pull request on remote", "ts": "2026-11-01"}
+{"key": "3c88c9175f42", "verdict": "true", "note": "skill: reviewed, agy said false (general software project strategy question); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "f0f9936010bc", "verdict": "true", "note": "skill: reviewed, agy said false (reviewing scout picks without delegating work); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "a18fc4650594", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies ssh config adds script and merges pr", "ts": "2026-11-01"}
+{"key": "2e9a774a4ee2", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds mount script and systemd service", "ts": "2026-11-01"}
+{"key": "e357138283c2", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked whether to session end", "ts": "2026-11-01"}
+{"key": "b35bebacb0fc", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only edit to instructions without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "efd0f2a90968", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only edit to instructions without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "310c9386590d", "verdict": "true", "note": "skill: reviewed, agy said false (career planning rather than physical choice); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "a1706e53db5b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds new scripts in repo scripts directory", "ts": "2026-11-01"}
+{"key": "022110c9d48d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "9997dc1a0f1b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds write recipe to home assistant rest api", "ts": "2026-11-01"}
+{"key": "832ed606327c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: edits executable script", "ts": "2026-11-01"}
+{"key": "bb3ad95aa18b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "8737c4b28978", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "42cf7459d2f4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "b2cba919c376", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming pathfinder area templates", "ts": "2026-11-01"}
+{"key": "44ffdf591f37", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan from spec", "ts": "2026-11-01"}
+{"key": "48fcf4b72d76", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: subagent driven execution of plan", "ts": "2026-11-01"}
+{"key": "df7e7d0015ac", "verdict": "false", "note": "skill: reviewed false: user asked question about tool choice", "ts": "2026-11-01"}
+{"key": "b5df52728d86", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: physical 3d print manufacturing order decision", "ts": "2026-11-01"}
+{"key": "beac6601cd3d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds exporter code and changes generator", "ts": "2026-11-01"}
+{"key": "63ae780868ac", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user invoked just-get-it-done skill", "ts": "2026-11-01"}
+{"key": "8c3c1faf47cf", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds scripts node loader hook and skill symlink", "ts": "2026-11-01"}
+{"key": "e869e16cd303", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only edit to instructions without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "e7ad0a76a575", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "dc64a70015ac", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested to get to work on not done", "ts": "2026-11-01"}
+{"key": "d6840af640a4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after hardening security guardrails", "ts": "2026-11-01"}
+{"key": "5508f9bc41e8", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "53db1b381815", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed session-end", "ts": "2026-11-01"}
+{"key": "aa9af303f6ab", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "3b5a17bfd67f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "c6c06113d64b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "62c9e7fe31aa", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "cfe7eed27fbd", "verdict": "true", "note": "skill: reviewed, agy said false (user told agent to go rather than stop); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "0b170ff380b2", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: edits scripts and docker compose configuration", "ts": "2026-11-01"}
+{"key": "adfd869482ee", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates remote repo with api token and pushes", "ts": "2026-11-01"}
+{"key": "efc4eee2a4a7", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "7094a07a5927", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: memory search before non-trivial investigation", "ts": "2026-11-01"}
+{"key": "2997426bac42", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates local server script and just recipe", "ts": "2026-11-01"}
+{"key": "835bedd9c740", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "69b73d4864fd", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked now what", "ts": "2026-11-01"}
+{"key": "fe10f4b94f7b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies script and healthcheck configuration", "ts": "2026-11-01"}
+{"key": "92dc534347ea", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "3a04df1ee0e4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed sesion end", "ts": "2026-11-01"}
+{"key": "5ef13b4c1701", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates weekly cron script and crontab entry", "ts": "2026-11-01"}
+{"key": "d8a3fb801064", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies container management script", "ts": "2026-11-01"}
+{"key": "43369748071f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming multiplayer game integration", "ts": "2026-11-01"}
+{"key": "17b0622160b5", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "22c2878d3ad4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates remote repo pushes and merges pr", "ts": "2026-11-01"}
+{"key": "b9e5365f86b6", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan", "ts": "2026-11-01"}
+{"key": "8af23b47469c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: executes implementation plan", "ts": "2026-11-01"}
+{"key": "61a9c62e9d4a", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: test-driven implementation", "ts": "2026-11-01"}
+{"key": "542e68297a3e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates install script and modifies justfile", "ts": "2026-11-01"}
+{"key": "069422d9ae49", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "5a7245937dd0", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: installs bridge into live game and merges pr", "ts": "2026-11-01"}
+{"key": "6dda5e9e08a2", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies protocol and event models", "ts": "2026-11-01"}
+{"key": "0f3d346487ff", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it now", "ts": "2026-11-01"}
+{"key": "a1cab6258d09", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies seat timeout configuration and fallback", "ts": "2026-11-01"}
+{"key": "933704445374", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "fc4c75ef5d37", "verdict": "true", "note": "skill: reviewed, agy said false (compaction summary without session end request); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "9f18be588256", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds autostart script and merges pr", "ts": "2026-11-01"}
+{"key": "0a5722c60d7b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "a492cec205f5", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds ci workflow triggering windows runner", "ts": "2026-11-01"}
+{"key": "c70452753288", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "965cf161b695", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds mcp server and registers install script", "ts": "2026-11-01"}
+{"key": "1e869f962faa", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked if session end now", "ts": "2026-11-01"}
+{"key": "9e55981525d3", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies runner reaper scripts", "ts": "2026-11-01"}
+{"key": "9c99899ac489", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "b466079a8daf", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "b0932e043596", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "036dc29551bc", "verdict": "false", "note": "skill: reviewed false: prioritizing tasks not diagnosing root cause", "ts": "2026-11-01"}
+{"key": "ac7699007492", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: evaluates security risk of public repository", "ts": "2026-11-01"}
+{"key": "45056e579895", "verdict": "true", "note": "skill: reviewed, agy said false (user asked to check internet access while working); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "adcc27d3c658", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies seat configuration and requests webhook", "ts": "2026-11-01"}
+{"key": "7e9d5c707b77", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "dd2cb877a224", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies game configuration file", "ts": "2026-11-01"}
+{"key": "74ee76a1b7b6", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "82c52834e7ac", "verdict": "true", "note": "skill: reviewed, agy said false (user typed just-do-it not session end); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "310d4c746c32", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user gave explicit commands to move work forward", "ts": "2026-11-01"}
+{"key": "9b5f5c7dfb07", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies lua bridge and game protocol", "ts": "2026-11-01"}
+{"key": "5ed57c22e479", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "d6f4bb81a13b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "f14843ac9812", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user requested status check", "ts": "2026-11-01"}
+{"key": "8575a531dc83", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies permissions configuration file", "ts": "2026-11-01"}
+{"key": "3d7048bf4a5c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies nightly cron script", "ts": "2026-11-01"}
+{"key": "6290186b0742", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user asked to create ontological auditor skill", "ts": "2026-11-01"}
+{"key": "496547d97e28", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "8ffa3b7c9e1c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: delegating tasks to agy and gemini", "ts": "2026-11-01"}
+{"key": "8a5e48bf3c1e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies server script and retry handling", "ts": "2026-11-01"}
+{"key": "af90e1dd1720", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "679391e9c979", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "e503eb8e289e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: delegating build tasks to agy", "ts": "2026-11-01"}
+{"key": "f15c5db1c5d0", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and creates pull request", "ts": "2026-11-01"}
+{"key": "13d72246c342", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "d97760b38a59", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "e5e4560396e7", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies popup logic and decision gate", "ts": "2026-11-01"}
+{"key": "dd21a5172a2b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "81a1a1adf729", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies ask_agy script and install script", "ts": "2026-11-01"}
+{"key": "ab204033e645", "verdict": "true", "note": "skill: reviewed, agy said false (asking now what without delegating work); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "847c560afcda", "verdict": "true", "note": "skill: reviewed, agy said false (modifies prompt text only with no logic); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "50a7ab7a97a9", "verdict": "false", "note": "skill: reviewed false: user said let's get started without delegating", "ts": "2026-11-01"}
+{"key": "1cb51f6bf8d3", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: edits script pushes branch and merges pr", "ts": "2026-11-01"}
+{"key": "64aa8bfb95b1", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "a2514da5b3f9", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "b4228d144b01", "verdict": "true", "note": "skill: reviewed, agy said false (doc-only routing edit to instructions without push); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "8d66210ab036", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: edits game config and installs bridge", "ts": "2026-11-01"}
+{"key": "be6a9f4433e9", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "7df2e0d5687d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "73b369b2bd7e", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds watch script and merges pr", "ts": "2026-11-01"}
+{"key": "029d654a68b4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds session start hook to settings", "ts": "2026-11-01"}
+{"key": "026cff66cd40", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: configures hook in settings and merges pr", "ts": "2026-11-01"}
+{"key": "fa5fb7c1cebc", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies game configuration wait timeout", "ts": "2026-11-01"}
+{"key": "d9efe16b72e9", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "0b2a05a5272c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: authoring new skill", "ts": "2026-11-01"}
+{"key": "491f001cb6bb", "verdict": "true", "note": "skill: reviewed, agy said false (user asked to continue not end session); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "1720c3630480", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates stop hook and wires settings", "ts": "2026-11-01"}
+{"key": "522fa41bea97", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "27264ae181ba", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and merges pull request", "ts": "2026-11-01"}
+{"key": "05a3512c2f1e", "verdict": "false", "note": "skill: reviewed false: answering why user asked question", "ts": "2026-11-01"}
+{"key": "a39dd641e21f", "verdict": "true", "note": "skill: reviewed, agy said false (explaining omission not diagnosing failure); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "0f16649aaad1", "verdict": "false", "note": "skill: reviewed false: answering why question not creating product brief", "ts": "2026-11-01"}
+{"key": "bdeaa890b0e2", "verdict": "true", "note": "skill: reviewed, agy said false (user asked for explanation of expert bar); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "aba37da431d4", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates analysis script and stop hook", "ts": "2026-11-01"}
+{"key": "24388b3a6ee3", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: authoring think-wider skill", "ts": "2026-11-01"}
+{"key": "829096c96afb", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "231ab1c8a2e2", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies ci workflow configuration and template", "ts": "2026-11-01"}
+{"key": "d6e0aebf6fb8", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: analyzing external standards audit document", "ts": "2026-11-01"}
+{"key": "a7a36eac9fdf", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies validator script in features", "ts": "2026-11-01"}
+{"key": "7d27c9b29267", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds script and modifies cron script", "ts": "2026-11-01"}
+{"key": "d26253916dc5", "verdict": "false", "note": "skill: reviewed false: user granted permission rather than commanding advance", "ts": "2026-11-01"}
+{"key": "a1bc4d564990", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies docker compose service arguments", "ts": "2026-11-01"}
+{"key": "d8da8b71d95c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: brainstorming qa test bench campaigns", "ts": "2026-11-01"}
+{"key": "810403a8076d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: diagnosing root cause of testing failure", "ts": "2026-11-01"}
+{"key": "2a4936fee586", "verdict": "true", "note": "skill: reviewed, agy said false (design and explanation only without code execution); context shows the trigger applied", "ts": "2026-11-01"}
+{"key": "f56e081d3233", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: addresses slow live campaign roll dependency", "ts": "2026-11-01"}
+{"key": "1d1337ce2a76", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "653ff5b59f35", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: writing implementation plan for test bench", "ts": "2026-11-01"}
+{"key": "4f4ab62659cc", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: edits qa config and merges pull request", "ts": "2026-11-01"}
+{"key": "75ae95bea6f7", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: adds probe script and merges pull request", "ts": "2026-11-01"}
+{"key": "7d3b4522cf11", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user challenged standards bar coverage", "ts": "2026-11-01"}
+{"key": "8a597f3ec5ae", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: creates hook bench script and configuration", "ts": "2026-11-01"}
+{"key": "e5a7f0482d9b", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user explicitly requested session end", "ts": "2026-11-01"}
+{"key": "ab9bed5caf69", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after narrowing guard controls", "ts": "2026-11-01"}
+{"key": "5098205cb250", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies grep guard and trigger hooks", "ts": "2026-11-01"}
+{"key": "6ade34a2c54f", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after hardening hook controls", "ts": "2026-11-01"}
+{"key": "a864a2133920", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies surface write guard hook", "ts": "2026-11-01"}
+{"key": "f3d4afbf96e1", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after adversarial review of guard", "ts": "2026-11-01"}
+{"key": "6922d5c13437", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: pushes branch and opens pull request", "ts": "2026-11-01"}
+{"key": "30bff156d66c", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: user typed just-do-it", "ts": "2026-11-01"}
+{"key": "d08a5f1e3e2d", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after hardening defender guardrails", "ts": "2026-11-01"}
+{"key": "4c5b9dbe0012", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies qa runner code and lua bridge", "ts": "2026-11-01"}
+{"key": "b14b815d0113", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies and relocates token guard hook", "ts": "2026-11-01"}
+{"key": "400c0e3f7f07", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: captures memory after hardening token guard control", "ts": "2026-11-01"}
+{"key": "fc130a7bc657", "verdict": "true", "note": "skill: agy-proposed, 20-sample checked: modifies hook bench script", "ts": "2026-11-01"}
