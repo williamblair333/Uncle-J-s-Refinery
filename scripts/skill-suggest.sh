@@ -11,6 +11,14 @@ trap 'exit 0' ERR
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Guards against the 2026-11-01 churn: this hook fired on every Stop (blocked re-stops
+# included) and each fire was a full `claude -p` that loaded every MCP server. 583 of
+# 682 Refinery transcripts were its own children; RAM and swap filled.
+# 1. Never from a headless session (its own child, scout, dream, ralph, auto-maintain).
+[[ -n "${SKILL_SUGGEST_CHILD:-}" ]] && exit 0
+[[ "${CLAUDE_CODE_ENTRYPOINT:-cli}" == "sdk-cli" ]] && exit 0
+[[ "${SKILL_SUGGEST:-}" == "off" ]] && exit 0
+
 # Load .env
 if [[ -f "$REPO_ROOT/.env" ]]; then
   # shellcheck disable=SC1091
@@ -39,12 +47,17 @@ try:
     data = json.loads(sys.stdin.read())
     sid = data.get('session_id', '')
     tp  = data.get('transcript_path', '')
-    print(sid + '\t' + tp)
+    active = '1' if data.get('stop_hook_active') else ''
+    print(sid + '\t' + tp + '\t' + active)
 except Exception:
-    print('\t')
+    print('\t\t')
 ")"
 SESSION_ID="$(cut -f1 <<< "$_py_out")"
 TRANSCRIPT_PATH="$(cut -f2 <<< "$_py_out")"
+STOP_HOOK_ACTIVE="$(cut -f3 <<< "$_py_out")"
+
+# 2. Not on a re-stop forced by another Stop hook (self-check, workaround-scan).
+[[ -n "$STOP_HOOK_ACTIVE" ]] && exit 0
 
 SHORT_ID="${SESSION_ID:0:8}"
 [[ -z "$SHORT_ID" ]] && SHORT_ID="unknown"
@@ -52,6 +65,19 @@ SHORT_ID="${SESSION_ID:0:8}"
 # Exit early if transcript is missing
 [[ -z "$TRANSCRIPT_PATH" ]] && exit 0
 [[ -f "$TRANSCRIPT_PATH" ]] || exit 0
+
+# 3. At most one run at a time, and one per session per cooldown window.
+STAMP_DIR="${SKILL_SUGGEST_STATE:-$REPO_ROOT/state/skill-suggest}"
+COOLDOWN="${SKILL_SUGGEST_COOLDOWN:-1800}"
+mkdir -p "$STAMP_DIR"
+exec 9>"$STAMP_DIR/.lock"
+flock -n 9 || exit 0
+STAMP="$STAMP_DIR/$SHORT_ID"
+if [[ -f "$STAMP" ]] && (( $(date +%s) - $(stat -c %Y "$STAMP") < COOLDOWN )); then
+  exit 0
+fi
+touch "$STAMP"
+find "$STAMP_DIR" -maxdepth 1 -type f ! -name .lock -mtime +7 -delete 2>/dev/null || true
 
 # Extract ALL assistant messages from the transcript, concatenated with ---
 # Truncate total to 6000 chars to stay within claude --print limits
@@ -124,7 +150,12 @@ printf '%s\n' "$TRANSCRIPT_TEXT" >> "$TMPFILE"
 printf '\n--- END TRANSCRIPT ---\n' >> "$TMPFILE"
 
 # Call claude --print to analyze the transcript
-CLAUDE_OUTPUT="$(claude --dangerously-skip-permissions -p "@$TMPFILE" 2>/dev/null)" || true
+# 4. A bare text call: no hooks (so it can't re-trigger this one), no MCP servers, no
+#    tools, no saved transcript. Same flags as scripts/local_chat/server.py.
+CLAUDE_OUTPUT="$(SKILL_SUGGEST_CHILD=1 SELF_CHECK=off WORKAROUND_SCAN=off \
+  "${SKILL_SUGGEST_CLAUDE:-claude}" -p --settings '{"disableAllHooks":true}' \
+  --strict-mcp-config --tools "" --no-session-persistence --output-format text \
+  < "$TMPFILE" 2>/dev/null)" || true
 
 # Parse: strip markdown fences, find SKILL_DRAFT line
 CLEAN_OUTPUT="$(printf '%s' "$CLAUDE_OUTPUT" | grep -v '^```')"

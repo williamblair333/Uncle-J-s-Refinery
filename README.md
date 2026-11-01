@@ -541,6 +541,8 @@ promote <id> global
 
 The draft is not installed until you send that command via Telegram. Review the preview, then promote or ignore.
 
+The hook runs at most once per session every 30 minutes (`SKILL_SUGGEST_COOLDOWN`, in seconds), one at a time, and never on a re-stop or in a headless `claude -p` session. Its review call loads no MCP servers, tools or hooks. Turn it off with `SKILL_SUGGEST=off`.
+
 ```bash
 bash features/auto-skill/install.sh
 # uninstall: bash features/auto-skill/install.sh --uninstall

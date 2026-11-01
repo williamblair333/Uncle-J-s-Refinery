@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-01 — skill-suggest Stop hook stopped flooding the machine
+
+- Why: RAM (46 GB) and swap (7 GB) filled up and the desktop slowed to a crawl. The auto-skill Stop hook (`scripts/skill-suggest.sh`, `# uncle-j-auto-skill`) fired on every Stop, including the re-stops that self-check forces. Each fire was a full permission-skipping `claude -p` that loaded every MCP server. 583 of 682 Refinery transcripts were its own runs (67 on 10-31), and only 56 drafted anything.
+- Fixed: it now skips re-stops (`stop_hook_active`), headless sessions (`SKILL_SUGGEST_CHILD`, `CLAUDE_CODE_ENTRYPOINT=sdk-cli`) and `SKILL_SUGGEST=off`. One instance runs at a time (`flock`), at most once per session per 30 min (`SKILL_SUGGEST_COOLDOWN`, stamps in `state/skill-suggest/`). The review call runs with no hooks, no MCP servers, no tools, no saved session and no permission skip (same flags as `scripts/local_chat/server.py`). Live at once, since the hook reads the script on each fire. `tests/test_skill_suggest.py`, 4 tests.
+
 ## 2026-11-01 — skill-adoption-audit skill committed
 
 - `global-skills/skill-adoption-audit/` (written 04:16, already symlinked into ~/.claude/skills) is now tracked, which clears the `untracked-skills` healthcheck fail. `docs/SKILLS.md` regenerated (80 repo skills). Nightly scout state staged.
