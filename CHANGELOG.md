@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-01 — session end (fourth)
+
+- Merged #274 (skill false-hit labels). README checked: it doesn't cover the hook bench; no update. ROADMAP checked: no update. Open item filed in HANDOFF: self-work-budget denies one Edit inside a parallel batch.
+
 ## 2026-11-01 — skill false-hit labels in the hook bench
 
 - `scripts/hook_bench.py`: each Skill call carries the user prompt before it (`prompt`), gets a label key (`skill_key`, `skill:` prefix, prompt included) and a row in a per-skill table (calls, false/labelled, precision) with unlabelled samples; `--skill NAME` shows skills only. `--json` `skills` is now a list of rows (was a name→count dict; no consumers).

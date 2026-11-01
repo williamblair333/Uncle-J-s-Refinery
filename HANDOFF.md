@@ -1,7 +1,7 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-11-01, third session end)
+## NEXT SESSION — start here (updated 2026-11-01, fourth session end)
 
 **Next:** `skills-red-green` or the PR-gate-on-Gitea gap. Skill false-hit labels are done (11-01, PR
 `feat/skill-false-hit-labels`): `just hook-bench --skill X` shows a skill's calls and precision; new calls show
