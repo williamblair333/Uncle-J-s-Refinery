@@ -118,7 +118,14 @@ case "$TOOL_NAME" in
       fi
     fi
     count=$((current + 1))
-    if [ "$count" -gt "$BUDGET" ]; then
+    # Edit-family calls count but are never denied: they often arrive in a
+    # parallel batch, and denying one while the rest apply leaves a file
+    # half-edited. The over-budget count carries to the next Read/Bash/Grep/Glob.
+    case "$TOOL_NAME" in
+      Edit|Write|MultiEdit|NotebookEdit) is_edit=1 ;;
+      *) is_edit=0 ;;
+    esac
+    if [ "$count" -gt "$BUDGET" ] && [ "$is_edit" = "0" ]; then
       if ! { mkdir -p "$SELF_WORK_DIR" && echo 0 > "$COUNT_FILE"; } 2>/dev/null; then
         log_decision allow
         exit 0

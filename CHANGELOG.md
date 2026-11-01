@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-01 — self-work budget never denies an edit
+
+- Why: the budget denied one Edit in a parallel batch while the rest applied, leaving hook_bench.py half-edited (tests caught it).
+- `hooks/discipline/self-work-budget.sh`: Edit-family calls still count, but never take the deny; the over-budget count carries to the next Read/Bash/Grep/Glob. Live at once (the hook is symlinked from the repo). New parametrized test covers all four edit tools.
+
 ## 2026-11-01 — agy brief lint
 
 - Why: this session sent 4 agy briefs that broke the written agy-job rules (memory note only): `.venv/bin/python` instead of a bare command (one denied), `git checkout -b` (denied), a read under ~/.code-index (outside agy's roots). Two jobs failed and burned quota.

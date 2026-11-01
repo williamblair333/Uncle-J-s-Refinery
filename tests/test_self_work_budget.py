@@ -53,8 +53,8 @@ def test_budget_exceeded_denies_once_then_allows(tmp_path):
     assert proc2.returncode == 0
     assert proc2.stdout.strip() == ""
 
-    # Call 3: Edit -> count 3 exceeds budget 2 -> deny once
-    payload3 = {"tool_name": "Edit", "session_id": session_id, "cwd": cwd}
+    # Call 3: Read -> count 3 exceeds budget 2 -> deny once
+    payload3 = {"tool_name": "Read", "session_id": session_id, "cwd": cwd}
     proc3 = run_hook(tmp_path, payload3, env)
     assert proc3.returncode == 0
     data = json.loads(proc3.stdout)
@@ -64,7 +64,7 @@ def test_budget_exceeded_denies_once_then_allows(tmp_path):
     assert "Hand the next bounded piece to ask_agy" in reason
     assert "Retry to continue if this genuinely needs Claude." in reason
 
-    # Call 4: Retry of Edit -> count reset to 0 so next call is 1 <= 2 -> allow
+    # Call 4: Retry of Read -> count reset to 0 so next call is 1 <= 2 -> allow
     proc4 = run_hook(tmp_path, payload3, env)
     assert proc4.returncode == 0
     assert proc4.stdout.strip() == ""
@@ -72,7 +72,34 @@ def test_budget_exceeded_denies_once_then_allows(tmp_path):
     logs = read_logs(tmp_path)
     assert len(logs) == 4
     assert [log["decision"] for log in logs] == ["allow", "allow", "deny", "allow"]
-    assert [log["tool"] for log in logs] == ["Read", "Write", "Edit", "Edit"]
+    assert [log["tool"] for log in logs] == ["Read", "Write", "Read", "Read"]
+
+
+@pytest.mark.parametrize("edit_tool", ["Edit", "Write", "MultiEdit", "NotebookEdit"])
+def test_edits_over_budget_never_denied_deny_carries_over(tmp_path, edit_tool):
+    """A parallel batch of edits must apply whole: denying one leaves a file half-edited."""
+    env = {"SELF_WORK_BUDGET": "2"}
+    session_id = "edit-batch-session"
+    cwd = "/opt/proj/my-project"
+    count_file = tmp_path / ".claude" / "state" / "self-work" / f"{session_id}.count"
+
+    # Four edits in a row: counts 1..4, all allowed even past the budget
+    for _ in range(4):
+        proc = run_hook(tmp_path, {"tool_name": edit_tool, "session_id": session_id, "cwd": cwd}, env)
+        assert proc.returncode == 0
+        assert proc.stdout.strip() == ""
+    assert count_file.read_text().strip() == "4"
+
+    # The next non-edit self-work call takes the deny and resets the counter
+    proc = run_hook(tmp_path, {"tool_name": "Bash", "session_id": session_id, "cwd": cwd,
+                               "tool_input": {"command": "ls"}}, env)
+    data = json.loads(proc.stdout)
+    assert data["hookSpecificOutput"]["permissionDecision"] == "deny"
+    assert "Self-work budget: 5 tool calls" in data["hookSpecificOutput"]["permissionDecisionReason"]
+    assert count_file.read_text().strip() == "0"
+
+    logs = read_logs(tmp_path)
+    assert [log["decision"] for log in logs] == ["allow"] * 4 + ["deny"]
 
 
 @pytest.mark.parametrize("delegate_tool", [
@@ -210,7 +237,7 @@ def test_per_session_isolation(tmp_path):
     assert "deny" in proc1_denied.stdout
 
     # Session 2 makes its 1st retry / check: it hasn't exceeded yet, so 2nd call is denied only now
-    proc2_denied = run_hook(tmp_path, {"tool_name": "Write", "session_id": "sess-two-2222", "cwd": cwd}, env)
+    proc2_denied = run_hook(tmp_path, {"tool_name": "Read", "session_id": "sess-two-2222", "cwd": cwd}, env)
     assert proc2_denied.returncode == 0
     assert "deny" in proc2_denied.stdout
 
