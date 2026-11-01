@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-01 — skill router names judgment skills before the turn starts
+
+- Why: across 65 interactive sessions (14 days, every project), the skills a hook forces ran in most of them: pre-mortem 55, session-end-checklist 40. The judgment skills nobody forces almost never ran: think-wider 1, prior-art-check 1, gttp 4, expert-bar 4, occams-razor 3, referee 0. partikus went from "I really wanted a statue" straight to installing torch, and only used gttp, brainstorming and expert-bar after Bill asked.
+- Added: `features/prompt-triggers/skill_router.py`, a UserPromptSubmit hook. It matches Bill's own words (pasted agent text and harness messages skipped, pastes over 3000 chars skipped) against a fixed table of trigger phrases for gttp, think-wider, prior-art-check, occams-razor, referee, validate-external-audit, media-teardown, brainstorming and slowest-loop-first. It names at most 3 and lets the model decline one in a line. No model call. `SKILL_ROUTER_OFF=1` disables it; `features/prompt-triggers/install.sh` registers it.
+- Bench: `just router-bench` replays real prompts. On 711 prompts it fires on 10 (1.4%), all real matches on review, including both partikus misses. `tests/test_skill_router.py`, 25 tests.
+- Limit: a prompt regex only sees what Bill says. Misses that happen in the agent's own actions, such as installing a dependency without checking existing infrastructure, need an action gate (partikus's preflight `existing-infra-first`).
+
 ## 2026-11-01 — skill-suggest Stop hook stopped flooding the machine
 
 - Why: RAM (46 GB) and swap (7 GB) filled up and the desktop slowed to a crawl. The auto-skill Stop hook (`scripts/skill-suggest.sh`, `# uncle-j-auto-skill`) fired on every Stop, including the re-stops that self-check forces. Each fire was a full permission-skipping `claude -p` that loaded every MCP server. 583 of 682 Refinery transcripts were its own runs (67 on 10-31), and only 56 drafted anything.

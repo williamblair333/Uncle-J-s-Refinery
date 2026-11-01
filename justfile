@@ -73,6 +73,10 @@ hook-bench *args:
 hook-bench-export dir="state/hook-bench-export":
     python3 scripts/hook_bench.py --export {{dir}}
 
+# skill router bench: replay Bill's real prompts, fire rate and sample hits per routed skill
+router-bench *args:
+    python3 scripts/router_bench.py {{args}}
+
 # self-check bench: how often "check yourself" turns up a real correction (all transcripts)
 check-bench *args:
     python3 scripts/check_bench.py {{args}}

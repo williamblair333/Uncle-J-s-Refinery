@@ -54,6 +54,8 @@ and `grep preflight-gate state/hook-blocks.log` for real denies. Untracked
 
 ## NEXT SESSION — start here (updated 2026-11-01, fourth session end)
 
+**Skill router (2026-11-01, `feat/skill-router`):** `features/prompt-triggers/skill_router.py` names the judgment skills a prompt matches (gttp, think-wider, prior-art-check, occams-razor, …). Deployed with `bash features/prompt-triggers/install.sh`. Bench: `just router-bench` (1.4% fire rate on 711 prompts). Not yet proven: whether named skills then get *called*. Re-run the skill-adoption count (`skill-adoption-audit` steps 3 and 6) after a week of sessions; if named-but-not-called stays common, add the Stop check (named skill not called and not declined → block once). Action-side misses (installing deps without checking existing infra) need a global version of partikus's preflight `existing-infra-first` gate. Partikus asked for four items (Hunyuan3D in ComfyUI, preflight trust, write-guard false positive, review/ exemption); Bill is handling those with partikus directly.
+
 **Next:** `skills-red-green` or the PR-gate-on-Gitea gap. Check `~/.claude/state/verify-gate/denies.jsonl` for the first real denies (the gate hasn't fired live yet). mtw2-ca holds its three mtw2 fixes until Bill confirms them to it. `skill-adoption-audit` is now tracked (healthcheck clean). Skill false-hit labels are done (11-01, PR
 `feat/skill-false-hit-labels`): `just hook-bench --skill X` shows a skill's calls and precision; new calls show
 as unlabelled samples. agy labels skills from the prompt alone and misses context (commit next, delegation
