@@ -1086,6 +1086,7 @@ Cloned at install time (gitignored):
 │   │   └── unpushed-warn.sh            ← Stop hook: warns when branch is ahead of remote
 │   ├── pre-mortem-guard/               ← versioned pre-mortem enforcement (symlinked to ~/.claude/hooks/pre-mortem-guard/)
 │   │   ├── surface-write-guard.sh      ← blocks Bash writes to surface files that bypass the Edit/Write guard; fails loudly without jq
+│   │   ├── token-guard.sh              ← blocks every direct write of a clearance token (reads allowed) and rm of guard scripts
 │   │   └── write-clearance-token.sh    ← the only sanctioned way to mint a pre-mortem clearance token
 │   ├── langfuse_hook.py                ← Stop hook (step 8)
 │   ├── scan-secrets/                   ← guardrail (step 7)

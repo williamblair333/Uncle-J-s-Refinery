@@ -1,13 +1,13 @@
 # Handoff — Uncle J's Refinery
 
 
-## NEXT SESSION — start here (updated 2026-11-01, second session end)
+## NEXT SESSION — start here (updated 2026-11-01, third session end)
 
-11-01 late: token-guard.sh is versioned (`hooks/pre-mortem-guard/`, PR `fix/token-guard-versioned`) and no
-longer blocks token reads; `leaks_state` is empty. After merge, run install-reliability.sh's pre-mortem-guard
-section so `~/.claude/hooks/pre-mortem-guard/token-guard.sh` becomes a symlink, then
-`just hook-bench --hook token-guard --days 30` should show 0 fires (old copy: 2, both false).
-Left of `behaviour-bench-per-hook`: false-hit labels for skills.
+**Next:** the last open part of `behaviour-bench-per-hook` is false-hit labels for skills; then
+`skills-red-green` or the PR-gate-on-Gitea gap. token-guard is done: #272 merged and deployed (symlink into
+the repo, verified live; bench 0/800, old copy 2/800 both false; `leaks_state` empty). Direct `ln`/`cp` on
+`~/.claude/hooks/*` is blocked by surface-write-guard: deploy with `bash install-reliability.sh`.
+Pre-mortem kept `.*` matching in token-guard on purpose (segment-local misses `touch ';' T`).
 
 Merged #266–#270, all below. `behaviour-bench-per-hook` is still partial: PostToolUse is now replayed; left are
 false-hit labels for skills and token-guard (leaks_state: hardcoded log path). **Next:** finish those, or
