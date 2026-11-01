@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-01 — machine slowdown: skill-suggest churn fixed; Heretic still holds 15.6 GB
+
+Bill reported the machine crawling. RAM and swap were full, with 23–36% of CPU time waiting on disk. Causes, biggest first: Heretic `llama-server` (15.6–18 GB RSS, ~2 cores), and the auto-skill Stop hook starting a full-MCP `claude -p` on every Stop (fixed, see CHANGELOG). mtw2's parley loop was also running. Bill had every session wrap up: mtw2-74 stopped (`just stop`, branch `fix/qa-open-cases` 330f8f9), hearth-5b went idle, and partikus-5d was still waiting at a prompt when this session ended.
+- **Not seen live yet:** the guarded hook hadn't fired when this was committed. Check that `state/skill-suggest/` holds one stamp per session, and that `pgrep -af "claude -p"` shows no burst after turns.
+- **Bill's call:** stop Heretic when nothing needs it (frees ~16 GB). Chatterbox holds 2.2 GB of swap while idle.
+- Other `claude -p` callers (dream, ralph, auto-maintain, scout) run from cron, not per turn. They still load the full stack. Check them only if load spikes line up with their schedules.
+
 ## 2026-11-01 — verify-before-delegate gate (merged, deployed)
 
 The first delegation of a session (`ask_agy`/`heretic`/`openai`, `ask_local`'s three work tools, `Agent` except
