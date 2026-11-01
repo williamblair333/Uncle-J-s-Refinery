@@ -679,6 +679,12 @@ Skills are model-invoked, so typing a skill's name doesn't guarantee it loads. T
 UserPromptSubmit hook spots a skill name in your message (`just-do-it`, `pre-mortem`, or any
 name as `/name`) and tells Claude to invoke it first. Task and system notifications are ignored.
 
+The same installer adds two more. `meta_trigger.py` catches "why did I have to…" complaints and
+forces expert-bar plus a real check. `skill_router.py` matches your wording against the trigger
+phrases of judgment skills (gttp, think-wider, prior-art-check, occams-razor, referee and others)
+and names up to 3 for the turn. Measure it with `just router-bench`; turn it off with
+`SKILL_ROUTER_OFF=1`.
+
 ```bash
 bash features/prompt-triggers/install.sh              # registers it in ~/.claude/settings.json
 bash features/prompt-triggers/install.sh --uninstall
