@@ -37,8 +37,8 @@ next): check its falses against the transcript before importing. token-guard is 
 the repo, verified live; bench 0/800, old copy 2/800 both false; `leaks_state` empty). Direct `ln`/`cp` on
 `~/.claude/hooks/*` is blocked by surface-write-guard: deploy with `bash install-reliability.sh`.
 Pre-mortem kept `.*` matching in token-guard on purpose (segment-local misses `touch ';' T`).
-**Open (11-01):** self-work-budget.sh denies a single Edit inside a parallel batch while the rest apply, leaving
-a file half-edited (hook_bench.py; tests caught it). Fix: deny every call in the batch, or exempt Edit/Write.
+**Fixed (11-01):** self-work-budget.sh no longer denies Edit/Write/MultiEdit/NotebookEdit (they still count); the
+deny lands on the next Read/Bash/Grep/Glob, so a parallel edit batch applies whole.
 
 Merged #266–#270, all below. `behaviour-bench-per-hook` is still partial: PostToolUse is now replayed; left are
 false-hit labels for skills and token-guard (leaks_state: hardcoded log path). **Next:** finish those, or
