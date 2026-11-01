@@ -135,6 +135,21 @@ def deny(reason: str, session: str, what: str) -> None:
     }}))
 
 
+_CD = re.compile(r"(?:^|[;&|(]\s*)(?:cd|pushd)\s+(?:--\s+)?(['\"]?)([^\s;&|)'\"]+)\1")
+_DASH_C = re.compile(r"(?:^|\s)-C\s+(['\"]?)([^\s;&|)'\"]+)\1")
+
+
+def command_dirs(command: str, cwd: str) -> list[str]:
+    """Where the command may run: the session cwd, plus each `cd X` / `pushd X` / `-C X` target,
+    so `cd /other/repo && just qa` from another repo still meets that repo's gates."""
+    dirs = [cwd]
+    for rx in (_CD, _DASH_C):
+        for m in rx.finditer(command):
+            p = os.path.expanduser(m.group(2))
+            dirs.append(p if os.path.isabs(p) else os.path.join(cwd, p))
+    return dirs
+
+
 def main(stdin=sys.stdin, trusted: set[Path] | None = None) -> int:
     try:
         data = json.load(stdin)
@@ -144,19 +159,30 @@ def main(stdin=sys.stdin, trusted: set[Path] | None = None) -> int:
         return 0
     command = (data.get("tool_input") or {}).get("command") or ""
     session = data.get("session_id") or "unknown"
-    config = find_config(data.get("cwd") or os.getcwd())
-    if not command or config is None:
+    if not command:
         return 0
+    trusted = trusted_roots() if trusted is None else trusted
+    seen: set[Path] = set()
+    for d in command_dirs(command, data.get("cwd") or os.getcwd()):
+        config = find_config(d)
+        if config is None or config in seen:
+            continue
+        seen.add(config)
+        if config.parent.parent.resolve() in trusted and check_config(config, command, session):
+            return 0
+    return 0
+
+
+def check_config(config: Path, command: str, session: str) -> bool:
+    """Run one repo's gates against the command; True when it denied (the deny is printed)."""
     root = config.parent.parent.resolve()
-    if root not in (trusted_roots() if trusted is None else trusted):
-        return 0
     try:
         gates = load_gates(config)
     except ValueError as exc:
         deny(f"Preflight config is broken, so no gate in this repo can run:\n{exc}\n\n"
              f"Fix {config} with the Edit tool; every Bash call here is refused until it parses.",
              session, f"config-error={config}")
-        return 0
+        return True
     for gate in gates:
         if not gate["_re"].search(command):
             continue
@@ -169,8 +195,8 @@ def main(stdin=sys.stdin, trusted: set[Path] | None = None) -> int:
              "Fix what the check reports, then run the command again. Don't reword the command "
              "to slip past the match: the gate is the project's own rule.",
              session, f"gate={gate['id']} root={root}")
-        return 0
-    return 0
+        return True
+    return False
 
 
 if __name__ == "__main__":

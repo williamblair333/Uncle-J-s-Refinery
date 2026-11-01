@@ -1,5 +1,14 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-01 — cross-session edit guard (deployed)
+
+A session can no longer edit a checkout another live session works in (`scripts/session_edit_guard.py`;
+override: `.claude/allow-cross-session-edits` in the target). It finds sessions through the undocumented
+`/run/user/<uid>/cc-socks/<pid>.sock`: after a Claude Code update run
+`bash hooks/discipline/session-edit-guard.sh --selftest`; empty output while sessions are open means it went inert.
+The preflight gate now follows `cd X &&`. Lesson behind both: Uncle J builds mechanisms; the project's own
+session fixes the project (mtw2-ca owns the young Pope; my unmerged edits there were handed to it, not reverted).
+
 ## 2026-11-01 — preflight gates + meta-question trigger (deployed)
 
 Deployed live via `features/prompt-triggers/install.sh` and `install-reliability.sh`; end-to-end

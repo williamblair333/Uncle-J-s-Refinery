@@ -72,6 +72,24 @@ def test_non_matching_command_is_not_checked(tmp_path, capsys):
         assert call(root, cmd, capsys=capsys) == (0, None), cmd
 
 
+def test_cd_into_a_gated_repo_from_elsewhere_still_meets_its_gate(tmp_path, capsys):
+    # 11-01: the gate read only the session cwd, so `cd mtw2 && just qa` from Uncle J slipped by
+    root = make_repo(tmp_path, GATE.format(run="exit 1"))
+    elsewhere = tmp_path / "other"
+    (elsewhere / ".git").mkdir(parents=True)
+    for cmd in (f"cd {root} && just qa field", f"cd '{root}/sub'; just qa field",
+                f"pushd {root} && just qa all"):
+        rc, out = call(root, cmd, cwd=elsewhere, capsys=capsys)
+        assert out and out["hookSpecificOutput"]["permissionDecision"] == "deny", cmd
+    assert call(root, f"cd {root} && just test", cwd=elsewhere, capsys=capsys) == (0, None)
+
+
+def test_command_dirs_resolves_relative_and_dash_c(tmp_path):
+    dirs = pg.command_dirs("git -C ../x status; cd sub && ls", str(tmp_path))
+    assert dirs[0] == str(tmp_path)
+    assert set(dirs[1:]) == {str(tmp_path / "../x"), str(tmp_path / "sub")}
+
+
 def test_untrusted_repo_never_runs_its_gate(tmp_path, capsys):
     marker = tmp_path / "ran"
     root = make_repo(tmp_path, GATE.format(run=f"touch {marker}; exit 1"))

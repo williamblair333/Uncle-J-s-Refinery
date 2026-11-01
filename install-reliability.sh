@@ -278,6 +278,25 @@ else
             ok "preflight-gate PreToolUse hook already wired in settings.json"
         fi
 
+        # Wire session-edit-guard (edit tools) on its own key, for the same reason as credential-guard.
+        # Refuses edits into a checkout another live Claude session works in (scripts/session_edit_guard.py).
+        # `|| exit 1` keeps a broken script (bash exit 2 = block) from denying every edit.
+        _seg_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("session-edit-guard"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_seg_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"Edit|Write|MultiEdit|NotebookEdit","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/session-edit-guard.sh || exit 1","timeout":10}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "session-edit-guard PreToolUse hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "session-edit-guard PreToolUse hook already wired in settings.json"
+        fi
+
         # Wire Stop hook (unpushed-warn) if not already present
         _stop_already=$(jq '[.hooks.Stop[]?.hooks[]?.command // ""] | map(select(contains("unpushed"))) | length' "$_settings" 2>/dev/null || echo 0)
         if [ "$_stop_already" -eq 0 ]; then

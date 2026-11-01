@@ -23,6 +23,8 @@ HITS = [
     "● You're right, and it was there to see. The handoff already called papal elections the "
     "main crash source.\n  So it doesn't depend on you asking again, I'm saving it as standing "
     "guidance:  i'm tired of having to solve the problems all the time",
+    "this is what i was talking about before.  any project manager would be smart enough to see "
+    "that if something is slowing down a process or test, fix it, mitigate it, something..",
 ]
 MISSES = [
     "build it",
