@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-02 — skill router covers plan and handoff reviews
+
+- Why: "review /home/bill/Downloads/daily-digest-handoff.md" ran with no review skill. The router had no route for plan-shaped documents, so it stayed silent, and Bill had to ask twice before verify-handoff-claims, product-focus-review, think-wider, expert-bar, red-team and referee ran.
+- Changed: `features/prompt-triggers/skill_router.py` routes review/analyze/assess/critique/"thoughts on" + plan/handoff/spec/design/proposal/PRD/brief/roadmap or a `*.md` name to product-focus-review and think-wider, and adds verify-handoff-claims when it's a handoff (or STATUS/TODO/NOTES.md). The new routes sit at the end of the table so the 3-skill cap never drops an older route; `route()` now names each skill once.
+- Bench: `just router-bench` on 708 real prompts: the new routes fire on none (no false positives); the incident prompt is in the tests. `tests/test_skill_router.py`, 33 tests.
+
 ## 2026-11-01 — skill router names judgment skills before the turn starts
 
 - Why: across 65 interactive sessions (14 days, every project), the skills a hook forces ran in most of them: pre-mortem 55, session-end-checklist 40. The judgment skills nobody forces almost never ran: think-wider 1, prior-art-check 1, gttp 4, expert-bar 4, occams-razor 3, referee 0. partikus went from "I really wanted a statue" straight to installing torch, and only used gttp, brainstorming and expert-bar after Bill asked.
