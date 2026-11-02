@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-02 — Strata 125B local-agent bench: verdict recorded
+
+- Ran the 125B Coder IQ1_M under Claude Code (bwrap read-only sandbox, localhost-only API with a key, read-only Bash allowlist; denials verified). No task completed within a 64k context; verdict and revisit conditions in HANDOFF. Services restored.
+
 ## 2026-11-02 — research queue: hallucination watcher
 
 - Reviewed `~/Downloads/hallucination-watcher-handoff.md` with the full review set + referee (pass). Queued in `docs/research-later.md`: premature until the digest exists; deterministic claim checks first.
