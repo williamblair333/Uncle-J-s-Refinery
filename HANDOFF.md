@@ -1,8 +1,16 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-02 — Strata 125B local agent: not worth it on this machine
+
+Bench: Coder IQ1_M, 64k context, Claude Code as the agent loop. 0 of 5 tasks gave an answer, so quality was never judged. Best attempt (t14): 30 turns, 27 min, then Claude Code's autocompact thrashed. Its system prompt plus tool output doesn't fit 64k with room to work, and 128k needs RAM that isn't free with the model resident. Details and the run log: `/opt/docker/strata/bench/NOTES.md`. Strata is stopped; Ollama, Chatterbox and Whisper are back.
+- **Bill's call:** delete the ~64 GB model files in `/opt/docker/strata/data`, or keep them for a revisit (a lean agent harness, or a machine with more RAM).
+- **Open, needs a PR:** `surface-write-guard.sh` blocked a `mv` of `.jsonl` results in a command that also passed `-f docker-compose.yml` to dcup (read argument, `.yml` is a surface extension). Write a failing test for the read-arg case first; cause not yet traced to the exact pattern.
+- **Open, Bill approves before filing:** Strata returns a call to an undefined tool as plain `<tool_call>` text with `end_turn` instead of an error (NOTES.md item 1).
+- **Learned:** Claude Code 2.1.316 has no separate Grep/Glob tools (search runs through Bash); `--bare` + Bash disallowed leaves only Read. `CLAUDE_CODE_AUTO_COMPACT_WINDOW` didn't change the reported 200k window for `claude-sonnet-4-5`; `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` did trigger compaction.
+
 ## 2026-11-02 — hallucination watcher queued
 
-Review at `review/2026-11-02-hallucination-watcher-review.md`; entry in `docs/research-later.md`. Strata bench (125B Coder IQ1_M) in progress: see `/opt/docker/strata/`; restore stopped services with `bash /opt/docker/strata/restore.sh`.
+Review at `review/2026-11-02-hallucination-watcher-review.md`; entry in `docs/research-later.md`.
 
 ## 2026-11-02 — router: doc-first review prompts
 
