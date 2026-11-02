@@ -25,9 +25,14 @@ MAX_PROMPT = 3000          # longer prompts are pastes (transcripts, docs), not 
 # A review of a plan-shaped document. 2026-11-02: "review .../daily-digest-handoff.md" ran with
 # no review skill until Bill asked twice. One pattern feeds three routes so they stay in step;
 # they sit at the end of ROUTES so the MAX_SKILLS cap never drops an older, narrower route.
-PLAN_REVIEW = re.compile(
-    r"\b(?:review|analy[sz]e|evaluate|assess|critique|audit|look\s+over|go\s+over|thoughts\s+on)\b"
-    r".{0,80}?(?:\b(?:handoff|plan|proposal|design|spec|prd|brief|roadmap)\b|[\w-]\.(?:md|txt)\b)", re.I)
+# Either order: "review the plan" and "<path>.md ... please analyze / review" (2026-11-02 miss).
+# Doc-first needs a real file name: a bare "HANDOFF:" or "ROADMAP" in pasted text followed by a
+# later "review" is a quote, not an ask. "for review" / "under review" is the noun, not the ask.
+_VERB = (r"(?<!\bfor )(?<!\bunder )\b(?:review|analy[sz]e|evaluate|assess|critique|audit"
+         r"|look\s+over|go\s+over|thoughts\s+on)\b(?![-./])")   # not "audit-baselines.md"
+_DOC = r"(?:\b(?:handoff|plan|proposal|design|spec|prd|brief|roadmap)\b|[\w-]\.(?:md|txt)\b)"
+_PATH = r"[\w-]\.(?:md|txt)\b"
+PLAN_REVIEW = re.compile(rf"{_VERB}.{{0,80}}?{_DOC}|{_PATH}.{{0,160}}?{_VERB}", re.I | re.S)
 HANDOFF_REVIEW = re.compile(r"(?=.*?(?:\bhandoff\b|\b(?:status|todo|notes)\.md\b))" + PLAN_REVIEW.pattern,
                             re.I | re.S)
 

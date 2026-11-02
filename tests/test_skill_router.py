@@ -34,6 +34,10 @@ HITS = [
     ("review /home/bill/Downloads/daily-digest-handoff.md", "think-wider"),
     ("can you analyze this plan for the scout", "product-focus-review"),
     ("thoughts on the design doc in review/", "think-wider"),
+    # 2026-11-02: doc named before the verb went unrouted.
+    ("/home/bill/Downloads/125b-local-performance-handoff.md should answer your strata question. "
+     "please analyze / review", "verify-handoff-claims"),
+    ("the plan in notes.md — can you critique it", "product-focus-review"),
 ]
 MISSES = [
     "all good",
@@ -46,6 +50,11 @@ MISSES = [
     "continue",
     "review the diff",
     "update the plan file with the new dates",
+    # bench false hits 2026-11-02: noun "for review", pasted quotes
+    "file it away for review / todo whatever then continue where you left off at handoff",
+    " HANDOFF:\n    - It points the next session at the top STANDARDS gap, or the gap where review",
+    "you said: I left README and ROADMAP alone. I didn't redo the weekly review of blocked hooks.",
+    "the baseline is in ~/.uncle-j-memory/memory/audit-baselines.md now",
 ]
 
 
