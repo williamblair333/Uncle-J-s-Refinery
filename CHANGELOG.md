@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-02 — skill router: full review set for plans, and a gate that makes named skills run
+
+- Why: after PR #287 the router still had two limits. It named at most 3 skills, so expert-bar, red-team and referee were never named for a plan review. And nothing checked that a named skill actually ran. Bill: "fix the limits first".
+- Router (`features/prompt-triggers/skill_router.py`): a plan/handoff/spec/design review names product-focus-review, think-wider, expert-bar, auditor and referee (plus verify-handoff-claims for a handoff), on top of the 3-skill cap. It reads up to 5 `.md`/`.txt` files named in the prompt (regular files only, 200 KB each; only skill names leave the hook). The document's text adds red-team (untrusted input, feeds, scraping, webhooks, credentials), slowest-loop-first ("after 7 days", cron, nightly, waiting on) and library-backend-adoption-eval (replace, backend, migrate, X vs Y). The router records the named skills per session in `~/.claude/state/skill-router/<session>.json`; a prompt from Bill with no match clears it, and harness messages leave it alone.
+- Gate (`features/prompt-triggers/skill_gate.py`, PreToolUse, matcher `*`): each Skill call clears its name. The first other tool call while any remain is denied once, with the list; the retry goes through, so a declined skill never deadlocks. It fails open on bad input, broken state, or a deny marker it can't write. Subagents are exempt, and `SKILL_GATE_OFF=1` turns it off. Denies go to `denies.jsonl` in the state dir. `features/prompt-triggers/install.sh` registers it idempotently.
+- Tests: `tests/test_skill_router.py`, `tests/test_skill_gate.py` and `tests/test_prompt_triggers_install.py` (temp HOME: idempotent, uninstall keeps other hooks), 46 tests; the full suite passes. The referee (Gemini) failed the first diff with 3 real findings, all fixed: `.txt` names didn't count as a review target, a non-dict `tool_input` crashed the gate outside its `try`, and relative paths were skipped without `cwd`. On the 2026-11-02 handoff prompt the router names exactly the 9 skills the full review used. `just router-bench`: still 10/708 fires.
+- Cost: a plan review now loads 6–9 skills, several thousand tokens. That's the ask: every lens that applies.
+
 ## 2026-11-02 — skill router covers plan and handoff reviews
 
 - Why: "review /home/bill/Downloads/daily-digest-handoff.md" ran with no review skill. The router had no route for plan-shaped documents, so it stayed silent, and Bill had to ask twice before verify-handoff-claims, product-focus-review, think-wider, expert-bar, red-team and referee ran.
