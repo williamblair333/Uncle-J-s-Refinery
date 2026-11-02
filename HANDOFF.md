@@ -1,8 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-02 — hallucination watcher queued
+
+Review at `review/2026-11-02-hallucination-watcher-review.md`; entry in `docs/research-later.md`. Strata bench (125B Coder IQ1_M) in progress: see `/opt/docker/strata/`; restore stopped services with `bash /opt/docker/strata/restore.sh`.
+
 ## 2026-11-02 — router: doc-first review prompts
 
 A review prompt that names the file first ("<path>.md … please analyze / review") was silent; fixed, see CHANGELOG. On the 14-day bench the plan set fires only on the 2 real review asks.
+- **jcodemunch-mcp breaking change**: since v1.108.403 a `file_pattern` containing `/` is anchored at the repo root in every tool (it used to also match at any depth, so `src/*.py` hit `pkg/src/a.py`); callers wanting any depth must write `**/src/*.py` or a bare pattern, and matching is case-sensitive.
 
 ## 2026-11-02 — router limits fixed: full review set + skill gate
 
