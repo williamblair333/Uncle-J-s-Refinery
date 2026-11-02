@@ -125,6 +125,7 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 - `search_text` for strings/comments/config (`context_lines` like `grep -C`); `winnow_symbols`
   for multi-constraint queries. Small matches come back with code in `sources` (no follow-up
   fetch needed); fetch any counted in `sources_omitted`.
+- `file_pattern` with `/` is root-anchored (any depth: `**/src/*.py`); bare `*.py` isn't.
 - Also: `index_file` (surgical re-index after an edit; a file the folder walk excludes is
   refused with `success: false` and the reason in `skipped`), `get_session_snapshot` (after
   compaction), `index_dependency` (the *installed* version's source — prefer over context7
