@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-02 — research queue: hallucination watcher
+
+- Reviewed `~/Downloads/hallucination-watcher-handoff.md` with the full review set + referee (pass). Queued in `docs/research-later.md`: premature until the digest exists; deterministic claim checks first.
+
 ## 2026-11-02 — skill router: doc-first review prompts route, bench false hits removed
 
 - Why: "/home/bill/Downloads/125b-local-performance-handoff.md should answer your strata question. please analyze / review" named no skills: the plan-review pattern only matched the verb before the document.
