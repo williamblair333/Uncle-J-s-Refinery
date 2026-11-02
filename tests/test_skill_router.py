@@ -28,6 +28,12 @@ HITS = [
     ("why does the bridge keep failing after a restart", "occams-razor"),
     ("get a second opinion from gemini on this plan", "referee"),
     ("review this critique and tell me if it's right", "validate-external-audit"),
+    # 2026-11-02: a handoff review ran with no review skills until Bill asked twice.
+    ("review /home/bill/Downloads/daily-digest-handoff.md", "verify-handoff-claims"),
+    ("review /home/bill/Downloads/daily-digest-handoff.md", "product-focus-review"),
+    ("review /home/bill/Downloads/daily-digest-handoff.md", "think-wider"),
+    ("can you analyze this plan for the scout", "product-focus-review"),
+    ("thoughts on the design doc in review/", "think-wider"),
 ]
 MISSES = [
     "all good",
@@ -38,7 +44,14 @@ MISSES = [
     "where are stls and py files if need merge then merge",
     "ok use your suggestions and just-do-it",
     "continue",
+    "review the diff",
+    "update the plan file with the new dates",
 ]
+
+
+def test_plan_review_routes_once_each():
+    skills = [s for s, _ in sr.route("review /home/bill/Downloads/daily-digest-handoff.md")]
+    assert len(skills) == len(set(skills))
 
 
 @pytest.mark.parametrize("prompt,skill", HITS)

@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-02 — skill router covers plan/handoff reviews; daily-digest handoff reviewed
+
+Bill asked for a review of `~/Downloads/daily-digest-handoff.md`. The first pass used no review skill. The router had no plan/handoff route (fixed, see CHANGELOG), and Bill had to ask twice. The full review used verify-handoff-claims, product-focus-review, slowest-loop-first, think-wider, expert-bar, red-team, library-backend-adoption-eval and auditor, and the referee (Gemini) passed it. The review was saved to the session scratchpad, not the repo.
+- **Verdict:** build it as a thin scout extension: feedparser + SQLite on native feeds (Reddit `.rss`, GitHub `releases.atom` and HN all return 200), a scripted burst rank, Heretic for prose, and URLs filled in from feed entries, never from the model. Skip RSSHub and the reader UI for now. Before any cron: a replay bench on a labelled fixture week, an SSRF guard on page fetches, and `_defang` on the digest. It sits behind offload-first unless it's built Heretic-first.
+- **Open for Bill:** what's "Strata" (not found anywhere)? Name three things from the last month you wish you'd heard about sooner, and where they first appeared.
+- **Not covered yet:** a review whose skills the router names but the agent then skips. Watch the next plan review for the skill calls.
+
 ## 2026-11-01 — machine slowdown: skill-suggest churn fixed; Heretic still holds 15.6 GB
 
 Bill reported the machine crawling. RAM and swap were full, with 23–36% of CPU time waiting on disk. Causes, biggest first: Heretic `llama-server` (15.6–18 GB RSS, ~2 cores), and the auto-skill Stop hook starting a full-MCP `claude -p` on every Stop (fixed, see CHANGELOG). mtw2's parley loop was also running. Bill had every session wrap up: mtw2-74 stopped (`just stop`, branch `fix/qa-open-cases` 330f8f9), hearth-5b went idle, and partikus-5d was still waiting at a prompt when this session ended.

@@ -20,6 +20,15 @@ import sys
 MAX_SKILLS = 3
 MAX_PROMPT = 3000          # longer prompts are pastes (transcripts, docs), not Bill's ask
 
+# A review of a plan-shaped document. 2026-11-02: "review .../daily-digest-handoff.md" ran with
+# no review skill until Bill asked twice. One pattern feeds three routes so they stay in step;
+# they sit at the end of ROUTES so the MAX_SKILLS cap never drops an older, narrower route.
+PLAN_REVIEW = re.compile(
+    r"\b(?:review|analy[sz]e|evaluate|assess|critique|audit|look\s+over|go\s+over|thoughts\s+on)\b"
+    r".{0,80}?(?:\b(?:handoff|plan|proposal|design|spec|prd|brief|roadmap)\b|[\w-]\.md\b)", re.I)
+HANDOFF_REVIEW = re.compile(r"(?=.*?(?:\bhandoff\b|\b(?:status|todo|notes)\.md\b))" + PLAN_REVIEW.pattern,
+                            re.I | re.S)
+
 # (skill, pattern, why). The wording comes from each skill's description in SKILL.md.
 ROUTES = [
     ("gttp", re.compile(
@@ -90,6 +99,9 @@ ROUTES = [
         r"|\bverify\s+(?:it\s+)?(?:on|in)\s+(?:the\s+)?(?:live|real|production)\b"
         r"|\bcheck\s+(?:the\s+log|back)\s+(?:in|tomorrow|later)\b", re.I),
      "a fix that can't be proven right away"),
+    ("verify-handoff-claims", HANDOFF_REVIEW, "a handoff whose claims may be stale"),
+    ("product-focus-review", PLAN_REVIEW, "reviewing a plan or design"),
+    ("think-wider", PLAN_REVIEW, "is the plan the best approach"),
 ]
 
 
@@ -118,7 +130,11 @@ def route(prompt: str) -> list[tuple[str, str]]:
     text = own_words(prompt)
     if len(text) > MAX_PROMPT:
         return []
-    hits = [(skill, why) for skill, rx, why in ROUTES if rx.search(text)]
+    hits, seen = [], set()
+    for skill, rx, why in ROUTES:
+        if skill not in seen and rx.search(text):
+            hits.append((skill, why))
+            seen.add(skill)
     return hits[:MAX_SKILLS]
 
 
