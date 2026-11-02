@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-02 — router: doc-first review prompts
+
+A review prompt that names the file first ("<path>.md … please analyze / review") was silent; fixed, see CHANGELOG. On the 14-day bench the plan set fires only on the 2 real review asks.
+
 ## 2026-11-02 — router limits fixed: full review set + skill gate
 
 Both limits from the entry below are fixed (see CHANGELOG): plan reviews name the whole review set, which the reviewed document's text extends, and `skill_gate.py` denies the first non-Skill tool call once until each named skill has run or been declined in a line.

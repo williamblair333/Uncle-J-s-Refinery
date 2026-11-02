@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-02 — skill router: doc-first review prompts route, bench false hits removed
+
+- Why: "/home/bill/Downloads/125b-local-performance-handoff.md should answer your strata question. please analyze / review" named no skills: the plan-review pattern only matched the verb before the document.
+- Fix: either order now matches. The doc-first order needs a real `.md`/`.txt` name. "for review" and "under review" are nouns, not the ask, and a verb inside a filename (`audit-baselines.md`) doesn't count. All three were false hits found by replaying the bench (14 days, 1184 prompts). After the fix the plan set fires on exactly the 2 real review asks. 52 tests.
+
 ## 2026-11-02 — skill router: full review set for plans, and a gate that makes named skills run
 
 - Why: after PR #287 the router still had two limits. It named at most 3 skills, so expert-bar, red-team and referee were never named for a plan review. And nothing checked that a named skill actually ran. Bill: "fix the limits first".
