@@ -15,7 +15,9 @@ complaints. This covers the turn before the complaint. SKILL_ROUTER_OFF=1 turns 
 import json
 import os
 import re
+import stat
 import sys
+import time
 
 MAX_SKILLS = 3
 MAX_PROMPT = 3000          # longer prompts are pastes (transcripts, docs), not Bill's ask
@@ -25,7 +27,7 @@ MAX_PROMPT = 3000          # longer prompts are pastes (transcripts, docs), not 
 # they sit at the end of ROUTES so the MAX_SKILLS cap never drops an older, narrower route.
 PLAN_REVIEW = re.compile(
     r"\b(?:review|analy[sz]e|evaluate|assess|critique|audit|look\s+over|go\s+over|thoughts\s+on)\b"
-    r".{0,80}?(?:\b(?:handoff|plan|proposal|design|spec|prd|brief|roadmap)\b|[\w-]\.md\b)", re.I)
+    r".{0,80}?(?:\b(?:handoff|plan|proposal|design|spec|prd|brief|roadmap)\b|[\w-]\.(?:md|txt)\b)", re.I)
 HANDOFF_REVIEW = re.compile(r"(?=.*?(?:\bhandoff\b|\b(?:status|todo|notes)\.md\b))" + PLAN_REVIEW.pattern,
                             re.I | re.S)
 
@@ -99,10 +101,36 @@ ROUTES = [
         r"|\bverify\s+(?:it\s+)?(?:on|in)\s+(?:the\s+)?(?:live|real|production)\b"
         r"|\bcheck\s+(?:the\s+log|back)\s+(?:in|tomorrow|later)\b", re.I),
      "a fix that can't be proven right away"),
-    ("verify-handoff-claims", HANDOFF_REVIEW, "a handoff whose claims may be stale"),
-    ("product-focus-review", PLAN_REVIEW, "reviewing a plan or design"),
-    ("think-wider", PLAN_REVIEW, "is the plan the best approach"),
 ]
+
+# A plan review names the whole review set, past MAX_SKILLS: Bill wants a plan judged by every
+# lens that applies, and 2026-11-02 showed three wasn't enough (expert-bar, red-team, referee
+# all applied to the digest handoff and none were named).
+PLAN_SET = [
+    ("product-focus-review", "reviewing a plan or design"),
+    ("think-wider", "is the plan the best approach"),
+    ("expert-bar", "what a senior practitioner of this field would already have in place"),
+    ("auditor", "a plan to audit (deep mode)"),
+    ("referee", "a second opinion before the plan is acted on"),
+]
+# The document named in the prompt says which further lenses apply.
+DOC_ROUTES = [
+    ("red-team", re.compile(
+        r"\buntrusted\b|\bprompt\s+injection\b|\bfeeds?\b|\brss\b|\bscrap(?:e|es|ed|ing)\b"
+        r"|\bwebhooks?\b|\bpublic\s+(?:url|internet|endpoint)\b|\bcredentials?\b|\bsecrets?\b"
+        r"|\bthird[-\s]party\b|\bexposed?\b", re.I),
+     "the plan takes untrusted input or exposes something"),
+    ("slowest-loop-first", re.compile(
+        r"\b(?:after|for|over)\s+\d+\s+(?:days?|weeks?)\b|\b\d+\s+(?:days?|weeks?)\s+in\s+a\s+row\b"
+        r"|\bcron\b|\bnightly\b|\bwait(?:s|ing)?\s+(?:for|on|until)\b", re.I),
+     "the plan is proven by waiting on a schedule or the calendar"),
+    ("library-backend-adoption-eval", re.compile(
+        r"\breplace(?:s|ment)?\b|\bbackend\b|\bmigrat(?:e|ion)\b|\balternatives?\b"
+        r"|\b\w+\s+(?:vs\.?|versus)\s+\w+", re.I),
+     "the plan chooses or replaces a library or backend"),
+]
+DOC_PATH = re.compile(r"""(?<![\w.])((?:~|\.{0,2})?/?[^\s'"`<>()]+\.(?:md|txt))\b""")
+DOC_MAX = 200_000
 
 
 def is_from_bill(prompt: str) -> bool:
@@ -124,7 +152,25 @@ def own_words(prompt: str) -> str:
     return tail.split("\n\n", 1)[1] if "\n\n" in tail else ""
 
 
-def route(prompt: str) -> list[tuple[str, str]]:
+def doc_text(text: str, cwd: str | None) -> str:
+    """Text of the .md/.txt files the prompt names. Regular files only (a FIFO would hang the
+    hook), first DOC_MAX chars; only skill names ever leave this hook, never the text."""
+    out = []
+    for raw in DOC_PATH.findall(text)[:5]:
+        p = os.path.expanduser(raw)
+        if not os.path.isabs(p):
+            p = os.path.join(cwd or os.getcwd(), p)   # the hook runs in the session's directory
+        try:
+            if not stat.S_ISREG(os.stat(p).st_mode):
+                continue
+            with open(p, encoding="utf-8", errors="replace") as fh:
+                out.append(fh.read(DOC_MAX))
+        except OSError:
+            continue
+    return "\n".join(out)
+
+
+def route(prompt: str, cwd: str | None = None) -> list[tuple[str, str]]:
     if not prompt or not is_from_bill(prompt):
         return []
     text = own_words(prompt)
@@ -135,22 +181,66 @@ def route(prompt: str) -> list[tuple[str, str]]:
         if skill not in seen and rx.search(text):
             hits.append((skill, why))
             seen.add(skill)
-    return hits[:MAX_SKILLS]
+    hits = hits[:MAX_SKILLS]
+    seen = {s for s, _ in hits}
+    if PLAN_REVIEW.search(text):
+        extra = list(PLAN_SET)
+        if HANDOFF_REVIEW.search(text):
+            extra.insert(0, ("verify-handoff-claims", "a handoff whose claims may be stale"))
+        doc = doc_text(text, cwd)
+        extra += [(s, why) for s, rx, why in DOC_ROUTES if doc and rx.search(doc)]
+        for skill, why in extra:
+            if skill not in seen:
+                hits.append((skill, why))
+                seen.add(skill)
+    return hits
 
 
 def message(hits: list[tuple[str, str]]) -> str:
     listed = "; ".join(f"{s} ({why})" for s, why in hits)
     return (f"Skills that match this prompt: {listed}. Invoke each with the Skill tool before "
-            "your first substantive step. If one doesn't fit, say so in one line and why.")
+            "your first substantive step. If one doesn't fit, say so in one line and why. "
+            "skill_gate.py holds the first other tool call once until each has run.")
+
+
+def _state_file(session: str) -> str | None:
+    session = re.sub(r"[^\w.-]", "", os.path.basename(session or ""))
+    if not session:
+        return None
+    root = os.environ.get("SKILL_ROUTER_STATE") or os.path.expanduser("~/.claude/state/skill-router")
+    return os.path.join(root, session + ".json")
+
+
+def record(session: str, hits: list[tuple[str, str]]) -> None:
+    """What the gate checks: the skills named for this prompt. A prompt with no match clears it."""
+    path = _state_file(session)
+    if not path:
+        return
+    try:
+        if not hits:
+            if os.path.exists(path):
+                os.remove(path)
+            return
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump({"skills": [s for s, _ in hits], "ts": int(time.time())}, fh)
+        os.replace(tmp, path)
+    except OSError:
+        pass
 
 
 def main() -> int:
     if os.environ.get("SKILL_ROUTER_OFF"):
         return 0
     try:
-        hits = route(json.load(sys.stdin).get("prompt") or "")
+        event = json.load(sys.stdin)
+        prompt = event.get("prompt") or ""
+        hits = route(prompt, event.get("cwd"))
     except Exception:
         return 0
+    if prompt and is_from_bill(prompt):
+        record(event.get("session_id") or "", hits)
     if not hits:
         return 0
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",

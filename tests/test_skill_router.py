@@ -54,6 +54,61 @@ def test_plan_review_routes_once_each():
     assert len(skills) == len(set(skills))
 
 
+def test_plan_review_names_the_whole_review_set_past_the_cap():
+    skills = [s for s, _ in sr.route("review /home/bill/Downloads/daily-digest-handoff.md")]
+    for s in ("verify-handoff-claims", "product-focus-review", "think-wider", "expert-bar",
+              "auditor", "referee"):
+        assert s in skills
+    assert len(skills) > sr.MAX_SKILLS
+
+
+def test_plan_review_reads_the_named_doc(tmp_path):
+    doc = tmp_path / "digest-plan.md"
+    doc.write_text("Pull RSS feeds and scrape pages (untrusted text). Review for 7 days, "
+                   "then tune. Replace the backend library with Miniflux vs FreshRSS.")
+    skills = [s for s, _ in sr.route(f"review {doc}")]
+    for s in ("red-team", "slowest-loop-first", "library-backend-adoption-eval"):
+        assert s in skills
+
+
+def test_txt_docs_and_relative_paths_are_read(tmp_path, monkeypatch):
+    (tmp_path / "rollout.txt").write_text("Scrape the public feeds nightly.")
+    assert "red-team" in [s for s, _ in sr.route(f"audit {tmp_path}/rollout.txt")]
+    monkeypatch.chdir(tmp_path)                          # no cwd in the event: fall back
+    assert "red-team" in [s for s, _ in sr.route("review rollout.txt")]
+    assert "red-team" in [s for s, _ in sr.route("review rollout.txt", str(tmp_path))]
+
+
+def test_doc_scan_skips_quiet_docs_and_non_files(tmp_path):
+    quiet = tmp_path / "notes-plan.md"
+    quiet.write_text("Rename two buttons.")
+    skills = [s for s, _ in sr.route(f"review {quiet}")]
+    assert "red-team" not in skills and "slowest-loop-first" not in skills
+    fifo = tmp_path / "pipe-plan.md"
+    os.mkfifo(fifo)
+    assert "red-team" not in [s for s, _ in sr.route(f"review {fifo}")]   # returns, no hang
+
+
+def run_state(prompt, state, session="s1"):
+    return subprocess.run([sys.executable, str(SCRIPT)],
+                          input=json.dumps({"prompt": prompt, "session_id": session}),
+                          capture_output=True, text=True, timeout=10,
+                          env={**os.environ, "SKILL_ROUTER_STATE": str(state)})
+
+
+def test_router_records_named_skills_for_the_gate(tmp_path):
+    run_state("why does it keep crashing", tmp_path)
+    assert json.loads((tmp_path / "s1.json").read_text())["skills"] == ["occams-razor"]
+
+
+def test_plain_prompt_clears_pending_harness_message_does_not(tmp_path):
+    run_state("why does it keep crashing", tmp_path)
+    run_state("<task-notification>done</task-notification>", tmp_path)
+    assert (tmp_path / "s1.json").exists()
+    run_state("all good", tmp_path)
+    assert not (tmp_path / "s1.json").exists()
+
+
 @pytest.mark.parametrize("prompt,skill", HITS)
 def test_real_prompts_route(prompt, skill):
     assert skill in [s for s, _ in sr.route(prompt)]
@@ -88,7 +143,9 @@ def test_routed_skills_exist():
     if not skills.is_dir():
         pytest.skip("no global skills dir")
     plugin = {"superpowers:brainstorming"}
-    for skill, _, _ in sr.ROUTES:
+    named = ([s for s, _, _ in sr.ROUTES] + [s for s, _ in sr.PLAN_SET]
+             + [s for s, _, _ in sr.DOC_ROUTES] + ["verify-handoff-claims"])
+    for skill in named:
         if skill in plugin:
             continue
         assert (skills / skill).exists(), f"routed skill {skill} not installed"

@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-02 — router limits fixed: full review set + skill gate
+
+Both limits from the entry below are fixed (see CHANGELOG): plan reviews name the whole review set, which the reviewed document's text extends, and `skill_gate.py` denies the first non-Skill tool call once until each named skill has run or been declined in a line.
+- **Check next session:** the first plan review should show the deny (or none, if every skill ran first); `~/.claude/state/skill-router/denies.jsonl` records it. A deny on nearly every prompt means the routes are too broad, so look at `just router-bench`.
+- **Not handled:** a skill run *before* the prompt (already loaded) still gets one deny; the model declines it in a line.
+
 ## 2026-11-02 — skill router covers plan/handoff reviews; daily-digest handoff reviewed
 
 Bill asked for a review of `~/Downloads/daily-digest-handoff.md`. The first pass used no review skill. The router had no plan/handoff route (fixed, see CHANGELOG), and Bill had to ask twice. The full review used verify-handoff-claims, product-focus-review, slowest-loop-first, think-wider, expert-bar, red-team, library-backend-adoption-eval and auditor, and the referee (Gemini) passed it. The review was saved to the session scratchpad, not the repo.
