@@ -3,6 +3,7 @@
 ## 2026-11-02 — router limits fixed: full review set + skill gate
 
 Both limits from the entry below are fixed (see CHANGELOG): plan reviews name the whole review set, which the reviewed document's text extends, and `skill_gate.py` denies the first non-Skill tool call once until each named skill has run or been declined in a line.
+- **Verified live 2026-11-02:** installed, then a seeded probe (just-answer + terse-reply). The Skill call cleared just-answer (PreToolUse `*` does see Skill calls), the next Bash was denied once naming only terse-reply, and the retry went through.
 - **Check next session:** the first plan review should show the deny (or none, if every skill ran first); `~/.claude/state/skill-router/denies.jsonl` records it. A deny on nearly every prompt means the routes are too broad, so look at `just router-bench`.
 - **Not handled:** a skill run *before* the prompt (already loaded) still gets one deny; the model declines it in a line.
 
