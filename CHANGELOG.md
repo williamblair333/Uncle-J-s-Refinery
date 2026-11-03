@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-03 — alternatives-scan: look for what else does the job, enforced
+
+- Why: Strata got a 64 GB download and a day of bench; Avalon (same model, faster, better quant) was 12th on one `gh search repos` sorted by stars, and nobody looked.
+- New skill `global-skills/alternatives-scan`: goal and use cases first, then GitHub/web/local searches by category and one level up, read the top READMEs, a table with every number's source, a Verdict, and a recorded scan.
+- Router: an `alternatives-scan` route ("should I use X", "is X any good", "alternatives to", "anything better than", "look at this tool/repo/github link") outside the 3-skill cap, and the plan-review set now includes it. On the 14-day bench (698 prompts) it fires on 4 real asks; the one false hit ("review folder … ssh tools") is fixed and tested.
+- Gate: `alternatives_gate.py` (PreToolUse Bash) denies `git clone`, `hf`/`huggingface-cli download`, `ollama pull`, `docker pull` and piped-to-shell installers unless a scan from the last 14 days covers the target. Gitea and localhost pass; `ALT_SCAN_SKIP="<reason>"` as a leading assignment skips (logged); fails open. Referee (Gemini) found option-value, `git -C`, nested-shell, host-spoof and short-name issues; fixed with tests. One finding rejected: adding the scan to the plan-review set is intended. Dogfooding found one more: a heredoc mentioning `git clone` was denied; heredoc bodies and quoted text are now data.
+- First scan: `review/alternatives/2026-11-03-strata-avalon.md` (gitignored).
+
 ## 2026-11-02 — Strata 125B local-agent bench: verdict recorded
 
 - Ran the 125B Coder IQ1_M under Claude Code (bwrap read-only sandbox, localhost-only API with a key, read-only Bash allowlist; denials verified). No task completed within a 64k context; verdict and revisit conditions in HANDOFF. Services restored.

@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-03 — alternatives-scan skill, route and download gate (live)
+
+Bill asked why Avalon wasn't found during the Strata work, and for a mechanism that looks for alternatives automatically. Built and installed (see CHANGELOG); the live gate denied `git clone …/freriadoc/Avalon` before the scan and allowed it after.
+- **First scan** (`review/alternatives/2026-11-03-strata-avalon.md`): the 11-02 failure was mostly setup (IQ1_M, 64k, Claude Code, 46 GB RAM). A dual-3060 user passed 10/10 OpenCode agent tasks with Strata IQ3_S at 256K and 64 GB RAM. **Test first:** Qwen3.6-35B-A3B (13–23 GB) on the existing read-only bench; Avalon on CUDA second.
+- **Watch:** `~/.claude/state/alternatives-scan/gate.jsonl` lists denies and skips. Frequent skips mean the gate is in the way or being dodged; read the reasons weekly.
+- **Not gated yet:** `pip install` / `uv add` / `npm i -g` (too frequent for this gate), and engines that download inside a container (`strata launch`).
+
 ## 2026-11-02 — Strata 125B local agent: not worth it on this machine
 
 Bench: Coder IQ1_M, 64k context, Claude Code as the agent loop. 0 of 5 tasks gave an answer, so quality was never judged. Best attempt (t14): 30 turns, 27 min, then Claude Code's autocompact thrashed. Its system prompt plus tool output doesn't fit 64k with room to work, and 128k needs RAM that isn't free with the model resident. Details and the run log: `/opt/docker/strata/bench/NOTES.md`. Strata is stopped; Ollama, Chatterbox and Whisper are back.

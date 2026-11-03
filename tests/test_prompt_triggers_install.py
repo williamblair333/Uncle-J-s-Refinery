@@ -29,6 +29,9 @@ def test_install_is_idempotent_and_uninstall_keeps_other_hooks(tmp_path):
     assert len(gates(first)) == 1
     gate_entry = [e for e in first["hooks"]["PreToolUse"] if gates({"hooks": {"PreToolUse": [e]}})]
     assert gate_entry[0]["matcher"] == "*"
+    alt = [e for e in first["hooks"]["PreToolUse"]
+           if any("prompt-triggers:alternatives-gate" in h["command"] for h in e["hooks"])]
+    assert len(alt) == 1 and alt[0]["matcher"] == "Bash"
     assert run(tmp_path) == first
     after = run(tmp_path, "--uninstall")
     assert gates(after) == [] and after["hooks"]["PreToolUse"] == [other]
