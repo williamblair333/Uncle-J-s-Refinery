@@ -683,7 +683,14 @@ The same installer adds two more. `meta_trigger.py` catches "why did I have toâ€
 forces expert-bar plus a real check. `skill_router.py` matches your wording against the trigger
 phrases of judgment skills (gttp, think-wider, prior-art-check, occams-razor, referee and others)
 and names up to 3 for the turn. Measure it with `just router-bench`; turn it off with
-`SKILL_ROUTER_OFF=1`.
+`SKILL_ROUTER_OFF=1`. `skill_gate.py` holds the first other tool call once until the named skills
+have run (`SKILL_GATE_OFF=1`).
+
+`alternatives_gate.py` blocks `git clone`, `hf download`, `ollama pull`, `docker pull` and
+`curl â€¦ | sh` installers until the alternatives-scan skill has recorded a scan from the last 14 days
+that covers the target (`features/prompt-triggers/alternatives_scan.py check <target>`). Your
+Gitea host and localhost pass; a leading `ALT_SCAN_SKIP="<reason>"` skips it (logged to
+`~/.claude/state/alternatives-scan/gate.jsonl`); `ALT_GATE_OFF=1` turns it off.
 
 ```bash
 bash features/prompt-triggers/install.sh              # registers it in ~/.claude/settings.json
