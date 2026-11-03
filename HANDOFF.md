@@ -1,5 +1,21 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-03 — local agent: Heretic bench 1/5; the harness is the blocker
+
+Bill wants a 125B model (~40 t/s) and all local models uncensored. Plan was: Heretic bench (free) →
+Strata refusal-vector on the IQ1_M files we have → bigger quant or RAM.
+- **Heretic bench done** (`/opt/docker/strata/bench/NOTES.md`, `run_heretic.sh`): 1 of 5 answered, and
+  that answer's cause was wrong (agy right, checked against the source). 3 tasks died with HTTP 400:
+  one request overflowed 64k (up to 118k tokens) before Claude Code compacted; 1 timed out at 40 min.
+- **Shared failure with Strata (0/5):** context under Claude Code's harness, not the model. A 125B
+  download doesn't fix that. **Next:** rerun with a lean harness (OpenCode, as in the one public
+  success) and/or Heretic at 128k (`HERETIC_NP=1 HERETIC_CTX=131072` in mtw2 mode), then decide on 125B.
+- **Uncensored 125B, when it's time:** Strata only, via alesha-pro's 480 KB refusal direction
+  (`--cvec-mode project`); our IQ1_M files are the same GSQ-RCO family. Strata v0.2.9 support for
+  the flag is unverified. Download gate already covers those repos.
+- **Old plan below (Avalon first) is superseded:** no uncensored Avalon route was found.
+- **Bill:** revoke leftover Gitea `write:user` tokens (latest `lanscout-create-20261103`; ROADMAP #298).
+
 ## 2026-11-03 — local agent: 125B is the goal; Avalon on CUDA is next
 
 Bill confirmed a 125B-class model at ~40 t/s is the point, so the scan's order flips (update in
