@@ -6,8 +6,10 @@
 #   skill_name_trigger.py  Bill names a skill -> invoke it
 #   meta_trigger.py        Bill asks why he had to catch something -> expert-bar + a real check
 #   skill_router.py        Bill's prompt matches a judgment skill's triggers -> name it
-# and one PreToolUse hook (matcher "*", so it sees Skill calls too):
-#   skill_gate.py          the first other tool call waits once until the named skills ran
+# and two PreToolUse hooks:
+#   skill_gate.py          (matcher "*", sees Skill calls too) the first other tool call waits once
+#                          until the named skills ran
+#   alternatives_gate.py   (matcher "Bash") a big download waits until an alternatives scan covers it
 # Written atomically after a backup, the same way features/product-quality/install.sh does it.
 #
 # Usage: install.sh [--uninstall]
@@ -19,7 +21,7 @@ ACTION=install
 [[ "${1:-}" == "--uninstall" ]] && ACTION=uninstall
 
 chmod +x "$SCRIPT_DIR/skill_name_trigger.py" "$SCRIPT_DIR/meta_trigger.py" "$SCRIPT_DIR/skill_router.py" \
-  "$SCRIPT_DIR/skill_gate.py"
+  "$SCRIPT_DIR/skill_gate.py" "$SCRIPT_DIR/alternatives_gate.py" "$SCRIPT_DIR/alternatives_scan.py"
 python3 - "$SETTINGS" "$ACTION" "$SCRIPT_DIR" <<'PYEOF'
 import json, os, sys, tempfile, shutil
 
@@ -54,16 +56,18 @@ if kept:
 else:
     hooks.pop("UserPromptSubmit", None)
 
-GATE, GATE_MARKER = "skill_gate.py", "prompt-triggers:skill-gate"
+GATES = [("skill_gate.py", "prompt-triggers:skill-gate", "*"),
+         ("alternatives_gate.py", "prompt-triggers:alternatives-gate", "Bash")]
 pre = [e for e in hooks.get("PreToolUse", [])
-       if not any(GATE_MARKER in h.get("command", "") for h in e.get("hooks", []))]
+       if not any(m in h.get("command", "") for _, m, _ in GATES for h in e.get("hooks", []))]
 if action == "install":
-    pre.append({"matcher": "*", "hooks": [{
-        "type": "command",
-        "command": f"[ -f {script_dir}/{GATE} ] || exit 0; "
-                   f"python3 {script_dir}/{GATE}  # {GATE_MARKER}",
-        "timeout": 5,
-    }]})
+    for gate, marker, matcher in GATES:
+        pre.append({"matcher": matcher, "hooks": [{
+            "type": "command",
+            "command": f"[ -f {script_dir}/{gate} ] || exit 0; "
+                       f"python3 {script_dir}/{gate}  # {marker}",
+            "timeout": 5,
+        }]})
 if pre:
     hooks["PreToolUse"] = pre
 else:
@@ -80,5 +84,5 @@ with tempfile.NamedTemporaryFile("w", dir=os.path.dirname(settings_path), delete
     os.fsync(tmp.fileno())
     name = tmp.name
 os.replace(name, settings_path)
-print(f"    OK  prompt triggers ({len(TRIGGERS)}) + skill gate {action}ed in {settings_path}")
+print(f"    OK  prompt triggers ({len(TRIGGERS)}) + {len(GATES)} gates {action}ed in {settings_path}")
 PYEOF

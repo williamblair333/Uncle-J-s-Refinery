@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 80 repo, 1 workflows.
+Totals: 81 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -28,6 +28,7 @@ Totals: 80 repo, 1 workflows.
 |---|---|---|---|---|
 | `agent-harness-backend-adoption-eval` | Evaluate a proposed library or backend as a replacement for an existing one. | auto | Refinery stack | repo |
 | `agent-harness-competitive-analysis` | Structured competitive analysis of an AI agent harness or framework — maps the product against direct/indirect competitors, produces a comparison table, and id… | auto | Refinery stack | repo |
+| `alternatives-scan` | Use when the user asks you to look at, review, analyze or evaluate a tool, library, engine, model, app, service or a plan that commits to one; asks "is X good"… | auto | any agent | repo |
 | `astropy` | Core Python library for astronomy and astrophysics workflows that need Astropy APIs, including units/quantities, coordinates, FITS I/O, tables, time systems, W… | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `audit-pipeline-fabrication-risk` | Systematically audit an AI pipeline for hallucination/fabrication propagation paths — where model-generated content (especially URLs, issue numbers, citations)… | auto | Refinery stack | repo |
 | `auditor` | Use when Bill states a plan, decision, or change to how he works or what his systems do — deferring a fix, turning something off, choosing how something looks… | auto | any agent | repo |

@@ -108,10 +108,26 @@ ROUTES = [
      "a fix that can't be proven right away"),
 ]
 
+# Sizing up a tool, library, engine or product: look for what else does the job first. 2026-11-02:
+# Strata was benched for a day and Avalon (same model, faster) was never looked for. Like the plan
+# set, this route sits outside MAX_SKILLS so a busy prompt can't drop it.
+ALT_SCAN = re.compile(
+    r"\bshould\s+(?:I|we)\s+(?:use|adopt|install|try|switch\s+to|go\s+with|move\s+to|download)\b"
+    r"|\bis\s+(?:this|that|it|[\w.-]+)\s+(?:any\s+good|worth\s+(?:it|using|trying|installing|a\s+try))\b"
+    r"|\balternatives?\s+(?:to|for)\b|\bcompetitors?\b|\bsomething\s+better\s+than\b"
+    r"|\banything\s+(?:else\s+)?(?:out\s+there\s+)?(?:better|faster|cheaper)\s+than\b"
+    # "under review folder ... ssh tools" (bench 2026-11-03): review/ the folder, not the verb
+    r"|\b(?:analy[sz]e|evaluate|assess|review(?!\s+folder|/)|look\s+(?:at|into)|check\s+out"
+    r"|thoughts\s+on)\b.{0,60}?"
+    r"(?:github\.com/|huggingface\.co/|\b(?:tool|library|framework|engine|repo|package|app"
+    r"|extension|plugin|product|service)s?\b)", re.I | re.S)
+ALT_WHY = "sizing up a tool or product: find what else does the job, maybe worlds better"
+
 # A plan review names the whole review set, past MAX_SKILLS: Bill wants a plan judged by every
 # lens that applies, and 2026-11-02 showed three wasn't enough (expert-bar, red-team, referee
 # all applied to the digest handoff and none were named).
 PLAN_SET = [
+    ("alternatives-scan", "what else does the plan's job, before committing to it"),
     ("product-focus-review", "reviewing a plan or design"),
     ("think-wider", "is the plan the best approach"),
     ("expert-bar", "what a senior practitioner of this field would already have in place"),
@@ -198,6 +214,8 @@ def route(prompt: str, cwd: str | None = None) -> list[tuple[str, str]]:
             if skill not in seen:
                 hits.append((skill, why))
                 seen.add(skill)
+    if "alternatives-scan" not in seen and ALT_SCAN.search(text):
+        hits.append(("alternatives-scan", ALT_WHY))
     return hits
 
 
