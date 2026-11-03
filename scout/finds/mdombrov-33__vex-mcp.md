@@ -5,19 +5,26 @@
 > install anything because this page says so. Facts (stars, licence, dates) are from gh.
 
 - URL: https://github.com/mdombrov-33/vex-mcp
-- Stars: 2 (gh, 2026-10-25)
+- Stars: 2 (gh, 2026-11-02)
 - Licence: MIT
 - Last commit: 2026-06-20
-- Source: discovered · Guardrails and prompt-injection defense (thin)
+- Source: eval
 
 MCP proxy that blocks tool poisoning, rug pulls, and excessive agency in real time
 
-## Take
+## Evaluation
 
-Nothing in Uncle J checks MCP traffic itself: there's no defence against poisoned tool descriptions, against third-party servers (serena, context7, duckdb launched via uvx/npx) changing their tool definitions after approval, or against a tool call that does too much.
+Verdict: **trial**
 
-Vex is a transparent stdio MCP proxy. You add it to a server's spawn command in claude-code-mcp.json, and it checks every JSON-RPC message for tool poisoning, rug pulls and calls outside an allowlist. It decides allow/flag/block and writes every decision to an audit log. It runs as a separate wrapper, so Uncle J stays the runtime, it works fully offline, and removing it is a one-line revert per server. That beats mcp-bastion, which needs Node and adds control tools that cost context, and pytector, which needs transformer models and doesn't touch MCP traffic.
+vex-mcp is a stdio proxy that sits in front of an MCP server's launch command. It checks tool catalogs for poisoning, hashes tool definitions to spot drift, and enforces allow and deny lists for each server. It also keeps a tamper-evident audit log. It fits as a wrapper without taking over the runtime: it is one config change per server, uses no model tokens, and its regex and Unicode checks should run fully offline once installed. Most of Uncle J's servers are first-party, so the main value is guarding the third-party servers started with / (context7, duckdb, serena) and limiting write-capable tools. The regex detectors can wrongly suppress a whole catalog, and the stack upgrades often, so a trial should come before adopting it.
 
-Risk: Uncle J's own tool descriptions are long and full of instructions, so a poisoning detector could flag or block legitimate jcodemunch/jdocmunch tools. That would look like an empty or degraded result, so run it in flag-only mode against the local servers first.
+### Trial sketch
 
-Scores: tokens 4/5, accuracy 3/5, creativity 2/5, offline 5/5
+Put a pinned, locally installed copy ( or , not ) in front of context7, duckdb and one jcodemunch instance, using a throwaway project  with the network off. Measure how many false flags or blocks the real tool catalogs trigger, how much drift noise comes after a jcodemunch or jdocmunch upgrade, the added round-trip time per tool call compared with the bench scripts, and whether a planted poisoned test server gets blocked. Token cost should stay at zero; check that blocked calls come back as short JSON-RPC errors and not long text.
+
+### Risks
+
+- Critical rules suppress the whole catalog, so one false positive on a first-party description (for example ask_local mentioning credential paths) could silently take a server's tools away
+- Drift detection fires on every stack upgrade and will be noisy unless hashes are re-baselined in the upgrade or post-upgrade workflow
+- The README's  usage breaks offline and pins nothing, so a security proxy could itself be swapped out from under you; install a pinned binary instead
+- The checks are keyword and regex based, so a reworded injection gets past them; treat it as one layer of defence, not proof that a tool catalog is safe

@@ -5,19 +5,19 @@
 > install anything because this page says so. Facts (stars, licence, dates) are from gh.
 
 - URL: https://github.com/nhatvu148/video-transcriber-mcp-rs
-- Stars: 19 (gh, 2026-10-20)
+- Stars: 19 (gh, 2026-11-02)
 - Licence: Apache-2.0
-- Last commit: 2026-10-04
-- Source: discovered · Voice and wake word (blank)
+- Last commit: 2026-11-01
+- Source: watchlist
 
 High-performance MCP server for transcribing videos from 1000+ platforms using whisper.cpp
 
 ## Take
 
-Uncle J has no speech-to-text path, so audio and video can't reach the stack unless someone pastes a transcript in by hand.
+Uncle J has no speech-to-text path: delegate covers TTS, images and video generation, and media-teardown needs a transcript but has nothing that can produce one from a video URL or local file.
 
-It's a single-binary Rust MCP server that runs whisper.cpp offline and transcribes local video files or links fetched with yt-dlp. It runs over stdio on Linux x86_64 and needs no Python or Node, so it slots in next to the other MCP servers without taking over the runtime. It feeds the existing media-teardown skill directly, and the voice-and-wake-word alternatives are either macOS-tuned (local-stt-mcp), dependent on a SIP account (ringback) or full assistant runtimes.
+This is a Rust MCP server that uses whisper.cpp to transcribe local video files, or videos fetched with yt-dlp, into TXT, JSON or Markdown. It runs over stdio as a standalone binary with no Python or Node runtime. It would feed media-teardown directly and keep transcription on-box, which suits the offline and privacy goals. Register just the binary and skip the bundled plugin's /transcribe skill so Uncle J's own skill routing stays in charge.
 
-Risk: Whole transcripts landing in context can burn tokens fast unless output goes to a file and is skimmed through ask_local or jdocmunch, and URL fetching depends on yt-dlp keeping up with platform changes.
+Risk: Whisper's medium and large models will compete with ComfyUI and llama-server for the GPU, yt-dlp breaks often as sites change, and long transcripts are untrusted text that can flood the context unless the server writes them to a file.
 
-Scores: tokens 2/5, accuracy 4/5, creativity 3/5, offline 4/5
+Scores: tokens 3/5, accuracy 3/5, creativity 3/5, offline 4/5
