@@ -14,6 +14,15 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Gitea new-repo bootstrap** (filed 2026-11-03 from lanscout; 3rd repeat after dfir and anatomy-lab in
+  October). No sanctioned way for a session to create a Gitea repo: the stored token has only
+  `write:repository`, `POST /user/repos` needs `write:user`, and push-guard blocks the first push to `main`.
+  Each repo improvised: mint a token via `docker exec -u git gitea gitea admin user generate-access-token
+  --scopes write:repository,write:user --raw` → create private with `auto_init` → rebase local history onto
+  the init commit → import by PR. Each run leaves a `write:user` token only Bill can revoke in the UI
+  (latest: `lanscout-create-20261103`). Fix: `just gitea-new-repo <name>` script doing those steps and
+  verifying privacy (anonymous API request → 404); or one long-lived repo-create token in the credential
+  store so tokens stop piling up. Bill: revoke the leftover create tokens.
 - **Thinking chain** (agreed 2026-10-31: goal → problem choice → floor → ideas → proof → learning). Done:
   self-check hook (#249), `think-wider` skill with a build step (#251, #252), Refinery `STANDARDS.md` (#251, #253).
   Open: `meta-question-rate` (the outcome metric, ranked #2 in STANDARDS.md); testing the 5 untested ideas in
