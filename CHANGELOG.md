@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-03 — alternatives-scan checks local models first; Avalon next
+
+- `global-skills/alternatives-scan/SKILL.md`: the "already here" search step now lists the local model and container inventory (`/opt/models/gguf`, `ollama list`, the HF cache, `docker ps -a`, compose model paths), plus a quick-reference row. The first scan priced Qwen3.6-35B-A3B as a download when Heretic already serves it.
+- `uv.lock`: jcodemunch-mcp 1.108.409 (PR #295).
+- Strata/Avalon scan: an update section records that 125B is the goal, so Avalon on CUDA is tested first.
+
+---
+
 ## 2026-11-03 — alternatives-scan: look for what else does the job, enforced
 
 - Why: Strata got a 64 GB download and a day of bench; Avalon (same model, faster, better quant) was 12th on one `gh search repos` sorted by stars, and nobody looked.

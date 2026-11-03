@@ -1,5 +1,14 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-03 — local agent: 125B is the goal; Avalon on CUDA is next
+
+Bill confirmed a 125B-class model at ~40 t/s is the point, so the scan's order flips (update in
+`review/alternatives/2026-11-03-strata-avalon.md`).
+- **Next:** Avalon built for CUDA (sm_86), IQ3_KS, 128k, OpenCode, bench task t14; kill under ~20 t/s or if 128k won't fit. Clone is already allowed by the download gate (scan covers it); the 89 GiB model download is the cost. Nobody has shown 40 t/s on a 12 GB card.
+- **Fallback, no download:** Qwen3.6-35B-A3B is already on disk as Heretic (abliterated Q4_K_M, 32k default).
+- **Fixed:** alternatives-scan now checks local models and containers before pricing a download.
+- Strata's ~64 GB in `/opt/docker/strata/data`: still Bill's call.
+
 ## 2026-11-03 — alternatives-scan skill, route and download gate (live)
 
 Bill asked why Avalon wasn't found during the Strata work, and for a mechanism that looks for alternatives automatically. Built and installed (see CHANGELOG); the live gate denied `git clone …/freriadoc/Avalon` before the scan and allowed it after.

@@ -27,7 +27,12 @@ The alternatives scan comes first, before you look closely at the named thing.
      for each phrasing (GitHub by stars).
    - WebSearch: "<subject> alternative", "<category> 2026", "<subject> vs". Comparisons and
      forum threads name rivals the GitHub search misses.
-   - What's already here: `memory_search`, `scout/map.md`, `dcup list`, installed tools.
+   - What's already here, before pricing any download: `memory_search`, `scout/map.md`,
+     installed tools, and the local model and container inventory: `ls /opt/models/gguf`,
+     `ollama list`, `~/.cache/huggingface/hub`, `docker ps -a`, `dcup list`, and the
+     `docker/*/compose.yaml` model paths. A candidate already on disk (2026-11-03: Heretic
+     already served Qwen3.6-35B-A3B and the scan priced it as a 15–20 GB download) changes the
+     cheapest test. Note in its row which variant is local (quant, abliterated, context).
    - The subject's own README and issues: credits, "inspired by", "faster than X" tables.
 4. **Read before you rank.** For the top 3–5 candidates, read the README or docs yourself
    (`gh api repos/<o>/<r>/readme`). Search summaries invent and conflate; their numbers are leads.
@@ -54,6 +59,7 @@ Then go back to what the user asked about the subject, with the alternatives in 
 | Benchmarking the named tool before searching | Scan first; the bench may belong to another candidate |
 | Searching only the subject's name | Search the category without the name, and one level up |
 | Trusting a search summary's numbers | Read the candidate's README; label each number's source |
+| Pricing a test as "one download" | Check the local model and container inventory first; it may already be here |
 | "Not found anywhere" after a local search | Local is one source of four; run the web and GitHub searches |
 | Prefixing ALT_SCAN_SKIP to get past the gate | Only when it truly isn't an adoption (your own repo, a reinstall); say why |
 
