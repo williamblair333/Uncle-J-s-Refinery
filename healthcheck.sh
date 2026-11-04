@@ -1435,6 +1435,18 @@ check_cron_catchup() {
     fi
 }
 
+# ----- 125B revisit: a reminder, not a health problem (2026-11-04) -----------------
+# Silent until the machine has >= 120 GiB RAM; then one warning naming
+# docs/research-later.md. Warn, never fail: the script always exits 0 and is
+# guarded here too, so a host without /proc/meminfo is unaffected.
+check_ram_revisit() {
+    local msg
+    msg=$(bash "$REPO_ROOT/scripts/ram_revisit.sh" 2>/dev/null) || true
+    [ -n "$msg" ] || return 0
+    step "local 125B revisit"
+    warn "$msg"
+}
+
 # ===== main =================================================================
 # verify.sh is install-time (uvx cache warmup takes ~5s); run it only in
 # --full mode. --quick sticks to runtime invariants for a ~6s session-start
@@ -1475,6 +1487,7 @@ check_dreaming_runtime
 check_auto_maintain_runtime
 check_repo_scout
 check_cron_catchup
+check_ram_revisit
 if [ "$MODE" = "full" ]; then
     check_verify
     check_smoke_hook

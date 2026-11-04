@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — 125B decided: shelved until 128 GB RAM
+
+- **Decision (Bill agreed):** not worth it at 46 GB. Revisit at 128 GB. `scripts/ram_revisit.sh` warns at session start once MemTotal ≥ 120 GiB; the plan is in `docs/research-later.md`.
+- **Strata weights:** 63G moved to `/opt/docker/strata/data/.trash-20261104` (root-owned; the destructive-delete gate blocks `rm -rf` on absolute paths). **Bill:** `sudo rm -rf /opt/docker/strata/data/.trash-20261104` frees the space.
+- **Next (mine):** post-audit design note for the surface-write-guard change; the memweave catch-up hang (a "database is locked" error at 07:47 on 11-02 left the sync holding its lock until the 2 h timeout); the relative `scripts/` gap (failing test + replay first); moving the inline pipe-to-shell hook into the repo (Bill pastes `grep -n "Pipe-to-shell" ~/.claude/settings.json` first).
+
 ## 2026-11-03 — surface-write-guard false positives fixed (sed span, cp/mv span)
 
 - **Fixed:** both open guard false positives from the entries below (the 11-02 `mv … -f docker-compose.yml` item and the 11-03 `sed -n … | grep -i` item) had the same root cause: a regex span that crossed `|`, `&&` and `;`. Details are in the CHANGELOG. The pre-mortem found one new false negative the narrowing would have created (`cp $(ls | head -1) scripts/y.sh`); it's fixed and has tests.

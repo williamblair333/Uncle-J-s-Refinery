@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-11-04 — local 125B shelved until 128 GB RAM, with a trigger
+
+### Added
+- `scripts/ram_revisit.sh` + `check_ram_revisit` in `healthcheck.sh`: silent below 120 GiB RAM, one warning (never a failure) at or above it, pointing at the revisit plan. `tests/test_ram_revisit.py` (7 cases, including missing and garbage meminfo).
+- `docs/research-later.md`: the 125B revisit plan (IQ3_S+ at 128k under Pi, bench target: clearly beat Heretic's 15/40).
+
+### Removed
+- Strata IQ1_M weights and derived packs (63G) moved out of `/opt/docker/strata/data/Strata-data` into `.trash-20261104` beside it, pending Bill's final delete. Strata config, state and image are kept.
+
+---
+
 ## 2026-11-03 — surface-write-guard: flags stay in their own pipeline stage
 
 ### Fixed
