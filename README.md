@@ -847,7 +847,7 @@ cp -r ~/.claude ~/.claude.bak.$(date +%Y%m%d-%H%M%S)
 (cd claude-code-langfuse-template && docker compose down -v)
 
 # Remove MCP registrations
-for s in jcodemunch jdatamunch jdocmunch serena duckdb context7; do
+for s in jcodemunch jdatamunch jdocmunch serena duckdb context7 ask_local memweave live_preview delegate; do
     claude mcp remove "$s" 2>/dev/null
 done
 
@@ -1093,7 +1093,7 @@ Cloned at install time (gitignored):
 (cd claude-code-langfuse-template && docker compose down -v)
 
 # Remove MCP registrations
-for s in jcodemunch jdatamunch jdocmunch serena duckdb context7; do
+for s in jcodemunch jdatamunch jdocmunch serena duckdb context7 ask_local memweave live_preview delegate; do
     claude mcp remove "$s" 2>/dev/null
 done
 
@@ -1114,8 +1114,6 @@ rm -f ~/.claude/CLAUDE.md
 cd ..
 rm -rf Uncle-J-s-Refinery
 ```
-
-[TODO: the uninstall and reset loops remove only six servers. `install.sh` also registers memweave, live_preview, delegate and ask_local; add them after checking each removal is safe.]
 
 ---
 
