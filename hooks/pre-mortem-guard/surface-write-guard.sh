@@ -87,7 +87,10 @@ AWK_RE="(^|[[:space:];|&(])awk[[:space:]].*>[[:space:]]*(['\"]?[^[:space:]]*${SU
 # (2026-11-03) Matched per command SEGMENT and only up to the next stage pipe, like
 # SED_RE: on the whole line `.*` ran past `&&` and `;`, so `mv a.jsonl b.jsonl &&
 # dcup -f docker-compose.yml` was read as a move onto a .yml.
-CP_RE="(^|[[:space:];|&(\`/\\])(cp|mv)[[:space:]][^|]*[[:space:]](['\"]?[^[:space:]]*${SURF_EXT}['\"]?|['\"]?[^[:space:]]*${SURF_PATH}[^[:space:]]*['\"]?)"
+# (2026-11-04) Also a RELATIVE surface directory operand (`scripts/`, `./hooks/x`):
+# SURF_PATH needs a leading `/`, so `mv x/*.py scripts/` was never checked. Replay over
+# 12,480 transcript commands: +4 denies, all that real move; 0 false positives.
+CP_RE="(^|[[:space:];|&(\`/\\])(cp|mv)[[:space:]][^|]*[[:space:]](['\"]?[^[:space:]]*${SURF_EXT}['\"]?|['\"]?[^[:space:]]*${SURF_PATH}[^[:space:]]*['\"]?|['\"]?(\./)?(hooks|scripts|features)/[^[:space:]]*['\"]?)"
 
 # ── Scratch targets under /tmp are not surface writes (2026-10-16) ───────────────
 # The regexes above match on text, so `cat > $scratchpad/probe.py` and a backup

@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — guard: relative surface dirs; memweave hang diagnosed
+
+- **Guard gap closed:** cp/mv into relative `scripts/`, `hooks/`, `features/` is now denied. Replay: +4 denies (all the real 11-01 move), 0 false positives. Design baseline for the guard written to `~/.uncle-j-memory/memory/audit-baselines.md`.
+- **memweave catch-up hang, root cause (agy, every citation checked):** `scripts/memweave/index_workspace.py:36` opens `async with MemWeave(...)`. `MemWeave.__aenter__` → `_ensure_db` opens the aiosqlite connection (`store.py:210`) and then runs `ensure_schema` (`:213`). When that raises "database is locked", `__aexit__` never runs, the connection is never closed, and aiosqlite's non-daemon worker thread (`core.py:90`, blocking on `tx.get()` at `:59`) keeps the interpreter alive, holding `/tmp/memweave-sync.lock.d` until the 2 h catch-up timeout. **Fix next:** close the store in `finally` in `run()`. What held the db at boot is still open (likely a concurrent session-start sync).
+
 ## 2026-11-04 — 125B decided: shelved until 128 GB RAM
 
 - **Decision (Bill agreed):** not worth it at 46 GB. Revisit at 128 GB. `scripts/ram_revisit.sh` warns at session start once MemTotal ≥ 120 GiB; the plan is in `docs/research-later.md`.

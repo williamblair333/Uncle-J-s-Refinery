@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-04 — surface-write-guard: relative surface directories as cp/mv targets
+
+### Fixed
+- `hooks/pre-mortem-guard/surface-write-guard.sh`: `CP_RE` now also matches a relative `hooks/`, `scripts/` or `features/` operand (optionally `./`). `SURF_PATH` needs a leading `/`, so `mv x/*.py scripts/` was never checked. The PR #302 replay found it: the old guard blocked the 11-01 gambling move only by accident. Replay of the widening over 12,480 transcript commands: 293 → 297 denies, all 4 new ones that move, 0 false positives.
+- `tests/test_surface_write_guard.py`: 5 block and 4 near-miss allow cases.
+
+---
+
 ## 2026-11-04 — local 125B shelved until 128 GB RAM, with a trigger
 
 ### Added
