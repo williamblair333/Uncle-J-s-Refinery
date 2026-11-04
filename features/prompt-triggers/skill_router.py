@@ -77,8 +77,11 @@ ROUTES = [
         r"|\bhelp\s+me\s+(?:\w+\s+){0,3}(?:discuss|think\s+(?:about|through))\b", re.I),
      "choosing an approach"),
     ("prior-art-check", re.compile(
-        r"\bhave\s+we\s+(?:ever\s+|already\s+)?(?:done|built|solved|tried|made|looked|conducted|run"
-        r"|ran|tested)\b"
+        r"\bhave\s+we\s+(?:ever\s+|already\s+)?(?:done|built|solved|tried|made|looked|conducted)\b"
+        # "have we run an experiment like this" is prior work; "have we run the tests?" is status
+        # (agy referee 2026-11-04), so run/ran/tested need an experiment-type object.
+        r"|\bhave\s+we\s+(?:ever\s+|already\s+)?(?:run|ran|tested)\s+(?:a|an|any|this|that|something)"
+        r"\b.{0,40}?\b(?:experiment|study|trial|backtest|like\s+this|before)\b"
         r"|\bdid\s+we\s+(?:ever|already)\b"
         r"|\bdidn['’]?t\s+we\s+(?:already|decide|build|have)\b"
         r"|\bwhat\s+did\s+we\s+(?:decide|do|build|say)\b"

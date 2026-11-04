@@ -43,6 +43,7 @@ HITS = [
      "of drawing  and what else?", "think-wider"),
     ("let's talk about the lotto and using my birth chart", "superpowers:brainstorming"),
     ("Have we conducted a type of experiment like this.", "prior-art-check"),
+    ("have we ever run an experiment like this before?", "prior-art-check"),
     ("Right now, I'd love to profit at least $300 daily from playing lotto games.", "auditor"),
     ("So how could we check this before spending money?", "superpowers:brainstorming"),
     ("but what about other factors that may be important?  Like the planets/houses or whatever "
@@ -80,6 +81,7 @@ MISSES = [
     "earn $5 per day in interest, fine whatever",
     "help me understand this error",
     "let's discuss the PR after lunch",
+    "have we run the tests?",
 ]
 
 

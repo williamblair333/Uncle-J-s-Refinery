@@ -14,6 +14,9 @@
 - **agy reviews time out:** two bounded diff reviews today hit the print timeout (gemini-3.8-flash-high,
   280–300 s, about 20–30 tool calls each, argon exhausted until 11-06) and returned nothing usable.
   The referee path needs a smaller prompt (paste the diff, no exploring) or a higher timeout.
+  What worked (both sessions): a narrow brief naming one command, with no exploring, returned ok in
+  about 158 s. The broad briefs ran 282–303 s and timed out (`state/delegate.jsonl`). A higher
+  `timeout=` isn't shown to matter yet. No root cause.
 - **Open:** a local-model intent classifier as the next layer, for design talk no regex foresees.
   It's an idea only (think-wider), test first: hand-label 50 bench prompts and measure regex recall.
 - **Bill:** revoke the Gitea token `lanscout-create-20261103` (Settings → Applications). It's
