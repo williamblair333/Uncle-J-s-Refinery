@@ -38,6 +38,14 @@ HANDOFF_REVIEW = re.compile(r"(?=.*?(?:\bhandoff\b|\b(?:status|todo|notes)\.md\b
 
 # (skill, pattern, why). The wording comes from each skill's description in SKILL.md.
 ROUTES = [
+    # Klarheit 2026-11-04: "why didn't the fucking skills fire … supposed to kick in". First, so
+    # the MAX_SKILLS cap can never drop it.
+    ("skill-adoption-audit", re.compile(
+        r"\bwhy\s+(?:didn['’]?t|don['’]?t|aren['’]?t|wasn['’]?t|weren['’]?t|did\s+not)\s+"
+        r"(?:the\s+|my\s+|any\s+|those\s+|these\s+)?(?:\w+\s+)?skills?\b"
+        r"|\bskills?\s+(?:\w+\s+){0,3}supposed\s+to\s+(?:kick\s+in|fire|run|trigger|load)\b"
+        r"|\bskills?\s+(?:didn['’]?t|never|don['’]?t)\s+(?:fire|kick|trigger|run|load)\b", re.I),
+     "Bill says installed skills didn't fire"),
     ("gttp", re.compile(
         r"\bwhat\s+if\s+I\b"
         r"|\bis\s+(?:it|this|that|\w+)\s+a\s+good\s+idea\b"
@@ -58,10 +66,22 @@ ROUTES = [
         r"|\bany\s+(?:other|better)\s+(?:ideas|options|approaches)\b"
         # partikus 2026-11-01: "I really wanted a statue and not a relief" went straight to torch
         r"|\bI\s+(?:really\s+)?want(?:ed)?\s+(?:a|an|something)\b"
-        r"|\bI\s+(?:really\s+)?want(?:ed)?\s+to\s+(?:make|build|print|create)\b", re.I),
+        r"|\bI\s+(?:really\s+)?want(?:ed)?\s+to\s+(?:make|build|print|create)\b"
+        # Klarheit 2026-11-04: "but what about other factors that may be important?", "and what
+        # else?", "let's keep discussing" — design talk that matched nothing and got a thin answer.
+        r"|\bwhat\s+about\s+(?:the\s+)?(?:other|any|more)\s+(?:factors|things|variables|options"
+        r"|ideas|systems|approaches|methods)\b"
+        r"|\bother\s+factors\b"
+        r"|\bwhat\s+else\s*\?"
+        r"|\bkeep\s+discussing\b"
+        r"|\bhelp\s+me\s+(?:\w+\s+){0,3}(?:discuss|think\s+(?:about|through))\b", re.I),
      "choosing an approach"),
     ("prior-art-check", re.compile(
-        r"\bhave\s+we\s+(?:ever\s+|already\s+)?(?:done|built|solved|tried|made|looked)\b"
+        r"\bhave\s+we\s+(?:ever\s+|already\s+)?(?:done|built|solved|tried|made|looked|conducted)\b"
+        # "have we run an experiment like this" is prior work; "have we run the tests?" is status
+        # (agy referee 2026-11-04), so run/ran/tested need an experiment-type object.
+        r"|\bhave\s+we\s+(?:ever\s+|already\s+)?(?:run|ran|tested)\s+(?:a|an|any|this|that|something)"
+        r"\b.{0,40}?\b(?:experiment|study|trial|backtest|like\s+this|before)\b"
         r"|\bdid\s+we\s+(?:ever|already)\b"
         r"|\bdidn['’]?t\s+we\s+(?:already|decide|build|have)\b"
         r"|\bwhat\s+did\s+we\s+(?:decide|do|build|say)\b"
@@ -98,8 +118,23 @@ ROUTES = [
     ("superpowers:brainstorming", re.compile(
         r"\blet['’]?s\s+(?:build|make|create|design)\b"
         r"|\bI\s+want\s+(?:to\s+(?:build|make|create)|a\s+(?:new\s+)?(?:tool|app|feature|dashboard))\b"
-        r"|\bnew\s+(?:feature|project|tool)\b", re.I),
+        r"|\bnew\s+(?:feature|project|tool)\b"
+        # Klarheit 2026-11-04: "let's talk about the lotto…", "Let's discuss before digging cause
+        # I'm just brainstorming", "So how could we check" — designing by conversation.
+        r"|\blet['’]?s\s+(?:talk|brainstorm|think)\s+(?:about|through)\b"
+        # not scheduling: "let's discuss the PR after lunch" / "… it later"
+        r"|\blet['’]?s\s+discuss\b(?!\s+(?:\w+\s+){0,3}(?:later|after|tomorrow|next\s+(?:week|time)))"
+        r"|\bjust\s+brainstorming\b"
+        r"|\bhow\s+(?:could|would|can)\s+we\s+(?:check|test|build|design|model|try|prove)\b", re.I),
      "new thing to build"),
+    # Klarheit 2026-11-04: "I'd love to profit at least $300 daily from playing lotto games" was
+    # accepted as a target with no challenge. A money goal is a plan to stress-test.
+    ("auditor", re.compile(
+        # "to profit …" is a goal; "I make $90k a year" is a fact (self-review 2026-11-04).
+        r"\b(?:to|wanna|gonna)\s+(?:profit|make|earn|net|clear|win|bring\s+in)\s+(?:at\s+least\s+|about\s+|around\s+"
+        r"|over\s+)?\$\s?\d[\d,.]*\s*[kK]?\s*(?:a\s+|per\s+|each\s+|every\s+|/\s*)?"
+        r"(?:day|daily|week|weekly|month|monthly|year|yearly)\b", re.I),
+     "a money goal to stress-test before planning around it"),
     ("slowest-loop-first", re.compile(
         r"\b(?:wait|waiting)\s+(?:for|on|until)\s+(?:the\s+)?(?:next\s+)?"
         r"(?:cron|nightly|run|roll|dice|live|event)\b"
@@ -161,7 +196,8 @@ def is_from_bill(prompt: str) -> bool:
                                  "<system-reminder>", "Base directory for this skill",
                                  "This session is being continued from a previous conversation",
                                  "<cross-session-message"))
-                or "<task-notification>" in head or "[SYSTEM NOTIFICATION" in head)
+                or "<task-notification>" in head or "[SYSTEM NOTIFICATION" in head
+                or "<cross-session-message" in head)
 
 
 def own_words(prompt: str) -> str:
@@ -253,6 +289,49 @@ def record(session: str, hits: list[tuple[str, str]]) -> None:
         pass
 
 
+# A project with no STANDARDS.md gets expert-bar once per session, gated like any route.
+# Klarheit 2026-11-04: the session-start notice said "no STANDARDS.md, run expert-bar"; the
+# session read it, never ran it, and gave Bill a thin design. A notice is advice; this holds a tool call.
+PROJECT_MARKERS = ("PRODUCT.md", "README.md", "justfile", "pyproject.toml", "package.json")
+EXPERT_BAR_WHY = "this project has no STANDARDS.md; write its expert bar before planning work"
+
+
+def project_root(cwd: str | None) -> str | None:
+    """The git root at or above cwd, if it looks like a project. Never $HOME or /."""
+    if not cwd:
+        return None
+    home = os.path.realpath(os.path.expanduser("~"))
+    d = os.path.realpath(cwd)
+    for _ in range(25):
+        if d in (home, "/"):
+            return None
+        if os.path.exists(os.path.join(d, ".git")):
+            return d if any(os.path.isfile(os.path.join(d, m)) for m in PROJECT_MARKERS) else None
+        parent = os.path.dirname(d)
+        if parent == d:
+            return None
+        d = parent
+    return None
+
+
+def needs_expert_bar(session: str, cwd: str | None) -> bool:
+    """True the first time a session prompts in a project with no STANDARDS.md."""
+    root = project_root(cwd)
+    path = _state_file(session)
+    if not root or not path or os.path.isfile(os.path.join(root, "STANDARDS.md")):
+        return False
+    marker = path[: -len(".json")] + ".expert-bar"
+    if os.path.exists(marker):
+        return False
+    try:
+        os.makedirs(os.path.dirname(marker), exist_ok=True)
+        with open(marker, "w") as fh:
+            fh.write(root)
+    except OSError:
+        return False          # can't remember it was named: don't risk naming it every prompt
+    return True
+
+
 def main() -> int:
     if os.environ.get("SKILL_ROUTER_OFF"):
         return 0
@@ -260,10 +339,14 @@ def main() -> int:
         event = json.load(sys.stdin)
         prompt = event.get("prompt") or ""
         hits = route(prompt, event.get("cwd"))
+        session = event.get("session_id") or ""
+        if (prompt and is_from_bill(prompt) and all(s != "expert-bar" for s, _ in hits)
+                and needs_expert_bar(session, event.get("cwd"))):
+            hits.append(("expert-bar", EXPERT_BAR_WHY))
     except Exception:
         return 0
     if prompt and is_from_bill(prompt):
-        record(event.get("session_id") or "", hits)
+        record(session, hits)
     if not hits:
         return 0
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",

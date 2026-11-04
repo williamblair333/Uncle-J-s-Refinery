@@ -33,7 +33,14 @@ EXTRA = re.compile(
     r"|\bwhy\s+are\s+you\s+(?:even\s+)?(?:doing|working\s+on|building)\s+(?:this|that|it)\b"
     r"|\bdrift(?:ing|ed)?\s+(?:away\s+)?from\s+the\s+(?:goal|plan|task)\b"
     r"|\bare\s+you\s+(?:even\s+)?using\s+the\s+(?:new\s+)?skills\b"
-    r"|\bI['’]?m\s+(?:getting\s+)?(?:really\s+|so\s+)?frustrated\b",
+    r"|\bI['’]?m\s+(?:getting\s+)?(?:really\s+|so\s+)?frustrated\b"
+    # Klarheit 2026-11-04: "This infuriates me. I have worked hard for Uncle J / you to think of
+    # things like this. There are skills involved that are supposed to kick in. and they didn't."
+    r"|\binfuriat(?:es|ing|ed)\b"
+    r"|\bI\s*(?:['’]ve|\s+have)\s+worked\s+(?:so\s+|really\s+)?hard\b"
+    r"|\bskills?\s+(?:\w+\s+){0,3}supposed\s+to\s+(?:kick\s+in|fire|run|trigger|load)\b"
+    r"|\bwhy\s+(?:didn['’]?t|don['’]?t|aren['’]?t)\s+(?:the\s+|my\s+)?(?:\w+\s+)?skills?\s+"
+    r"(?:fire|kick|run|trigger|work|load)",
     re.I,
 )
 
@@ -79,7 +86,8 @@ def is_from_bill(prompt: str) -> bool:
     head = prompt.lstrip()[:400]
     return not (head.startswith("<task-notification") or "<task-notification>" in head
                 or "[SYSTEM NOTIFICATION" in head or head.startswith("<system-reminder>")
-                or head.startswith("This session is being continued from a previous conversation"))
+                or head.startswith("This session is being continued from a previous conversation")
+                or "<cross-session-message" in head)     # a peer session's text, not Bill's
 
 
 def triggered(prompt: str) -> bool:

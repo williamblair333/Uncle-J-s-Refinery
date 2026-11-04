@@ -5,6 +5,23 @@
 - **Guard gap closed:** cp/mv into relative `scripts/`, `hooks/`, `features/` is now denied. Replay: +4 denies (all the real 11-01 move), 0 false positives. Design baseline for the guard written to `~/.uncle-j-memory/memory/audit-baselines.md`.
 - **memweave catch-up hang, root cause (agy, every citation checked):** `scripts/memweave/index_workspace.py:36` opens `async with MemWeave(...)`. `MemWeave.__aenter__` → `_ensure_db` opens the aiosqlite connection (`store.py:210`) and then runs `ensure_schema` (`:213`). When that raises "database is locked", `__aexit__` never runs, the connection is never closed, and aiosqlite's non-daemon worker thread (`core.py:90`, blocking on `tx.get()` at `:59`) keeps the interpreter alive, holding `/tmp/memweave-sync.lock.d` until the 2 h catch-up timeout. **Fixed** (store closed in `finally`; a regression test reproduces the lock). Still open: what held the db at boot (likely a concurrent session-start sync). A locked store now fails fast instead of hanging. Upstream memweave bug worth filing with Bill's OK: `__aenter__` leaks the connection when `ensure_schema` raises.
 
+## 2026-11-04 — skill routes for design talk; expert-bar gate (from lanscout-f7)
+
+- **Done:** see the CHANGELOG entry of the same name. Built in worktree `/opt/proj/uj-wt-skill-routes`
+  so it wouldn't touch the live Refinery checkout (another session was working there).
+- **Watch:** `~/.claude/state/skill-router/denies.jsonl` for the new routes. If "let's discuss"
+  or "what else?" nag on plain prompts, narrow them with a MISSES case, not by deleting the route.
+- **agy reviews time out:** two bounded diff reviews today hit the print timeout (gemini-3.8-flash-high,
+  280–300 s, about 20–30 tool calls each, argon exhausted until 11-06) and returned nothing usable.
+  The referee path needs a smaller prompt (paste the diff, no exploring) or a higher timeout.
+  What worked (both sessions): a narrow brief naming one command, with no exploring, returned ok in
+  about 158 s. The broad briefs ran 282–303 s and timed out (`state/delegate.jsonl`). A higher
+  `timeout=` isn't shown to matter yet. No root cause.
+- **Open:** a local-model intent classifier as the next layer, for design talk no regex foresees.
+  It's an idea only (think-wider), test first: hand-label 50 bench prompts and measure regex recall.
+- **Bill:** revoke the Gitea token `lanscout-create-20261103` (Settings → Applications). It's
+  left over from creating `bill/lanscout`; the bootstrap gap is in ROADMAP (#298).
+
 ## 2026-11-04 — 125B decided: shelved until 128 GB RAM
 
 - **Decision (Bill agreed):** not worth it at 46 GB. Revisit at 128 GB. `scripts/ram_revisit.sh` warns at session start once MemTotal ≥ 120 GiB; the plan is in `docs/research-later.md`.

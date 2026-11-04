@@ -18,6 +18,42 @@
 
 ---
 
+## 2026-11-04 — design talk routes to judgment skills; expert-bar gated when STANDARDS.md is missing
+
+Klarheit, 2026-11-04: Bill designed a lotto experiment over 5 turns, and the session called 0 skills.
+Replayed through the router, all 6 prompts got 0 routes and 0 complaint flags. The session-start
+"no STANDARDS.md, run expert-bar" notice was read and ignored.
+
+### Added
+- `skill_router.py`: `expert-bar` is named once per session when the git root (with a README,
+  PRODUCT, justfile, pyproject or package.json; never `$HOME`) has no `STANDARDS.md`. It's held by
+  `skill_gate.py` like any route. The marker is `~/.claude/state/skill-router/<session>.expert-bar`.
+- Routes: `skill-adoption-audit` ("why didn't the skills fire", "supposed to kick in"); `auditor`
+  (a money goal: "profit at least $300 daily"); design talk feeds `think-wider` ("what about other
+  factors", "what else?", "keep discussing") and `brainstorming` ("let's talk about / discuss",
+  "how could we check"); `prior-art-check` takes "have we conducted / run / tested".
+- `meta_trigger.py`: "infuriates", "I have worked hard", "skills … supposed to kick in", "why
+  didn't the … skills fire".
+
+### Fixed
+- `skill_name_trigger.py` and `meta_trigger.py` read a peer session's `<cross-session-message>` as
+  Bill naming skills. Two sessions were told to run expert-bar / think-wider / verifiable-task from
+  a quoted plan. The router already skipped these; now all three do.
+
+### Measured
+- `just router-bench`, 14 days: 688 prompts, 12 → 25 fired (1.7% → 3.6%). Each new hit was read by
+  hand: all Klarheit design turns, a gambling "are there other factors successful horse bettors
+  use", and mtw2 "let's discuss …" prompts. One marginal hit (hearth "let's discuss").
+- Gate replay over 437 sessions: expert-bar would have been named once in 15 (jaredrhod 4,
+  gambling 3, hearth, gitea, bizengine, mafski 2 each). Full suite: 3201 passed.
+- The agy referee timed out twice (280–300 s), so I probed by hand. That narrowed `auditor` to goal
+  framing ("to profit $X daily", not "I make $90k a year"), dropped bare "help me understand",
+  and stopped "let's discuss … later/after" matching. Each is now a MISSES case; the bench is still 25/688.
+  A third try with a one-command brief came back: of its 5 prompts, 1 was real ("have we run the
+  tests?" → prior-art-check), so run/ran/tested now need an experiment-type object.
+
+---
+
 ## 2026-11-04 — local 125B shelved until 128 GB RAM, with a trigger
 
 ### Added
