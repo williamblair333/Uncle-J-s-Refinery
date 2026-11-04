@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-03 — surface-write-guard false positives fixed (sed span, cp/mv span)
+
+- **Fixed:** both open guard false positives from the entries below (the 11-02 `mv … -f docker-compose.yml` item and the 11-03 `sed -n … | grep -i` item) had the same root cause: a regex span that crossed `|`, `&&` and `;`. Details are in the CHANGELOG. The pre-mortem found one new false negative the narrowing would have created (`cp $(ls | head -1) scripts/y.sh`); it's fixed and has tests.
+- **Replay bench:** 12,476 unique Bash commands from 14 days of transcripts, old guard vs new: 326 → 296 denies, 30 changed, all deny→allow, none allow→deny. All 30 were read by hand, and only one (#9 below) writes a surface file.
+- **Older gap the replay exposed (not caused by this fix):** `mv x/*.py scripts/` (a relative surface directory, no leading `/`) is allowed by both old and new guards. The old one blocked the 11-01 gambling session's version only by accident. `SURF_PATH` requires `/scripts/`, and a surface file as the *first* `mv` operand (moved away) isn't checked. Widening it trades off false positives, so write the failing test plus a replay first.
+- **Still open:** the pipe-to-shell PreToolUse false positive (`curl … | sha256sum`) lives in `~/.claude/settings.json`, outside this repo.
+- **Next session, first (unchanged):** Bill's call on whether the 125B is still worth it, given Heretic + Pi scored 15/40 against agy's 31/40.
+
 ## 2026-11-03 — local agent: Pi fixes the harness; quality is half of agy's
 
 - **Harness scan** (`review/alternatives/2026-11-03-agent-harness.md`): Pi topped the only local

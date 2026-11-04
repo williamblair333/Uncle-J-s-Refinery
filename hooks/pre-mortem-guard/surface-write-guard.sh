@@ -63,7 +63,11 @@ REDIR_RE=">[>|&]?[[:space:]]*(\"[^\"]*${SURF_EXT}\"|'[^']*${SURF_EXT}'|[^[:space
 # (SURF_TOKEN_RE). (2026-10-22) The old pattern allowed only [[:space:]a-zA-Z0-9='"]
 # between the flag and the file, so `s/a/b/` or `-i.bak` killed the match and it fired
 # on nothing but macOS `sed -i "" f.sh`.
-SED_RE="(^|[^[:alnum:]_.-])g?sed[\"']?[[:space:]](.*[[:space:]])?[\"']?(-[a-zA-Z]*i|--in-place)"
+# (2026-11-03) The flag must sit in sed's own pipeline stage: `[^|]*`, not `.*`, so
+# `sed -n p f.yaml | grep -i x` is not an in-place edit. SEGS masks every `|` that
+# isn't a stage boundary of the outer command (quoted, escaped, or inside $( ) <( )
+# >( ) or backticks), so `sed 's|a|b|' -i f.sh` and `s/a\|b/` keep the span whole.
+SED_RE="(^|[^[:alnum:]_.-])g?sed[\"']?[[:space:]]([^|]*[[:space:]])?[\"']?(-[a-zA-Z]*i|--in-place)"
 
 # Detect: python3 opening surface file in write mode
 PY_RE="python3?[[:space:]].*open[[:space:]]*\([[:space:]]*['\"][^'\"]*${SURF_EXT}['\"][^)]*['\"][wa]['\"]"
@@ -80,7 +84,10 @@ AWK_RE="(^|[[:space:];|&(])awk[[:space:]].*>[[:space:]]*(['\"]?[^[:space:]]*${SU
 # (2026-10-22) cp/mv must start a word — line start, whitespace, ; | & ( ` or a path
 # slash (/bin/cp) or backslash (\cp). Unanchored, the `cp` inside `claude mcp add …
 # scripts/x.py` and `partikus_mcp … tests/x.py` was read as a copy.
-CP_RE="(^|[[:space:];|&(\`/\\])(cp|mv)[[:space:]].*[[:space:]](['\"]?[^[:space:]]*${SURF_EXT}['\"]?|['\"]?[^[:space:]]*${SURF_PATH}[^[:space:]]*['\"]?)"
+# (2026-11-03) Matched per command SEGMENT and only up to the next stage pipe, like
+# SED_RE: on the whole line `.*` ran past `&&` and `;`, so `mv a.jsonl b.jsonl &&
+# dcup -f docker-compose.yml` was read as a move onto a .yml.
+CP_RE="(^|[[:space:];|&(\`/\\])(cp|mv)[[:space:]][^|]*[[:space:]](['\"]?[^[:space:]]*${SURF_EXT}['\"]?|['\"]?[^[:space:]]*${SURF_PATH}[^[:space:]]*['\"]?)"
 
 # ── Scratch targets under /tmp are not surface writes (2026-10-16) ───────────────
 # The regexes above match on text, so `cat > $scratchpad/probe.py` and a backup
@@ -337,21 +344,32 @@ fi
 # masked (`sed -i 's|a|b|' f.sh` stays whole) and so is the `&` of `2>&1` / `&>`.
 # Quote state carries across lines and an unbalanced quote masks everything after it:
 # every mistake here MERGES segments, which can add a match but never remove one.
+# (2026-11-03) SED_RE and CP_RE stop at a `|` left in a segment, and a pipe left here
+# wrongly would SPLIT a span (a false negative). So `|` is also masked when escaped
+# (quoted or not) and inside $( ) <( ) >( ) or backticks, where `;` and `&` are
+# masked too: `cp $(ls | head -1) scripts/y.sh` stays one span. Depth carries across
+# lines, like quote state. Only unquoted parens are counted: `$(` opens, `)` closes.
 SEGS=$(printf '%s\n' "$SCAN" | awk '
-  BEGIN { q = "" }
+  BEGIN { q = ""; d = 0; bt = 0 }
+  function esc(ch) { return ch == "|" ? "_" : ch }
   {
     out = ""; n = length($0)
     for (i = 1; i <= n; i++) {
       c = substr($0, i, 1)
       if (q == "") {
-        if (c == "\\") { out = out c substr($0, i + 1, 1); i++; continue }
+        if (c == "\\") { out = out c esc(substr($0, i + 1, 1)); i++; continue }
+        p = substr($0, i - 1, 1)
+        if (c == "(" && (p == "$" || p == "<" || p == ">")) d++
+        else if (c == ")" && d > 0) d--
+        else if (c == "`") bt = !bt
         if (c == "\047" || c == "\"") q = c
+        else if ((d > 0 || bt) && (c == ";" || c == "&" || c == "|")) c = "_"
         else if (c == ";") c = "\n"
         else if (c == "&") {
           if (substr($0, i - 1, 1) == ">" || substr($0, i + 1, 1) == ">") c = "_"
           else c = "\n"
         }
-      } else if (q == "\"" && c == "\\") { out = out c substr($0, i + 1, 1); i++; continue }
+      } else if (q == "\"" && c == "\\") { out = out c esc(substr($0, i + 1, 1)); i++; continue }
       else if (c == q) q = ""
       else if (c == ";" || c == "&" || c == "|") c = "_"
       out = out c
@@ -367,7 +385,7 @@ echo "$SCAN" | grep -qE "$REDIR_RE" && HIT=1
 [[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$RUBY_RE" && HIT=1
 [[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$NODE_RE" && HIT=1
 [[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$AWK_RE" && HIT=1
-[[ $HIT -eq 0 ]] && echo "$SCAN" | grep -qE "$CP_RE" && HIT=1
+[[ $HIT -eq 0 ]] && printf '%s\n' "$SEGS" | grep -qE "$CP_RE" && HIT=1
 
 [[ $HIT -eq 0 ]] && exit 0
 

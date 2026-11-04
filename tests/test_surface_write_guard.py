@@ -192,6 +192,55 @@ def test_widening_does_not_block_ordinary_work(name, cmd, tmp_path):
     assert not blocked(res), f"{name}: false positive.\ncmd={cmd!r}"
 
 
+# 2026-11-03: a flag or operand belongs to its own pipeline stage. SED_RE's `.*`
+# crossed a pipe to grep's `-i`, and CP_RE ran on the whole line, so a `mv` of
+# .jsonl files was blocked by a `docker-compose.yml` three commands later. Both
+# real commands were blocked in live sessions (state/hook-blocks.log, 11-02/11-03).
+PIPE_SPAN_ALLOW = [
+    ("sed-print-pipe-grep-i",  "sed -n 1,40p compose.yaml | grep -n -i 'gguf\\|port'"),
+    ("live-2026-11-03",        "cd /opt/proj/Uncle-J-s-Refinery; sed -n 1,40p docker/llama-heretic/compose.yaml"
+                               " | grep -n -i 'gguf\\|model\\|ctx\\|-c \\|port' ; docker ps -a --format"
+                               " '{{.Names}} {{.Status}}' | grep -i -E 'heretic|llama|strata';"
+                               " ls /opt/docker/strata/bench 2>/dev/null | head"),
+    ("mv-then-dcup-yml",       "mv a.jsonl b.jsonl && dcup -f docker-compose.yml up -d"),
+    ("mv-then-run-sh",         "mv a.jsonl b.jsonl; bash x/guard.sh"),
+    ("live-2026-11-02",        "cd /opt/docker/strata && mv bench/results/strata-runs.jsonl"
+                               " bench/results/strata-runs.ctx32k.jsonl && for t in t04 t14; do"
+                               " for e in json md err; do mv bench/results/$t.strata.$e"
+                               " bench/results/$t.strata.ctx32k.$e; done; done &&"
+                               " dcup -f docker-compose.yml up -d --force-recreate 2>&1 | tail -4"),
+]
+
+# What the narrowing must keep: writes whose flag/target sit in the same stage,
+# or after a pipe, or behind an escaped or quoted `|`.
+PIPE_SPAN_BLOCK = [
+    ("sed-escaped-pipe-script", "sed -e s/a\\|b/c/ -i f.sh"),
+    ("sed-quoted-pipe-then-i", "sed 's|a|b|' -i f.sh"),
+    ("xargs-cp-after-pipe",    "find . -name x | xargs cp -t /opt/proj/x/hooks/"),
+    ("mv-after-or",            "false || mv x y.sh"),
+    ("cp-before-pipe",         "cp x y.sh | cat"),
+    ("mv-after-and",           "mv a.jsonl b.jsonl && mv c scripts/d.sh"),
+    # A pipe inside a substitution is not a stage boundary of the outer command.
+    ("cp-cmd-subst-pipe",      "cp $(ls x | head -1) scripts/y.sh"),
+    ("cp-proc-subst-pipe",     "cp <(echo x | cat) y.sh"),
+    ("cp-backtick-pipe",       "cp `ls x | head -1` y.sh"),
+    ("cp-subst-semicolon",     "cp $(cd x; ls) y.sh"),
+    ("sed-subst-pipe-then-i",  "sed $(echo -e | cat) -i f.sh"),
+]
+
+
+@pytest.mark.parametrize("name,cmd", PIPE_SPAN_ALLOW, ids=[c[0] for c in PIPE_SPAN_ALLOW])
+def test_flags_do_not_span_pipeline_stages(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert not blocked(res), f"{name}: false positive.\ncmd={cmd!r}"
+
+
+@pytest.mark.parametrize("name,cmd", PIPE_SPAN_BLOCK, ids=[c[0] for c in PIPE_SPAN_BLOCK])
+def test_pipe_span_narrowing_still_blocks(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert blocked(res), f"{name}: NOT blocked — false negative.\ncmd={cmd!r}"
+
+
 # 2026-10-23: the surfaces added to edit-surface-guard.sh are mirrored here.
 SURFACE_ADDED_2026_10_23 = [
     ("mcp-json",        "echo '{}' > /opt/proj/x/.mcp.json"),
