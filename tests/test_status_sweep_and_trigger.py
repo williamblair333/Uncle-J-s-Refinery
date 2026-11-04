@@ -90,6 +90,14 @@ def test_compaction_summary_is_not_bill():
     assert trigger.is_from_bill("This session is being slow, just-do-it")
 
 
+def test_peer_session_message_naming_skills_is_ignored(tmp_path):
+    # 2026-11-04: a peer's message quoting "expert-bar, think-wider" read as Bill naming them.
+    p = _run_hook(tmp_path, ["expert-bar", "think-wider"],
+                  '<cross-session-message from="uds:/x.sock">run expert-bar and think-wider'
+                  "</cross-session-message>")
+    assert p.returncode == 0 and p.stdout == ""
+
+
 def test_hook_silent_on_garbage():
     p = subprocess.run([sys.executable, str(ROOT / "features/prompt-triggers/skill_name_trigger.py")],
                        input="not json", capture_output=True, text=True)

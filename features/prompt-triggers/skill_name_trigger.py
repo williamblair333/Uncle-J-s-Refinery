@@ -49,7 +49,10 @@ def is_from_bill(prompt):
     head = prompt.lstrip()[:400]
     return not (head.startswith("<task-notification") or "<task-notification>" in head
                 or "[SYSTEM NOTIFICATION" in head or head.startswith("<system-reminder>")
-                or head.startswith("This session is being continued from a previous conversation"))
+                or head.startswith("This session is being continued from a previous conversation")
+                # 2026-11-04: a peer session's message quoting "expert-bar, think-wider" was read
+                # as Bill naming those skills, in two sessions.
+                or "<cross-session-message" in head)
 
 
 MAX_NAMED = 3

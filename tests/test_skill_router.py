@@ -38,6 +38,21 @@ HITS = [
     ("/home/bill/Downloads/125b-local-performance-handoff.md should answer your strata question. "
      "please analyze / review", "verify-handoff-claims"),
     ("the plan in notes.md — can you critique it", "product-focus-review"),
+    # Klarheit 2026-11-04: five design turns, zero skills, until Bill complained.
+    ("let's talk about the lotto and using my birth chart + whatever factors regarding the date "
+     "of drawing  and what else?", "think-wider"),
+    ("let's talk about the lotto and using my birth chart", "superpowers:brainstorming"),
+    ("Have we conducted a type of experiment like this.", "prior-art-check"),
+    ("Right now, I'd love to profit at least $300 daily from playing lotto games.", "auditor"),
+    ("So how could we check this before spending money?", "superpowers:brainstorming"),
+    ("but what about other factors that may be important?  Like the planets/houses or whatever "
+     "else other systems use  Does this mean one year isn't enough time? let's keep discussing.",
+     "think-wider"),
+    ("Let's discuss before digging cause I'm just brainstorming here.", "superpowers:brainstorming"),
+    ("Analyze and help me suss understand and discuss", "think-wider"),
+    ("I asked about other factors. why didn't the fucking skills fire", "skill-adoption-audit"),
+    ("There are skills involved that are supposed to kick in . and they didn't.",
+     "skill-adoption-audit"),
 ]
 MISSES = [
     "all good",
@@ -55,6 +70,11 @@ MISSES = [
     " HANDOFF:\n    - It points the next session at the top STANDARDS gap, or the gap where review",
     "you said: I left README and ROADMAP alone. I didn't redo the weekly review of blocked hooks.",
     "the baseline is in ~/.uncle-j-memory/memory/audit-baselines.md now",
+    # Money mentioned as a cost, not a goal; "else" and "discuss" in passing.
+    "the VPS costs $20 a month, keep it",
+    "what else did you change in that commit",
+    "we can discuss it later, session end",
+    "the skills dir is in ~/.claude/skills",
 ]
 
 
@@ -172,6 +192,57 @@ def test_hook_output_shape():
     ctx = json.loads(r.stdout)["hookSpecificOutput"]
     assert ctx["hookEventName"] == "UserPromptSubmit"
     assert "occams-razor" in ctx["additionalContext"]
+
+
+def run_in(prompt, state, cwd, session="s1"):
+    return subprocess.run([sys.executable, str(SCRIPT)],
+                          input=json.dumps({"prompt": prompt, "session_id": session, "cwd": str(cwd)}),
+                          capture_output=True, text=True, timeout=10,
+                          env={**os.environ, "SKILL_ROUTER_STATE": str(state)})
+
+
+def make_project(root, standards=False):
+    (root / ".git").mkdir(parents=True)
+    (root / "README.md").write_text("x")
+    if standards:
+        (root / "STANDARDS.md").write_text("x")
+    return root
+
+
+def test_project_without_standards_gets_expert_bar_once_per_session(tmp_path):
+    proj, state = make_project(tmp_path / "proj"), tmp_path / "state"
+    (proj / "src").mkdir()
+    r = run_in("all good", state, proj / "src")
+    assert "expert-bar" in json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert json.loads((state / "s1.json").read_text())["skills"] == ["expert-bar"]
+    assert run_in("all good", state, proj).stdout == ""          # named once, not every prompt
+    assert "expert-bar" in run_in("all good", state, proj, session="s2").stdout
+
+
+def test_expert_bar_rides_along_with_routed_skills(tmp_path):
+    proj, state = make_project(tmp_path / "proj"), tmp_path / "state"
+    run_in("why does it keep crashing", state, proj)
+    assert json.loads((state / "s1.json").read_text())["skills"] == ["occams-razor", "expert-bar"]
+
+
+def test_no_expert_bar_with_standards_outside_a_project_or_for_harness_text(tmp_path):
+    state = tmp_path / "state"
+    assert run_in("all good", state, make_project(tmp_path / "a", standards=True)).stdout == ""
+    bare = tmp_path / "b"
+    (bare / ".git").mkdir(parents=True)                           # a git dir with no project files
+    assert run_in("all good", state, bare).stdout == ""
+    assert run_in("all good", state, tmp_path / "nogit").stdout == ""
+    proj = make_project(tmp_path / "c")
+    assert run_in("<cross-session-message from=x>hi</cross-session-message>", state, proj).stdout == ""
+    assert "expert-bar" in run_in("all good", state, proj).stdout  # the peer text didn't use it up
+
+
+def test_peer_message_naming_skills_routes_nothing():
+    peer = ('<cross-session-message from="uds:/run/x.sock" from-name="klarheit-73">Run expert-bar, '
+            "think-wider and verifiable-task; why didn't the skills fire? profit $300 daily"
+            "</cross-session-message>")
+    assert sr.route(peer) == []
+    assert not sr.is_from_bill("Another session wrote:\n" + peer)
 
 
 def test_silent_on_miss_off_switch_and_bad_input():

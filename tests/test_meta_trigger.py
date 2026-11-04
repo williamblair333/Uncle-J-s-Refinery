@@ -30,6 +30,11 @@ HITS = [
     "are you drifting from the goal and how to get there? are you using the new skills we built?  "
     "would you check yourself while the other process runs?",
     "I'm getting frustrated you know",
+    # Klarheit, 2026-11-04: went unflagged
+    "This infuriates me.  I have worked hard for Uncle J / you to think of things like this.  "
+    "There are skills involved that are supposed to kick in . and they didn't.",
+    "the skills are supposed to kick in and they didn't",
+    "OK.  I had this conversation in Klarheit and why didn't the fucking skills fire",
 ]
 ORDER_HITS = [
     "from last session  First up next session:\n  1. Quiet world for turn tests\n  2. Far boarding",
@@ -57,6 +62,10 @@ MISSES = [
     # pasted agent text full of "you should have", with nothing from Bill after it
     "● You should have seen the log. Why didn't you check it? That was my miss.",
     "<task-notification> why didn't you check </task-notification>",
+    # a peer session's message is not Bill's complaint (2026-11-04)
+    '<cross-session-message from="uds:/x.sock">why didn\'t the skills fire? I\'m frustrated'
+    "</cross-session-message>",
+    "the skills dir has 90 entries",
 ]
 
 
