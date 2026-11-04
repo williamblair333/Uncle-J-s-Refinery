@@ -16,6 +16,10 @@
 - **Guard false positive, needs a fix at its source:** the inline pipe-to-shell PreToolUse hook
   (pattern `curl\s.*\|\s*(bash|sh|zsh)`) blocks `curl … | sha256sum` because there's no word boundary.
   Not in this repo (search `absent`), and reading `~/.claude/settings.json` is denied. Fix: `…(bash|sh|zsh)\b`.
+- **Another guard false positive:** `surface-write-guard` blocked a read-only `sed -n 1,40p docker/llama-heretic/compose.yaml`
+  as a Bash write (state/hook-blocks.log, 2026-11-03). `sed` without `-i` doesn't write. It's the same family as the
+  open `-f <surface>` read-arg item from 11-02: write the failing test first.
+- **Next session, first:** decide whether the 125B is still worth it given Heretic + Pi scores 15/40 against agy's 31/40.
 
 ## 2026-11-03 — local agent: Heretic bench 1/5; the harness is the blocker
 
