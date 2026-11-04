@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-03 — surface-write-guard: flags stay in their own pipeline stage
+
+### Fixed
+- `hooks/pre-mortem-guard/surface-write-guard.sh` had two live false positives. `sed -n … compose.yaml | grep -i …` was read as `sed -i`, because `SED_RE`'s `.*` crossed the pipe. `mv a.jsonl b.jsonl && dcup -f docker-compose.yml` was read as a move onto a `.yml`, because `CP_RE` ran on the whole line. Both spans now stop at a stage pipe (`[^|]*`), and `CP_RE` runs per segment like the sed check.
+- The segment builder now also masks escaped `\|` and `| ; &` inside `$( )`, `<( )`, `>( )` and backticks. A pre-mortem found that without this, `cp $(ls | head -1) scripts/y.sh` would have become a new false negative.
+- `tests/test_surface_write_guard.py`: 5 allow cases (2 are the real blocked commands) and 11 block cases. A replay of 14 days of transcript Bash commands compared old and new guard verdicts (see HANDOFF).
+
+---
+
 ## 2026-11-03 — local agent bench: Heretic under Claude Code, then Pi
 
 ### Added
