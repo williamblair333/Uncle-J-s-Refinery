@@ -1,5 +1,22 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-03 — local agent: Pi fixes the harness; quality is half of agy's
+
+- **Harness scan** (`review/alternatives/2026-11-03-agent-harness.md`): Pi topped the only local
+  harness bench (76.9%, neuralnoise, their benchmark); OpenCode trailed Claude Code there. Installed
+  Pi 1.5.0 to `~/.local/opt/pi` with a checksum-verified Node 22.23.4 in `~/.local/opt/node22`;
+  the system Node 20 is untouched.
+- **Bench, Heretic at 128k + Pi:** 4 of 5 answered (Claude Code: 1 of 5). Blind judging against agy:
+  agy won all 4, 31/40 vs 15/40. Local answers cite wrong lines and invent CLI flags. Details are in
+  `/opt/docker/strata/bench/NOTES.md`.
+- **Meaning for the 125B question:** the agent loop now works, so a stronger model is the remaining lever.
+  Next is the uncensored Flash-Next under Pi (Strata exposes OpenAI `/v1`) once RAM allows, or the refusal
+  vector on our IQ1_M, though IQ1_M lost on context before Pi existed here. The 125B is only worth
+  it if it beats 15/40 by a wide margin.
+- **Guard false positive, needs a fix at its source:** the inline pipe-to-shell PreToolUse hook
+  (pattern `curl\s.*\|\s*(bash|sh|zsh)`) blocks `curl … | sha256sum` because there's no word boundary.
+  Not in this repo (search `absent`), and reading `~/.claude/settings.json` is denied. Fix: `…(bash|sh|zsh)\b`.
+
 ## 2026-11-03 — local agent: Heretic bench 1/5; the harness is the blocker
 
 Bill wants a 125B model (~40 t/s) and all local models uncensored. Plan was: Heretic bench (free) →
