@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — README plain-language rewrite (session refinery-26)
+
+- **Done:** PR #310 merged (`b72d913`). Worked in a worktree because `uncle-j-s-refinery-85` had uncommitted work in the main checkout; coordinated with it by SendMessage.
+- **Watch:** README facts that drift. The server count (10) and the uninstall loop must change when `install.sh` registers a new MCP server; nothing checks this automatically.
+- README, ROADMAP checked; no further update needed.
+
 ## 2026-11-04 — flowchart re-rendered
 
 - `docs/uncle-js-flowchart.png` no longer mentions MemPalace (the PNG had never been re-rendered after the script switched to memweave). To regenerate: `uv run --no-project --with matplotlib python scripts/generate-flowchart.py`. The stack venv has no matplotlib, on purpose: don't `uv sync` it in.

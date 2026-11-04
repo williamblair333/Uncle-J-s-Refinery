@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-11-04 — README rewritten in plain language (PR #310)
+
+### Changed
+- `README.md` rewritten with the feynman-style skill: short sentences, terms (MCP server, hook, prompt injection, language server) defined at first use, no boosters. Every shell command, number and path is unchanged; fenced blocks differ only in file-map comments.
+
+### Fixed
+- `README.md`: MCP server count now 10 (`install.sh:455-467`); it said 6 in one place and 9 in another. Credits no longer say memweave has no MCP server (`scripts/memweave/mw_mcp.py`). Contents list covers sections 20-24; the broken ClickHouse troubleshooting anchor works. Uninstall and reset loops now remove all 10 servers (ask_local, memweave, live_preview, delegate were missing).
+
+---
+
 ## 2026-11-04 — flowchart re-rendered (MemPalace gone)
 
 ### Fixed
