@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — 125B decided: shelved until 128 GB RAM
+
+- **Decision (Bill agreed):** not worth it at 46 GB. Revisit at 128 GB. `scripts/ram_revisit.sh` warns at session start once MemTotal ≥ 120 GiB; the plan is in `docs/research-later.md`.
+- **Strata weights:** 63G moved to `/opt/docker/strata/data/.trash-20261104` (root-owned; the destructive-delete gate blocks `rm -rf` on absolute paths). **Bill:** `sudo rm -rf /opt/docker/strata/data/.trash-20261104` frees the space.
+- **Next (mine):** post-audit design note for the surface-write-guard change; the memweave catch-up hang (a "database is locked" error at 07:47 on 11-02 left the sync holding its lock until the 2 h timeout); the relative `scripts/` gap (failing test + replay first); moving the inline pipe-to-shell hook into the repo (Bill pastes `grep -n "Pipe-to-shell" ~/.claude/settings.json` first).
+
 ## 2026-11-03 — surface-write-guard false positives fixed (sed span, cp/mv span)
 
 - **Fixed:** both open guard false positives from the entries below (the 11-02 `mv … -f docker-compose.yml` item and the 11-03 `sed -n … | grep -i` item) had the same root cause: a regex span that crossed `|`, `&&` and `;`. Details are in the CHANGELOG. The pre-mortem found one new false negative the narrowing would have created (`cp $(ls | head -1) scripts/y.sh`); it's fixed and has tests.
@@ -7,6 +13,7 @@
 - **Older gap the replay exposed (not caused by this fix):** `mv x/*.py scripts/` (a relative surface directory, no leading `/`) is allowed by both old and new guards. The old one blocked the 11-01 gambling session's version only by accident. `SURF_PATH` requires `/scripts/`, and a surface file as the *first* `mv` operand (moved away) isn't checked. Widening it trades off false positives, so write the failing test plus a replay first.
 - **Still open:** the pipe-to-shell PreToolUse false positive (`curl … | sha256sum`) lives in `~/.claude/settings.json`, outside this repo.
 - **Next session, first (unchanged):** Bill's call on whether the 125B is still worth it, given Heretic + Pi scored 15/40 against agy's 31/40.
+- **jcodemunch-mcp breaking change**: `get_symbol_source` on a class now returns a method outline by default (`source_outline: true`) instead of the full body — callers that need the whole class must pass `class_body="full"`.
 
 ## 2026-11-03 — local agent: Pi fixes the harness; quality is half of agy's
 
