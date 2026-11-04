@@ -229,6 +229,37 @@ PIPE_SPAN_BLOCK = [
 ]
 
 
+# 2026-11-04: a RELATIVE surface directory as a cp/mv target was never checked
+# (SURF_PATH needs a leading `/`). Found by the PR #302 replay: the 11-01 gambling
+# session's `mv data/…/scripts/*.py scripts/` was blocked only by the old `.*` span.
+RELATIVE_DIR_BLOCK = [
+    ("mv-py-into-scripts",     "mv data/horseshoe-indy/scripts/*.py scripts/"),
+    ("cp-into-hooks",          "cp x hooks/guard"),
+    ("cp-into-dot-features",   "cp -r x ./features/y"),
+    ("mv-quoted-scripts",      "mv a 'scripts/b c'"),
+    ("live-2026-11-01",        "mkdir -p data scripts && mv review/horseshoe-indy-results data/horseshoe-indy"
+                               " && mv data/horseshoe-indy/scripts/*.py scripts/ && rmdir data/horseshoe-indy/scripts"),
+]
+RELATIVE_DIR_ALLOW = [
+    ("cp-from-scripts",        "cp scripts/a.txt /tmp/b"),
+    ("ls-scripts",             "ls scripts/"),
+    ("cp-into-myscripts",      "cp a.txt myscripts/b.txt"),
+    ("cp-into-data",           "cp a.txt data/scripts.txt"),
+]
+
+
+@pytest.mark.parametrize("name,cmd", RELATIVE_DIR_BLOCK, ids=[c[0] for c in RELATIVE_DIR_BLOCK])
+def test_relative_surface_dir_targets_blocked(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert blocked(res), f"{name}: NOT blocked — false negative.\ncmd={cmd!r}"
+
+
+@pytest.mark.parametrize("name,cmd", RELATIVE_DIR_ALLOW, ids=[c[0] for c in RELATIVE_DIR_ALLOW])
+def test_relative_surface_dir_near_misses_allowed(name, cmd, tmp_path):
+    res = run_guard(cmd, tmp_path)
+    assert not blocked(res), f"{name}: false positive.\ncmd={cmd!r}"
+
+
 @pytest.mark.parametrize("name,cmd", PIPE_SPAN_ALLOW, ids=[c[0] for c in PIPE_SPAN_ALLOW])
 def test_flags_do_not_span_pipeline_stages(name, cmd, tmp_path):
     res = run_guard(cmd, tmp_path)
