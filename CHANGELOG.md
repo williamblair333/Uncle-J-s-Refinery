@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-04 — memweave sync exits on a locked store instead of hanging
+
+### Fixed
+- `scripts/memweave/index_workspace.py`: closes the MemWeave store in `finally`. When `MemWeave.__aenter__` raised "database is locked" (schema check), `__aexit__` never ran, and aiosqlite's non-daemon worker thread kept the process alive. The 11-02 boot catch-up sync hung for 2 h holding `/tmp/memweave-sync.lock.d`, so every other sync was skipped. Diagnosed by agy (citations checked against the source).
+- `tests/test_memweave_index_lock.py`: holds an exclusive lock on a real store and runs the indexer. Before the fix it hung past the 90 s limit; after, it exits nonzero in about 6 s.
+
+---
+
 ## 2026-11-04 — surface-write-guard: relative surface directories as cp/mv targets
 
 ### Fixed
