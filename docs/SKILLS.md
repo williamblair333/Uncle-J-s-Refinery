@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 81 repo, 1 workflows.
+Totals: 83 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -36,10 +36,12 @@ Totals: 81 repo, 1 workflows.
 | `blue-team` | Use when performing defensive security work — hardening controls, implementing patches from red-team findings, threat modeling, detection engineering, incident… | auto | Claude Code | repo |
 | `building-circuit-boards` | Use when asked to design, make, revise, or order a printed circuit board (PCB), produce Gerbers or a fab zip for JLCPCB/PCBWay, or create a KiCad board or sche… | auto | any agent | repo |
 | `catch-up-pull` | Use when returning to a repo after time away, when git status reports "up to date" but commits may have landed upstream, or when you need to safely absorb a la… | auto | any agent | repo |
+| `claim-to-protocol` | Use whenever a person is evaluating a claim, recommendation, plan, or decision in any domain, especially before acting on it. | auto | any agent | repo |
 | `clean-room-rebuild` | Use when building original software that replicates the functionality of an existing app, including any use of REA (morluto/rea) to study a target, so the work… | auto | Refinery stack | repo |
 | `community-pr-stakeholder-response` | Use when tagged as a stakeholder on an open-source PR or issue comment, especially when the PR has evolved since your last review, involves architectural chang… | auto | Refinery stack | repo |
 | `deep-repo-analysis` | Full codebase health audit using jcodemunch — cycles, complexity, coupling, dead code, test gaps, and architectural debt. | auto | Refinery stack | repo |
 | `expert-bar` | Use when a project has no STANDARDS.md (the session-start notice says so), when its phase changes, before planning the next stretch of work, or when the user k… | auto | Claude Code | repo |
+| `feynman-style` | Use when writing, drafting, editing, or explaining anything in clear plain language, or when asked for Feynman style, simpler wording, or less jargon. | auto | any agent | repo |
 | `first-run-gate` | Use before calling any project done, before opening a PR that changes runtime behavior, and when setup or install is suspected broken — "does this still work o… | auto | any agent | repo |
 | `fog-of-chess-engine-mode-implementation` | Implement a new engineMode variant end-to-end in Fog of Chess — types, UCI bridge, adapter, server polling, REST endpoint, and UI panel — following the validat… | auto | any agent | repo |
 | `freecad-parametric-toolkit-build` | Build a FreeCAD parametric CAD toolkit tier by tier — probe APIs first, implement modules, run tests with freecadcmd, fix stdout capture issues. | auto | any agent | repo |

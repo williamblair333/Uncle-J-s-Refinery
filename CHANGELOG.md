@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-04 — skills: claim-to-protocol, feynman-style
+
+### Added
+- `global-skills/claim-to-protocol/`: claim → evidence grade → disconfirmation → hidden harm, with gated steps (real? works here? worth the cost? then act).
+- `global-skills/feynman-style/`: plain-language writing rules and a final check. The source file was `feynman-writing.skill.md`; the folder follows its declared name.
+- Both supplied by Bill, read in full (prose only: no commands, URLs or hidden characters), linked via `scripts/skill-link.sh`, and listed in `docs/SKILLS.md`.
+
+---
+
 ## 2026-11-04 — memweave sync exits on a locked store instead of hanging
 
 ### Fixed

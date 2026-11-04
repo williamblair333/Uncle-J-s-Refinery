@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — two skills added (claim-to-protocol, feynman-style)
+
+- **Watch:** both descriptions are very broad ("any claim … in any domain", "writing … anything"), so they'll fire often and overlap auditor, gttp, occams-razor and terse-reply. If they crowd out the specific skills, narrow the descriptions. Neither has a red-green baseline yet (STANDARDS `skills-red-green`).
+- Strata IQ1_M weights deleted by Bill (`/opt` 458G → 520G free).
+
 ## 2026-11-04 — guard: relative surface dirs; memweave hang diagnosed
 
 - **Guard gap closed:** cp/mv into relative `scripts/`, `hooks/`, `features/` is now denied. Replay: +4 denies (all the real 11-01 move), 0 false positives. Design baseline for the guard written to `~/.uncle-j-memory/memory/audit-baselines.md`.
