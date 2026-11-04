@@ -11,6 +11,9 @@
   so it wouldn't touch the live Refinery checkout (another session was working there).
 - **Watch:** `~/.claude/state/skill-router/denies.jsonl` for the new routes. If "let's discuss"
   or "what else?" nag on plain prompts, narrow them with a MISSES case, not by deleting the route.
+- **agy reviews time out:** two bounded diff reviews today hit the print timeout (gemini-3.8-flash-high,
+  280–300 s, about 20–30 tool calls each, argon exhausted until 11-06) and returned nothing usable.
+  The referee path needs a smaller prompt (paste the diff, no exploring) or a higher timeout.
 - **Open:** a local-model intent classifier as the next layer, for design talk no regex foresees.
   It's an idea only (think-wider), test first: hand-label 50 bench prompts and measure regex recall.
 - **Bill:** revoke the Gitea token `lanscout-create-20261103` (Settings → Applications). It's

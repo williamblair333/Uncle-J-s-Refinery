@@ -75,6 +75,11 @@ MISSES = [
     "what else did you change in that commit",
     "we can discuss it later, session end",
     "the skills dir is in ~/.claude/skills",
+    # self-review 2026-11-04 (agy referee timed out twice)
+    "I make $90k a year, irrelevant",
+    "earn $5 per day in interest, fine whatever",
+    "help me understand this error",
+    "let's discuss the PR after lunch",
 ]
 
 

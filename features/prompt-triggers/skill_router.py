@@ -74,7 +74,7 @@ ROUTES = [
         r"|\bother\s+factors\b"
         r"|\bwhat\s+else\s*\?"
         r"|\bkeep\s+discussing\b"
-        r"|\bhelp\s+me\s+(?:\w+\s+){0,3}(?:understand|discuss|think\s+(?:about|through))\b", re.I),
+        r"|\bhelp\s+me\s+(?:\w+\s+){0,3}(?:discuss|think\s+(?:about|through))\b", re.I),
      "choosing an approach"),
     ("prior-art-check", re.compile(
         r"\bhave\s+we\s+(?:ever\s+|already\s+)?(?:done|built|solved|tried|made|looked|conducted|run"
@@ -119,14 +119,16 @@ ROUTES = [
         # Klarheit 2026-11-04: "let's talk about the lotto…", "Let's discuss before digging cause
         # I'm just brainstorming", "So how could we check" — designing by conversation.
         r"|\blet['’]?s\s+(?:talk|brainstorm|think)\s+(?:about|through)\b"
-        r"|\blet['’]?s\s+discuss\b"
+        # not scheduling: "let's discuss the PR after lunch" / "… it later"
+        r"|\blet['’]?s\s+discuss\b(?!\s+(?:\w+\s+){0,3}(?:later|after|tomorrow|next\s+(?:week|time)))"
         r"|\bjust\s+brainstorming\b"
         r"|\bhow\s+(?:could|would|can)\s+we\s+(?:check|test|build|design|model|try|prove)\b", re.I),
      "new thing to build"),
     # Klarheit 2026-11-04: "I'd love to profit at least $300 daily from playing lotto games" was
     # accepted as a target with no challenge. A money goal is a plan to stress-test.
     ("auditor", re.compile(
-        r"\b(?:profit|make|earn|net|clear|win|bring\s+in)\s+(?:at\s+least\s+|about\s+|around\s+"
+        # "to profit …" is a goal; "I make $90k a year" is a fact (self-review 2026-11-04).
+        r"\b(?:to|wanna|gonna)\s+(?:profit|make|earn|net|clear|win|bring\s+in)\s+(?:at\s+least\s+|about\s+|around\s+"
         r"|over\s+)?\$\s?\d[\d,.]*\s*[kK]?\s*(?:a\s+|per\s+|each\s+|every\s+|/\s*)?"
         r"(?:day|daily|week|weekly|month|monthly|year|yearly)\b", re.I),
      "a money goal to stress-test before planning around it"),

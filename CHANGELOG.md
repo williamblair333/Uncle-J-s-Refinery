@@ -46,6 +46,9 @@ Replayed through the router, all 6 prompts got 0 routes and 0 complaint flags. T
   use", and mtw2 "let's discuss …" prompts. One marginal hit (hearth "let's discuss").
 - Gate replay over 437 sessions: expert-bar would have been named once in 15 (jaredrhod 4,
   gambling 3, hearth, gitea, bizengine, mafski 2 each). Full suite: 3201 passed.
+- The agy referee timed out twice (280–300 s), so I probed by hand. That narrowed `auditor` to goal
+  framing ("to profit $X daily", not "I make $90k a year"), dropped bare "help me understand",
+  and stopped "let's discuss … later/after" matching. Each is now a MISSES case; the bench is still 25/688.
 
 ---
 
