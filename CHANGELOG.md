@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-04 — flowchart re-rendered (MemPalace gone)
+
+### Fixed
+- `docs/uncle-js-flowchart.png` still showed MemPalace in 4 places (session start, prior-art check, MCP panel, stop hook). `scripts/generate-flowchart.py` had already been updated, but the PNG was never re-rendered. Re-rendered with `uv run --no-project --with matplotlib` (matplotlib isn't in the stack venv).
+- `scripts/generate-flowchart.py`: memweave tile in the MCP panel; current PreToolUse guards (surface-write, pipe-to-shell, push, credential, grep, edit-surface + pre-mortem, skill gate) instead of retired hook names; 02:30 memweave sync and 04:15 repo scout crons. Layout: the cron caption no longer overprints the first box, and the axes extend below 0, so the cron boxes, legend swatches and footer are no longer clipped.
+
+---
+
 ## 2026-11-04 — session end: memweave fix sent upstream, lockfile, scout
 
 ### Added

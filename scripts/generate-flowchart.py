@@ -79,12 +79,16 @@ def section_tag(ax, y, text):
             fontfamily="monospace", zorder=5)
 
 # ── Figure ────────────────────────────────────────────────────────────────────
-FW, FH = 20, 44
+# The layout runs below y=0 (crons, legend), so the axes extend to Y_MIN; FH grows
+# in proportion to keep box shapes. With ylim(0, 1) the cron boxes, legend swatches
+# and footer were clipped or overprinted (2026-11-04).
+Y_MIN = -0.075
+FW, FH = 20, 44 * (1 - Y_MIN)
 fig, ax = plt.subplots(figsize=(FW, FH))
 fig.patch.set_facecolor(BG)
 ax.set_facecolor(BG)
 ax.set_xlim(0, 1)
-ax.set_ylim(0, 1)
+ax.set_ylim(Y_MIN, 1)
 ax.axis("off")
 
 CX  = 0.50   # main spine x
@@ -152,14 +156,15 @@ STOP_LABEL_Y = y;   y -= 0.002
 SH1_Y = y;          y -= GAP + 0.004   # langfuse
 SH2_Y = y;          y -= GAP + 0.004   # session-notify (Telegram)
 SH3_Y = y;          y -= GAP + 0.004   # memweave session ingest
-SH4_Y = y;          y -= GAP + 0.016   # skill-suggest + skill-link unlink
+SH4_Y = y;          y -= GAP + 0.010   # skill-suggest + skill-link unlink
 
-# CRON section
-CRON_LABEL_Y = y;   y -= 0.004
+# CRON section — label sits above the boxes, inside the dashed border (it used to
+# share their y and overprint the first box)
+CRON_LABEL_Y = y;   y -= 0.036
 CRON_Y = y;         y -= 0.058
 
 LEGEND_Y = y - 0.010
-FOOTER_Y = 0.008
+FOOTER_Y = LEGEND_Y - 0.052   # below both legend rows
 
 # ── TITLE ─────────────────────────────────────────────────────────────────────
 ax.text(CX, TITLE_Y, "Uncle J's Refinery",
@@ -222,6 +227,7 @@ TOOLS = [
     ("jCodeMunch\nsymbols · blast radius\ncall graph · hotspots", ROUTE_C),
     ("jDataMunch\nCSV · Parquet\nSQL aggregation",                ROUTE_C),
     ("jDocMunch\nproject docs\nrunbooks · markdown",              ROUTE_C),
+    ("memweave\nprior art · decisions\nsession transcripts",      SKILL_C),
     ("Serena\nLSP · cross-file refs\ntype resolution",            ROUTE_C),
     ("Context7\n3rd-party library\ndocs (version-pinned)",        ROUTE_C),
     ("DuckDB\nParquet · S3 · JSON\ncomplex SQL joins",            ROUTE_C),
@@ -254,7 +260,7 @@ section_tag(ax, PTU_Y, "HOOK")
 box(ax, CX, PTU_Y, W + 0.04, H,
     "PreToolUse hooks fire",
     HOOK_C,
-    sublabel="enforce-docs (Bash)  |  scan-commit (Bash)  |  bash-guard rules  |  jCodeMunch pre-hook (Read)")
+    sublabel="surface-write · pipe-to-shell · push · credential · grep guards (Bash)  |  edit-surface + pre-mortem (Edit/Write)  |  skill gate")
 
 arrow(ax, CX, PTU_Y - H/2, CX, EW_Y + DH/2)
 
@@ -378,13 +384,15 @@ section_tag(ax, CRON_LABEL_Y, "BACKGROUND CRONS  (always running, independent of
 
 CRONS = [
     ("01:00 daily\njCodemunch\nreindex",         CRON_C),
+    ("02:30 daily\nmemweave\nsync + index",       CRON_C),
     ("03:00 daily\nauto-maintain\nupgrade + sync",CRON_C),
+    ("04:15 daily\nrepo scout\nfinds",            CRON_C),
     ("07:00 daily\nhealthcheck\n+ Telegram alert",CRON_C),
     ("Daily\ndreaming\ntrace mining",             CRON_C),
     ("Weekly\nsession-stats\nreport",             CRON_C),
 ]
 nc = len(CRONS)
-CW = 0.148
+CW = 0.125
 CH = 0.058
 cpad = 0.010
 ctotal = nc * CW + (nc-1) * cpad

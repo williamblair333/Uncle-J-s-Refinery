@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — flowchart re-rendered
+
+- `docs/uncle-js-flowchart.png` no longer mentions MemPalace (the PNG had never been re-rendered after the script switched to memweave). To regenerate: `uv run --no-project --with matplotlib python scripts/generate-flowchart.py`. The stack venv has no matplotlib, on purpose: don't `uv sync` it in.
+
 ## 2026-11-04 — session end (Uncle J session 11f026d2)
 
 - **Done this session:** PRs #302–#304, #306, #308, #309 (surface-guard spans + relative dirs, RAM-revisit trigger, memweave hang fix, two skills, versioned pipe-to-shell guard, live on this host). 125B shelved until 128 GB RAM. Strata weights deleted. Upstream memweave issue #7 + PR #8.
