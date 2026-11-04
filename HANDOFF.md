@@ -1,5 +1,14 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — session end (Uncle J session 11f026d2)
+
+- **Done this session:** PRs #302–#304, #306, #308, #309 (surface-guard spans + relative dirs, RAM-revisit trigger, memweave hang fix, two skills, versioned pipe-to-shell guard, live on this host). 125B shelved until 128 GB RAM. Strata weights deleted. Upstream memweave issue #7 + PR #8.
+- **Waiting on others:** memweave PR #8 (maintainer review; check with `gh pr view 8 --repo sachinsharma9780/memweave`, and if changes are asked for, amend in `/opt/proj/forks/memweave` with the same noreply author). Bill: revoke the Gitea `write:user` tokens in the web UI (the API needs a password).
+- **Other hosts:** pi server and tc-vmh-03 still run the inline pipe-to-shell regex until each runs `bash scripts/repoint-pipe-guard.sh` after pulling.
+- **Guard false positive seen (no fix yet):** grep-guard treats `.venv-memweave/lib/…/site-packages/*.py` as repo source and blocks shell reads of it, but jcodemunch doesn't index third-party packages, so Read is the only route. Write the failing test first.
+- **Next session, first:** restart so the new pipe-to-shell guard takes effect. Then check that `curl … | sha256sum` runs and `state/hook-blocks.log` gets `pipe-to-shell-guard` lines only for real pipes.
+- README checked (refinery-26's rewrite, #310, still accurate for the guard change). ROADMAP and docs/STACK.md checked; no update needed.
+
 ## 2026-11-04 — pipe-to-shell guard versioned and live on this host
 
 - **Live:** `~/.claude/settings.json` now runs `bash ~/.claude/hooks/discipline/pipe-to-shell-guard.sh` (repointed by `scripts/repoint-pipe-guard.sh`; backup `settings.json.bak.pipeguard.20261104-115116`; roll back with `--restore`). Takes effect next session.
