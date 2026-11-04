@@ -33,19 +33,28 @@ async def run(workspace: str, query: str | None, k: int, force: bool) -> int:
         embedding=EmbeddingConfig(model=provider.model),
         progress=False,
     )
-    async with MemWeave(config, embedding_provider=provider) as mem:
-        idx = await mem.index(force=force)
-        print(f"index: {idx.files_indexed} indexed, {idx.files_skipped} skipped, "
-              f"{idx.chunks_created} chunks  [{idx.duration_ms:.0f}ms]")
-        if query:
-            results = await mem.search(query, max_results=k)
-            print(f"\nquery: {query!r} -> {len(results)} hits")
-            for r in results:
-                vs = f"{r.vector_score:.3f}" if r.vector_score is not None else "—"
-                ts = f"{r.text_score:.3f}" if r.text_score is not None else "—"
-                snippet = r.snippet[:140].replace("\n", " ")
-                print(f"  [{r.score:.3f} vec={vs} bm25={ts}] {r.path}:{r.start_line}-{r.end_line}")
-                print(f"        {snippet}")
+    # (2026-11-04) Close in `finally`, not only via `async with`: if MemWeave.__aenter__
+    # raises (e.g. "database is locked" in ensure_schema, store.py:213), __aexit__ never
+    # runs, the aiosqlite connection opened at store.py:210 stays open, and its non-daemon
+    # worker thread keeps the interpreter alive — the 2026-11-02 sync hung 2 h holding
+    # /tmp/memweave-sync.lock.d. close() is documented safe to call twice.
+    mem = MemWeave(config, embedding_provider=provider)
+    try:
+        async with mem:
+            idx = await mem.index(force=force)
+            print(f"index: {idx.files_indexed} indexed, {idx.files_skipped} skipped, "
+                  f"{idx.chunks_created} chunks  [{idx.duration_ms:.0f}ms]")
+            if query:
+                results = await mem.search(query, max_results=k)
+                print(f"\nquery: {query!r} -> {len(results)} hits")
+                for r in results:
+                    vs = f"{r.vector_score:.3f}" if r.vector_score is not None else "—"
+                    ts = f"{r.text_score:.3f}" if r.text_score is not None else "—"
+                    snippet = r.snippet[:140].replace("\n", " ")
+                    print(f"  [{r.score:.3f} vec={vs} bm25={ts}] {r.path}:{r.start_line}-{r.end_line}")
+                    print(f"        {snippet}")
+    finally:
+        await mem.close()
     return 0
 
 
