@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-11-04 — session end: memweave fix sent upstream, lockfile, scout
+
+### Added
+- Upstream: memweave issue #7 and PR #8 (close the db connection when `MemWeave` setup fails), authored as williamblair333 from the fork `williamblair333/memweave` (local clone `/opt/proj/forks/memweave`, outside this tree). The fix ships 2 unit tests; ruff/black/mypy are clean and 546 upstream unit tests pass.
+- `scout/finds/jia-gao__leanctx.md` (nightly scout find).
+
+### Changed
+- `uv.lock`: jcodemunch-mcp 1.108.409 → 1.108.413, matching what auto-maintain installed in `.venv`.
+
+---
+
 ## 2026-11-04 — pipe-to-shell guard versioned (replaces the inline settings.json regex)
 
 ### Added
