@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-11-03 — local agent bench: Heretic under Claude Code, then Pi
+
+### Added
+- Bench runners outside the repo: `/opt/docker/strata/bench/run_heretic.sh` (Claude Code → Heretic, 64k) and `run_pi.sh` + `pi-cfg/models.json` (Pi 1.5.0 → Heretic, 128k, tools read,grep,find,ls only). Both use the same bwrap read-only wall.
+- Pi 1.5.0 in `~/.local/opt/pi`, Node 22.23.4 (checksum-verified) in `~/.local/opt/node22`; the system Node 20 is untouched.
+- Alternatives scans: `review/alternatives/2026-11-03-agent-harness.md` (Pi > Qwen Code > OpenCode); an uncensored-125B update to the Strata/Avalon scan. Download gate records cover the scanned repos.
+- ROADMAP Planned: Gitea new-repo bootstrap script (PR #298, filed for the lanscout session).
+
+### Results
+- Heretic + Claude Code: 1/5 answered (3 overflowed 64k). Heretic + Pi at 128k: 4/5 answered. Blind-judged against agy: agy won all 4, 31/40 vs 15/40 (PRs #299, #300).
+
+---
+
 ## 2026-11-03 — alternatives-scan checks local models first; Avalon next
 
 - `global-skills/alternatives-scan/SKILL.md`: the "already here" search step now lists the local model and container inventory (`/opt/models/gguf`, `ollama list`, the HF cache, `docker ps -a`, compose model paths), plus a quick-reference row. The first scan priced Qwen3.6-35B-A3B as a download when Heretic already serves it.
