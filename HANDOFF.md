@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-04 — pipe-to-shell guard versioned and live on this host
+
+- **Live:** `~/.claude/settings.json` now runs `bash ~/.claude/hooks/discipline/pipe-to-shell-guard.sh` (repointed by `scripts/repoint-pipe-guard.sh`; backup `settings.json.bak.pipeguard.20261104-115116`; roll back with `--restore`). Takes effect next session.
+- **Other hosts** (pi server, tc-vmh-03) still run the inline regex until each runs `bash scripts/repoint-pipe-guard.sh` after pulling.
+- **memweave upstream issue filed:** https://github.com/sachinsharma9780/memweave/issues/7 (Bill approved; the transfer is in the pre-mortem audit sink). When it's fixed upstream and released, our `finally: await mem.close()` in `index_workspace.py` can stay (harmless) or go.
+- **Flaky test seen once:** the first `just test` run on this branch failed and the rerun passed 3299/3299. The failing test wasn't captured, so if it recurs, grab the names.
+- **Gitea `write:user` tokens:** can't be revoked via the API with a token (403: Gitea needs password auth). Bill: delete them at `http://10.0.0.100:3000/user/settings/applications`.
+
 ## 2026-11-04 — two skills added (claim-to-protocol, feynman-style)
 
 - **Watch:** both descriptions are very broad ("any claim … in any domain", "writing … anything"), so they'll fire often and overlap auditor, gttp, occams-razor and terse-reply. If they crowd out the specific skills, narrow the descriptions. Neither has a red-green baseline yet (STANDARDS `skills-red-green`).

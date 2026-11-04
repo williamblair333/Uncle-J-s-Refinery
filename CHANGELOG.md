@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-11-04 — pipe-to-shell guard versioned (replaces the inline settings.json regex)
+
+### Added
+- `hooks/discipline/pipe-to-shell-guard.sh` + `pipe_to_shell_guard.py`: the curl/wget-into-a-shell check is now tokenised (shlex) and judged per command and pipeline stage. It also catches `$SHELL`, `source /dev/stdin`, `bash <(curl …)`, `sh -c "$(curl …)"`, `eval "$(curl …)"`, download-then-run of the same file, and pipes inside `bash -c '…'` scripts (including via `docker run`/`ssh`). Data heredoc bodies (commit messages, notes) aren't scanned. Any guard failure falls back to a word-bounded regex in bash, so it never fails open. Blocks are logged to `state/hook-blocks.log`.
+- `scripts/repoint-pipe-guard.sh` (from `repoint-push-guard.sh`): backup, exact-match checks, hook-count check, smoke test, `--restore`. Run on this host: 22 PreToolUse hooks preserved.
+- `tests/test_pipe_to_shell_guard.py`: 53 cases, including a crashing checker and a missing python3.
+
+### Fixed
+- The inline regex blocked `curl … | sha256sum` (no word boundary after `sh`) and matched across `;`, `&&` and quoted text. Replay over 12,834 transcript commands: the old regex blocked 5 (1 real, 4 false positives), the new guard blocks 1 (the real one) and adds no new blocks.
+
+---
+
 ## 2026-11-04 — skills: claim-to-protocol, feynman-style
 
 ### Added
