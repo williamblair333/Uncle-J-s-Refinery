@@ -7,6 +7,7 @@
 - **Older gap the replay exposed (not caused by this fix):** `mv x/*.py scripts/` (a relative surface directory, no leading `/`) is allowed by both old and new guards. The old one blocked the 11-01 gambling session's version only by accident. `SURF_PATH` requires `/scripts/`, and a surface file as the *first* `mv` operand (moved away) isn't checked. Widening it trades off false positives, so write the failing test plus a replay first.
 - **Still open:** the pipe-to-shell PreToolUse false positive (`curl … | sha256sum`) lives in `~/.claude/settings.json`, outside this repo.
 - **Next session, first (unchanged):** Bill's call on whether the 125B is still worth it, given Heretic + Pi scored 15/40 against agy's 31/40.
+- **jcodemunch-mcp breaking change**: `get_symbol_source` on a class now returns a method outline by default (`source_outline: true`) instead of the full body — callers that need the whole class must pass `class_body="full"`.
 
 ## 2026-11-03 — local agent: Pi fixes the harness; quality is half of agy's
 

@@ -258,7 +258,7 @@ an audit; it validates every evidence ref against what this session retrieved.
   as JSON is the encoder failing safe, not the argument being ignored.
 - An empty `search_ast` result from v1.108.282–.302 is not evidence of a clean repo — re-run.
 - `get_ranked_context(compress=True)` fits more per budget; `get_symbol_source(verify=True)`
-  when you need `content_hash`.
+  for `content_hash`; a class returns an outline — `class_body="full"` for all.
 
 ## When to fall back to Read / Grep / Bash
 
