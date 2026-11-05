@@ -198,12 +198,13 @@ for itself is refused with `ok: true`). Widening is never refused. `finalize_han
 an audit; it validates every evidence ref against what this session retrieved.
 
 ### 2. Data work — jDataMunch for CSVs, DuckDB for real SQL
-- CSV/TSV: `describe_dataset` → `get_rows` with filters → `aggregate`. Never dump the file.
-  `plan_query` + `run_sql` for single-dataset SQL; `get_dataset_health` before deep analysis.
+- CSV/TSV: `describe_dataset` → `get_rows` → `aggregate`; never dump the file.
+  Rows are arrays (`row_format="objects"` = dicts); profiles: `detail="full"`.
+  `plan_query`+`run_sql` for one-dataset SQL; `get_dataset_health` before deep work.
 - Parquet, JSON, remote data, or joins across sources → **duckdb**.
-- `describe_column` / `search_data` verdicts follow the absence contract; a
-  `channels.index: "stale"` profile describes a file that has since changed — re-index.
-- `check_column_drop_safe` before dropping a column; `get_schema_impact` for blast radius.
+- `describe_column`/`search_data` follow the absence contract; `channels.index: "stale"`
+  = out-of-date profile, re-index. `check_column_drop_safe` before dropping a column;
+  `get_schema_impact` for blast radius.
 
 ### 3. Docs work — jDocMunch (mine), Context7 (theirs)
 - Ask for sections by heading, not whole files: `search_sections`, `search_titles`,
