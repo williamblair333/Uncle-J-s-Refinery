@@ -103,16 +103,14 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 
 **Setup & orientation**
 - `list_repos` / `resolve_repo` before any search; on a miss `index_folder`. `resolve_repo`
-  stops at a nested independent clone — pass `repo` explicitly for the outer one. A linked
-  git worktree nested in an indexed checkout (`.claude/worktrees/<name>`) now resolves
-  `indexed: false` with `canonical_candidates` — the checkout's index is another branch;
-  `index_folder` the worktree rather than borrowing it.
+  stops at a nested independent clone — pass `repo` explicitly for the outer one. A git
+  worktree nested in an indexed checkout resolves `indexed: false` with
+  `canonical_candidates`; `index_folder` the worktree, don't borrow the checkout's index.
   `CODE_INDEX_PATH` moves the whole index root; an index built under another value is
   simply not found (`degraded`, never `absent`).
-- Two repo ids that sanitise to one `<owner>-<name>` slot (`foo-bar/baz`, `foo/bar-baz`) no
-  longer share an index: the second is refused (`IndexIdentityConflict`, load status
-  `identity_conflict`). That's a collision, not a missing index — re-index under
-  another `CODE_INDEX_PATH`, don't read it as `absent`.
+- Two repo ids that sanitise to one `<owner>-<name>` slot: the second is refused
+  (`IndexIdentityConflict`, load status `identity_conflict`). That's a collision, not
+  `absent` — re-index under another `CODE_INDEX_PATH`.
 - `list_repos` lists only indexes in the server's working directory by default
   (`repo_visibility`). A top-level `visibility` block with `hidden_count` means other indexes
   exist; a miss there is not grounds to re-index. Pass the exact repo id (it still loads), or
@@ -133,16 +131,18 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 - `_meta` reaches you on this host (`meta_fields: null`); on a default install
   (`meta_fields: []`) it is stripped, so only body-level keys survive.
 - **Freshness:** `get_watch_status` → read `index_freshness` (`fresh`/`stale`/`unknown`/
-  `not_tracked`); gate on `any_stale is False` **and** `any_freshness_unknown is False`. The old
-  `index_stale` key is gone — code keyed on it reads a missing key as fresh.
-- **After a stack upgrade, re-index in full** (`invalidate_cache` then `index_folder`) before
-  trusting symbol counts, `parent`, member lists, or stored ids — several git upgrades moved
-  ids or added symbols without forcing a re-parse. A symbol-count jump after re-index is the
+  `not_tracked`); gate on `any_stale is False` **and** `any_freshness_unknown is False`.
+  `index_stale` is gone — code keyed on it reads missing as fresh.
+- **After a stack upgrade, re-index in full** (`invalidate_cache` then `index_folder`; over
+  `max_folder_files` (2,000), only `jcodemunch-mcp index` — invalidating shrinks to the cap, and
+  a capped call keeps old parses with the upgrade still due) before
+  trusting symbol counts, `parent`, member lists, or stored ids — git upgrades can move
+  ids or add symbols without a re-parse. A symbol-count jump after re-index is the
   fix, not a regression — so is a file-count drop from newly skipped build dirs
   (`discovery_skip_counts`). A not-found error may carry `near_miss_ids`; re-issue with one.
+  `index_warning`: capped index, hits aren't the whole repo.
 - If `JCODEMUNCH_EMBED_MODEL` ever changes, re-embed every repo (`embed_repo`); a mixed-width
-  store silently drops vectors. `embed_repo` returning `all_batches_failed: true` embedded
-  nothing, even though it exited clean.
+  store silently drops vectors. `embed_repo` returning `all_batches_failed: true` embedded nothing.
 
 **Reading results**
 - `identity_type` grades `exact` / `normalized` / `prefix` / `segment` — accept `normalized`

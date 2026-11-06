@@ -6,6 +6,7 @@
 - **Watch:** README facts that drift. The server count (10) and the uninstall loop must change when `install.sh` registers a new MCP server; nothing checks this automatically.
 - README, ROADMAP checked; no further update needed.
 - **jdatamunch-mcp breaking change**: `describe_dataset`/`describe_column` default to `detail="compact"` (row arrays, no samples/mean/summaries) and `get_rows` defaults to `row_format="arrays"` (`fields` + list rows) — callers parsing dict rows or full profiles must pass `row_format="objects"` / `detail="full"`.
+- **jcodemunch-mcp breaking change**: a capped `index_folder` no longer drops files past `max_folder_files` or marks a due parser upgrade done when it keeps them, and the CLI gets its own 30,000 cap (`cli_max_folder_files`) — on repos over 2,000 files, run `jcodemunch-mcp index` to re-parse, use `invalidate_cache` plus `index_folder` only to shrink an index on purpose, and read `index_warning` as a partial index.
 
 ## 2026-11-04 — flowchart re-rendered
 
