@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-06 — agy can stage files
+
+### Changed
+- `features/antigravity/permissions.json`: allow `git add`; deny `git add -f` and `git add --force`. `git commit` stays off the allow list, and `tests/test_ask_agy.py` pins all of it.
+
 ## 2026-11-06 — forcing list; the chance check failed its bench
 
 ### Added
