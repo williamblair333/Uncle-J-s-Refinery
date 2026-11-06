@@ -1,10 +1,20 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-06 — ask-gate wired; forcing work on the same branch
+
+- **Live now:** `ask-gate` Stop hook, in every session started since it was wired on this host. Other hosts get it after pulling and running `install-reliability.sh`.
+- **Watch with a number, not by eye:** `just ask-gate-bench` shows fire rate and refusals; `~/.claude/state/ask-gate.jsonl` shows live blocks. If it starts work Bill refuses, tighten `BILLS_CALL` and add the case to `tests/test_ask_gate.py`.
+- **Not built, waiting on Bill:** the Heretic turn-end check (`chance-check`), the forcing list + preflight gate, and the required forcing step. Its pre-mortem is a MEDIUM bundle (turn-end latency, wrong flags, text leaving the machine), which needs Bill to acknowledge each by name. Bench so far: on 120 random turn ends, 7 flags, median 2.5 s, about 5 real; 2 wrong, a Klarheit draw and caliper measurements Bill must take himself. mtw2's `games/interrupts.toml` already lists hold-offs, so the list should extend it.
+- **CI was red on main and nobody saw:** at least the last 6 runs on main (from 2026-11-04) failed. The failure on this branch was `tests/test_brief_lint.py`, whose fixture names a file only this machine has; fixed here. Merges go through Gitea, CI runs on the GitHub mirror, and nothing reports its result back or alerts on red.
+- **Known dead code:** `scripts/force-rules.d/` doesn't exist, so `scripts/force-rules.sh` enforces nothing. Left alone.
+
 ## 2026-11-04 — README plain-language rewrite (session refinery-26)
 
 - **Done:** PR #310 merged (`b72d913`). Worked in a worktree because `uncle-j-s-refinery-85` had uncommitted work in the main checkout; coordinated with it by SendMessage.
 - **Watch:** README facts that drift. The server count (10) and the uninstall loop must change when `install.sh` registers a new MCP server; nothing checks this automatically.
 - README, ROADMAP checked; no further update needed.
+- **jdatamunch-mcp breaking change**: `describe_dataset`/`describe_column` default to `detail="compact"` (row arrays, no samples/mean/summaries) and `get_rows` defaults to `row_format="arrays"` (`fields` + list rows) — callers parsing dict rows or full profiles must pass `row_format="objects"` / `detail="full"`.
+- **jcodemunch-mcp breaking change**: a capped `index_folder` no longer drops files past `max_folder_files` or marks a due parser upgrade done when it keeps them, and the CLI gets its own 30,000 cap (`cli_max_folder_files`) — on repos over 2,000 files, run `jcodemunch-mcp index` to re-parse, use `invalidate_cache` plus `index_folder` only to shrink an index on purpose, and read `index_warning` as a partial index.
 
 ## 2026-11-04 — flowchart re-rendered
 

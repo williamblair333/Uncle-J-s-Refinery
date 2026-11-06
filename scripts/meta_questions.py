@@ -44,7 +44,7 @@ _META_PATTERNS = [
     rf"\byou\s+(?:did|do|have|were|was){_NT}\b[^.?!\n]{{0,80}}\bwhy\s*\?",  # "you didn't X - why?"
     # Bill had to ask, tell or remind
     r"\bwhy\b[^.?!\n]{0,30}\bI\s+(?:had|have|need(?:ed)?|keep)\s+to\s+(?:ask|tell|say|remind|point|explain)\b",
-    r"\bwhy\s+(?:did|do)\s+I\s+(?:have|need|keep)\s+to\b",
+    r"\bwhy\s+(?:did|do)\s+I\s+(?:even\s+)?(?:have|need|keep)\s+to\b",
     r"\bwhy\s+(?:do\s+you\s+)?keep\s+asking\b|\bwhy\s+(?:are|were)\s+you\s+(?:asking|being)\b",
     r"\bbefore\s+I\s+(?:ask|have\s+to\s+ask)\b|\bwithout\s+(?:asking\s+me|me\s+asking)\b",
     r"\bI\s+thought\s+you(?:['’]d|\s+would|\s+were)\b",

@@ -43,6 +43,12 @@ standards:
     why: it's the outcome metric for anticipation; the expert bar and think-wider have no score without it
     status: done
     evidence: scripts/meta_questions.py (just meta-questions; line in features/focus-check/focus-check.sh, Monday 08:00; precision 23/27 measured 10-31; recall estimated at 29/~34)
+  - id: no-permission-asks
+    area: evaluation
+    bar: A turn that ends asking permission for reversible, agreed work is caught by a program at that moment, with its fire rate and refusals benched on real transcripts
+    why: Bill's attention is the scarce resource; about 9% of answered turn ends asked him something, and just-do-it only loads when a prompt triggers it, never when a session writes the question
+    status: done
+    evidence: scripts/ask_gate.py (Stop hook via install-reliability.sh; just ask-gate-bench; tests/test_ask_gate.py); complaint detection in features/prompt-triggers/meta_trigger.py (tests/test_meta_trigger.py)
   - id: alternatives-before-adoption
     area: evaluation
     bar: Nothing new is downloaded, cloned or installed (and no tool is judged) until a recorded scan from the last 14 days lists what else does the same job, judged against Bill's goal

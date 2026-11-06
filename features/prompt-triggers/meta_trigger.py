@@ -29,6 +29,13 @@ EXTRA = re.compile(
     r"|\b(?:any|a\s+(?:real|good|senior))\s+(?:project\s+manager|manager|engineer|expert|senior|pm|lead|professional)\s+would\b"
     r"|\bsmart\s+enough\s+to\s+(?:see|know|notice|realize|figure)\b"
     r"|\bthis\s+is\s+what\s+I\s+was\s+talking\s+about\b"
+    # 2026-11-06: "I thought we had skills and hooks to allow you to be forward thinking"
+    r"|\bI\s+thought\s+we\s+(?:had|have|built)\b[^.?!\n]{0,40}\b(?:skills?|hooks?|gates?|checks?|rules?)\b"
+    # mtw2, 2026-11-06: "WHY ISN'T THIS FUCKING CLEAR". The word must end the clause, so "why
+    # isn't this clear button working" and "why isn't this test passing" stay ordinary questions.
+    r"|\bwhy\s+(?:isn['’]?t\s+(?:this|that|it)|is\s+(?:this|that|it)\s+not)\s+"
+    r"(?:(?:fucking|fuckin['’]?|effing|freaking|frigging|goddamn|damn|bloody|just|already|more|so)\s+){0,2}"
+    r"(?:clear|obvious|apparent|evident)(?=[ \t]*(?:[\n.?!,;:…]|\Z|to\s+(?:you|everyone|anyone)\b))"
     # mtw2, 2026-11-01: both drift complaints went unflagged
     r"|\bwhy\s+are\s+you\s+(?:even\s+)?(?:doing|working\s+on|building)\s+(?:this|that|it)\b"
     r"|\bdrift(?:ing|ed)?\s+(?:away\s+)?from\s+the\s+(?:goal|plan|task)\b"
@@ -97,9 +104,30 @@ def triggered(prompt: str) -> bool:
     if is_meta(prompt):
         return True
     # is_meta skips pasted terminal exchanges ("●"), whose agent text is full of "you should
-    # have". The fatigue phrasings are Bill's own words, so they count after a paste too.
+    # have". Bill's own lines count wherever they sit: before the paste, on its ❯ lines, after it.
+    own = bills_lines(prompt)
+    if own != prompt and is_meta(own):
+        return True
+    if len(own) <= 3000 and EXTRA.search(own):
+        return True
+    # Bill sometimes types straight on after a pasted reply, on its last line.
     tail = prompt.rsplit("●", 1)[-1]
     return len(tail) <= 3000 and bool(EXTRA.search(tail))
+
+
+def bills_lines(prompt: str) -> str:
+    """The prompt without pasted agent replies. A reply starts at a "●" line and runs through its
+    indented and blank lines; the first flush-left line after it is Bill's again."""
+    kept, in_reply = [], False
+    for line in prompt.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith("●"):
+            in_reply = True
+        elif in_reply and stripped and not line[0].isspace():
+            in_reply = False
+        if not in_reply:
+            kept.append(stripped[1:].lstrip() if stripped.startswith("❯") else line)
+    return "\n".join(kept)
 
 
 def order_triggered(prompt: str) -> bool:

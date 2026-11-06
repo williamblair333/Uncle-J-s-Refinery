@@ -1,5 +1,6 @@
 """scripts/delegate/brief_lint.py: agy briefs that ask for what agy may not do are refused up front."""
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -38,7 +39,12 @@ def kinds(problems):
     (2, {"venv", "branch", "path"}),    # same, second try
     (3, {"venv"}),                      # .venv/bin/python denied: "user denied permission"
 ])
-def test_real_briefs_from_11_01(i, expected):
+def test_real_briefs_from_11_01(i, expected, monkeypatch):
+    # lint() skips paths that don't exist, and these briefs name a file only Bill's machine has,
+    # so without this the test can't pass on CI (red on main from at least 2026-11-04).
+    real_exists = os.path.exists
+    monkeypatch.setattr(bl.os.path, "exists",
+                        lambda p: str(p).startswith("/home/bill/.code-index/") or real_exists(p))
     b = BRIEFS[i]
     assert kinds(bl.lint(b["prompt"], b["cwd"], RULES)) >= expected
 
