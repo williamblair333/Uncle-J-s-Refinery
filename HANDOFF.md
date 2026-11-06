@@ -5,6 +5,7 @@
 - **Live now:** `ask-gate` Stop hook, in every session started since it was wired on this host. Other hosts get it after pulling and running `install-reliability.sh`.
 - **Watch with a number, not by eye:** `just ask-gate-bench` shows fire rate and refusals; `~/.claude/state/ask-gate.jsonl` shows live blocks. If it starts work Bill refuses, tighten `BILLS_CALL` and add the case to `tests/test_ask_gate.py`.
 - **Not built, waiting on Bill:** the Heretic turn-end check (`chance-check`), the forcing list + preflight gate, and the required forcing step. Its pre-mortem is a MEDIUM bundle (turn-end latency, wrong flags, text leaving the machine), which needs Bill to acknowledge each by name. Bench so far: on 120 random turn ends, 7 flags, median 2.5 s, about 5 real; 2 wrong, a Klarheit draw and caliper measurements Bill must take himself. mtw2's `games/interrupts.toml` already lists hold-offs, so the list should extend it.
+- **CI was red on main and nobody saw:** at least the last 6 runs on main (from 2026-11-04) failed. The failure on this branch was `tests/test_brief_lint.py`, whose fixture names a file only this machine has; fixed here. Merges go through Gitea, CI runs on the GitHub mirror, and nothing reports its result back or alerts on red.
 - **Known dead code:** `scripts/force-rules.d/` doesn't exist, so `scripts/force-rules.sh` enforces nothing. Left alone.
 
 ## 2026-11-04 — README plain-language rewrite (session refinery-26)

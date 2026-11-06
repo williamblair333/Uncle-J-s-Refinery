@@ -10,6 +10,7 @@
 ### Fixed
 - `features/prompt-triggers/meta_trigger.py`: missed "why did I even have to ask", any complaint next to a pasted reply, "I thought we had skills and hooks", and "why isn't this fucking clear". Replay on 2,955 real prompts: 3 newly fire, all real complaints; none stopped firing.
 - `scripts/ask_gate.py`, three referee (Gemini) findings, each reproduced by a failing test first: a push or reset inside backticks was blocked instead of passed, a non-string message crashed the script (the wrapper failed open), and an ask wrapped over lines was missed.
+- `tests/test_brief_lint.py` failed on CI because its fixture names a file only Bill's machine has. At least the last 6 CI runs on main (from 2026-11-04) were red, and nothing alerted.
 - The Monday meta-question count may step up slightly: `scripts/meta_questions.py` now also counts "why did I even have to".
 - `hooks/discipline/pipe-to-shell-guard.sh` tracked as executable, so re-running `install-reliability.sh` no longer dirties the tree.
 
