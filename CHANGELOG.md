@@ -6,7 +6,7 @@
 
 ### Added
 - `scripts/forcing_list.py` + `just forcing-list`: every event a project's tests depend on must be forced (with proof the code exists), unforceable with a reason, or parked with an idea and a date. A repo gates on it with one `[[gate]]` in `.claude/preflight.toml`.
-- `global-skills/slowest-loop-first`: a required forcing step, including the rule that a forcer runs the real code path and never fakes the data being measured.
+- `global-skills/slowest-loop-first`: a required forcing step, including the rule that a forcer runs the real code path and never fakes the data being measured. Two traps from mtw2 added: expect the system's reaction rather than the helper's `ok`, and a probe must not write process-wide state.
 - `scripts/chance_check.py` + `just chance-bench` + `bench/chance-cases.jsonl`: a local-model check for turns that leave proof to chance. **Bench only, not wired:** it failed its bar (2 of 3 flags real). On 120 real turn ends it made 12 flags, about 4 real, and 32 calls timed out at 60 s with the GPU busy.
 
 ---

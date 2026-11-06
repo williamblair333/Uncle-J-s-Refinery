@@ -64,6 +64,18 @@ A forcer must run the real code path. Never fake the data a test is meant to mea
 caliper readings prove nothing, and a back-filled forward test ruins the experiment. If forcing
 isn't worth it, say so in one line with your reason.
 
+Two traps, both from mtw2 (2026-11-06):
+- **Expect the system's reaction, not the helper's report.** Three forced cases first passed on the
+  helper's own `ok` line in 0.1 s, which only proved the helper ran. Assert what the system did
+  in response.
+- **A probe must not write process-wide state.** A probe that changed a process-wide setting leaked
+  it into the live campaign. Scope the change to the bench, or undo it structurally.
+
+**Keep the list honest.** mtw2's `games/forced_events.toml` (`tests/test_forced_events.py`) goes
+further than `forcing_list.py`: a forced row must name a real non-chance bench case, every known
+event needs a row, and the count of unforced events can only shrink. Copy those when a project's
+list matters.
+
 **Live incident in progress?** Triage it first, read-only: keep the evidence and stop the damage.
 The bench comes before the next *fix*, not before triage.
 
