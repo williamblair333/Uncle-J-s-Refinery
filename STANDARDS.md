@@ -36,7 +36,7 @@ standards:
     bar: Every push runs the whole pytest suite (`just test`), not only skill frontmatter and shell lint
     why: a release engineer never merges on tests that only ran on the author's machine
     status: done
-    evidence: .github/workflows/ci.yml (test-suite job runs all of tests/; green on main since #255)
+    evidence: .github/workflows/ci.yml (test-suite job runs all of tests/, on the GitHub mirror). Red on main from at least 11-04 until #315 with no alert, because merges happen on Gitea, which shows no CI result; the alert belongs to rate-control-limits
   - id: meta-question-rate
     area: evaluation
     bar: Bill's meta-questions ("why didn't you…", "why did I have to ask") are counted per session every week from transcripts, with a trend in the Monday report
