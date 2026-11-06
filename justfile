@@ -69,6 +69,14 @@ workaround-bench *args:
 ask-gate-bench *args:
     python3 scripts/ask_gate.py --replay {{args}}
 
+# chance-check bench: labelled cases by default; --replay N checks N random real turn ends and prints every flag
+chance-bench *args:
+    python3 scripts/chance_check.py {{ if args == "" { "--bench" } else { args } }}
+
+# events this project's tests depend on, and how each gets forced: just forcing-list [--list] [--file F] (runs in your cwd)
+forcing-list *args:
+    cd "{{invocation_directory()}}" && python3 "{{justfile_directory()}}/scripts/forcing_list.py" {{args}}
+
 # hook bench: replay real transcripts through every behaviour-changing hook — fire rate, errors, false hits
 hook-bench *args:
     python3 scripts/hook_bench.py {{args}}

@@ -146,6 +146,12 @@ standards:
     status: open
     evidence: self-work.jsonl rotates (10-27); no check covers the other state files
 ideas:
+  - id: nightly-chance-sweep
+    idea: Run the local-model chance check (scripts/chance_check.py) overnight on the day's turn ends and send the flags, instead of blocking each stop; at a Stop hook it failed (about 4 of 12 flags real, 32 of 120 calls timed out with the GPU busy)
+    from: aviation FOQA, applied to the failed Stop hook
+    test: run it on 14 days of turn ends with the GPU free and read every flag
+    kill: fewer than 1 in 2 flags is a gap Bill would want forced
+    status: untested
   - id: foqa-transcript-sweep
     idea: A nightly sweep scores every transcript for exceedances (meta-questions, workarounds, Claude takeovers of delegated jobs) and sends the top three
     from: aviation FOQA
