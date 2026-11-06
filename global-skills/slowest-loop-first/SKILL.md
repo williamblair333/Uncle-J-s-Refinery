@@ -45,6 +45,25 @@ Any one of these:
    proves each change first. Tell the user about the amendment and get their agreement.
 6. **Then go back to the fix,** proven on the bench; live is acceptance only.
 
+## When a proof depends on an event you don't control
+
+You wrote that something is unproven until an event happens, or a `forced-events` gate refused a
+run. Do this before the next fix, in the same turn:
+
+1. **Name the ways it could be forced:** a save edit, script call, fake input, test double or
+   manual trigger.
+2. **Try the cheapest one now.** Trying it costs less than waiting, and the result is evidence
+   either way.
+3. **Make what works repeatable:** a bench case or test, so the next change doesn't need the trick
+   again.
+4. **Record it** in the project's forcing list (`just forcing-list`; the format is in
+   `scripts/forcing_list.py`): `force` with its proof, or `cannot_force` with the reason, or `idea`
+   with a `parked_until` date.
+
+A forcer must run the real code path. Never fake the data a test is meant to measure: made-up
+caliper readings prove nothing, and a back-filled forward test ruins the experiment. If forcing
+isn't worth it, say so in one line with your reason.
+
 **Live incident in progress?** Triage it first, read-only: keep the evidence and stop the damage.
 The bench comes before the next *fix*, not before triage.
 
