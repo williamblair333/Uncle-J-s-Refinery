@@ -409,6 +409,16 @@ def test_read_only_lookups_are_allowed():
     assert "command(echo)" not in rules["allow"]
 
 
+def test_git_add_is_allowed_but_never_forced():
+    # headless agy couldn't stage its work; -f would stage ignored files such as private data
+    rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
+    assert "command(git add)" in rules["allow"]
+    assert "command(git add -f)" in rules["deny"]
+    assert "command(git add --force)" in rules["deny"]
+    assert "command(git commit)" not in rules["allow"]
+    assert "command(git push)" in rules["deny"]
+
+
 # ── sync_mcp: Claude user-scope servers -> agy mcp_config.json ───────────────
 
 def test_sync_mcp_copies_servers_keeps_others_and_is_private(tmp_path):

@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-06 — agy `git add`
+
+- agy can now run `git add`, and forced adds are denied. The rules look prefix-based, so `git add . -f` may not match the deny; that's unverified.
+- **Still open, found from Klarheit:** `just gpu mtw2` disables Klarheit's M11, M12 and cycle timers and stops Ollama, with no alert, and each missed hour or slot is a permanent miss. It happened 2026-11-06 from 06:39 to 08:28. `scripts/gpu-mode.sh` should seal pauses or refuse.
+
 ## 2026-11-06 — ask-gate wired; forcing work on the same branch
 
 - **Live now:** `ask-gate` Stop hook, in every session started since it was wired on this host. Other hosts get it after pulling and running `install-reliability.sh`.
