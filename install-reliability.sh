@@ -366,6 +366,24 @@ else
         else
             ok "self-check Stop hook already wired in settings.json"
         fi
+
+        # Wire ask-gate Stop hook: a turn ending on a permission question for reversible, agreed
+        # work gets one forced retry (scripts/ask_gate.py). Same shape as self-check.
+        _ag_already=$(jq '[.hooks.Stop[]?.hooks[]?.command // ""] | map(select(contains("ask-gate.sh"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_ag_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.Stop += [
+                {"hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/ask-gate.sh || exit 0","timeout":10}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.Stop | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "ask-gate Stop hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "ask-gate Stop hook already wired in settings.json"
+        fi
     else
         warn "settings.json not found — run install-guardrails.sh first, then re-run this script"
     fi

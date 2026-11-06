@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-06 — ask-gate wired; forcing work on the same branch
+
+- **Live now:** `ask-gate` Stop hook, in every session started since it was wired on this host. Other hosts get it after pulling and running `install-reliability.sh`.
+- **Watch with a number, not by eye:** `just ask-gate-bench` shows fire rate and refusals; `~/.claude/state/ask-gate.jsonl` shows live blocks. If it starts work Bill refuses, tighten `BILLS_CALL` and add the case to `tests/test_ask_gate.py`.
+- **Known dead code:** `scripts/force-rules.d/` doesn't exist, so `scripts/force-rules.sh` enforces nothing. Left alone.
+
 ## 2026-11-04 — README plain-language rewrite (session refinery-26)
 
 - **Done:** PR #310 merged (`b72d913`). Worked in a worktree because `uncle-j-s-refinery-85` had uncommitted work in the main checkout; coordinated with it by SendMessage.

@@ -20,6 +20,7 @@ DRY_RUN=0
 # eval's required last line (VERDICT: ...) out of the final message. Off for this job's claude -p.
 export WORKAROUND_SCAN=off
 export SELF_CHECK=off  # same reason: the self-check Stop hook forces a follow-up reply
+export ASK_GATE=off    # same reason: the ask-gate Stop hook forces a follow-up reply
 CAP_WARNINGS=()
 
 mkdir -p "$PROJ_ROOT/state"

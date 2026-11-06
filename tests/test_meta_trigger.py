@@ -35,6 +35,25 @@ HITS = [
     "There are skills involved that are supposed to kick in . and they didn't.",
     "the skills are supposed to kick in and they didn't",
     "OK.  I had this conversation in Klarheit and why didn't the fucking skills fire",
+    # mtw2, 2026-11-06: "even" slipped past the pattern
+    "My reply is why did I even have to ask of course",
+    # 2026-11-06: Bill's complaint sits BEFORE the paste, and an agent reply follows it
+    "I thought we had skills and hooks to allow you to be forward thinking, clever and always "
+    "looking for the best way to do something. but apparently not recap: Getting LLM rulers\n\n"
+    "❯ so you can't force a marriage offer..bummer\n\n"
+    "● Not on demand, as far as I know.\n  Want me to look into it?\n\n"
+    "❯ My reply is why did I even have to ask of course\n\n"
+    "● You shouldn't have had to. Looking now.",
+    # the complaint is on a ❯ line in the middle of a paste
+    "● Done.\n\n❯ why did I have to ask\n\n● You shouldn't have had to.",
+    # mtw2, 2026-11-06: went unflagged
+    "WE DON'T WANT TO BE AT THE MERCY OF THE GAME WAITING ON STUFF TO TRIGGER IN ORDER TO TEST... "
+    "WHY ISN'T THIS FUCKING CLEAR",
+    "why isn't this fucking clear",
+    "why isn't this clear",
+    "why isn't this clear?",
+    "why isnt this obvious",
+    "why is that not damn obvious to you",
 ]
 ORDER_HITS = [
     "from last session  First up next session:\n  1. Quiet world for turn tests\n  2. Far boarding",
@@ -66,6 +85,13 @@ MISSES = [
     '<cross-session-message from="uds:/x.sock">why didn\'t the skills fire? I\'m frustrated'
     "</cross-session-message>",
     "the skills dir has 90 entries",
+    # agent text in a paste stays agent text, even its indented lines
+    "look at this\n\n● You should have seen the log.\n  Why didn't you check it? That was my miss.",
+    "I thought we had a meeting today",
+    # an ordinary "why isn't this…" is a question about the world
+    "why isn't this test passing",
+    "why isn't this clear button working",
+    "why isn't this obvious bug fixed in the upstream repo",
 ]
 
 

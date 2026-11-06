@@ -65,6 +65,10 @@ offload *args:
 workaround-bench *args:
     python3 scripts/workaround_scan.py --replay {{args}}
 
+# ask-gate bench: permission questions at turn end on real transcripts, and what Bill replied (default 30 days)
+ask-gate-bench *args:
+    python3 scripts/ask_gate.py --replay {{args}}
+
 # hook bench: replay real transcripts through every behaviour-changing hook — fire rate, errors, false hits
 hook-bench *args:
     python3 scripts/hook_bench.py {{args}}
