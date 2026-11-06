@@ -77,6 +77,38 @@ def test_a_blockquote_does_not_hide_the_ask_below_it():
     assert ag.final_ask("> quoted line\nmore text.\n\nWant me to run the bench?")
 
 
+# Referee (Gemini) findings on b012ac8, each reproduced here before the fix.
+@pytest.mark.parametrize("text", [
+    "Want me to run `git push`?",
+    'Should I run "git reset --hard"?',
+    "Tests pass. Want me to run `rm -rf build && git push origin main`?",
+])
+def test_an_outward_command_in_backticks_still_passes(text):
+    assert ag.decide({"last_assistant_message": text}) is None
+
+
+def test_backticked_harmless_ask_still_blocks():
+    assert ag.decide({"last_assistant_message": "Want me to run `just test`?"})
+
+
+def test_a_word_in_an_earlier_sentence_does_not_exempt_the_ask():
+    assert ag.decide({"last_assistant_message": "I fixed the push bug. Want me to run the bench?"})
+
+
+@pytest.mark.parametrize("bad", [123, ["x"], {"a": 1}, True])
+def test_a_non_string_message_never_crashes(bad):
+    assert ag.decide({"last_assistant_message": bad}) is None
+
+
+@pytest.mark.parametrize("text", [
+    "Want me to look into it\nwhile the live run plays?",
+    "Done\nWant me to run the bench?",
+    "All green.\n\nShould I start\non the next item?",
+])
+def test_an_ask_wrapped_over_lines_still_blocks(text):
+    assert ag.decide({"last_assistant_message": text})
+
+
 def test_blocks_only_once():
     assert ag.decide({"last_assistant_message": ASKS[1], "stop_hook_active": True}) is None
 

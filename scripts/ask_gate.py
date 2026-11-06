@@ -34,6 +34,7 @@ LOG = Path(os.environ.get("ASK_GATE_LOG")
 
 # Code, quotes and blockquotes are mentions of an ask, not this turn's ask.
 _MENTION = re.compile(r"```[\s\S]*?```|`[^`\n]*`|\"[^\"\n]*\"|“[^”\n]*”|^[ \t]*>[^\n]*$", re.M)
+_BLOCK = re.compile(r"```[\s\S]*?```|^[ \t]*>[^\n]*$", re.M)
 _SENTENCE_END = re.compile(r"(?<=[.!?:])\s+")
 ASK = re.compile(
     r"^(?:(?:so|ok|okay|then|otherwise|or),?\s+)?(?:"
@@ -64,17 +65,33 @@ REASON = (
 )
 
 
+def _last_sentence(s: str) -> str:
+    return _SENTENCE_END.split(s.strip())[-1].strip().lstrip("*_ ").rstrip("*_ ")
+
+
+def _tails(text: str) -> list[str]:
+    """Where the reply's last sentence may be: its last line, or its last paragraph joined up,
+    since an ask can wrap over lines."""
+    paragraphs = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
+    if not paragraphs:
+        return []
+    lines = [ln.strip() for ln in paragraphs[-1].splitlines() if ln.strip()]
+    return [_last_sentence(lines[-1]), _last_sentence(" ".join(lines))]
+
+
 def final_ask(text: str) -> str | None:
-    """The permission question this reply ends on, if any."""
-    if not text:
+    """The permission question this reply ends on, if any.
+
+    The shape of the ask is read with mentions blanked, so a quoted ask doesn't count. Bill's-call
+    words are read with inline code and quotes kept: "Want me to run `git push`?" is about a push."""
+    if not isinstance(text, str) or not text:
         return None
-    lines = [ln for ln in _MENTION.sub(" ", text).splitlines() if ln.strip()]
-    if not lines:
-        return None
-    last = _SENTENCE_END.split(lines[-1].strip())[-1].strip().lstrip("*_ ").rstrip("*_ ")
-    if not ASK.match(last) or BILLS_CALL.search(last):
-        return None
-    return last
+    masked, kept = _tails(_MENTION.sub(" ", text)), _tails(_BLOCK.sub(" ", text))
+    for i, tail in enumerate(masked):
+        if ASK.match(tail):
+            shown = kept[i] if i < len(kept) else tail
+            return None if BILLS_CALL.search(shown) else shown
+    return None
 
 
 def decide(hook: dict) -> dict | None:
@@ -82,9 +99,10 @@ def decide(hook: dict) -> dict | None:
         return None
     if os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").startswith("sdk"):
         return None
-    text = hook.get("last_assistant_message") or ""
+    text = hook.get("last_assistant_message")
+    text = text if isinstance(text, str) else ""
     path = hook.get("transcript_path")
-    if not text and path:
+    if not text and isinstance(path, str) and path:
         text = turn_text(Path(path))
     ask = final_ask(text)
     if not ask:
@@ -180,7 +198,8 @@ def main(argv=None) -> int:
         return 0
     verdict = decide(hook)
     if verdict:
-        _log(hook, len(hook.get("last_assistant_message") or ""))
+        message = hook.get("last_assistant_message")
+        _log(hook, len(message) if isinstance(message, str) else 0)
         print(json.dumps(verdict))
     return 0
 

@@ -5,10 +5,11 @@
 ## 2026-11-06 — sessions stop asking permission; complaints get detected
 
 ### Added
-- `scripts/ask_gate.py` + `hooks/discipline/ask-gate.sh`: Stop hook. A turn whose last sentence asks permission for reversible work gets one forced retry; merge, push, delete, post, spend and similar questions pass untouched. Kill switch `ASK_GATE=off`; off for `auto-maintain`. `just ask-gate-bench`: on 120 days of transcripts it fires on 200 of 2,146 answered turn ends (9.3%); 7 replies read as refusals, 3 of them actually go-aheads ("don't ask for permission… do it"), and at least 2 more refusals sit among the "other" replies.
+- `scripts/ask_gate.py` + `hooks/discipline/ask-gate.sh`: Stop hook. A turn whose last sentence asks permission for reversible work gets one forced retry; merge, push, delete, post, spend and similar questions pass untouched. Kill switch `ASK_GATE=off`; off for `auto-maintain`. `just ask-gate-bench`: on 120 days of transcripts it fires on 199 of 2,154 answered turn ends (9.2%); 7 replies read as refusals, 3 of them actually go-aheads ("don't ask for permission… do it"), and at least 2 more refusals sit among the "other" replies.
 
 ### Fixed
 - `features/prompt-triggers/meta_trigger.py`: missed "why did I even have to ask", any complaint next to a pasted reply, "I thought we had skills and hooks", and "why isn't this fucking clear". Replay on 2,955 real prompts: 3 newly fire, all real complaints; none stopped firing.
+- `scripts/ask_gate.py`, three referee (Gemini) findings, each reproduced by a failing test first: a push or reset inside backticks was blocked instead of passed, a non-string message crashed the script (the wrapper failed open), and an ask wrapped over lines was missed.
 - The Monday meta-question count may step up slightly: `scripts/meta_questions.py` now also counts "why did I even have to".
 - `hooks/discipline/pipe-to-shell-guard.sh` tracked as executable, so re-running `install-reliability.sh` no longer dirties the tree.
 
