@@ -7,6 +7,7 @@
 - `ask_agy_packet` (`scripts/delegate/server.py`): runs agy on a throwaway copy of named files and returns a diff; live files don't change. Each file must be under `config/delegate-packet-allow.txt`, which ships empty, so nothing can leave a local-only repo until its owner lists it. It limits what you hand over, not what agy can reach.
 - `features/antigravity/permissions.json`: denies `read_file(/opt/proj/business)`, which was on the local-only list with no matching rule. A new test fails whenever a local-only path lacks one. Takes effect after `apply_permissions.py` runs.
 - `scripts/ask_agy.py`: a missing working folder returns `cwd_missing`, not a false "agy not found".
+- `tests/test_agy_packet.py`: an overlong file name may give either refusal, since Python versions differ. CI's Python caught this.
 
 ## 2026-11-07 — agy shim can no longer call itself
 

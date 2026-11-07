@@ -4,6 +4,7 @@
 
 - **Landed in this PR:** `ask_agy_packet`, an empty `config/delegate-packet-allow.txt`, `read_file(/opt/proj/business)` in the deny rules, and `cwd_missing`. This redoes the `feat/agy-packet` job noted below.
 - **After merging:** run `features/antigravity/apply_permissions.py` so agy gets the rule. Running delegate servers need a session restart to show the new tool.
+- **CI:** the first run failed on one test too strict about a Python version difference. Fixed in the next commit. The merge waited for green.
 - **Limits:** the packet limits which files you hand over, not what agy can reach. It keeps its other tools, and whether a deny rule stops `cat` is untested. See the ROADMAP's per-repo deny item.
 - **Open:** adding allow-list entries and removing `mcp(memweave/*)` from agy's rules. Bill wants the Refinery's view first.
 
