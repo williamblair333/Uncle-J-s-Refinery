@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-07 — agy packets and a deny rule for business
+
+- **Landed in this PR:** `ask_agy_packet`, an empty `config/delegate-packet-allow.txt`, `read_file(/opt/proj/business)` in the deny rules, and `cwd_missing`. This redoes the `feat/agy-packet` job noted below.
+- **After merging:** run `features/antigravity/apply_permissions.py` so agy gets the rule. Running delegate servers need a session restart to show the new tool.
+- **Limits:** the packet limits which files you hand over, not what agy can reach. It keeps its other tools, and whether a deny rule stops `cat` is untested. See the ROADMAP's per-repo deny item.
+- **Open:** adding allow-list entries and removing `mcp(memweave/*)` from agy's rules. Bill wants the Refinery's view first.
+
 ## 2026-11-07 — three Claude sessions aborted; agy shim fixed
 
 - **What happened:** three sessions ended in a bare `Aborted`, with last writes at 06:16, 06:20 and 06:21. The two idle ones may have died a little later. A throwaway escape-test probe added `basename`, `dirname` and `readlink` to its shim folder, and `_shim`'s first line called `basename`. The terminal's cgroup peaked at exactly its 57,292 task limit, with 945 refusals and `oom_kill 0`. Claude Code aborts silently when it can't start a thread (upstream anthropics/claude-code#100545). Ollama and `llama-server`, in other cgroups, survived.

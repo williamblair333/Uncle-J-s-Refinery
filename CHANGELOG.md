@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-07 — agy packet: named files only, diff back
+
+- `ask_agy_packet` (`scripts/delegate/server.py`): runs agy on a throwaway copy of named files and returns a diff; live files don't change. Each file must be under `config/delegate-packet-allow.txt`, which ships empty, so nothing can leave a local-only repo until its owner lists it. It limits what you hand over, not what agy can reach.
+- `features/antigravity/permissions.json`: denies `read_file(/opt/proj/business)`, which was on the local-only list with no matching rule. A new test fails whenever a local-only path lacks one. Takes effect after `apply_permissions.py` runs.
+- `scripts/ask_agy.py`: a missing working folder returns `cwd_missing`, not a false "agy not found".
+
 ## 2026-11-07 — agy shim can no longer call itself
 
 - `features/antigravity/shims/_shim`: uses bash built-ins for its own name and directory, and system PATH for `readlink`. A shimmed `basename` used to call the shim again without end. A probe that shimmed it exhausted the terminal's 57,292 task limit, and Claude Code aborted in every session there. New depth guard `AGY_SHIM_DEPTH` refuses at 32, and validates the value first because bash arithmetic would execute a crafted one.

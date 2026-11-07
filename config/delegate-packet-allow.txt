@@ -1,0 +1,4 @@
+# Files ask_agy_packet may copy to an off-machine model, though they sit in a local-only repo.
+# One directory or file per line; anything not listed is refused. Each line is that repo owner's
+# decision, and an empty file means nothing leaves. Check a folder for client names or private
+# data before listing it, and never list a whole local-only repo.

@@ -27,6 +27,14 @@ ask = load("ask_agy", "scripts/ask_agy.py")
 perms = load("apply_permissions", "features/antigravity/apply_permissions.py")
 
 
+def test_missing_cwd_is_not_reported_as_missing_agy(tmp_path):
+    agy = tmp_path / "agy"
+    agy.write_text("#!/bin/sh\nexit 0\n")
+    agy.chmod(0o755)
+    out = ask.ask("hi", agy_bin=str(agy), cwd=str(tmp_path / "gone"))
+    assert out["error"] == "cwd_missing" and str(tmp_path / "gone") in out["detail"]
+
+
 @pytest.mark.parametrize("cmd,fix", [
     # .venv is not a .env file, and a relative path is inside the repo (review, 2026-10-30)
     (".venv/bin/python -m pytest", 'add "command(.venv/bin/python)"'),
