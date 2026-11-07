@@ -1,9 +1,10 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-11-07 — session end: jail merged, bench still running
+## 2026-11-07 — session end: jail merged, bench gave no answers
 
 - **Most important:** Claude sessions started before #328 merged (09:38) still run the old unjailed `ask_agy` through their delegate server, until restarted. Three were running at 09:39.
-- **Bench running:** RVN Qwen3.8-27B against Heretic's 15/40 (`/opt/docker/strata/bench/rvn/run.log`, `results/rvn-runs.jsonl`, `results/*.rvn.md`). It runs alone and restarts Heretic when it ends, so first confirm `llama-heretic` is up. Judge the answers blind against `results/*.agy.md`, as `judge-pi` did. Shared GPU mode, because mtw2 mode loses Klarheit's slots, so speeds understate it. At 2.07 tok/s, tasks may hit the 2400 s limit. Then Bill decides on DeepSeek V4.1 (249 GB, not approved yet): `review/alternatives/2026-11-07-deepseek-v41-local.md`.
+- **Bench finished, nothing to judge:** RVN Qwen3.8-27B hit the 2400 s limit on all 5 tasks with empty output, so its quality is unmeasured, not bad (`/opt/docker/strata/bench/NOTES.md`). Pi prints only at the end and ran with `--no-session`, so a timeout discards everything: fix that before any rerun. Heretic is back on :8090.
+- **Look at the machine first:** Heretic itself measured 2.00 tok/s after the bench, the same as RVN's 2.07, in shared GPU mode with 2814 MiB on the GPU. Meanwhile Ollama's 9B ran 100% on CPU for hours, about 45 s per chat call, with 7.7 GB of VRAM free. Why it's on CPU, and whether that's what slows Heretic, is untested. Ollama's caller isn't confirmed. Klarheit's project owns any change there. Bill decides whether to rerun, and DeepSeek V4.1 (249 GB, not approved yet) waits on this: `review/alternatives/2026-11-07-deepseek-v41-local.md`.
 - **Bill's decision open:** the backup question in `review/2026-11-07-backup-gap.md` (gitignored).
 - **Docs:** README updated for `just agy-login`; ROADMAP's jail item closed in #328.
 - **Guards:** the surface-write guard blocked a Bash heredoc writing a scratchpad `.sh`, and the credential guard blocks any command text naming the fixture filename, even in a test. Neither stopped the work. Check whether the first is too broad at the next weekly `state/hook-blocks.log` review (249 entries today across all sessions, not reviewed).
