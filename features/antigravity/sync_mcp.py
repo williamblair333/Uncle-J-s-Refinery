@@ -6,7 +6,8 @@ keys agy understands are copied (command, args, env for stdio; url, headers for 
 Servers that exist only on the agy side are kept. The write is atomic, mode 0600 (env may
 hold API keys), with a .bak of the previous file. Re-run after the stack's MCP
 registrations change. SKIP servers are never copied (and removed if an older sync copied
-them): `delegate` would let agy call ask_agy, i.e. itself.
+them): `delegate` would let agy call ask_agy, i.e. itself, and `memweave` would give an
+off-machine model every project's transcripts, including local-only ones.
 
 Usage: sync_mcp.py [--claude PATH] [--target PATH]
 """
@@ -20,7 +21,7 @@ from pathlib import Path
 DEFAULT_CLAUDE = Path.home() / ".claude.json"
 DEFAULT_TARGET = Path.home() / ".gemini" / "config" / "mcp_config.json"
 KEEP = ("command", "args", "env", "url", "headers")
-SKIP = ("delegate",)
+SKIP = ("delegate", "memweave")
 # agy-only servers, always written: headless agy has no web tool of its own (read_url is not
 # registered in print mode, probed 2026-10-26). The reference fetch server refuses private
 # and LAN addresses by default. Pinned to a release more than two weeks old.

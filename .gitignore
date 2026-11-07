@@ -7,6 +7,9 @@
 .venv-test/
 .venv-memweave/
 
+# Per-host packet allow-list: names private repos' paths, and this repo is public
+config/delegate-packet-allow.local.txt
+
 # first-run gate reports: evidence about one machine at one commit, not source
 .first-run-gate/
 __pycache__/

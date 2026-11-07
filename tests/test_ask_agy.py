@@ -471,17 +471,23 @@ def test_shipped_rules_block_includes_claude_md_and_fits():
     assert len((REPO / "CLAUDE.md").read_bytes()) + len(block.encode()) < 24_000  # agy per-file cap
 
 
-def test_sync_mcp_never_gives_agy_delegate(tmp_path):
-    # delegate's ask_agy inside agy would let agy call itself
+def test_sync_mcp_never_gives_agy_delegate_or_memweave(tmp_path):
+    # delegate's ask_agy inside agy would let agy call itself; memweave holds local-only transcripts
     claude = tmp_path / "claude_user.json"
     claude.write_text(json.dumps({"mcpServers": {
         "delegate": {"command": "/v/python", "args": ["delegate/server.py"]},
         "memweave": {"command": "/v/python", "args": ["mw_mcp.py"]},
+        "context7": {"command": "/v/python", "args": ["c7.py"]},
     }}))
     target = tmp_path / "mcp_config.json"
-    target.write_text(json.dumps({"mcpServers": {"delegate": {"command": "old"}}}))
-    assert sync.sync(claude, target) == ["memweave"]
-    assert set(json.loads(target.read_text())["mcpServers"]) == {"memweave"} | set(sync.AGY_EXTRA)
+    target.write_text(json.dumps({"mcpServers": {"delegate": {"command": "old"}, "memweave": {"command": "old"}}}))
+    assert sync.sync(claude, target) == ["context7"]
+    assert set(json.loads(target.read_text())["mcpServers"]) == {"context7"} | set(sync.AGY_EXTRA)
+
+
+def test_agy_may_not_call_memweave():
+    rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
+    assert "mcp(memweave/*)" in rules["deny"] and "mcp(memweave/*)" not in rules["allow"]
 
 
 def test_sync_mcp_always_gives_agy_a_pinned_fetch_server(tmp_path):
