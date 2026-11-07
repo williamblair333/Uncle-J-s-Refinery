@@ -667,8 +667,8 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.108.413"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#fd6062d8af96148dd879b638286b0104185336f1" }
+version = "1.108.419"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#545df63de1ab20600a529b3a1500ec1a98a2c6a7" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -698,8 +698,8 @@ openai = [
 
 [[package]]
 name = "jdatamunch-mcp"
-version = "1.31.13"
-source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#7a6ab14cfd4ac5344076f4d200aad379db2b3c21" }
+version = "1.33.0"
+source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#d830600d8c5edacfe2e049841e3ff85422856282" }
 dependencies = [
     { name = "charset-normalizer" },
     { name = "mcp" },
@@ -707,8 +707,8 @@ dependencies = [
 
 [[package]]
 name = "jdocmunch-mcp"
-version = "1.150.1"
-source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#f03a06264eca1de2e4a37bd5d390761d263da284" }
+version = "1.151.0"
+source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#c0b9a410144b8b28acdeeb510b992fa93eecd787" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },

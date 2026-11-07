@@ -7,6 +7,9 @@
 - **Behaviour change:** `just gpu mtw2` now needs `--accept-klarheit-loss`. Nothing unattended calls it (only Klarheit's docs mention it). It still doesn't record a pause in Klarheit, so slots missed in mtw2 mode remain misses.
 - **CI-red alert:** cron `uncle-j-ci-red-alert`, every 15 minutes, dma64 only. It isn't in `install.sh` or healthcheck's expected list, on purpose, so other hosts don't send duplicates. agy drafted it and agy's review caught that `gh` would have failed from cron's `$HOME`.
 - **Bug found, not fixed:** `_tg_send_text` in `lib/notify-telegram.sh` ends its curl in `|| true`, so every caller reports success when a send fails, and its HTML mode rejects text containing `<`. `gpu-mode.sh`'s alert has that limit too. Changing it affects every notifier, so it needs its own pre-mortem.
+- **Also done:** `uv.lock` committed after a full test run. Removed the `hermes-features` worktree and 56 merged local branches; the 9 unmerged ones stay. The pipe-to-shell guard no longer blocks `curl … | sha256sum` (retested live).
+- **Skill router:** across 109 sessions since 11-01, skills it named were called in 18 of 36 session-and-skill pairs. How many of the other 18 gave a reason instead wasn't measured. `skill_gate.py` already blocks other tools until each named skill runs or is declined, which is stronger than the Stop check proposed earlier, so nothing new was built.
+- **Waiting on Bill:** how sessions may create Gitea repos (ROADMAP "Gitea new-repo bootstrap"); `ENABLE_PUSH_CREATE_USER` is unset and untested here. Revoking the leftover `write:user` tokens, and the two questions in the slowdown note.
 
 ## 2026-11-06 — business repo started; agy friction note waiting
 
