@@ -89,6 +89,14 @@ hook-bench-export dir="state/hook-bench-export":
 router-bench *args:
     python3 scripts/router_bench.py {{args}}
 
+# RAM bench: Heretic speed before, during and after a scheduled job loads Ollama (start it before a klarheit-rv slot)
+ram-bench *args:
+    .venv/bin/python scripts/ram_bench.py {{args}}
+
+# CI-red alert: read main's latest CI run, Telegram on red (--dry-run prints; --install-cron adds the 15-minute job on this host)
+ci-alert *args:
+    python3 scripts/ci_red_alert.py {{args}}
+
 # self-check bench: how often "check yourself" turns up a real correction (all transcripts)
 check-bench *args:
     python3 scripts/check_bench.py {{args}}
@@ -134,7 +142,7 @@ ask-local-up:
 heretic *args:
     ./scripts/heretic.sh {{args}}
 
-# who gets the GPU: just gpu mtw2 (Heretic takes it; Ollama + Klarheit paused) | shared | status
+# who gets the GPU: just gpu mtw2 --accept-klarheit-loss (Heretic takes it; Klarheit loses its slots) | shared | status
 gpu *args:
     ./scripts/gpu-mode.sh {{args}}
 

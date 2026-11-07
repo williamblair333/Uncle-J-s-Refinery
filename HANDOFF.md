@@ -1,5 +1,16 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-07 — RAM bench result; GPU mode guard; CI-red alert
+
+- **RAM bench, one real slot (06:05, quiet machine after a reboot, at least 26 GB available):** while M11 ran, Heretic's prompt speed fell to 0.61x and generation from about 38 to 7 t/s. Once the job ended with the model still loaded, both were back to normal (622 t/s prompt, 32 t/s generation), and stopping Ollama added nothing more (635, 33). Heretic's memory stayed at about 20 GB and no eviction happened. The 230 MB/s disk burst was Ollama loading itself, at 06:05:23-33 while Heretic was idle.
+- **What that means:** the slowdown here is the job competing for GPU and CPU, not memory. A shorter Ollama keep-alive wouldn't help (fix 3 in `review/2026-11-06-dma64-slowdown.md`), and `--mlock` has no evidence behind it yet. The 11-06 eviction did not reproduce, so it probably needs the memory pressure of that day (about 15 GB available, with Chrome and 7 sessions). That part is still unproven: rerun `just ram-bench` before a slot on a busy day. Swap was also 6.7 of 7 GB full with 28 GB available right after the bench and the test suite; cause unread.
+- **Behaviour change:** `just gpu mtw2` now needs `--accept-klarheit-loss`. Nothing unattended calls it (only Klarheit's docs mention it). It still doesn't record a pause in Klarheit, so slots missed in mtw2 mode remain misses.
+- **CI-red alert:** cron `uncle-j-ci-red-alert`, every 15 minutes, dma64 only. It isn't in `install.sh` or healthcheck's expected list, on purpose, so other hosts don't send duplicates. agy drafted it and agy's review caught that `gh` would have failed from cron's `$HOME`.
+- **Bug found, not fixed:** `_tg_send_text` in `lib/notify-telegram.sh` ends its curl in `|| true`, so every caller reports success when a send fails, and its HTML mode rejects text containing `<`. `gpu-mode.sh`'s alert has that limit too. Changing it affects every notifier, so it needs its own pre-mortem.
+- **Also done:** `uv.lock` committed after a full test run. Removed the `hermes-features` worktree and 56 merged local branches; the 9 unmerged ones stay. The pipe-to-shell guard no longer blocks `curl … | sha256sum` (retested live).
+- **Skill router:** across 109 sessions since 11-01, skills it named were called in 18 of 36 session-and-skill pairs. How many of the other 18 gave a reason instead wasn't measured. `skill_gate.py` already blocks other tools until each named skill runs or is declined, which is stronger than the Stop check proposed earlier, so nothing new was built.
+- **Waiting on Bill:** how sessions may create Gitea repos (ROADMAP "Gitea new-repo bootstrap"); `ENABLE_PUSH_CREATE_USER` is unset and untested here. Revoking the leftover `write:user` tokens, and the two questions in the slowdown note.
+
 ## 2026-11-06 — business repo started; agy friction note waiting
 
 - **New repo:** `/opt/proj/business` is private on Gitea with no mirror, and on the delegate local-only list (#320). Its own `HANDOFF.md` has the live state, so look there for business work. This file reaches the public GitHub mirror, so keep client and business details out of it.

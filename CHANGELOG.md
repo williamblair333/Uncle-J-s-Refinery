@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-07 — RAM bench, GPU mode guard, CI-red alert
+
+- `just ram-bench` (`scripts/ram_bench.py`): Heretic speed before, during and after a scheduled job loads Ollama. Also adds the `ci-alert` recipe.
+- `just gpu mtw2` refuses without `--accept-klarheit-loss`, alerts on entry and reports time off on leaving. `shared` restores Klarheit even if Heretic fails. healthcheck warns while mtw2 mode is on.
+- `scripts/ci_red_alert.py` (`just ci-alert`): Telegram when main's CI goes red, one alert per run. `--install-cron` adds it on this host only, so other hosts don't send duplicates.
+- `uv.lock`: jcodemunch 1.108.419, jdatamunch 1.33.0, jdocmunch 1.151.0, tested with the full suite.
+
 ## 2026-11-06 — business repo kept local-only
 
 ### Changed

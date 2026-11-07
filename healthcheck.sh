@@ -1413,6 +1413,16 @@ except ValueError: print(-1)' "$last_done" 2>/dev/null)
     fi
 }
 
+# ----- GPU mode: mtw2 mode left on keeps Klarheit's timers off, and each missed slot is lost -----
+# Warn, never fail: the mode is a choice, but one easy to forget.
+check_gpu_mode() {
+    local state="$REPO_ROOT/state/gpu-mode"
+    [ "$(cat "$state" 2>/dev/null)" = mtw2 ] || return 0
+    step "GPU mode — Klarheit timers"
+    warn "GPU mode is mtw2 since $(date -r "$state" '+%F %H:%M'): Klarheit's timers are off and its slots are being lost"
+    hint "when mtw2 is done: just gpu shared"
+}
+
 # ----- cron catch-up: jobs missed while the machine was off got run at boot -----
 # Warn, never fail: a failed catch-up job still gets its normal cron run next night.
 check_cron_catchup() {
@@ -1487,6 +1497,7 @@ check_dreaming_runtime
 check_auto_maintain_runtime
 check_repo_scout
 check_cron_catchup
+check_gpu_mode
 check_ram_revisit
 if [ "$MODE" = "full" ]; then
     check_verify
