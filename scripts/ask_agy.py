@@ -145,6 +145,8 @@ def fix_cause(out: dict) -> list[dict]:
 
 def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         timeout: int = 300, model: str = None) -> dict:
+    if cwd and not os.path.isdir(cwd):  # subprocess would raise FileNotFoundError, which reads as a missing agy
+        return {"ok": False, "error": "cwd_missing", "detail": f"no such directory: {cwd}"}
     agy = agy_bin or os.environ.get("AGY_BIN") or "agy"
     env = agy_env()
     resolved = shutil.which(agy, path=env["PATH"])

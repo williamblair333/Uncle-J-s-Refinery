@@ -28,6 +28,8 @@ directory, so a session inside a local-only repo can't ship it to Google or Open
 Every call is logged to state/delegate.jsonl (backend, model, seconds, ok; no content).
 """
 import datetime
+import difflib
+import fnmatch
 import importlib.util
 import json
 import os
@@ -53,6 +55,11 @@ OPENAI_MODEL = os.environ.get("DELEGATE_OPENAI_MODEL", "")
 OPENAI_KEY_ENV = os.environ.get("DELEGATE_OPENAI_KEY_ENV", "OPENAI_API_KEY")
 LOCAL_ONLY_FILE = _REPO / "config" / "delegate-local-only.txt"
 ROUTING_FILE = _REPO / "config" / "delegate-routing.json"
+PACKET_ALLOW_FILE = _REPO / "config" / "delegate-packet-allow.txt"
+PERMISSIONS_FILE = _REPO / "features" / "antigravity" / "permissions.json"
+# agy's read rules allow this tree, so the throwaway copies live inside it
+PACKET_ROOT = Path(os.environ.get("DELEGATE_PACKET_ROOT") or f"/tmp/claude-{os.getuid()}/agy-packets")
+PACKET_MAX_BYTES = 500_000
 QUOTA_PATH = Path(os.environ.get("DELEGATE_QUOTA_FILE") or _REPO / "state" / "agy-quota.json")
 DEFAULT_QUOTA_SECONDS = 3600
 _RESET_RE = re.compile(r"resets?\s+in\s+(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?", re.I)
@@ -469,6 +476,104 @@ def run_agy(prompt: str, cwd: str | None = None, model: str | None = None,
             "hint": "fall back to ask_heretic / ask_local, or do it yourself"}
 
 
+def _secret_globs() -> list[str]:
+    """The filename patterns agy itself may never read, such as key files. Raises if they can't be read."""
+    deny = json.loads(PERMISSIONS_FILE.read_text()).get("deny", [])
+    rules = [r[len("read_file("):-1] for r in deny if isinstance(r, str) and r.startswith("read_file(")]
+    return [r for r in rules if "*" in r]
+
+
+def _read_no_follow(path: Path) -> bytes:
+    """Read a regular file. A symlink swapped in since the check raises OSError."""
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    with os.fdopen(fd, "rb") as f:
+        return f.read()
+
+
+def _packet_contents(base: Path, files: list[str]) -> tuple[dict[str, bytes], dict | None]:
+    """The files' contents by relative path, or a refusal. One bad name refuses the whole packet.
+    Each file is read as it's checked, so nothing can be swapped in between the check and the copy."""
+    if not files:
+        return {}, {"ok": False, "error": "no_files", "detail": "name the files to send"}
+    try:
+        secret = _secret_globs()
+    except (OSError, ValueError, AttributeError, TypeError) as err:  # no list of secrets, so nothing goes
+        return {}, {"ok": False, "error": "deny_rules_unreadable", "detail": str(err)[:200]}
+    allowed = local_only_roots(PACKET_ALLOW_FILE, env="")
+    contents, total = {}, 0
+    for name in files:
+        no = {"ok": False, "error": "not_allow_listed",
+              "detail": f"{name[:200]!r} isn't in {PACKET_ALLOW_FILE.name}; use ask_heretic or do it yourself"}
+        try:
+            real = (base / name).resolve()  # resolving catches ../ and symlinks that point elsewhere
+            if base not in real.parents or not _under(real, allowed):
+                return {}, no
+            if any(fnmatch.fnmatch(str(real), g) for g in secret):
+                return {}, no
+            if not real.is_file():
+                return {}, {"ok": False, "error": "file_not_found", "detail": name[:200]}
+            contents[str(real.relative_to(base))] = data = _read_no_follow(real)
+        except (OSError, ValueError):  # a null byte, an overlong name, an unreadable file, a swapped-in link
+            return {}, no
+        total += len(data)
+    if total > PACKET_MAX_BYTES:
+        return {}, {"ok": False, "error": "packet_too_large", "detail": f"{total} bytes, limit {PACKET_MAX_BYTES}"}
+    return contents, None
+
+
+def _snapshot(folder: Path) -> dict[str, bytes]:
+    """Exact bytes, so binary and line-ending edits count as changes. A symlink is reported by name
+    and never followed, so the agent can't pull an outside file into the diff."""
+    seen = {}
+    for p in folder.rglob("*"):
+        name = str(p.relative_to(folder))
+        if p.is_symlink():
+            seen[name] = f"symlink to {os.readlink(p)}\n".encode()
+        elif p.is_file():
+            try:
+                seen[name] = p.read_bytes()
+            except OSError as err:  # one unreadable file mustn't lose the rest of the result
+                seen[name] = f"unreadable: {err.strerror}\n".encode()
+    return seen
+
+
+def _packet_diff(name: str, old: bytes, new: bytes) -> list[str]:
+    try:
+        old_text, new_text = old.decode(), new.decode()
+    except UnicodeDecodeError:
+        return [f"Binary file {name} differs\n"]
+    return list(difflib.unified_diff(old_text.splitlines(True), new_text.splitlines(True),
+                                     f"a/{name}", f"b/{name}"))
+
+
+def run_agy_packet(prompt: str, files: list[str], base: str, task: str | None = None,
+                   model: str | None = None, timeout: int | None = None, ask=ask_agy.ask) -> dict:
+    """Run agy on a throwaway copy of the named files and return its changes as a diff."""
+    root = Path(base).resolve()
+    contents, refused = _packet_contents(root, files)
+    if refused := refused or _refused(str(PACKET_ROOT), prompt):
+        return refused
+    try:
+        PACKET_ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if PACKET_ROOT.is_symlink() or PACKET_ROOT.stat().st_uid != os.getuid():
+            return {"ok": False, "error": "packet_root_unusable", "detail": f"{PACKET_ROOT} isn't this user's folder"}
+        PACKET_ROOT.chmod(0o700)
+        with tempfile.TemporaryDirectory(dir=PACKET_ROOT, ignore_cleanup_errors=True) as temp:
+            work = Path(temp) / root.name  # the folder's name is what the call log records as the project
+            work.mkdir()
+            for name, data in contents.items():
+                (work / name).parent.mkdir(parents=True, exist_ok=True)
+                (work / name).write_bytes(data)
+            before = _snapshot(work)
+            out = run_agy(prompt, str(work), model, timeout, edits=True, ask=ask, task=task)
+            after = _snapshot(work)
+    except OSError as err:
+        return {"ok": False, "error": "packet_root_unusable", "detail": str(err)[:200]}
+    changed = sorted(n for n in before.keys() | after.keys() if before.get(n) != after.get(n))
+    diff = [line for n in changed for line in _packet_diff(n, before.get(n, b""), after.get(n, b""))]
+    return {**out, "diff": "".join(diff), "changed": changed}
+
+
 def run_openai(prompt: str, system: str | None = None, model: str | None = None,
                max_tokens: int = 2048, cwd: str | None = None, opener=urllib.request.urlopen) -> dict:
     key = os.environ.get(OPENAI_KEY_ENV)
@@ -575,6 +680,16 @@ def build_server():
         (non-Claude first). model overrides task ("local:heretic" / "local:ask_local" too).
         In a local-only directory only the local models run."""
         return run_agy(prompt, cwd, model, timeout, edits, task=task)
+
+    @mcp.tool(name="ask_agy_packet")
+    def _agy_packet(prompt: str, files: list[str], base: str | None = None, task: str | None = None,
+                    model: str | None = None, timeout: int | None = None) -> dict:
+        """Run agy on a throwaway copy of the named files, and return `diff` and `changed` for you to
+        review and apply. Live files are never touched. files are relative to base (default: the
+        session's project), and each must be under config/delegate-packet-allow.txt, or the whole call
+        is refused. This limits which files you hand over, not what agy can reach: it keeps its other
+        tools. Name files by relative path in the prompt, and keep private details out of it."""
+        return run_agy_packet(prompt, files, base or os.getcwd(), task, model, timeout)
 
     @mcp.tool(name="ask_heretic")
     def _heretic(prompt: str, system: str | None = None, think: bool = False) -> dict:

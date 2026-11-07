@@ -57,7 +57,9 @@ Completed items age out after ~4 weeks.
 
 - **Per-repo deny in the servers agy calls** (opened 2026-10-25). agy keeps full use of the stack
   (Bill's call), so it can still reach anatomy-lab through jcodemunch, and its transcripts through
-  memweave. Closing that needs a repo filter inside those servers when agy is the caller. The
+  memweave. The same goes for `business` (found 2026-11-07).
+  The `read_file` deny rules don't cover allowed shell commands such as `cat` either; that hasn't been
+  tested. Closing this needs a repo filter inside those servers when agy is the caller. The
   delegate guard only sees the prompt.
 - **OpenAI backend for delegate** (opened 2026-10-25, when needed). Set `OPENAI_API_KEY` and
   `DELEGATE_OPENAI_MODEL` in the server's env; the code is already in.
