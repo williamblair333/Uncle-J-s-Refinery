@@ -4,7 +4,7 @@
 
 ## 2026-11-07 — session end
 
-- Docs only: handoff for the running local-model bench and the restart that `ask_agy`'s jail needs. No code changed
+- Docs only: handoff for the running local-model bench and the restart that `ask_agy`'s jail needs. The README's agy steps now include `just agy-login`. No code changed
 
 ## 2026-11-07 — agy jobs run in an empty root
 
