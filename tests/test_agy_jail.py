@@ -356,6 +356,29 @@ def test_glob_characters_in_a_local_only_path_keep_it_masked(box):
     assert "my-secret" not in r.stdout
 
 
+def test_broken_shims_on_path_cant_make_the_walls_fail_open(box):
+    """ask_agy puts sandboxing shims for sed, tr and find first on PATH. CI, 2026-11-07: where they
+    failed, the private list came out empty and a local-only job folder ran."""
+    shims = box["tmp"] / "broken"
+    shims.mkdir()
+    for tool in ("sed", "tr", "find", "realpath", "git", "cut", "sort"):
+        (shims / tool).write_text("#!/bin/sh\nexit 1\n")
+        (shims / tool).chmod(0o755)
+    path = f"{shims}:{os.environ['PATH']}"
+    refused = run(box, "echo RAN", PATH=path, DELEGATE_LOCAL_ONLY=str(box["job"]))
+    assert refused.returncode == 126
+    assert "RAN" not in refused.stdout
+    (box["job"] / "my-secret.txt").write_text("TOPSECRET")
+    r = run(box, "cat my-secret.txt", PATH=path)
+    assert r.returncode == 0, r.stderr
+    assert "TOPSECRET" not in r.stdout
+
+
+def test_the_job_still_gets_the_callers_path(box):
+    r = run(box, 'echo "$PATH"', PATH=f"/first/on/path:{os.environ['PATH']}")
+    assert r.stdout.startswith("/first/on/path:")
+
+
 def test_a_tracked_secret_named_file_stays_readable_so_git_add_cant_empty_it(box):
     git(box["job"], "init", "-q")
     (box["job"] / "secret_scan.py").write_text("code\n")

@@ -18,6 +18,10 @@
 set -euo pipefail
 
 die() { echo "agy-jail: $*" >&2; exit 126; }
+# The caller's PATH is the job's: ask_agy puts sandboxing shims for sed, tr and find first. The walls
+# here must not run through them, or a shim failing would empty the private list and fail open.
+JOB_PATH="$PATH"
+PATH=/usr/bin:/bin
 [[ $# -gt 0 ]] || { echo "usage: agy-jail <job-dir> COMMAND [ARGS...] | agy-jail --login" >&2; exit 2; }
 command -v bwrap >/dev/null || die "bubblewrap (bwrap) is not installed, refusing to run agy unjailed"
 
@@ -31,7 +35,7 @@ EXTRA="$R/config/agy-jail-extra.txt"
 
 if [[ "$1" == --login ]]; then
     mkdir -p "$ST/login"
-    PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH" exec "$SELF" "$ST/login" agy -p "reply ok" \
+    PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$JOB_PATH" exec "$SELF" "$ST/login" agy -p "reply ok" \
         --print-timeout 300s --model "${AGY_LOGIN_MODEL:-gemini-3.8-flash-low}"
 fi
 
@@ -52,6 +56,7 @@ read_paths() {
 }
 
 mapfile -t private < <({ read_paths < "$LOCAL_ONLY"; printf '%s\n' "${DELEGATE_LOCAL_ONLY:-}" | tr ':' '\n' | read_paths; })
+[[ ${#private[@]} -gt 0 ]] || die "the local-only list came out empty, refusing to run"
 
 under() { [[ "$2" == / || "$1" == "$2" || "$1" == "$2"/* ]]; }   # is $1 at or below $2?
 
@@ -175,7 +180,7 @@ done < <(find "$root" -xdev \( "${skip[@]}" \) -prune -o \( -type f -o -type d -
        -o -iname '*creds*' -o -iname '*credentials*' -o -iname '*secret*' \) -prune -print0)
 
 # A clean environment: tokens in the caller's stay out.
-a+=(--clearenv --setenv HOME "$HOME" --setenv PATH "${PATH}" --setenv AGY_JAIL 1)
+a+=(--clearenv --setenv HOME "$HOME" --setenv PATH "$JOB_PATH" --setenv AGY_JAIL 1)
 for v in USER LOGNAME LANG LC_ALL LC_CTYPE TERM TZ; do
     [[ -n "${!v:-}" ]] && a+=(--setenv "$v" "${!v}")
 done
