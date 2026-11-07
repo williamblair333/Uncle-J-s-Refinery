@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-07 — session end
+
+- Docs only: handoff for the running local-model bench and the restart that `ask_agy`'s jail needs. No code changed
+
 ## 2026-11-07 — agy jobs run in an empty root
 
 - `ask_agy` starts every job through `features/antigravity/agy-jail`: only the job's repo, agy's state and the tools it needs exist. Its MCP servers are children, so they're inside too. It refuses to run without bubblewrap, in a local-only path or in your home
