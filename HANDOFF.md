@@ -4,6 +4,7 @@
 
 - **RAM bench, one real slot (06:05, quiet machine after a reboot, at least 26 GB available):** while M11 ran, Heretic's prompt speed fell to 0.61x and generation from about 38 to 7 t/s. Once the job ended with the model still loaded, both were back to normal (622 t/s prompt, 32 t/s generation), and stopping Ollama added nothing more (635, 33). Heretic's memory stayed at about 20 GB and no eviction happened. The 230 MB/s disk burst was Ollama loading itself, at 06:05:23-33 while Heretic was idle.
 - **What that means:** the slowdown here is the job competing for GPU and CPU, not memory. A shorter Ollama keep-alive wouldn't help (fix 3 in `review/2026-11-06-dma64-slowdown.md`), and `--mlock` has no evidence behind it yet. The 11-06 eviction did not reproduce, so it probably needs the memory pressure of that day (about 15 GB available, with Chrome and 7 sessions). That part is still unproven: rerun `just ram-bench` before a slot on a busy day. Swap was also 6.7 of 7 GB full with 28 GB available right after the bench and the test suite; cause unread.
+- **Behaviour change:** `just gpu mtw2` now needs `--accept-klarheit-loss`. Nothing unattended calls it (only Klarheit's docs mention it). It still doesn't record a pause in Klarheit, so slots missed in mtw2 mode remain misses.
 
 ## 2026-11-06 — business repo started; agy friction note waiting
 
