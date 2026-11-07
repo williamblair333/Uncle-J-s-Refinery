@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-07 — RAM bench, GPU mode guard, CI-red alert
+
+- `just ram-bench` (`scripts/ram_bench.py`): Heretic speed before, during and after a scheduled job loads Ollama. Also adds the `ci-alert` recipe.
+
 ## 2026-11-06 — business repo kept local-only
 
 ### Changed
