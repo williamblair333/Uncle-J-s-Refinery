@@ -1,8 +1,16 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-07 — session end: jail merged, bench still running
+
+- **Most important:** Claude sessions started before #328 merged (09:38) still run the old unjailed `ask_agy` through their delegate server, until restarted. Three were running at 09:39.
+- **Bench running:** RVN Qwen3.8-27B against Heretic's 15/40 (`/opt/docker/strata/bench/rvn/run.log`, `results/rvn-runs.jsonl`, `results/*.rvn.md`). It runs alone and restarts Heretic when it ends, so first confirm `llama-heretic` is up. Judge the answers blind against `results/*.agy.md`, as `judge-pi` did. Shared GPU mode, because mtw2 mode loses Klarheit's slots, so speeds understate it. At 2.07 tok/s, tasks may hit the 2400 s limit. Then Bill decides on DeepSeek V4.1 (249 GB, not approved yet): `review/alternatives/2026-11-07-deepseek-v41-local.md`.
+- **Bill's decision open:** the backup question in `review/2026-11-07-backup-gap.md` (gitignored).
+- **Docs:** README updated for `just agy-login`; ROADMAP's jail item closed in #328.
+- **Guards:** the surface-write guard blocked a Bash heredoc writing a scratchpad `.sh`, and the credential guard blocks any command text naming the fixture filename, even in a test. Neither stopped the work. Check whether the first is too broad at the next weekly `state/hook-blocks.log` review (249 entries today across all sessions, not reviewed).
+
 ## 2026-11-07 — agy jobs run in an empty root
 
-- **After merging:** run `features/antigravity/install_rules.py`, and restart running delegate servers so they load the new `ask_agy`. Each other host (pi, tc-vmh-03) needs one `just agy-login` after pulling, or its jobs fail with a hint naming that command.
+- **Done after merging #328:** ran `install_rules.py` and `apply_permissions.py`, and verified from main. Each other host (pi, tc-vmh-03) needs one `just agy-login` after pulling, or its jobs fail with a hint naming that command.
 - **Verified only from the worktree:** the MCP code's read-only binds use the launcher's own repo path, so re-check them from main after merging.
 - **Rule for `agy-jail`:** it runs with `PATH=/usr/bin:/bin` and passes the caller's PATH on to the job. Don't call tools through the job's PATH: the shims there made it fail open once.
 - **Watch:** `just offload`. A job that read a neighbouring repo now gets "file does not exist". Add the path to `config/agy-jail-extra.txt` if it's legitimate.
