@@ -57,6 +57,10 @@ referee task *args:
 agy *args:
     .venv/bin/python scripts/ask_agy.py {{args}}
 
+# one sign-in for agy jobs, once per host: they run in a jail with no keyring (features/antigravity/README.md)
+agy-login:
+    features/antigravity/agy-jail --login
+
 # offload report: work sent to agy/Heretic/local vs Claude (default 7 days)
 offload *args:
     .venv/bin/python scripts/offload_report.py {{args}}

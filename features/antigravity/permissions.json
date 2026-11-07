@@ -102,6 +102,7 @@
     "read_file(**/id_ed25519*)",
     "read_file(/opt/proj/anatomy-lab)",
     "read_file(/opt/proj/business)",
+    "read_file(/opt/proj/Uncle-J-s-Refinery/review)",
     "read_file(/home/bill/.uncle-j-memory)",
     "mcp(memweave/*)",
     "read_file(/opt/proj/gitea/runner-config.yaml)",

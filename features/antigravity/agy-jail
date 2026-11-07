@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# agy-jail: start agy in an empty root, so what it can't see it can't send off the machine.
+#
+#   agy-jail <job-dir> COMMAND [ARGS...]     used by scripts/ask_agy.py for every job
+#   agy-jail --login                         one browser login for jobs (just agy-login)
+#
+# Deny rules aren't a wall: on 2026-11-07 a read_file deny on a canary refused read_file while
+# `cat` returned the contents. So everything is hidden unless named here: the job's repo, agy's own
+# state and login, and the tools it needs. A new private copy anywhere stays invisible by default.
+#
+# What's visible: /usr, /etc, the job's repo (writable), agy's state, the MCP servers' code
+# (read-only) and config/agy-jail-extra.txt. Inside the repo, config/delegate-local-only.txt
+# entries and secret-named files are masked. Indexes and package caches are private to jobs, so
+# nothing a job writes there runs outside. No session bus: it would let a job run commands outside.
+#
+# Not covered: the network is shared, so localhost services are reachable; gitignored files in the
+# job's repo are visible unless masked; running `agy` by hand stays outside.
+set -euo pipefail
+
+die() { echo "agy-jail: $*" >&2; exit 126; }
+[[ $# -gt 0 ]] || { echo "usage: agy-jail <job-dir> COMMAND [ARGS...] | agy-jail --login" >&2; exit 2; }
+command -v bwrap >/dev/null || die "bubblewrap (bwrap) is not installed, refusing to run agy unjailed"
+
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+HERE="$(dirname "$SELF")"
+R="$(cd "$HERE/../.." && pwd -P)"
+ST="${AGY_JAIL_STATE:-$HOME/.local/state/agy-jail}"
+LOCAL_ONLY="$R/config/delegate-local-only.txt"
+EXTRA="$R/config/agy-jail-extra.txt"
+[[ -f "$LOCAL_ONLY" ]] || die "can't read $LOCAL_ONLY, refusing to run"
+
+if [[ "$1" == --login ]]; then
+    mkdir -p "$ST/login"
+    PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH" exec "$SELF" "$ST/login" agy -p "reply ok" \
+        --print-timeout 300s --model "${AGY_LOGIN_MODEL:-gemini-3.8-flash-low}"
+fi
+
+[[ $# -ge 2 ]] || die "no command given"
+job="$(realpath -e "$1")" || die "no such job directory: $1"
+shift
+
+# One path per line, # starts a comment, ~ expands. Prints resolved paths.
+read_paths() {
+    local raw
+    while IFS= read -r raw || [[ -n "$raw" ]]; do
+        raw="${raw%%#*}"
+        raw="$(printf '%s' "$raw" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+        [[ -n "$raw" ]] || continue
+        raw="${raw/#\~/$HOME}"
+        realpath -m -- "$raw"
+    done
+}
+
+mapfile -t private < <({ read_paths < "$LOCAL_ONLY"; printf '%s\n' "${DELEGATE_LOCAL_ONLY:-}" | tr ':' '\n' | read_paths; })
+
+under() { [[ "$1" == "$2" || "$1" == "$2"/* ]]; }   # is $1 at or below $2?
+
+# The whole repo is visible, not just the folder asked for: git and relative paths need it.
+root="$job"
+if top="$(git -C "$job" rev-parse --show-toplevel 2>/dev/null)"; then root="$(realpath -e "$top")"; fi
+common=""
+if c="$(git -C "$job" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; then
+    c="$(realpath -e "$c")"
+    under "$c" "$root" || common="$c"    # a linked worktree's history lives in the main checkout
+fi
+
+for p in "$job" "$root" ${common:+"$common"}; do
+    [[ "$p" != / ]] || die "refusing to expose /"
+    under "$HOME" "$p" && die "refusing to expose $p: it holds the whole home"
+    for x in "${private[@]}"; do
+        under "$p" "$x" && die "refusing: $p is local-only ($x)"
+    done
+done
+
+mkdir -p "$ST"/{uv-cache,uv-tools,npm,code-index,doc-index,data-index,serena} "$HOME/.local/share/uv/tools"
+: > "$ST/empty"    # what masked files read as (a /dev/null bind is unreadable: bwrap mounts it nodev)
+
+a=(--unshare-pid --unshare-ipc --unshare-uts --die-with-parent --new-session
+   --proc /proc --dev /dev --tmpfs /tmp --tmpfs /run --dir "$HOME"
+   --ro-bind /usr /usr --ro-bind /etc /etc)
+for l in bin sbin lib lib64; do [[ -e "/usr/$l" ]] && a+=(--symlink "usr/$l" "/$l"); done
+
+# agy's state and login are writable; its rules aren't, so a job can't widen them.
+G="$HOME/.gemini"
+a+=(--ro-bind-try "$G" "$G" --bind-try "$G/antigravity-cli" "$G/antigravity-cli" --bind-try "$G/tmp" "$G/tmp"
+    --ro-bind-try "$G/antigravity-cli/settings.json" "$G/antigravity-cli/settings.json"
+    --ro-bind-try "$HOME/.gitconfig" "$HOME/.gitconfig")
+
+# Tools, read-only. The interpreters are shared; everything written is private to jobs.
+a+=(--ro-bind-try "$HOME/.local/bin" "$HOME/.local/bin"
+    --ro-bind-try "$HOME/.local/share/pipx" "$HOME/.local/share/pipx"
+    --ro-bind-try "$HOME/.npm-global" "$HOME/.npm-global"
+    --ro-bind-try "$HOME/.local/share/uv" "$HOME/.local/share/uv"
+    --bind "$ST/uv-tools" "$HOME/.local/share/uv/tools"
+    --bind "$ST/uv-cache" "$HOME/.cache/uv"
+    --bind "$ST/npm" "$HOME/.npm"
+    --bind "$ST/code-index" "$HOME/.code-index"
+    --bind "$ST/doc-index" "$HOME/.doc-index"
+    --bind "$ST/data-index" "$HOME/.data-index"
+    --bind "$ST/serena" "$HOME/.serena")
+
+# The job's repo, then the read-only and masked paths on top of it.
+a+=(--bind "$root" "$root")
+[[ -n "$common" ]] && a+=(--bind "$common" "$common")
+for hooks in "$root/.git/hooks" ${common:+"$common/hooks"}; do
+    [[ -d "$hooks" ]] && a+=(--ro-bind "$hooks" "$hooks")    # hooks run outside, on the next commit
+done
+
+# MCP servers' code, read-only even when the job is this repo.
+for p in "$R/.venv" "$HERE" "$R/scripts/ask_local" "$R/scripts/live_preview"; do
+    a+=(--ro-bind-try "$p" "$p")
+done
+
+# Named extras, read-only. A local-only path is never mounted, whatever the list says.
+if [[ -f "$EXTRA" ]]; then
+    mapfile -t extras < <({ read_paths < "$EXTRA"; printf '%s\n' "${AGY_JAIL_EXTRA:-}" | tr ':' '\n' | read_paths; })
+    for e in "${extras[@]}"; do
+        blocked=""
+        for x in "${private[@]}"; do
+            if under "$e" "$x" || under "$x" "$e"; then blocked=1; fi
+        done
+        [[ -n "$blocked" ]] && { echo "agy-jail: skipping extra $e: it overlaps a local-only path" >&2; continue; }
+        a+=(--ro-bind-try "$e" "$e")
+    done
+fi
+
+# An agy somewhere other than ~/.local/bin (AGY_BIN).
+if [[ "$1" == /* && -e "$1" ]]; then
+    a+=(--ro-bind "$(readlink -f "$1")" "$(readlink -f "$1")")
+fi
+
+# Local-only paths inside the visible tree: an empty folder or empty file in their place.
+mask() {
+    if [[ -d "$1" ]]; then a+=(--tmpfs "$1"); elif [[ -e "$1" ]]; then a+=(--ro-bind "$ST/empty" "$1"); fi
+}
+for x in "${private[@]}"; do
+    if under "$x" "$root" || { [[ -n "$common" ]] && under "$x" "$common"; }; then mask "$x"; fi
+done
+
+# Secret-named files, anywhere in the repo. Matches the read_file denies in permissions.json.
+# Masked folders are skipped: binding a file inside one would bring its name back.
+skip=(-name .git -o -name .venv -o -name node_modules)
+for x in "${private[@]}"; do
+    if under "$x" "$root"; then skip+=(-o -path "$x"); fi
+done
+while IFS= read -r -d '' f; do
+    a+=(--ro-bind "$ST/empty" "$f")
+done < <(find "$root" -xdev \( "${skip[@]}" \) -prune -o -type f \
+    \( -name .env -o -name '.env.*' -o -name '*.env' -o -name 'id_rsa*' -o -name 'id_ed25519*' \
+       -o -iname '*creds*' -o -iname '*credentials*' -o -iname '*secret*' \) -print0)
+
+# A clean environment: tokens in the caller's stay out.
+a+=(--clearenv --setenv HOME "$HOME" --setenv PATH "${PATH}" --setenv AGY_JAIL 1)
+for v in USER LOGNAME LANG LC_ALL LC_CTYPE TERM TZ; do
+    [[ -n "${!v:-}" ]] && a+=(--setenv "$v" "${!v}")
+done
+
+a+=(--chdir "$job")
+exec bwrap "${a[@]}" -- "$@"

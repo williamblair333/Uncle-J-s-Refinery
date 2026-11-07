@@ -13,7 +13,7 @@ The policy below was written for Claude Code. Translations for you:
 - For long jobs, write findings or edits as you go, not at the end.
 - `local-health` checks local services; curl is denied.
 - **Web:** the `fetch` tool with `"raw": true`, page with `max_length`/`start_index`. No curl/wget/`read_url`.
-- **Repo id:** call `resolve_repo` / `doc_resolve_repo` first if unsure. **Never `list_repos` or `doc_list_repos`.** Known ids: `local/mtw2`, `bill/jigsaw`, `bill/Uncle-J-s-Refinery`, `bill/M2TWEOP-library` (EOP C++).
+- **Only this job's repo exists here.** `resolve_repo` / `doc_resolve_repo` first; on a miss, `index_folder` it. **Never `list_repos` or `doc_list_repos`.**
 - **Cheapest call that answers:** `search_text`/`search_symbols` then source or line range; docs via `search_sections` + `get_section`. Whole files only to edit.
 
 @[Retrieval stack routing policy]({STACK_ROOT}/CLAUDE.md)

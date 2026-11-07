@@ -35,6 +35,9 @@ _REPO = Path(__file__).resolve().parent.parent
 AGY_MAX_USER_TASKS = 8192
 # python3, find, sed, jq... run through sandbox-run when agy reaches for them (see _shim)
 SHIMS = _REPO / "features" / "antigravity" / "shims"
+# Every job starts in an empty root: deny rules don't stop `cat` (features/antigravity/agy-jail)
+JAIL = _REPO / "features" / "antigravity" / "agy-jail"
+_LOGIN_HINT = "jobs have their own agy login, separate from the keyring one: run `just agy-login`"
 
 # A failed lookup agy then worked around (a guessed path, a wrong MCP argument) does not fail
 # the job; a failed command, edit or write does, since the response may claim it worked.
@@ -157,6 +160,12 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         cmd += ["--mode", "accept-edits"]
     if model:
         cmd += ["--model", model]
+    # An explicit agy_bin is a caller's test double; AGY_BIN and the default both get the jail.
+    if os.name == "posix" and not agy_bin:
+        if not (shutil.which("bwrap") and JAIL.is_file()):  # never fall back to running agy unjailed
+            return {"ok": False, "error": "agy_jail_unavailable",
+                    "detail": f"needs bubblewrap and {JAIL}; refusing to run agy outside the jail"}
+        cmd = [str(JAIL), cwd or os.getcwd(), *cmd]
     try:
         proc = subprocess.run(capped(cmd), cwd=cwd, capture_output=True, text=True, timeout=timeout + 60,
                               env=env)
@@ -216,6 +225,8 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     if conversation_id:
         out["conversation_id"] = conversation_id
     stderr_tail = (proc.stderr or "").strip()[-600:]
+    if "authentication" in (proc.stderr or "").lower():
+        out["hint"] = _LOGIN_HINT
     timed_out = "print timeout" in (proc.stderr or "")
     if final is None:
         out["error"] = (f"agy hit its print timeout ({timeout}s); the response is partial"
