@@ -51,7 +51,6 @@
     "mcp(jcodemunch/*)",
     "mcp(jdocmunch/*)",
     "mcp(jdatamunch/*)",
-    "mcp(memweave/*)",
     "mcp(context7/*)",
     "mcp(ask_local/*)",
     "mcp(fetch/*)",
@@ -103,6 +102,8 @@
     "read_file(**/id_ed25519*)",
     "read_file(/opt/proj/anatomy-lab)",
     "read_file(/opt/proj/business)",
+    "read_file(/home/bill/.uncle-j-memory)",
+    "mcp(memweave/*)",
     "read_file(/opt/proj/gitea/runner-config.yaml)",
     "read_file(/opt/proj/gitea/state/)",
     "read_file(**/*.env)"

@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-07 — agy loses memweave; deny rules proven not to stop cat
+
+- **Biggest open item:** a canary test showed `read_file` denied and `cat` allowed on the same file. Local-only paths aren't protected from agy's shell commands. The fix is undecided; see the ROADMAP's "Keep agy out of local-only paths for real".
+- **After merging:** run `apply_permissions.py`, `sync_mcp.py` and `install_rules.py` from `features/antigravity/`, pull the main checkout, and restart sessions to get the new delegate code.
+- **Watch:** `just offload`, since agy lost memory search on every project.
+- **Tight limit:** `CLAUDE.md` plus the rules block is within a few bytes of agy's 24,000-byte cap, per the test in `tests/test_ask_agy.py`.
+
 ## 2026-11-07 — agy packets and a deny rule for business
 
 - **Landed in this PR:** `ask_agy_packet`, an empty `config/delegate-packet-allow.txt`, `read_file(/opt/proj/business)` in the deny rules, and `cwd_missing`. This redoes the `feat/agy-packet` job noted below.

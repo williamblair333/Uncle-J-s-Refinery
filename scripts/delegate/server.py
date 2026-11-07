@@ -56,6 +56,8 @@ OPENAI_KEY_ENV = os.environ.get("DELEGATE_OPENAI_KEY_ENV", "OPENAI_API_KEY")
 LOCAL_ONLY_FILE = _REPO / "config" / "delegate-local-only.txt"
 ROUTING_FILE = _REPO / "config" / "delegate-routing.json"
 PACKET_ALLOW_FILE = _REPO / "config" / "delegate-packet-allow.txt"
+PACKET_ALLOW_LOCAL_FILE = _REPO / "config" / "delegate-packet-allow.local.txt"  # gitignored; this repo is public
+PACKET_WORDS = Path("private") / "packet-refuse-words.txt"  # inside the repo the files come from
 PERMISSIONS_FILE = _REPO / "features" / "antigravity" / "permissions.json"
 # agy's read rules allow this tree, so the throwaway copies live inside it
 PACKET_ROOT = Path(os.environ.get("DELEGATE_PACKET_ROOT") or f"/tmp/claude-{os.getuid()}/agy-packets")
@@ -490,6 +492,17 @@ def _read_no_follow(path: Path) -> bytes:
         return f.read()
 
 
+def _refuse_words(base: Path) -> list[str]:
+    """Names that must not leave this repo, casefolded. Raises OSError if the list can't be read."""
+    lines = (base / PACKET_WORDS).read_text(encoding="utf-8").splitlines()
+    return [word for word in (line.split("#", 1)[0].strip().casefold() for line in lines) if word]
+
+
+def _names_hit(text: str, words: list[str]) -> bool:
+    folded = text.casefold()
+    return any(word in folded for word in words)
+
+
 def _packet_contents(base: Path, files: list[str]) -> tuple[dict[str, bytes], dict | None]:
     """The files' contents by relative path, or a refusal. One bad name refuses the whole packet.
     Each file is read as it's checked, so nothing can be swapped in between the check and the copy."""
@@ -499,7 +512,15 @@ def _packet_contents(base: Path, files: list[str]) -> tuple[dict[str, bytes], di
         secret = _secret_globs()
     except (OSError, ValueError, AttributeError, TypeError) as err:  # no list of secrets, so nothing goes
         return {}, {"ok": False, "error": "deny_rules_unreadable", "detail": str(err)[:200]}
-    allowed = local_only_roots(PACKET_ALLOW_FILE, env="")
+    try:
+        words = _refuse_words(base)
+    except (OSError, ValueError) as err:
+        words, why = [], str(err)[:200]
+    else:
+        why = "the list is empty"
+    if not words:  # nothing to check against, so nothing goes
+        return {}, {"ok": False, "error": "no_names_list", "detail": f"{PACKET_WORDS}: {why}"}
+    allowed = local_only_roots(PACKET_ALLOW_FILE, env="") + local_only_roots(PACKET_ALLOW_LOCAL_FILE, env="")
     contents, total = {}, 0
     for name in files:
         no = {"ok": False, "error": "not_allow_listed",
@@ -512,9 +533,17 @@ def _packet_contents(base: Path, files: list[str]) -> tuple[dict[str, bytes], di
                 return {}, no
             if not real.is_file():
                 return {}, {"ok": False, "error": "file_not_found", "detail": name[:200]}
-            contents[str(real.relative_to(base))] = data = _read_no_follow(real)
+            rel = str(real.relative_to(base))
+            data = _read_no_follow(real)
         except (OSError, ValueError):  # a null byte, an overlong name, an unreadable file, a swapped-in link
             return {}, no
+        try:
+            text = data.decode()
+        except UnicodeDecodeError:  # the names scan can't be trusted on bytes it can't read
+            return {}, {"ok": False, "error": "not_text", "detail": f"{rel} isn't UTF-8 text"}
+        if _names_hit(rel, words) or _names_hit(text, words):
+            return {}, {"ok": False, "error": "names_hit", "detail": f"{rel} contains a name on {PACKET_WORDS}"}
+        contents[rel] = data
         total += len(data)
     if total > PACKET_MAX_BYTES:
         return {}, {"ok": False, "error": "packet_too_large", "detail": f"{total} bytes, limit {PACKET_MAX_BYTES}"}
@@ -553,6 +582,12 @@ def run_agy_packet(prompt: str, files: list[str], base: str, task: str | None = 
     contents, refused = _packet_contents(root, files)
     if refused := refused or _refused(str(PACKET_ROOT), prompt):
         return refused
+    try:
+        hit = _names_hit(prompt, _refuse_words(root))
+    except (OSError, ValueError) as err:  # the list vanished since the files were checked
+        return {"ok": False, "error": "no_names_list", "detail": str(err)[:200]}
+    if hit:
+        return {"ok": False, "error": "names_hit", "detail": f"the prompt contains a name on {PACKET_WORDS}"}
     try:
         PACKET_ROOT.mkdir(parents=True, exist_ok=True, mode=0o700)
         if PACKET_ROOT.is_symlink() or PACKET_ROOT.stat().st_uid != os.getuid():
@@ -686,7 +721,8 @@ def build_server():
                     model: str | None = None, timeout: int | None = None) -> dict:
         """Run agy on a throwaway copy of the named files, and return `diff` and `changed` for you to
         review and apply. Live files are never touched. files are relative to base (default: the
-        session's project), and each must be under config/delegate-packet-allow.txt, or the whole call
+        session's project). Each must be under config/delegate-packet-allow.txt or its .local.txt, and
+        be UTF-8 text with nothing from the repo's private/packet-refuse-words.txt, or the whole call
         is refused. This limits which files you hand over, not what agy can reach: it keeps its other
         tools. Name files by relative path in the prompt, and keep private details out of it."""
         return run_agy_packet(prompt, files, base or os.getcwd(), task, model, timeout)

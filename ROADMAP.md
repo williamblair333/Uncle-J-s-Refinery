@@ -55,12 +55,15 @@ Completed items age out after ~4 weeks.
   binding `~/.cache/uv` writable. Done: qwen 8/8 was test pollution (#229), self-work rotation,
   timeout label (#235), CLI logging (#236), `git grep` rule (#237).
 
-- **Per-repo deny in the servers agy calls** (opened 2026-10-25). agy keeps full use of the stack
-  (Bill's call), so it can still reach anatomy-lab through jcodemunch, and its transcripts through
-  memweave. The same goes for `business` (found 2026-11-07).
-  The `read_file` deny rules don't cover allowed shell commands such as `cat` either; that hasn't been
-  tested. Closing this needs a repo filter inside those servers when agy is the caller. The
-  delegate guard only sees the prompt.
+- **Keep agy out of local-only paths for real** (opened 2026-10-25, widened 2026-11-07). The
+  `read_file` deny rules aren't a wall: on 2026-11-07, with a deny rule on a canary file in a neutral
+  folder, `read_file` was refused and `cat` returned the contents. `cat`, `grep`, `find` and `python3`
+  are allowed with no path limit, so assume agy can read `anatomy-lab`, `business` and the memory store
+  that way. Not tried on those paths, on purpose. `mcp(jcodemunch/*)` also lets agy call `index_folder`,
+  and serena's `activate_project` is allowed. agy lost memweave on 2026-11-07, which closes only that
+  route. Candidate fix: start agy and its MCP children in a mount namespace with local-only paths
+  hidden, which covers every tool at once. Test: the canary run returns nothing. The delegate guard
+  only sees the prompt.
 - **OpenAI backend for delegate** (opened 2026-10-25, when needed). Set `OPENAI_API_KEY` and
   `DELEGATE_OPENAI_MODEL` in the server's env; the code is already in.
 - **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in

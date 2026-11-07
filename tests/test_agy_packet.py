@@ -31,6 +31,9 @@ def repo(tmp_path, monkeypatch):
     allow = tmp_path / "allow.txt"
     allow.write_text(f"{root / 'tools'}   # generic code\n")
     monkeypatch.setattr(d, "PACKET_ALLOW_FILE", allow)
+    monkeypatch.setattr(d, "PACKET_ALLOW_LOCAL_FILE", tmp_path / "no-local.txt")
+    (root / "private").mkdir()
+    (root / "private" / "packet-refuse-words.txt").write_text("# people and sites\nAcme Fire  # a client\n")
     monkeypatch.setenv("DELEGATE_LOCAL_ONLY", str(root))
     monkeypatch.setattr(d, "PACKET_ROOT", tmp_path / "packets")
     monkeypatch.setattr(d, "LOG_PATH", None)
@@ -95,8 +98,49 @@ def test_a_symlink_made_by_the_agent_isnt_followed(repo):
     assert out["changed"] == ["tools/peek"] and "symlink to" in out["diff"]
 
 
-def test_binary_edit_is_reported(repo):
+def test_a_file_containing_a_listed_name_is_refused(repo):
+    (repo / "tools" / "c.py").write_text("# for the acme FIRE station\n")
+    out = run(repo, ["tools/a.py", "tools/c.py"], ask=agent(never))
+    assert out["error"] == "names_hit" and "tools/c.py" in out["detail"]
+
+
+def test_a_file_named_after_a_listed_name_is_refused(repo):
+    (repo / "tools" / "acme fire.py").write_text("x = 1\n")
+    assert run(repo, ["tools/acme fire.py"], ask=agent(never))["error"] == "names_hit"
+
+
+def test_a_prompt_containing_a_listed_name_is_refused(repo):
+    assert run(repo, ["tools/a.py"], prompt="fix this for Acme Fire", ask=agent(never))["error"] == "names_hit"
+
+
+@pytest.mark.parametrize("text", [None, "", "# only a comment\n\n"])
+def test_no_names_to_check_means_refused(repo, text):
+    words = repo / "private" / "packet-refuse-words.txt"
+    words.unlink()
+    if text is not None:
+        words.write_text(text)
+    assert run(repo, ["tools/a.py"], ask=agent(never))["error"] == "no_names_list"
+
+
+def test_a_file_the_scan_cant_read_is_refused(repo):
     (repo / "tools" / "blob").write_bytes(b"\x80\x81\x82")
+    assert run(repo, ["tools/blob"], ask=agent(never))["error"] == "not_text"
+    (repo / "tools" / "wide.txt").write_text("Acme Fire\n", encoding="utf-16")  # hides the name from a byte scan
+    assert run(repo, ["tools/wide.txt"], ask=agent(never))["error"] == "not_text"
+
+
+def test_the_local_allow_list_counts(repo, monkeypatch, tmp_path):
+    (repo / "docs").mkdir()
+    (repo / "docs" / "d.md").write_text("hi\n")
+    assert run(repo, ["docs/d.md"], ask=agent(never))["error"] == "not_allow_listed"
+    local = tmp_path / "local.txt"
+    local.write_text(f"{repo / 'docs' / 'd.md'}\n")
+    monkeypatch.setattr(d, "PACKET_ALLOW_LOCAL_FILE", local)
+    assert run(repo, ["docs/d.md"], ask=agent())["ok"]
+
+
+def test_binary_edit_is_reported(repo):
+    (repo / "tools" / "blob").write_text("text\n")
     out = run(repo, ["tools/blob"], ask=agent(lambda h: (h / "tools" / "blob").write_bytes(b"\x90\x91\x92")))
     assert out["changed"] == ["tools/blob"] and "Binary file tools/blob differs" in out["diff"]
 
@@ -108,10 +152,10 @@ def test_line_ending_edit_is_reported(repo):
 
 
 def test_copy_keeps_exact_bytes(repo):
-    (repo / "tools" / "blob").write_bytes(b"\x00\xff\r\n")
+    (repo / "tools" / "dos.txt").write_bytes(b"caf\xc3\xa9\r\n")
     got = {}
-    run(repo, ["tools/blob"], ask=agent(lambda h: got.update(data=(h / "tools" / "blob").read_bytes())))
-    assert got["data"] == b"\x00\xff\r\n"
+    run(repo, ["tools/dos.txt"], ask=agent(lambda h: got.update(data=(h / "tools" / "dos.txt").read_bytes())))
+    assert got["data"] == b"caf\xc3\xa9\r\n"
 
 
 def test_an_unreadable_file_doesnt_lose_the_result(repo):
@@ -209,8 +253,13 @@ def test_a_failed_run_still_reports_what_changed(repo):
 
 
 def test_a_whole_local_only_repo_is_never_allow_listed():
-    roots = d.local_only_roots(d.LOCAL_ONLY_FILE, env="")
-    assert not set(d.local_only_roots(d.PACKET_ALLOW_FILE, env="")) & set(roots)
+    roots = set(d.local_only_roots(d.LOCAL_ONLY_FILE, env=""))
+    for allow in (d.PACKET_ALLOW_FILE, d.PACKET_ALLOW_LOCAL_FILE):
+        assert not set(d.local_only_roots(allow, env="")) & roots
+
+
+def test_the_public_allow_list_stays_empty_of_private_paths():
+    assert d.local_only_roots(d.PACKET_ALLOW_FILE, env="") == []
 
 
 def test_every_local_only_path_is_denied_to_agy_directly():

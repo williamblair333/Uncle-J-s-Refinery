@@ -2,3 +2,7 @@
 # One directory or file per line; anything not listed is refused. Each line is that repo owner's
 # decision, and an empty file means nothing leaves. Check a folder for client names or private
 # data before listing it, and never list a whole local-only repo.
+#
+# This repo is public, so put private repos' paths in delegate-packet-allow.local.txt beside this
+# file, which git ignores. Each repo also needs private/packet-refuse-words.txt, a list of names
+# that must not leave; a file or prompt containing one is refused, as is a repo with no list.

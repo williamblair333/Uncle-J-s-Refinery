@@ -29,9 +29,10 @@ bash features/antigravity/install.sh     # permissions, MCP servers, rules, skil
 .venv/bin/python scripts/ask_agy.py --cwd /tmp/work --edits "/to-questionnaire ..."
 ```
 
-Verified live 2026-10-15: jcodemunch `resolve_repo` and memweave `memory_search` called from
-agy; the routing policy's heading and table quoted back from the rules context, both in this
-repo and in an untrusted project (`/opt/proj/voice-line`).
+Verified live 2026-10-15: jcodemunch `resolve_repo` called from agy; the routing policy's
+heading and table quoted back from the rules context, both in this repo and in an untrusted
+project (`/opt/proj/voice-line`). agy lost memweave on 2026-11-07, because its store holds
+transcripts from local-only projects. Put what agy needs from past sessions in the brief.
 
 ## Why the wrapper exists
 
