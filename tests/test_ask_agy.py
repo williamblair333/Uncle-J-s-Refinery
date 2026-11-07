@@ -27,6 +27,12 @@ ask = load("ask_agy", "scripts/ask_agy.py")
 perms = load("apply_permissions", "features/antigravity/apply_permissions.py")
 
 
+@pytest.fixture(autouse=True)
+def no_jail(monkeypatch):
+    """These test output parsing with a fake agy; tests/test_agy_jail.py tests the jail."""
+    monkeypatch.setattr(ask, "jailed", lambda cmd, cwd=None: cmd)
+
+
 def test_missing_cwd_is_not_reported_as_missing_agy(tmp_path):
     agy = tmp_path / "agy"
     agy.write_text("#!/bin/sh\nexit 0\n")

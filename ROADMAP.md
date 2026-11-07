@@ -55,19 +55,11 @@ Completed items age out after ~4 weeks.
   binding `~/.cache/uv` writable. Done: qwen 8/8 was test pollution (#229), self-work rotation,
   timeout label (#235), CLI logging (#236), `git grep` rule (#237).
 
-- **Keep agy out of local-only paths for real** (opened 2026-10-25, widened 2026-11-07). The
-  `read_file` deny rules aren't a wall: on 2026-11-07, with a deny rule on a canary file in a neutral
-  folder, `read_file` was refused and `cat` returned the contents. `cat`, `grep`, `find` and `python3`
-  are allowed with no path limit, so assume agy can read `anatomy-lab`, `business` and the memory store
-  that way. Not tried on those paths, on purpose. `mcp(jcodemunch/*)` also lets agy call `index_folder`,
-  and serena's `activate_project` is allowed. agy lost memweave on 2026-11-07, which closes only that
-  route. Candidate fix: start agy in an empty-root mount namespace, binding in only the job's folder,
-  agy's config and login, and the tools it needs. Hiding just the local-only paths isn't enough, since
-  copies exist elsewhere (memory store, `~/.claude/projects`, munch indexes, Gitea and its backups,
-  worktrees, `review/` clones). Unbuilt and untested. Check first: are MCP servers agy's children or
-  outside servers it connects to, and do its login and network path survive? Test: the canary run, plus
-  one through jcodemunch `index_folder` and one through serena `activate_project`, return nothing.
-  The delegate guard only sees the prompt.
+- **[DONE 2026-11-07] Keep agy out of local-only paths for real.** Deny rules didn't stop `cat`, so
+  every `ask_agy` job now starts in an empty root (`features/antigravity/agy-jail`; see its README
+  section). Left open: the network is shared, so localhost services are reachable, and gitignored files
+  in a job's own repo are visible unless masked. Running `agy` by hand stays outside. Restoring memweave
+  to jobs would need a store without local-only transcripts.
 - **OpenAI backend for delegate** (opened 2026-10-25, when needed). Set `OPENAI_API_KEY` and
   `DELEGATE_OPENAI_MODEL` in the server's env; the code is already in.
 - **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in

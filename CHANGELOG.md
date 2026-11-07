@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-07 — agy jobs run in an empty root
+
+- `ask_agy` starts every job through `features/antigravity/agy-jail`: only the job's repo, agy's state and the tools it needs exist. Its MCP servers are children, so they're inside too. It refuses to run without bubblewrap, in a local-only path or in your home
+- Inside the repo, local-only paths and secret-named files are masked. Indexes and package caches are private to jobs. agy's rules are read-only. The caller's environment stays out
+- New `just agy-login`: jobs use a token file, since the keyring needs the session bus, which would let a job run commands outside
+- The launcher's own checks use system tools, never the shims on the job's PATH, and an empty private list refuses to run. CI caught a shim failure emptying that list, which failed open
+- Git config and hooks are read-only in the jail, since git runs what they name outside. A safety-filter refusal now counts as a failed job. CI installs bubblewrap, so the jail tests run for real
+- `config/agy-jail-extra.txt` lists extra read-only paths. `review/` joined the local-only list. agy's rules now say only the job's repo exists
+
 ## 2026-11-07 — agy loses memweave; packets scan for names
 
 - agy can no longer call memweave: denied in `permissions.json`, skipped by `sync_mcp.py`, and dropped from its rules. Its store holds transcripts from local-only projects. Bill approved this if the Refinery session agreed, which reverses his 2026-10-25 call. Watch `just offload` for job failures.

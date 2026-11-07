@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-07 — agy jobs run in an empty root
+
+- **After merging:** run `features/antigravity/install_rules.py`, and restart running delegate servers so they load the new `ask_agy`. Each other host (pi, tc-vmh-03) needs one `just agy-login` after pulling, or its jobs fail with a hint naming that command.
+- **Verified only from the worktree:** the MCP code's read-only binds use the launcher's own repo path, so re-check them from main after merging.
+- **Rule for `agy-jail`:** it runs with `PATH=/usr/bin:/bin` and passes the caller's PATH on to the job. Don't call tools through the job's PATH: the shims there made it fail open once.
+- **Watch:** `just offload`. A job that read a neighbouring repo now gets "file does not exist". Add the path to `config/agy-jail-extra.txt` if it's legitimate.
+- **Still open:** the `fetch` server dying in jobs (`invalid character 'a'`, `state/agy-logs/20261107-083553-*.log:144`). Its handshake is clean and it worked inside the jail, so re-check after this lands.
+
 ## 2026-11-07 — agy loses memweave; deny rules proven not to stop cat
 
 - **Biggest open item:** a canary test showed `read_file` denied and `cat` allowed on the same file. Local-only paths aren't protected from agy's shell commands. The fix is undecided; see the ROADMAP's "Keep agy out of local-only paths for real".

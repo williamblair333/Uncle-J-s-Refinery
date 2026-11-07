@@ -1,0 +1,5 @@
+# Extra paths agy jobs may read, beyond their own repo (features/antigravity/agy-jail). Read-only.
+# One path per line; ~ is expanded; a path that doesn't exist on this host is harmless; a path that
+# overlaps config/delegate-local-only.txt is skipped. Add more per host with AGY_JAIL_EXTRA.
+/opt/proj/partikus/partikus_mcp                                  # the partikus MCP server's code
+~/.local/share/Steam/steamapps/common/Medieval II Total War      # mtw2 reads the game's files

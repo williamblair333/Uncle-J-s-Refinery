@@ -35,11 +35,16 @@ _REPO = Path(__file__).resolve().parent.parent
 AGY_MAX_USER_TASKS = 8192
 # python3, find, sed, jq... run through sandbox-run when agy reaches for them (see _shim)
 SHIMS = _REPO / "features" / "antigravity" / "shims"
+# Every job starts in an empty root: deny rules don't stop `cat` (features/antigravity/agy-jail)
+JAIL = _REPO / "features" / "antigravity" / "agy-jail"
+_LOGIN_HINT = "jobs have their own agy login, separate from the keyring one: run `just agy-login`"
 
 # A failed lookup agy then worked around (a guessed path, a wrong MCP argument) does not fail
 # the job; a failed command, edit or write does, since the response may claim it worked.
 READ_TOOLS = {"read_file", "view_file", "list_dir", "grep_search", "find_by_name", "call_mcp_tool"}
 _DENY_ERROR = re.compile(r"permission denied|deny rule|permission check failed", re.I)
+# agy reports status SUCCESS with this refusal as the response
+_FILTER_REFUSAL = re.compile(r"blocked by Gemini\S* filters", re.I)
 
 
 def fatal_tool_error(err: dict) -> bool:
@@ -51,6 +56,15 @@ def agy_env() -> dict:
     env = dict(os.environ)
     env["PATH"] = f"{SHIMS}{os.pathsep}{env.get('PATH', '')}"
     return env
+
+
+def jailed(cmd: list, cwd: str = None) -> list | None:
+    """cmd inside features/antigravity/agy-jail; None when the jail can't run here."""
+    if os.name != "posix":
+        return cmd
+    if not (shutil.which("bwrap") and JAIL.is_file()):
+        return None
+    return [str(JAIL), cwd or os.getcwd(), *cmd]
 
 
 def capped(cmd: list) -> list:
@@ -157,6 +171,12 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         cmd += ["--mode", "accept-edits"]
     if model:
         cmd += ["--model", model]
+    # An explicit agy_bin is a caller's test double; AGY_BIN and the default both get the jail.
+    if not agy_bin:
+        cmd = jailed(cmd, cwd)
+        if cmd is None:  # never fall back to running agy unjailed
+            return {"ok": False, "error": "agy_jail_unavailable",
+                    "detail": f"needs bubblewrap and {JAIL}; refusing to run agy outside the jail"}
     try:
         proc = subprocess.run(capped(cmd), cwd=cwd, capture_output=True, text=True, timeout=timeout + 60,
                               env=env)
@@ -216,6 +236,8 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     if conversation_id:
         out["conversation_id"] = conversation_id
     stderr_tail = (proc.stderr or "").strip()[-600:]
+    if "authentication" in (proc.stderr or "").lower():
+        out["hint"] = _LOGIN_HINT
     timed_out = "print timeout" in (proc.stderr or "")
     if final is None:
         out["error"] = (f"agy hit its print timeout ({timeout}s); the response is partial"
@@ -232,7 +254,9 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     recent = ([None] * len(denied) + steps)[len(steps):]
     out["denied"] = [describe_denied(a, s) for a, s in zip(denied, recent)]
     out["usage"] = final.get("usage")
-    if timed_out:
+    if _FILTER_REFUSAL.search(out["response"]):
+        out["error"] = "blocked by the model's safety filter; nothing was done, rephrase the prompt"
+    elif timed_out:
         out["error"] = f"agy hit its print timeout ({timeout}s); the response is partial"
         if stderr_tail:
             out["detail"] = stderr_tail
@@ -332,7 +356,9 @@ def main(argv=None) -> int:
     if not prompt:
         ap.error("a prompt or --prompt-file is required")
     started = time.time()
-    out = ask(prompt, agy_bin=args.agy_bin, cwd=args.cwd, edits=args.edits,
+    if args.agy_bin:  # through the environment, so a command-line agy still gets the jail
+        os.environ["AGY_BIN"] = args.agy_bin
+    out = ask(prompt, cwd=args.cwd, edits=args.edits,
               timeout=args.timeout, model=args.model)
     _log(args, out, time.time() - started)
     log_denials(out, os.path.basename(os.path.normpath(args.cwd)))

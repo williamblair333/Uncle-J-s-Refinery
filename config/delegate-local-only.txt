@@ -9,3 +9,4 @@
 /opt/proj/gitea/stack.env              # Gitea stack secrets
 /opt/proj/gitea/runner-config.yaml     # runner registration token
 /opt/proj/gitea/state                  # logs and locks
+/opt/proj/Uncle-J-s-Refinery/review    # gitignored: security findings and client details; hidden even from jobs in this repo

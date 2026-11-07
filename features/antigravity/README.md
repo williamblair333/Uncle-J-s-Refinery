@@ -9,6 +9,7 @@ Gemini CLI stopped serving personal Google accounts (AI Pro, Ultra, free) on 202
 curl -fsSL -o /tmp/agy-install.sh https://antigravity.google/cli/install.sh   # read it, then:
 bash /tmp/agy-install.sh && agy          # sign in with the Google AI Pro account
 bash features/antigravity/install.sh     # permissions, MCP servers, rules, skills
+just agy-login                           # one more sign-in, for jobs: see "The jail" below
 ```
 
 ## Pieces
@@ -16,6 +17,7 @@ bash features/antigravity/install.sh     # permissions, MCP servers, rules, skil
 | File | What it does |
 |---|---|
 | `install.sh` | Runs the five steps below; every step merges and keeps a `.bak`. |
+| `agy-jail` | The empty root every `ask_agy` job starts in. See "The jail" below. |
 | `sandbox-run` | The one way agy runs code: bubblewrap with no network, an empty home (only uv bound in) and the current directory the only writable path. agy's own `--sandbox` keeps the network and the user (probed 2026-10-26). Linked to `~/.local/bin`. |
 | `permissions.json` | Read-only shell allow list, MCP allow list (read-oriented servers, Serena read tools only, no DuckDB), deny list for destructive commands and index-deleting tools. |
 | `apply_permissions.py` | Merges those rules into `~/.gemini/antigravity-cli/settings.json` (keeps agy's own keys). |
@@ -33,6 +35,32 @@ Verified live 2026-10-15: jcodemunch `resolve_repo` called from agy; the routing
 heading and table quoted back from the rules context, both in this repo and in an untrusted
 project (`/opt/proj/voice-line`). agy lost memweave on 2026-11-07, because its store holds
 transcripts from local-only projects. Put what agy needs from past sessions in the brief.
+
+## The jail
+
+`ask_agy` starts every job through `agy-jail`, an empty-root bubblewrap namespace. Deny rules aren't
+a wall: on 2026-11-07 a `read_file` deny on a canary refused `read_file` while `cat` returned the
+contents. A job sees only its repo (writable), agy's own state, the tools and MCP servers' code
+(read-only) and `config/agy-jail-extra.txt`. It refuses to start in a `config/delegate-local-only.txt`
+path, or in your home, and masks those paths and secret-named files inside the repo. Its MCP servers
+are agy's children, so they're inside too. Indexes and package caches live in
+`~/.local/state/agy-jail`, so nothing a job writes there runs outside.
+
+- **Login:** agy's normal login is in the desktop keyring, over the session bus, which would let a job
+  run commands outside (`systemctl --user`). Jobs use a token file instead: run `just agy-login` once
+  per host. It lands in `~/.gemini/antigravity-cli/antigravity-oauth-token` (mode 0600).
+- **Other repos:** a job can't read a neighbouring repo. Add a read-only path to
+  `config/agy-jail-extra.txt`, or `AGY_JAIL_EXTRA` for one host. A path overlapping a local-only one is skipped.
+- **Git:** `.git/hooks` and `.git/config` are read-only, since git runs what they name outside, on your
+  next command. Tracked secret-named files stay visible: history already shows them, and masking one
+  would let `git add` stage it as empty.
+- **Not covered:** the network is shared, so localhost services are reachable (Gitea without
+  credentials, Ollama). Gitignored files in the job's repo are visible unless they match the masks.
+  Running `agy` by hand stays outside the jail. Files a job edits in its repo (scripts, a Makefile, a
+  folder already set as `core.hooksPath`) run when you run them, so review its changes as usual.
+
+Verified 2026-11-07 with real agy jobs: `cat`, `read_file`, jcodemunch `index_folder` and serena
+`activate_project` on hidden paths all returned nothing, while `fetch`, context7 and the job folder worked.
 
 ## Why the wrapper exists
 

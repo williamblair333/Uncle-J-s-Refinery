@@ -257,7 +257,9 @@ def main(argv=None) -> int:
     except (RefereeInputError, OSError) as e:
         print(json.dumps({"verdict": "error", "error": str(e)}, indent=2))
         return 1
-    out = referee(task, work, cwd=args.cwd, agy_bin=args.agy_bin, timeout=args.timeout,
+    if args.agy_bin:  # through the environment, so a command-line agy still gets the jail
+        os.environ["AGY_BIN"] = args.agy_bin
+    out = referee(task, work, cwd=args.cwd, timeout=args.timeout,
                   model=args.model, log_path=None if args.no_log else "default")
     print(json.dumps(out, indent=2))
     return exit_code(out)
