@@ -5,7 +5,10 @@
 - **What happened:** three sessions ended in a bare `Aborted`, with last writes at 06:16, 06:20 and 06:21. The two idle ones may have died a little later. A throwaway escape-test probe added `basename`, `dirname` and `readlink` to its shim folder, and `_shim`'s first line called `basename`. The terminal's cgroup peaked at exactly its 57,292 task limit, with 945 refusals and `oom_kill 0`. Claude Code aborts silently when it can't start a thread (upstream anthropics/claude-code#100545). Ollama and `llama-server`, in other cgroups, survived.
 - **Not proven directly:** the loop was never reproduced outside the tests, and the cgroup counters have no timestamps, so the link to the probe rests on the timing and the code. Kernel logs weren't read because `sudo` was denied.
 - **How to spot it again:** `pids.peak` and `pids.events` in the terminal's cgroup, `/proc/self/cgroup` gives the path. Peak and refusals persist until the terminal app restarts, so 57292 and 945 there are this incident, not a new one.
-- **Limits of the fix:** 8192 is shared by all of the user's tasks, not one per run. Delegate servers already running keep the old launcher until their session restarts; the shim fix applies at once.
+- **Limits of the fix:** 8192 is shared by all of the user's tasks, not one per run, and direct `agy` calls that skip `ask()` don't get it. Delegate servers already running keep the old launcher until their session restarts; the shim fix applies at once.
+- **Landed:** #322 and #323 merged, `a592816`. The CI-red cron is installed and its test alert was accepted by Telegram. One live agy run through the fixed shim worked. The `agy-packet` worktree was fast-forwarded to `a592816`, because the probe hardcodes that worktree's shim.
+- **Gaps:** no independent review of #323, since two agy attempts ended without findings (a print timeout, then `ulimit` not on the allow list). The probe itself hasn't been rerun. Invariants and closed loops are in `~/.uncle-j-memory/memory/audit-baselines.md`.
+- **Next:** Bill restarts the session that owns `feat/agy-packet`. Its background agent committed nothing, so that job needs redoing.
 
 ## 2026-11-07 — RAM bench result; GPU mode guard; CI-red alert
 
