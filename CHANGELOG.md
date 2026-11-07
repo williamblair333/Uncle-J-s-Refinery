@@ -4,7 +4,8 @@
 
 ## 2026-11-07 — session end
 
-- Docs only: handoff for the running local-model bench and the restart that `ask_agy`'s jail needs. The README's agy steps now include `just agy-login`. No code changed
+- Docs only: handoff for the local-model bench and the restart that `ask_agy`'s jail needs. The README's agy steps now include `just agy-login`. No code changed
+- Bench result in the handoff: RVN Qwen3.8-27B timed out on all 5 tasks with no answers, and Heretic measured the same 2 tok/s in shared GPU mode, so the machine is the next thing to check
 
 ## 2026-11-07 — agy jobs run in an empty root
 
