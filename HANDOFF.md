@@ -3,7 +3,7 @@
 ## 2026-11-07 — agy loses memweave; deny rules proven not to stop cat
 
 - **Biggest open item:** a canary test showed `read_file` denied and `cat` allowed on the same file. Local-only paths aren't protected from agy's shell commands. The fix is undecided; see the ROADMAP's "Keep agy out of local-only paths for real".
-- **After merging:** run `apply_permissions.py`, `sync_mcp.py` and `install_rules.py` from `features/antigravity/`, pull the main checkout, and restart sessions to get the new delegate code.
+- **Done after merging #326:** ran `apply_permissions.py`, `sync_mcp.py` and `install_rules.py`, and fast-forwarded the main checkout. A live agy job worked and reported no `memory_search` tool. Sessions need a restart to get the new delegate code.
 - **Watch:** `just offload`, since agy lost memory search on every project.
 - **Tight limit:** `CLAUDE.md` plus the rules block is within a few bytes of agy's 24,000-byte cap, per the test in `tests/test_ask_agy.py`.
 

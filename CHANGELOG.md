@@ -6,7 +6,7 @@
 
 - agy can no longer call memweave: denied in `permissions.json`, skipped by `sync_mcp.py`, and dropped from its rules. Its store holds transcripts from local-only projects. Bill approved this if the Refinery session agreed, which reverses his 2026-10-25 call. Watch `just offload` for job failures.
 - `ask_agy_packet`: refuses a file or prompt containing a word from the repo's `private/packet-refuse-words.txt`, refuses when that list is missing or empty, and refuses non-UTF-8 files, which the scan can't read. Private paths go in the gitignored `config/delegate-packet-allow.local.txt`.
-- Tested: a `read_file` deny rule doesn't stop `cat`. See the ROADMAP item.
+- Tested: a `read_file` deny rule doesn't stop `cat`. The ROADMAP item has the proposed empty-root fix and what to check first.
 
 ## 2026-11-07 — agy packet: named files only, diff back
 

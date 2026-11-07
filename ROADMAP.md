@@ -61,9 +61,13 @@ Completed items age out after ~4 weeks.
   are allowed with no path limit, so assume agy can read `anatomy-lab`, `business` and the memory store
   that way. Not tried on those paths, on purpose. `mcp(jcodemunch/*)` also lets agy call `index_folder`,
   and serena's `activate_project` is allowed. agy lost memweave on 2026-11-07, which closes only that
-  route. Candidate fix: start agy and its MCP children in a mount namespace with local-only paths
-  hidden, which covers every tool at once. Test: the canary run returns nothing. The delegate guard
-  only sees the prompt.
+  route. Candidate fix: start agy in an empty-root mount namespace, binding in only the job's folder,
+  agy's config and login, and the tools it needs. Hiding just the local-only paths isn't enough, since
+  copies exist elsewhere (memory store, `~/.claude/projects`, munch indexes, Gitea and its backups,
+  worktrees, `review/` clones). Unbuilt and untested. Check first: are MCP servers agy's children or
+  outside servers it connects to, and do its login and network path survive? Test: the canary run, plus
+  one through jcodemunch `index_folder` and one through serena `activate_project`, return nothing.
+  The delegate guard only sees the prompt.
 - **OpenAI backend for delegate** (opened 2026-10-25, when needed). Set `OPENAI_API_KEY` and
   `DELEGATE_OPENAI_MODEL` in the server's env; the code is already in.
 - **[DONE 2026-10-23] Ship `dcup` with Uncle J and enforce it.** It's vendored in
