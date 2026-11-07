@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-06 — business repo kept local-only
+
+### Changed
+- `config/delegate-local-only.txt`: added `/opt/proj/business` (#320). `ask_agy` and `ask_openai` refuse to work there; checked live with a `local_only` refusal.
+
+### Added
+- `HANDOFF.md`: the dma64 RAM findings from earlier today, which had sat uncommitted and blocked main from catching up.
+- Scout state from the nightly run (`scout/answers.json`, two find pages).
+
 ## 2026-11-06 — agy can stage files
 
 ### Changed

@@ -1,9 +1,25 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-06 — business repo started; agy friction note waiting
+
+- **New repo:** `/opt/proj/business` is private on Gitea with no mirror, and on the delegate local-only list (#320). Its own `HANDOFF.md` has the live state, so look there for business work. This file reaches the public GitHub mirror, so keep client and business details out of it.
+- **Decision waiting, for Bill and this session:** `review/2026-11-06-agy-friction.md` (gitignored, on dma64 only) lists 8 ways agy adds friction and 6 ranked fixes. The top one sends only named files to a temporary folder and returns a diff, so it lets chosen files leave a private repo. It proposes opt-in per repo, with anatomy-lab left out. Nothing is built. The peer session was messaged but never confirmed reading it.
+- **Gitea token gap:** the stored token can't create repos. This is the fourth repo to need a separate token, and the cause isn't fixed. The revoke step is in the business repo's handoff.
+- **Not committed on purpose:** `uv.lock` in the main checkout has munch version bumps that auto-maintain wrote (jcodemunch 1.108.419, jdatamunch 1.33.0, jdocmunch 1.151.0). This session didn't test them.
+
 ## 2026-11-06 — agy `git add`
 
 - agy can now run `git add`, and forced adds are denied. The rules look prefix-based, so `git add . -f` may not match the deny; that's unverified.
 - **Still open, found from Klarheit:** `just gpu mtw2` disables Klarheit's M11, M12 and cycle timers and stops Ollama, with no alert, and each missed hour or slot is a permanent miss. It happened 2026-11-06 from 06:39 to 08:28. `scripts/gpu-mode.sh` should seal pauses or refuse.
+
+## 2026-11-06 — dma64 nearly unusable: two models fighting over RAM; not fixed
+
+- **Likely cause, seen once:** Heretic (about 20 GB) and Ollama (about 6 GB) overflow 46 GB of RAM, and Klarheit's M11 (`klarheit-rv.timer`, hourly at :05) looks like what loads Ollama. At 13:05 EST Heretic fell from 20 GB to 10 GB in about a minute. Findings, unknowns and fixes to try: `review/2026-11-06-dma64-slowdown.md` (gitignored, on dma64 only).
+- **Halted until 21:30 EST:** `klarheit-rv`, `klarheit-dashboard`, `klarheit-cycle` and `klarheit-m12` timers were stopped at 13:21; `klarheit-timers-resume.timer` restarts them at 21:30. Expect one `klarheit-cycle` catch-up run then, which also loads Ollama. Klarheit-3b says the missed M11 and M12 slots count as permanent misses, since no pause was sealed.
+- **Not fixed:** it should recur once the timers are back and Heretic is in use. **Next:** the before-and-after bench in the review, then choose a fix.
+- **Sessions:** Tabby was killed on request and took the 7 other Claude sessions with it. hearth, autark and mafski never confirmed they'd parked; their repos were clean with nothing unpushed. Klarheit's 21:33 job only fires if a session is open in that repo.
+- **Security check:** two questions are waiting on Bill. They're in the review note, not here, because this file reaches the public mirror.
+- **Still running, untouched:** `jcodemunch-watch`, `jdocmunch-watch`, the 2-minute Telegram and stack-alert cron jobs, and `sync_memory.sh` (pid 27912), stuck since boot and a possible reason the startup check flags `uncle-j-memweave-sync`. `klarheit-m12.service` was already `failed` before the timers were stopped; cause unread.
 
 ## 2026-11-06 — ask-gate wired; forcing work on the same branch
 
