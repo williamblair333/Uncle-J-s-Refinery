@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-07 — three Claude sessions aborted; agy shim fixed
+
+- **What happened:** three sessions ended in a bare `Aborted`, with last writes at 06:16, 06:20 and 06:21. The two idle ones may have died a little later. A throwaway escape-test probe added `basename`, `dirname` and `readlink` to its shim folder, and `_shim`'s first line called `basename`. The terminal's cgroup peaked at exactly its 57,292 task limit, with 945 refusals and `oom_kill 0`. Claude Code aborts silently when it can't start a thread (upstream anthropics/claude-code#100545). Ollama and `llama-server`, in other cgroups, survived.
+- **Not proven directly:** the loop was never reproduced outside the tests, and the cgroup counters have no timestamps, so the link to the probe rests on the timing and the code. Kernel logs weren't read because `sudo` was denied.
+- **How to spot it again:** `pids.peak` and `pids.events` in the terminal's cgroup, `/proc/self/cgroup` gives the path. Peak and refusals persist until the terminal app restarts, so 57292 and 945 there are this incident, not a new one.
+- **Limits of the fix:** 8192 is shared by all of the user's tasks, not one per run. Delegate servers already running keep the old launcher until their session restarts; the shim fix applies at once.
+
 ## 2026-11-07 — RAM bench result; GPU mode guard; CI-red alert
 
 - **RAM bench, one real slot (06:05, quiet machine after a reboot, at least 26 GB available):** while M11 ran, Heretic's prompt speed fell to 0.61x and generation from about 38 to 7 t/s. Once the job ended with the model still loaded, both were back to normal (622 t/s prompt, 32 t/s generation), and stopping Ollama added nothing more (635, 33). Heretic's memory stayed at about 20 GB and no eviction happened. The 230 MB/s disk burst was Ollama loading itself, at 06:05:23-33 while Heretic was idle.

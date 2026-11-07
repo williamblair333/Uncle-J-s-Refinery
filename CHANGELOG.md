@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-07 — agy shim can no longer call itself
+
+- `features/antigravity/shims/_shim`: uses bash built-ins for its own name and directory, and system PATH for `readlink`. A shimmed `basename` used to call the shim again without end. A probe that shimmed it exhausted the terminal's 57,292 task limit, and Claude Code aborted in every session there. New depth guard `AGY_SHIM_DEPTH` refuses at 32, and validates the value first because bash arithmetic would execute a crafted one.
+- `features/antigravity/sandbox-run`: `readlink` and `dirname` run with system PATH, closing the same loop from the other side.
+- `scripts/ask_agy.py`: agy starts through `ulimit -S -u 8192`, which counts all of the user's tasks. The launcher is bash rather than `preexec_fn`, which Python documents as unsafe with threads.
+- `tests/test_agy_shim.py`: every test that starts a shim first confirms the protection is present, and runs under a task cap, so a regression fails instead of forking.
+
 ## 2026-11-07 — RAM bench, GPU mode guard, CI-red alert
 
 - `just ram-bench` (`scripts/ram_bench.py`): Heretic speed before, during and after a scheduled job loads Ollama. Also adds the `ci-alert` recipe.

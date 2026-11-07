@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # sandbox-run — run one command offline, seeing only the system, uv and the current directory.
 #
 #   sandbox-run uv run pytest -q
@@ -21,8 +21,9 @@ args=(--ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/lib /lib --symlin
       --tmpfs "$HOME" --dir /run --dir /run/sandbox-run-inside)
 # uv itself (wherever it is installed), the Pythons it manages, and its cache (uv locks it)
 if uv="$(command -v uv)"; then
-    real="$(readlink -f "$uv")"
-    tool="$(dirname "$(dirname "$real")")"        # .../venvs/uv for a pipx install
+    # System PATH for these two: the caller's PATH may shim them, and a shim comes back here.
+    real="$(PATH=/usr/bin:/bin readlink -f "$uv")"
+    tool="$(PATH=/usr/bin:/bin dirname "$(PATH=/usr/bin:/bin dirname "$real")")"        # .../venvs/uv for a pipx install
     case "$tool" in "$HOME"/*) args+=(--ro-bind "$tool" "$tool") ;; esac
     case "$real" in "$HOME"/*) args+=(--ro-bind "$real" "$real") ;; esac
     args+=(--symlink "$real" "$HOME/.local/bin/uv")

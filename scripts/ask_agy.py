@@ -23,12 +23,16 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parent.parent
+# Soft cap for agy and what it starts. The kernel counts all of this user's tasks against it, so a
+# runaway agy stops here, well below the terminal's 57k limit whose exhaustion aborts Claude Code.
+AGY_MAX_USER_TASKS = 8192
 # python3, find, sed, jq... run through sandbox-run when agy reaches for them (see _shim)
 SHIMS = _REPO / "features" / "antigravity" / "shims"
 
@@ -47,6 +51,15 @@ def agy_env() -> dict:
     env = dict(os.environ)
     env["PATH"] = f"{SHIMS}{os.pathsep}{env.get('PATH', '')}"
     return env
+
+
+def capped(cmd: list) -> list:
+    """cmd under the task cap. A shell, not preexec_fn: Python documents that as unsafe with
+    threads, this module is imported by long-lived programs, and a child stuck between fork and
+    exec would hang the caller before any timeout starts."""
+    if os.name != "posix":
+        return cmd
+    return ["/bin/bash", "-c", 'ulimit -S -u "$0" 2>/dev/null; exec "$@"', str(AGY_MAX_USER_TASKS), *cmd]
 
 
 def describe_denied(action: dict, step: dict = None) -> str:
@@ -133,14 +146,18 @@ def fix_cause(out: dict) -> list[dict]:
 def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         timeout: int = 300, model: str = None) -> dict:
     agy = agy_bin or os.environ.get("AGY_BIN") or "agy"
-    cmd = [agy, "-p", prompt, "--output-format", "stream-json", "--print-timeout", f"{timeout}s"]
+    env = agy_env()
+    resolved = shutil.which(agy, path=env["PATH"])
+    if not resolved:  # the shell would otherwise report this as exit 127
+        return {"ok": False, "error": f"agy not found: {agy}"}
+    cmd = [resolved, "-p", prompt, "--output-format", "stream-json", "--print-timeout", f"{timeout}s"]
     if edits:
         cmd += ["--mode", "accept-edits"]
     if model:
         cmd += ["--model", model]
     try:
-        proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout + 60,
-                              env=agy_env())
+        proc = subprocess.run(capped(cmd), cwd=cwd, capture_output=True, text=True, timeout=timeout + 60,
+                              env=env)
     except FileNotFoundError:
         return {"ok": False, "error": f"agy not found: {agy}"}
     except subprocess.TimeoutExpired:
