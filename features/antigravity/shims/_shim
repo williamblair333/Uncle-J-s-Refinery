@@ -1,16 +1,32 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # One shim for every command agy reaches for out of habit (python3, pytest, find, sed, jq...):
 # outside the sandbox, hand off to sandbox-run with the bare command name so sandbox-run's
 # internal PATH (.venv/bin first, then system) resolves it inside bwrap. Inside the sandbox,
 # find and exec the real binary skipping this shim directory without recursing.
+#
+# Bash built-ins only until a command is resolved: this file may BE basename, dirname or readlink,
+# and calling one by name would call this shim again, without end. That took every Claude session
+# in a terminal down on 2026-11-07 when a probe shimmed them.
 set -euo pipefail
-name="$(basename "$0")"
+name="${0##*/}"
+dir="${0%/*}"
+[[ "$dir" != "$0" ]] || dir=.
+
+# Backstop for any other loop. Validated first: bash arithmetic would execute a crafted value,
+# here, outside the sandbox.
+depth="${AGY_SHIM_DEPTH:-0}"
+[[ "$depth" =~ ^[0-9]{1,4}$ ]] || depth=0
+if (( 10#$depth >= 32 )); then
+    echo "shim: '$name' nested $depth shims deep, refusing (a command is calling itself)" >&2
+    exit 126
+fi
+export AGY_SHIM_DEPTH=$(( 10#$depth + 1 ))
 
 if [[ ! -d "/run/sandbox-run-inside" ]]; then
     exec sandbox-run "$name" "$@"
 fi
 
-here="$(cd "$(dirname "$0")" && pwd -P)"
+here="$(cd "$dir" && pwd -P)"
 real=""
 IFS=: read -ra dirs <<< "${PATH:-}"
 for d in "${dirs[@]}"; do
@@ -18,5 +34,5 @@ for d in "${dirs[@]}"; do
     if [[ -x "$d/$name" && ! -d "$d/$name" ]]; then real="$d/$name"; break; fi
 done
 [[ -n "$real" ]] || { echo "shim: no real '$name' on PATH" >&2; exit 127; }
-real="$(readlink -f "$real")"
+real="$(PATH=/usr/bin:/bin readlink -f "$real")"
 exec "$real" "$@"
