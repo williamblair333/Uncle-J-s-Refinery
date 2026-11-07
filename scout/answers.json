@@ -39,8 +39,8 @@
       "watch_checked": "2026-10-21T09:51:08Z"
     },
     "1270868404": {
-      "answer": "yes",
-      "answered_at": "2026-11-02T14:47:58Z",
+      "answer": "maybe",
+      "answered_at": "2026-11-05T09:15:01Z",
       "eval": {
         "risks": [
           "Critical rules suppress the whole catalog, so one false positive on a first-party description (for example ask_local mentioning credential paths) could silently take a server's tools away",
@@ -53,9 +53,10 @@
         "verdict": "trial"
       },
       "evaluated": true,
+      "expired": true,
       "full_name": "mdombrov-33/vex-mcp",
       "reason": null,
-      "rung": 1
+      "rung": 2
     },
     "1350666319": {
       "answer": "maybe",
@@ -64,7 +65,7 @@
       "full_name": "lovesong1026/EvalCompass",
       "reason": null,
       "rung": 1,
-      "watch_checked": "2026-10-29T11:22:31Z"
+      "watch_checked": "2026-11-06T09:15:01Z"
     },
     "663368311": {
       "answer": "maybe",
