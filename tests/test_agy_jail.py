@@ -263,3 +263,134 @@ def test_ask_names_the_login_command_when_jobs_are_logged_out(box, monkeypatch):
     out = ask_agy.ask("hi", cwd=str(box["job"]))
     assert not out["ok"]
     assert "just agy-login" in out.get("hint", "")
+
+
+# Findings from a code review of the launcher, 2026-11-07.
+
+def test_files_inside_a_secret_named_folder_are_hidden(box):
+    folder = box["job"] / "secrets"
+    folder.mkdir()
+    (folder / "token.txt").write_text("TOPSECRET")
+    r = run(box, "ls -A secrets; cat secrets/token.txt")
+    assert "TOPSECRET" not in r.stdout
+    assert "token.txt" not in r.stdout
+    assert (folder / "token.txt").read_text() == "TOPSECRET"
+
+
+def test_a_secret_named_symlink_reads_empty(box):
+    (box["job"] / "data.txt").write_text("TOPSECRET")
+    (box["job"] / "aws_creds.json").symlink_to("data.txt")
+    r = run(box, "cat aws_creds.json")
+    assert "TOPSECRET" not in r.stdout
+
+
+def test_a_secret_named_symlink_pointing_outside_does_not_stop_the_job(box):
+    (box["job"] / "aws_creds.json").symlink_to(box["secret"] / "canary.txt")
+    r = run(box, "cat aws_creds.json; echo ran")
+    assert "ran" in r.stdout, r.stderr
+    assert "TOPSECRET" not in r.stdout
+
+
+def test_an_extra_of_root_never_exposes_local_only_paths(box):
+    r = run(box, f"cat {box['secret']}/canary.txt; ls /usr >/dev/null && echo ran",
+            AGY_JAIL_EXTRA="/", DELEGATE_LOCAL_ONLY=str(box["secret"]))
+    assert "TOPSECRET" not in r.stdout
+    assert "skipping extra" in r.stderr
+
+
+def test_a_missing_hooks_folder_cant_be_created(box):
+    git(box["job"], "init", "-q")
+    hooks = box["job"] / ".git" / "hooks"
+    shutil.rmtree(hooks, ignore_errors=True)
+    r = run(box, "mkdir -p .git/hooks; echo evil > .git/hooks/pre-commit; echo tried")
+    assert "tried" in r.stdout, r.stderr
+    assert not (hooks / "pre-commit").exists()
+
+
+def test_git_config_is_read_only(box):
+    git(box["job"], "init", "-q")
+    config = box["job"] / ".git" / "config"
+    before = config.read_text()
+    r = run(box, "git config core.hooksPath evil; echo tried")
+    assert "tried" in r.stdout, r.stderr
+    assert config.read_text() == before
+
+
+def test_a_linked_worktrees_git_config_is_read_only(box):
+    main = box["job"]
+    git(main, "init", "-q")
+    git(main, "add", ".")
+    git(main, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first")
+    wt = box["tmp"] / "wt"
+    git(main, "worktree", "add", "-q", str(wt), "-b", "side")
+    config = main / ".git" / "config"
+    before = config.read_text()
+    r = run(box, "git config core.hooksPath evil; git status -s >/dev/null && echo git-ok", job=wt)
+    assert "git-ok" in r.stdout, r.stderr
+    assert config.read_text() == before
+
+
+def test_a_worktree_under_a_path_with_spaces_keeps_its_walls(box):
+    spaced = box["tmp"] / "dir with space"
+    spaced.mkdir()
+    git(spaced, "init", "-q")
+    (spaced / "a.txt").write_text("x")
+    git(spaced, "add", ".")
+    git(spaced, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first")
+    wt = box["tmp"] / "wt"
+    git(spaced, "worktree", "add", "-q", str(wt), "-b", "side")
+    hooks = spaced / ".git" / "hooks"
+    r = run(box, f'echo evil > "{hooks}/pre-commit"; git status -s >/dev/null && echo git-ok', job=wt)
+    assert "git-ok" in r.stdout, r.stderr
+    assert not (hooks / "pre-commit").exists()
+    refused = run(box, "echo RAN", job=wt, DELEGATE_LOCAL_ONLY=str(spaced))
+    assert refused.returncode == 126
+
+
+def test_glob_characters_in_a_local_only_path_keep_it_masked(box):
+    private = box["job"] / "[private]"
+    private.mkdir()
+    (private / "my-secret.txt").write_text("TOPSECRET")
+    r = run(box, 'ls -A "[private]"', DELEGATE_LOCAL_ONLY=str(private))
+    assert r.returncode == 0, r.stderr
+    assert "my-secret" not in r.stdout
+
+
+def test_a_tracked_secret_named_file_stays_readable_so_git_add_cant_empty_it(box):
+    git(box["job"], "init", "-q")
+    (box["job"] / "secret_scan.py").write_text("code\n")
+    git(box["job"], "add", ".")
+    git(box["job"], "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first")
+    r = run(box, "cat secret_scan.py; git status --porcelain secret_scan.py; echo done")
+    assert "code" in r.stdout, r.stderr
+    assert " M secret_scan.py" not in r.stdout
+
+
+def test_an_untracked_file_in_a_tracked_secret_named_folder_is_hidden(box):
+    folder = box["job"] / "secrets"
+    folder.mkdir()
+    (folder / "scanner.py").write_text("code\n")
+    git(box["job"], "init", "-q")
+    git(box["job"], "add", ".")
+    git(box["job"], "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "first")
+    (folder / "token.txt").write_text("TOPSECRET")
+    r = run(box, "cat secrets/scanner.py; cat secrets/token.txt")
+    assert "code" in r.stdout
+    assert "TOPSECRET" not in r.stdout
+
+
+def test_the_command_line_agy_bin_still_gets_the_jail(box):
+    fake = fake_agy(box["tmp"])
+    env = {"HOME": str(box["home"]), "PATH": os.environ["PATH"], "DELEGATE_LOCAL_ONLY": ""}
+    r = subprocess.run([sys.executable, str(REPO / "scripts" / "ask_agy.py"), "--agy-bin", str(fake),
+                        "--cwd", str(box["job"]), "hi"], capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    assert (box["job"] / "jail-seen").read_text().strip() == "1"
+
+
+def test_a_safety_filter_refusal_is_a_failure(box):
+    body = ('{"event":"result","result":{"status":"SUCCESS","response":'
+            '"This request was blocked by Gemini filters. Please try rephrasing your prompt."}}')
+    out = ask_agy.ask("hi", agy_bin=str(fake_agy(box["tmp"], body)), cwd=str(box["job"]))
+    assert not out["ok"]
+    assert "filter" in out["error"]

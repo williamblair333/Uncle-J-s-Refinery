@@ -51,9 +51,13 @@ are agy's children, so they're inside too. Indexes and package caches live in
   per host. It lands in `~/.gemini/antigravity-cli/antigravity-oauth-token` (mode 0600).
 - **Other repos:** a job can't read a neighbouring repo. Add a read-only path to
   `config/agy-jail-extra.txt`, or `AGY_JAIL_EXTRA` for one host. A path overlapping a local-only one is skipped.
+- **Git:** `.git/hooks` and `.git/config` are read-only, since git runs what they name outside, on your
+  next command. Tracked secret-named files stay visible: history already shows them, and masking one
+  would let `git add` stage it as empty.
 - **Not covered:** the network is shared, so localhost services are reachable (Gitea without
   credentials, Ollama). Gitignored files in the job's repo are visible unless they match the masks.
-  Running `agy` by hand stays outside the jail.
+  Running `agy` by hand stays outside the jail. Files a job edits in its repo (scripts, a Makefile, a
+  folder already set as `core.hooksPath`) run when you run them, so review its changes as usual.
 
 Verified 2026-11-07 with real agy jobs: `cat`, `read_file`, jcodemunch `index_folder` and serena
 `activate_project` on hidden paths all returned nothing, while `fetch`, context7 and the job folder worked.

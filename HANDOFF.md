@@ -3,6 +3,7 @@
 ## 2026-11-07 — agy jobs run in an empty root
 
 - **After merging:** run `features/antigravity/install_rules.py`, and restart running delegate servers so they load the new `ask_agy`. Each other host (pi, tc-vmh-03) needs one `just agy-login` after pulling, or its jobs fail with a hint naming that command.
+- **Verified only from the worktree:** the MCP code's read-only binds use the launcher's own repo path, so re-check them from main after merging.
 - **Watch:** `just offload`. A job that read a neighbouring repo now gets "file does not exist". Add the path to `config/agy-jail-extra.txt` if it's legitimate.
 - **Still open:** the `fetch` server dying in jobs (`invalid character 'a'`, `state/agy-logs/20261107-083553-*.log:144`). Its handshake is clean and it worked inside the jail, so re-check after this lands.
 

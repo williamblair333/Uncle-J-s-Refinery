@@ -53,7 +53,7 @@ read_paths() {
 
 mapfile -t private < <({ read_paths < "$LOCAL_ONLY"; printf '%s\n' "${DELEGATE_LOCAL_ONLY:-}" | tr ':' '\n' | read_paths; })
 
-under() { [[ "$1" == "$2" || "$1" == "$2"/* ]]; }   # is $1 at or below $2?
+under() { [[ "$2" == / || "$1" == "$2" || "$1" == "$2"/* ]]; }   # is $1 at or below $2?
 
 # The whole repo is visible, not just the folder asked for: git and relative paths need it.
 root="$job"
@@ -102,8 +102,15 @@ a+=(--ro-bind-try "$HOME/.local/bin" "$HOME/.local/bin"
 # The job's repo, then the read-only and masked paths on top of it.
 a+=(--bind "$root" "$root")
 [[ -n "$common" ]] && a+=(--bind "$common" "$common")
-for hooks in "$root/.git/hooks" ${common:+"$common/hooks"}; do
-    [[ -d "$hooks" ]] && a+=(--ro-bind "$hooks" "$hooks")    # hooks run outside, on the next commit
+# Git runs hooks and config-named programs (core.hooksPath, core.fsmonitor) outside, on your next
+# git command. So hooks and config are read-only, and a missing hooks folder is made first.
+for gd in "$root/.git" ${common:+"$common"}; do
+    [[ -d "$gd" ]] || continue    # a linked worktree's .git is a file
+    mkdir -p "$gd/hooks"
+    a+=(--ro-bind "$gd/hooks" "$gd/hooks")
+    for f in "$gd/config" "$gd/config.worktree" "$gd"/worktrees/*/config.worktree; do
+        [[ -f "$f" ]] && a+=(--ro-bind "$f" "$f")
+    done
 done
 
 # MCP servers' code, read-only even when the job is this repo.
@@ -137,17 +144,35 @@ for x in "${private[@]}"; do
     if under "$x" "$root" || { [[ -n "$common" ]] && under "$x" "$common"; }; then mask "$x"; fi
 done
 
-# Secret-named files, anywhere in the repo. Matches the read_file denies in permissions.json.
-# Masked folders are skipped: binding a file inside one would bring its name back.
+# Secret-named files and folders, anywhere in the repo. Matches the read_file denies in
+# permissions.json. Masked folders are skipped: binding a file inside one would bring its name back.
+# Tracked files stay: git history already shows them, and a job's `git add` would stage a masked
+# one as empty. A tracked folder keeps its tracked files and loses the rest.
+tracked() { git -C "$root" ls-files --error-unmatch -- "$1" >/dev/null 2>&1; }
 skip=(-name .git -o -name .venv -o -name node_modules)
 for x in "${private[@]}"; do
-    if under "$x" "$root"; then skip+=(-o -path "$x"); fi
+    if under "$x" "$root"; then
+        skip+=(-o -path "$(printf '%s' "$x" | sed 's/[][*?\\]/\\&/g')")    # -path takes a pattern
+    fi
 done
 while IFS= read -r -d '' f; do
-    a+=(--ro-bind "$ST/empty" "$f")
-done < <(find "$root" -xdev \( "${skip[@]}" \) -prune -o -type f \
+    if [[ -L "$f" ]]; then    # masking a link masks what it names; one leading outside is hidden already
+        t="$(realpath -m -- "$f")"
+        under "$t" "$root" || continue
+        f="$t"
+    fi
+    [[ -e "$f" ]] || continue
+    if tracked "$f"; then
+        [[ -d "$f" ]] || continue
+        while IFS= read -r -d '' u; do
+            [[ -f "$root/$u" ]] && a+=(--ro-bind "$ST/empty" "$root/$u")
+        done < <(git -C "$root" ls-files -z --others -- "$f")
+        continue
+    fi
+    mask "$f"
+done < <(find "$root" -xdev \( "${skip[@]}" \) -prune -o \( -type f -o -type d -o -type l \) \
     \( -name .env -o -name '.env.*' -o -name '*.env' -o -name 'id_rsa*' -o -name 'id_ed25519*' \
-       -o -iname '*creds*' -o -iname '*credentials*' -o -iname '*secret*' \) -print0)
+       -o -iname '*creds*' -o -iname '*credentials*' -o -iname '*secret*' \) -prune -print0)
 
 # A clean environment: tokens in the caller's stay out.
 a+=(--clearenv --setenv HOME "$HOME" --setenv PATH "${PATH}" --setenv AGY_JAIL 1)

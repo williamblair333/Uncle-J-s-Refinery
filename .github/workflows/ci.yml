@@ -74,6 +74,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
+      - name: bubblewrap (tests/test_agy_jail.py runs the jail for real)
+        run: |
+          sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+
       - name: git identity (tests build real repos and commit)
         run: |
           git config --global user.email ci@example.invalid
