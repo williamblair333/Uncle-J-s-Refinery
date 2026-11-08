@@ -5,6 +5,7 @@
 ## 2026-11-08 — Ollama stuck on CPU, fixed; RVN dropped
 
 - Ollama had stayed on CPU since a bench crowded the GPU, which slowed Heretic to 2 tok/s. A restart put it back on the GPU (77.8 tok/s, Heretic 14.0). RVN Qwen3.8-27B measured 3.8 tok/s on a quiet machine and is dropped. Docs only
+- Started downloading uncensored DeepSeek V4.1 IQ2_XXS and its Engram table, to test it as Heretic's overnight checker. Docs only here
 
 ## 2026-11-07 — session end
 
