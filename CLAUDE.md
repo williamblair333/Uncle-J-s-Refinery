@@ -115,6 +115,7 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   (`repo_visibility`). A top-level `visibility` block with `hidden_count` means other indexes
   exist; a miss there is not grounds to re-index. Pass the exact repo id (it still loads), or
   set `"repo_visibility": "all"` / `JCODEMUNCH_REPO_VISIBILITY=all` to list all of them.
+- Project `.jcodemunch.jsonc` can only tighten settings.
 - Unfamiliar repo: `plan_turn`, then `get_repo_map` / `suggest_queries`. Familiar repo:
   `digest`. Analysis session: `get_repo_health` first.
 - Never `Read` a source file to "see what's in it" — `get_file_outline`, `search_symbols`,
