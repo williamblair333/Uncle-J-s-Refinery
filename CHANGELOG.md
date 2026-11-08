@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-08 — Ollama stuck on CPU, fixed; RVN dropped
+
+- Ollama had stayed on CPU since a bench crowded the GPU, which slowed Heretic to 2 tok/s. A restart put it back on the GPU (77.8 tok/s, Heretic 14.0). RVN Qwen3.8-27B measured 3.8 tok/s on a quiet machine and is dropped. Docs only
+
 ## 2026-11-07 — session end
 
 - Docs only: handoff for the local-model bench and the restart that `ask_agy`'s jail needs. The README's agy steps now include `just agy-login`. No code changed
