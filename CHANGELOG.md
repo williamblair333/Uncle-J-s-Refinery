@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-09 — strategy session: Autark's handover goal
+
+- Docs only. Recorded the handover direction for Autark in `HANDOFF.md`: Ansible for the host setup after an off-site copy and a successor drill, no Vagrant. The autark session owns the work and is waiting for Bill's confirmation
+- Added the scout find `scout/finds/gashel01__sandboxmcp.md`
+
 ## 2026-11-08 — Ollama stuck on CPU, fixed; RVN dropped
 
 - Ollama had stayed on CPU since a bench crowded the GPU, which slowed Heretic to 2 tok/s. A restart put it back on the GPU (77.8 tok/s, Heretic 14.0). RVN Qwen3.8-27B measured 3.8 tok/s on a quiet machine and is dropped. Docs only
