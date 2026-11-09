@@ -13,6 +13,7 @@
 - **Docs:** README updated for `just agy-login`; ROADMAP's jail item closed in #328.
 - **Guards:** the surface-write guard blocked a Bash heredoc writing a scratchpad `.sh`, and the credential guard blocks any command text naming the fixture filename, even in a test. Neither stopped the work. Check whether the first is too broad at the next weekly `state/hook-blocks.log` review (249 entries today across all sessions, not reviewed).
 - **jcodemunch-mcp breaking change**: A project's `.jcodemunch.jsonc` can now only tighten settings (v1.108.424, #1353), so anything that relied on one to set `trusted_folders` or loosen summarizer, `disabled_tools` or `response_max_bytes` values must move that setting to the global `config.jsonc`.
+- **jcodemunch-mcp breaking change**: The once-per-session steering text moved from `_meta.hint` to `_meta.steer_hint` and its search answer now stays in the compact encoding instead of JSON (#1359, v1.108.426), so anything reading the steering text must use the new key and accept MUNCH (no Refinery code reads the old key).
 
 ## 2026-11-07 — agy jobs run in an empty root
 
