@@ -1,5 +1,17 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-08 — session end: DeepSeek downloads done, engine build next
+
+- **Most important next: build `strata-dsv41` for the RTX 3060** (`/opt/docker/strata/src/packaging/build_dsv41_cuda.sh`, ARCH=86; the local Strata 0.2.9 image has no engine). Then: symlink the Engram beside the shards, let Strata setup fetch the 8 GB DSpark drafter, stop Heretic, `strata launch --model-path /home/bill/models/dsv41/atomicchat-iq2_xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00004.gguf`, and smoke test (the answer must name Paris). Then the blind test: the 5 bench tasks as plain questions, plus DeepSeek grading Heretic's existing answers. Record tok/s and prefill. Afterwards restart Ollama and check `ollama ps` says GPU.
+- **Downloads done, exact sizes checked against Hugging Face:** the shards (138 GB, 4 files) at 12:52 in `/home/bill/models/dsv41/atomicchat-iq2_xxs`, and the Engram (110,595,290,816 bytes) at 14:33 in `/opt/models/gguf/dsv41-engram`. The Engram is on the SATA disk, so its speed there is untested; move it to the NVMe if it's too slow (the NVMe has 128 GB free, so it fits, though tightly).
+- **Outage 10:35 to about 11:30, cause unknown:** autark changed nothing, and its checks also failed. It broke both downloads in ways the scripts missed: hf returned the partial folder with exit 0 (a false "done" at 100 of 138 GB, sent to Bill on Telegram), and wget quit on a certificate error when the router's DNS answered 10.0.0.1. Fixed: `download.sh` now checks the exact shard sizes, and the new `engram.sh` reruns `wget -c` until the exact size. Killing wget proved the retry works; the cable pull came after both had finished, so it tested nothing.
+- **New: `watch.sh` in `/opt/docker/strata/bench/dsv41/`** sends Telegram through `lib/notify.sh` when each download ends. `notify_send_text` never reports a failed send (it ends in `|| true`), so the watcher sends a test message at start. That's worth fixing in `lib/notify-telegram.sh` sometime.
+- **Autark's internet-down drill ran and is over.** The DSpark drafter is clear to fetch.
+- **Bill's decisions still open:** whether "Klarheit is low priority" covers mtw2 GPU mode losing Klarheit's slots for good; the backup question (`review/2026-11-07-backup-gap.md`); restart hearth. Bill also got Home Assistant notifications on 11-08 that didn't come from this session, so they're hearth's to look into.
+- **Also next:** a healthcheck warning when Ollama runs on CPU with VRAM free; filter `__pycache__` from `ask_agy_packet` diffs.
+- **Left uncommitted on purpose:** the `uv.lock` bump (jcodemunch 1.108.419 to 1.108.424) needs its own review. The untracked scout find stays for the scout sweep.
+- **README checked; no update needed.** ROADMAP checked; no update needed.
+
 ## 2026-11-07 — session end: jail merged, bench gave no answers
 
 - **Most important:** Claude sessions started before #328 merged (09:38) still run the old unjailed `ask_agy` through their delegate server, until restarted. Three were running at 09:39.

@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-08 — DeepSeek V4.1 downloads finished
+
+- Both downloads finished at their exact remote sizes: the shards (138 GB) and the Engram (110.6 GB). An outage from 10:35 broke both: hf reported a false "done", and wget quit on a certificate error. The scripts in `/opt/docker/strata/bench/dsv41/` now check exact sizes and retry (`download.sh`, new `engram.sh`), and the new `watch.sh` sends Telegram when each download ends. These scripts are outside the repo; docs only here
+
 ## 2026-11-08 — Ollama stuck on CPU, fixed; RVN dropped
 
 - Ollama had stayed on CPU since a bench crowded the GPU, which slowed Heretic to 2 tok/s. A restart put it back on the GPU (77.8 tok/s, Heretic 14.0). RVN Qwen3.8-27B measured 3.8 tok/s on a quiet machine and is dropped. Docs only
