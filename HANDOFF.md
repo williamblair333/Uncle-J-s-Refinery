@@ -1,5 +1,15 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-09 — strategy session: Autark's handover goal
+
+- **Most important:** Bill said someone else being able to run Autark is "the whole point", and that someone "could be anyone, another MSP etc". He'll revisit this later today and wants the focus on Autark for now.
+- **Where it stands:** the direction went to the autark session on 11-08. That session owns the repo and is holding everything until Bill confirms there, so nothing is built and no host changed. The full comparison and the private findings are in the gitignored `review/alternatives/2026-11-08-ansible-vagrant-autark.md`.
+- **Proposed order:** an encrypted off-site copy; a successor drill on a blank laptop using only the paper sheet and that copy; then Ansible for the host setup only, scoped by what the drill finds. `just` stays the front door. No Vagrant. A laptop is x86, so a fresh SD card in the real Pi is the last step.
+- **Bill's decisions still open:** confirm the direction in the autark session, and whether the off-site copy uses a dedicated cloud account. Also the wider question in `review/2026-11-07-backup-gap.md`, now partly answered for Autark only.
+- **Parked by Bill:** running "could a stranger pick this up?" on the other projects, and whether a handover pack is something the business could offer.
+- **Local `main` is one commit ahead of origin:** `b03fd9f`, a jcodemunch post-upgrade sync from about 2 hours before this entry, unpushed. `uv.lock` is also modified and uncommitted. Neither came from this session, so both were left alone.
+- **Hook-blocks log:** glanced at, not reviewed: 5,372 lines since 10-22. The last 400 are mostly edit-surface passes. Do the weekly review next.
+
 ## 2026-11-08 — session end: DeepSeek downloads done, engine build next
 
 - **Most important next: build `strata-dsv41` for the RTX 3060** (`/opt/docker/strata/src/packaging/build_dsv41_cuda.sh`, ARCH=86; the local Strata 0.2.9 image has no engine). Then: symlink the Engram beside the shards, let Strata setup fetch the 8 GB DSpark drafter, stop Heretic, `strata launch --model-path /home/bill/models/dsv41/atomicchat-iq2_xxs/DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00004.gguf`, and smoke test (the answer must name Paris). Then the blind test: the 5 bench tasks as plain questions, plus DeepSeek grading Heretic's existing answers. Record tok/s and prefill. Afterwards restart Ollama and check `ollama ps` says GPU.

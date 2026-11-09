@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-09 — strategy session: Autark's handover goal
+
+- Docs only. Recorded the handover direction for Autark in `HANDOFF.md`: Ansible for the host setup after an off-site copy and a successor drill, no Vagrant. The autark session owns the work and is waiting for Bill's confirmation
+- Added the scout find `scout/finds/gashel01__sandboxmcp.md`
+
 ## 2026-11-08 — DeepSeek V4.1 downloads finished
 
 - Both downloads finished at their exact remote sizes: the shards (138 GB) and the Engram (110.6 GB). An outage from 10:35 broke both: hf reported a false "done", and wget quit on a certificate error. The scripts in `/opt/docker/strata/bench/dsv41/` now check exact sizes and retry (`download.sh`, new `engram.sh`), and the new `watch.sh` sends Telegram when each download ends. These scripts are outside the repo; docs only here
