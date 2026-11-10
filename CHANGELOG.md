@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-11-10 — tool recipes: one standard, one catalog, notes between projects
+
+- New `docs/TOOLS-STANDARD.md`: what a ready-made tool is, written down from Bill's `debian-howto-guides` scripts. It's one script plus one `just` recipe in the `tools` group, with a header, `--help`, `--version`, `--check`, `--dry-run`, `--json`, a test, and no hard-coded home folders. Start from `features/tool-recipes/template.sh`
+- New `just tools`. `list [word]` searches every project's documented recipes (`*` marks tools). `lint [repo]` checks a repo's tools against the standard (`--all` reports the rest as backlog). `sync` writes `~/.config/just/justfile`, so `just -g <project> <recipe>` runs any project's recipe from any folder. It skips projects whose justfile fails to parse or runs commands when loaded, checks the result with `just --summary`, and never overwrites a file it didn't write
+- New `just inbox`: a project changes only its own things, and asks another project by leaving a note in its `inbox/`. The folder ignores itself in git. Names that would climb out of the inbox are refused
+- New `just tool-mine`: lists command sequences done by hand in 3+ sessions over 30 days that don't already call a recipe or script. Its first strong candidate is opening and merging Gitea PRs with `curl` and the API token (17 sessions, 5 projects)
+- New SessionStart hook (`features/tool-recipes/install.sh`, called from `install.sh`). It shows the project's unread notes, and re-syncs the global justfile in the background when a project's justfile is newer
+- Fixed: `preview` and `forcing-list` used `justfile_directory()`, which points at the global justfile under `just -g`. They now use `source_directory()`, and the lint flags the old form
+- CI installs `just` 1.40.0, so the tests that run real `just` aren't skipped there
+
 ## 2026-11-09 — strategy session: Autark's handover goal
 
 - Docs only. Recorded the handover direction for Autark in `HANDOFF.md`: Ansible for the host setup after an off-site copy and a successor drill, no Vagrant. The autark session owns the work and is waiting for Bill's confirmation
