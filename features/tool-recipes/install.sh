@@ -27,12 +27,14 @@ case "${1:-}" in
     *)           echo "install.sh: unknown option $1 (see --help)" >&2; exit 2 ;;
 esac
 
-chmod +x "$HERE/hooks/session-start.sh" "$REPO_ROOT/scripts/tools.py" \
-    "$REPO_ROOT/scripts/inbox.py" "$REPO_ROOT/scripts/tool_miner.py" 2>/dev/null || true
+if [[ "$ACTION" == "install" ]]; then
+    chmod +x "$HERE/hooks/session-start.sh" "$REPO_ROOT/scripts/tools.py" \
+        "$REPO_ROOT/scripts/inbox.py" "$REPO_ROOT/scripts/tool_miner.py" 2>/dev/null || true
+fi
 
 rc=0
 python3 - "$SETTINGS" "$ACTION" "$HERE/hooks/session-start.sh" "$MARKER" <<'PYEOF' || rc=$?
-import json, os, shutil, sys, tempfile
+import copy, json, os, shutil, sys, tempfile
 
 settings_path, action, hook, marker = sys.argv[1:5]
 try:
@@ -44,32 +46,51 @@ except json.JSONDecodeError as exc:
     print(f"    !!  {settings_path} is not valid JSON ({exc}); refusing to touch it")
     raise SystemExit(1)
 
+command = f"[ -x {hook} ] || exit 0; {hook}  # {marker}"
+before = copy.deepcopy(config)
 hooks = config.setdefault("hooks", {})
 entries = hooks.get("SessionStart", [])
-ours = [e for e in entries if any(marker in h.get("command", "") for h in e.get("hooks", []))]
-command = f"[ -x {hook} ] || exit 0; {hook}  # {marker}"
+
+# Match our hook inside each entry, not whole entries: an entry can hold other
+# hooks too, and those must survive install and uninstall.
+ours, kept = [], []
+for entry in entries:
+    inner = entry.get("hooks", [])
+    mine = [h for h in inner if marker in str(h.get("command", ""))]
+    ours += mine
+    rest = [h for h in inner if h not in mine]
+    if rest or not mine:
+        kept.append({**entry, "hooks": rest} if mine else entry)
+current = len(ours) == 1 and ours[0].get("command") == command
 
 if action == "check":
-    ok = len(ours) == 1 and ours[0]["hooks"][0]["command"] == command
-    print(f"    {'OK' if ok else '!!'}  SessionStart hook {'registered' if ok else 'missing or outdated'}")
-    raise SystemExit(0 if ok else 1)
+    print(f"    {'OK' if current else '!!'}  SessionStart hook {'registered' if current else 'missing or outdated'}")
+    raise SystemExit(0 if current else 1)
 
-kept = [e for e in entries if e not in ours]
-if action in ("install", "dry-run"):
-    kept.append({"hooks": [{"type": "command", "command": command}]})
+if action in ("install", "dry-run") and current:
+    print("    OK  SessionStart hook already registered")
+    raise SystemExit(0)
+if action == "uninstall" and not ours:
+    print("    OK  SessionStart hook not registered; nothing to remove")
+    raise SystemExit(0)
 if action == "dry-run":
     print(f"    would {'update' if ours else 'add'} the SessionStart hook in {settings_path}")
     raise SystemExit(0)
+
+if action == "install":
+    kept.append({"hooks": [{"type": "command", "command": command}]})
 if kept:
     hooks["SessionStart"] = kept
 else:
     hooks.pop("SessionStart", None)
 if not hooks:
     config.pop("hooks", None)
+if config == before:
+    raise SystemExit(0)
 
 os.makedirs(os.path.dirname(settings_path), exist_ok=True)
 if os.path.exists(settings_path):
-    shutil.copy2(settings_path, settings_path + ".bak")
+    shutil.copy2(settings_path, settings_path + ".bak")  # only when something changes
 with tempfile.NamedTemporaryFile("w", dir=os.path.dirname(settings_path), delete=False) as tmp:
     json.dump(config, tmp, indent=2)
     tmp.write("\n")

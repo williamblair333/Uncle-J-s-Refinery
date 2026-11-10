@@ -185,3 +185,53 @@ def test_topic_newlines_cannot_break_the_front_matter(inbox_mod, tmp_path):
     notes = inbox_mod.unread("projB", tmp_path)
     assert notes[0]["from"] == "projA" and notes[0]["topic"] == "fix it from: bill"
     assert note.read_text().count("from:") == 2  # the real field, and the text inside the topic
+
+
+def test_done_refuses_gitignore(inbox_mod, tmp_path):
+    (tmp_path / "projA").mkdir()
+    (tmp_path / "projB").mkdir()
+    inbox_mod.send("projB", "projA", "topic", "body", root=tmp_path)
+    gi = tmp_path / "projB" / "inbox" / ".gitignore"
+    assert gi.is_file()
+    assert inbox_mod.main(["done", ".gitignore", "projB"]) == 2
+    assert gi.is_file()
+
+
+def test_traversal_and_absolute_paths_in_list_and_done(inbox_mod):
+    assert inbox_mod.main(["list", "../x"]) == 2
+    assert inbox_mod.main(["done", "a.md", "/tmp"]) == 2
+
+
+def test_same_day_same_topic_marked_done_twice_both_survive(inbox_mod, tmp_path):
+    (tmp_path / "projA").mkdir()
+    (tmp_path / "projB").mkdir()
+
+    n1 = inbox_mod.send("projB", "projA", "same-topic", "first", root=tmp_path)
+    assert inbox_mod.main(["done", n1.name, "projB"]) == 0
+
+    n2 = inbox_mod.send("projB", "projA", "same-topic", "second", root=tmp_path)
+    assert inbox_mod.main(["done", n2.name, "projB"]) == 0
+
+    done_dir = tmp_path / "projB" / "inbox" / "done"
+    done_files = sorted(done_dir.glob("*.md"))
+    assert len(done_files) == 2
+    contents = [p.read_text(encoding="utf-8") for p in done_files]
+    assert any("first" in c for c in contents)
+    assert any("second" in c for c in contents)
+
+
+def test_send_no_body_tty_stdin_returns_2(inbox_mod, tmp_path, monkeypatch):
+    (tmp_path / "projA").mkdir()
+    (tmp_path / "projB").mkdir()
+
+    class TTYStdin:
+        def isatty(self):
+            return True
+
+        def read(self, *args, **kwargs):
+            raise AssertionError("stdin.read() must not be called when stdin is a TTY")
+
+    monkeypatch.setattr("sys.stdin", TTYStdin())
+    code = inbox_mod.main(["send", "projB", "--topic", "topic", "--from", "projA"])
+    assert code == 2
+

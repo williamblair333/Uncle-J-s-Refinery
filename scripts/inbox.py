@@ -104,6 +104,7 @@ def send(to: str, frm: str, topic: str, body: str = "", root: Path | None = None
 def unread(project: str, root: Path | None = None) -> list[dict]:
     """Return unread notes for project sorted by name."""
     root = Path(root) if root else Path(os.environ.get("PROJ_ROOT", "/opt/proj"))
+    _check_name(project, "project")
     inbox = root / project / "inbox"
     if not inbox.is_dir():
         return []
@@ -118,13 +119,20 @@ def unread(project: str, root: Path | None = None) -> list[dict]:
 def done(project: str, note: str, root: Path | None = None) -> Path:
     """Move <project>/inbox/<note> into <project>/inbox/done/."""
     root = Path(root) if root else Path(os.environ.get("PROJ_ROOT", "/opt/proj"))
+    _check_name(project, "project")
     name = Path(note).name
+    if not name.endswith(".md") or name.startswith("."):
+        raise FileNotFoundError(f"Not a note: {name}")  # e.g. .gitignore must stay put
     src = root / project / "inbox" / name
     if not src.is_file():
         raise FileNotFoundError(f"Note not found: {src}")
-    dest = root / project / "inbox" / "done" / name
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(src), str(dest))
+    done_dir = root / project / "inbox" / "done"
+    done_dir.mkdir(parents=True, exist_ok=True)
+    dest, i = done_dir / name, 1
+    while dest.exists():  # never overwrite an earlier note of the same name
+        i += 1
+        dest = done_dir / f"{name[:-3]}-{i}.md"
+    os.rename(src, dest)
     return dest
 
 
@@ -203,6 +211,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.to == frm or not (root / args.to).is_dir():
             print(f"Error: target project invalid ({args.to})", file=sys.stderr)
             return 2
+        if args.body is None and sys.stdin.isatty():
+            print("Error: give the note with --body TEXT, or pipe it in", file=sys.stderr)
+            return 2
         body = args.body if args.body is not None else sys.stdin.read()
         if args.dry_run:
             base, content = _build_note(args.to, frm, args.topic, body)
@@ -223,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "list":
         proj = args.project or current_project(Path.cwd(), root)
-        if not proj or not (root / proj).is_dir():
+        if not proj or not PROJECT_NAME.match(proj) or ".." in proj or not (root / proj).is_dir():
             print(f"Error: project not found: {proj}", file=sys.stderr)
             return 2
         notes = unread(proj, root)
@@ -243,13 +254,17 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         name = Path(args.note).name
         src = root / proj / "inbox" / name
-        if not src.is_file():
+        try:
+            _check_name(proj, "project")
+            if not name.endswith(".md") or name.startswith(".") or not src.is_file():
+                raise FileNotFoundError(name)
+        except (ValueError, FileNotFoundError):
             print(f"Error: note not found: {args.note}", file=sys.stderr)
             return 2
         if args.dry_run:
             print(f"Would move {src} -> {root / proj / 'inbox' / 'done' / name}")
             return 0
-        done(proj, name, root)
+        print(done(proj, name, root))
         return 0
 
     if args.cmd == "notice":

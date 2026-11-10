@@ -66,6 +66,38 @@ def test_install_is_idempotent_and_keeps_other_settings(home, proj_root):
     assert settings(home)["hooks"]["SessionStart"] == [OTHER]
 
 
+@needs_just
+def test_sibling_hook_in_the_same_entry_survives_and_rerun_keeps_the_backup(home, proj_root):
+    """Our hook may share an entry with someone else's; only ours is ever touched."""
+    sibling = {"type": "command", "command": "/x/sibling.sh"}
+    shared = {"hooks": [sibling, {"type": "command", "command": "/old/path  # tool-recipes:session-start"}]}
+    (home / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"SessionStart": [shared]}}))
+
+    assert run(["bash", str(INSTALL)], home, proj_root).returncode == 0
+    starts = settings(home)["hooks"]["SessionStart"]
+    assert starts[0] == {"hooks": [sibling]}
+    assert "tool-recipes:session-start" in starts[1]["hooks"][0]["command"]
+
+    backup = (home / ".claude" / "settings.json.bak").read_text()
+    out = run(["bash", str(INSTALL)], home, proj_root)
+    assert "already registered" in out.stdout
+    assert (home / ".claude" / "settings.json.bak").read_text() == backup  # pre-install copy kept
+
+    assert run(["bash", str(INSTALL), "--uninstall"], home, proj_root).returncode == 0
+    assert settings(home)["hooks"]["SessionStart"] == [{"hooks": [sibling]}]
+
+
+def test_check_and_dry_run_change_nothing(home, proj_root):
+    script = REPO / "scripts" / "tools.py"
+    mode = script.stat().st_mode
+    before = (home / ".claude" / "settings.json").read_text()
+    run(["bash", str(INSTALL), "--check"], home, proj_root)
+    run(["bash", str(INSTALL), "--dry-run"], home, proj_root)
+    assert (home / ".claude" / "settings.json").read_text() == before
+    assert not (home / ".claude" / "settings.json.bak").exists()
+    assert script.stat().st_mode == mode
+
+
 def test_installer_refuses_broken_settings(home, proj_root):
     (home / ".claude" / "settings.json").write_text("{not json")
     out = run(["bash", str(INSTALL)], home, proj_root)

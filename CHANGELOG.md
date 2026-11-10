@@ -10,7 +10,8 @@
 - New `just tool-mine`: lists command sequences done by hand in 3+ sessions over 30 days that don't already call a recipe or script. Its first strong candidate is opening and merging Gitea PRs with `curl` and the API token (17 sessions, 5 projects)
 - New SessionStart hook (`features/tool-recipes/install.sh`, called from `install.sh`). It shows the project's unread notes, and re-syncs the global justfile in the background when a project's justfile is newer
 - Fixed: `preview` and `forcing-list` used `justfile_directory()`, which points at the global justfile under `just -g`. They now use `source_directory()`, and the lint flags the old form
-- CI installs `just` 1.40.0, so the tests that run real `just` aren't skipped there
+- CI installs `just` 1.40.0, checked against its published SHA-256, so the tests that run real `just` aren't skipped there
+- A second-opinion review (Gemini) found 17 issues, 16 now fixed. The biggest: a multi-line backtick assignment got past the load-time check, so it would have run on every `just -g` call. That check now reads just's own parse. Also, the installer could drop another hook sharing an entry with this one. The inbox no longer accepts project names that leave PROJ_ROOT, never moves its `.gitignore`, and never overwrites an archived note. The hook re-syncs when a project is deleted and stops re-checking once current
 
 ## 2026-11-09 — strategy session: Autark's handover goal
 

@@ -15,7 +15,8 @@ REPO_ROOT="$(cd "$HERE/../../.." && pwd)"
 PROJ_ROOT="${PROJ_ROOT:-/opt/proj}"
 GLOBAL="${GLOBAL_JUSTFILE:-${XDG_CONFIG_HOME:-$HOME/.config}/just/justfile}"
 
-payload="$(cat 2>/dev/null || true)"
+payload=""
+[[ -t 0 ]] || payload="$(timeout 5 cat 2>/dev/null || true)"   # never wait on a terminal
 printf '%s' "$payload" | python3 "$REPO_ROOT/scripts/inbox.py" notice 2>/dev/null || true
 
 command -v just >/dev/null 2>&1 || exit 0
@@ -24,8 +25,8 @@ if [[ ! -f "$GLOBAL" ]]; then
     stale=true
 elif [[ -n "$(find "$PROJ_ROOT" -mindepth 2 -maxdepth 2 \( -name justfile -o -name Justfile -o -name .justfile \) -newer "$GLOBAL" -print -quit 2>/dev/null)" ]]; then
     stale=true
-elif [[ -n "$(find "$PROJ_ROOT" -mindepth 1 -maxdepth 1 -type d -newer "$GLOBAL" -print -quit 2>/dev/null)" ]]; then
-    stale=true   # a project folder was added or removed
+elif [[ -n "$(find "$PROJ_ROOT" -mindepth 0 -maxdepth 1 -type d -newer "$GLOBAL" -print -quit 2>/dev/null)" ]]; then
+    stale=true   # a project folder was added or removed (that changes PROJ_ROOT's own mtime)
 fi
 if $stale; then
     mkdir -p "$REPO_ROOT/state" 2>/dev/null

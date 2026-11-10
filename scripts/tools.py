@@ -40,10 +40,7 @@ SUBCOMMANDS = {"list", "lint", "sync"}
 HEADER = re.compile(r"""^\s*(#|\"\"\"|''')?\s*[\w./-]+\s+[-—–]\s+\S""")
 HOME_PATH = re.compile(r"(/home/[a-z_][a-z0-9_-]*|/Users/[A-Za-z])")
 UID_1000 = re.compile(r"\b1000\b")
-TOOLS_GROUP = re.compile(r"""\[\s*group\s*\(\s*['"]tools['"]\s*\)""")
-# An assignment that runs a command when the justfile loads: every `just -g`
-# call would run it, for every project.
-LOAD_TIME = re.compile(r"""^\s*(export\s+)?[A-Za-z_][\w-]*\s*:=.*(`|\bshell\s*\()""", re.M)
+TOOLS_GROUP = re.compile(r"""^\s*\[\s*group\s*\(\s*['"]tools['"]\s*\)""", re.M)
 
 
 class ToolsError(Exception):
@@ -93,6 +90,28 @@ def iter_recipes(data: dict, prefix: str = ""):
         yield from iter_recipes(module, f"{prefix}{mod_name} ")
 
 
+def _runs_command(value) -> bool:
+    """True if an assignment's parsed value contains a backtick or shell() call."""
+    if isinstance(value, list):
+        if value and value[0] == "evaluate":
+            return True
+        if len(value) > 1 and value[0] == "call" and value[1] == "shell":
+            return True
+        return any(_runs_command(v) for v in value)
+    return False
+
+
+def runs_at_load(data: dict) -> bool:
+    """Would loading this justfile run a command? Then every `just -g` call would run it.
+
+    Read from just's own parse (backticks dump as ["evaluate", ...]), modules included,
+    so multi-line assignments count and backticks in comments don't.
+    """
+    if any(_runs_command(a.get("value")) for a in (data.get("assignments") or {}).values()):
+        return True
+    return any(runs_at_load(m) for m in (data.get("modules") or {}).values())
+
+
 def is_tool(recipe: dict) -> bool:
     return {"group": "tools"} in (recipe.get("attributes") or [])
 
@@ -105,9 +124,20 @@ def body_text(recipe: dict) -> str:
     )
 
 
+def _interpolated_paths(node) -> list[str]:
+    """Paths built inside {{...}}: quote(source_directory() / "scripts/x.py") dumps as
+    ["call", "quote", ["join", ["call", "source_directory"], "scripts/x.py"]]."""
+    if not isinstance(node, list):
+        return []
+    if node and node[0] == "join":
+        return [p for p in node[1:] if isinstance(p, str)] + [x for p in node[1:] for x in _interpolated_paths(p)]
+    return [x for child in node for x in _interpolated_paths(child)]
+
+
 def script_of(recipe: dict, repo: Path) -> Path | None:
     """The script a recipe runs: first .py/.sh in its body, else an executable."""
-    tokens = []
+    tokens = [p for line in recipe.get("body") or [] for f in line
+              if not isinstance(f, str) for p in _interpolated_paths(f)]
     for raw in re.split(r"[\s\"']+", body_text(recipe)):
         token = raw.replace("\0", "")
         if raw.startswith("\0"):  # "{{justfile_directory()}}/scripts/x.py"
@@ -115,13 +145,15 @@ def script_of(recipe: dict, repo: Path) -> Path | None:
         if not token or ".venv/" in token or token.startswith("-"):
             continue
         tokens.append(token)
-    found = [repo / t for t in tokens if (repo / t).is_file()]
+    base = repo.resolve()
+    found = [(repo / t).resolve() for t in tokens if (repo / t).is_file()]
+    found = [p for p in found if p.is_relative_to(base) and ".venv" not in p.relative_to(base).parts]
     for path in found:
         if path.suffix in (".py", ".sh"):
-            return path.resolve()
+            return path
     for path in found:
         if os.access(path, os.X_OK):
-            return path.resolve()
+            return path
     return None
 
 
@@ -197,6 +229,14 @@ def _relative(script: Path | None, repo: Path) -> str | None:
         return str(script.relative_to(repo.resolve()))
     except ValueError:
         return str(script)
+
+
+def repo_of(path: Path) -> Path:
+    """The nearest folder above path holding a justfile or .git (else path's folder)."""
+    for parent in path.parents:
+        if find_justfile(parent) or (parent / ".git").exists():
+            return parent
+    return path.parent
 
 
 def lint_repo(repo: Path, all_recipes: bool = False) -> list[dict]:
@@ -297,11 +337,12 @@ def render_global(root: Path) -> tuple[str, list[str]]:
         if not MODULE_NAME.match(name) or name in RESERVED:
             skipped.append(f"{name} (not usable as a module name)")
             continue
-        if LOAD_TIME.search(justfile.read_text(errors="replace")):
-            skipped.append(f"{name} (runs a command when loaded: backtick or shell() assignment)")
-            continue
-        if dump(justfile) is None:
+        data = dump(justfile)
+        if data is None:
             skipped.append(f"{name} (just can't parse its justfile)")
+            continue
+        if runs_at_load(data):
+            skipped.append(f"{name} (runs a command when loaded: backtick or shell() assignment)")
             continue
         lines.append(f"mod {name} {json.dumps(str(justfile))}")
     return "\n".join(lines) + "\n", skipped
@@ -317,6 +358,8 @@ def write_atomic(path: Path, content: str) -> None:
 
 def rejection(content: str) -> str | None:
     """None when just accepts the generated file, else its error."""
+    if shutil.which("just") is None:
+        raise ToolsError("`just` is not installed")
     with tempfile.TemporaryDirectory() as tmp:
         candidate = Path(tmp) / "justfile"
         candidate.write_text(content)
@@ -358,6 +401,8 @@ def cmd_lint(args) -> int:
     repo = Path(args.repo).resolve()
     if args.script:
         script = Path(args.script).resolve()
+        if args.repo == ".":
+            repo = repo_of(script)
         rows = [{"recipe": "-", "tool": True, "script": str(script), "problems": lint_script(script, repo)}]
     else:
         rows = lint_repo(repo, args.all)
@@ -398,6 +443,8 @@ def cmd_sync(args, root: Path) -> int:
         return 1
     if status != "current":
         write_atomic(target, content)
+    else:
+        os.utime(target)  # newer than every justfile now, so the session-start hook stops re-checking
     report["status"] = "current" if status == "current" else "written"
     report["projects"] = content.count("\nmod ")
     if args.json:
@@ -432,7 +479,7 @@ def main(argv: list[str] | None = None) -> int:
     p_sync.add_argument("--json", action="store_true")
 
     argv = list(sys.argv[1:] if argv is None else argv)
-    if not argv or (argv[0] not in SUBCOMMANDS and not argv[0].startswith("-")):
+    if not argv or (argv[0] not in SUBCOMMANDS and argv[0] not in ("-h", "--help", "--version")):
         argv.insert(0, "list")   # `just -g tools backup` searches the catalog
     args = parser.parse_args(argv)
     root = proj_root()

@@ -44,6 +44,9 @@ WRAPPERS = {"sudo", "env", "nice", "time", "command", "exec", "nohup"}
 
 VERSION = "1.0.0"
 
+# `python3 x.py` and `bash x.sh` run a script; `pytest x.py` only names one.
+INTERPRETERS = {"python", "python3", "bash", "sh", "zsh", "uv", "node"}
+
 TWO_WORD_TRIVIAL = {
     "git status", "git log", "git diff", "git show", "git fetch",
 }
@@ -94,7 +97,8 @@ def _strip_heredocs(command: str) -> str:
 def _segments(command: str) -> list[list[str]]:
     """Words of each simple command, split on ; & | && || and newlines, quote-aware."""
     text = REDIRECT.sub(" ", _strip_heredocs(command))
-    lexer = shlex.shlex(text, posix=True, punctuation_chars=";&|()\n")
+    # posix=False keeps quotes on tokens, so a quoted argument can be told apart
+    lexer = shlex.shlex(text, posix=False, punctuation_chars=";&|()\n")
     lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
     lexer.commenters = ""
@@ -127,7 +131,7 @@ def shape_of(command: str) -> str:
     heads: list[str] = []
 
     for words in _segments(command):
-        if not words or words[0] in ("for", "select", "case"):  # `for x in a b c`: the loop header
+        if not words or words[0].startswith("#") or words[0] in ("for", "select", "case"):  # `for x in a b c`: the loop header
             continue
         while words and words[0] in CONTROL:
             words = words[1:]
@@ -190,11 +194,17 @@ def is_tool_call(head: str) -> bool:
     words = head.split()
     if not words:
         return True
-    return words[0] == "just" or any(w.endswith((".py", ".sh")) for w in words)
+    if words[0] == "just" or words[0].endswith((".py", ".sh")):
+        return True
+    return (words[0] in INTERPRETERS and len(words) > 1 and words[1].endswith((".py", ".sh")))
 
 
 def without_tool_calls(shape: str) -> str:
-    return " && ".join(h for h in shape.split(" && ") if h and not is_tool_call(h))
+    kept: list[str] = []
+    for h in shape.split(" && "):
+        if h and not is_tool_call(h) and (not kept or kept[-1] != h):
+            kept.append(h)  # re-collapse: removing a tool call can bring repeats together
+    return " && ".join(kept)
 
 
 def steps(shape: str) -> int:

@@ -255,3 +255,108 @@ def test_a_bare_word_or_nothing_searches_the_catalog(monkeypatch, tmp_path):
     assert tools.main(["backup"]) == 0
     assert tools.main([]) == 0
     assert seen == ["backup", ""]
+
+
+import os
+import time
+
+
+def test_flags_without_subcommand_default_to_list(monkeypatch, tmp_path):
+    monkeypatch.setenv("PROJ_ROOT", str(tmp_path))
+    assert tools.main(["--json"]) == 0
+    assert tools.main(["--tools"]) == 0
+
+
+@needs_just
+def test_lint_repo_flags_external_script(tmp_path):
+    sh = shutil.which("sh")
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "x.sh").write_text("#!/bin/sh\n")
+    (other / "x.sh").chmod(0o755)
+
+    jf = f"""# run sh
+[group('tools')]
+run-sh:
+    {sh} -c true
+
+# run other
+[group('tools')]
+run-other:
+    ../other/x.sh
+"""
+    proj = make_project(tmp_path, "proj", jf)
+    rows = tools.lint_repo(proj)
+    assert len(rows) == 2
+    for r in rows:
+        codes = {p["code"] for p in r["problems"]}
+        assert "script" in codes
+
+
+@needs_just
+def test_render_global_multiline_backtick_and_runs_at_load(tmp_path):
+    root = tmp_path / "proj"
+    marker = tmp_path / "MARKER"
+    bad_jf = f"""x := (
+  `touch {marker}`
+)
+# hi
+hi:
+    @echo {{{{x}}}}
+"""
+    make_project(root, "bad", bad_jf)
+    good_jf = """z := "out" # for `just build`
+# hi
+hi:
+    true
+"""
+    make_project(root, "good", good_jf)
+
+    content, skipped = tools.render_global(root)
+    assert not marker.exists()
+    assert any(s.startswith("bad") for s in skipped)
+    assert "mod good " in content
+
+    assert tools.runs_at_load({"assignments": {"y": {"value": ["call", "shell", "echo a"]}}}) is True
+    assert tools.runs_at_load({"assignments": {"y": {"value": "out"}}}) is False
+
+
+@needs_just
+def test_lint_script_finds_tests_from_unrelated_cwd(tmp_path, monkeypatch):
+    proj = make_project(tmp_path, "p", TOOL_JUSTFILE, {
+        "fix-thing.sh": GOOD_SCRIPT,
+        "tests/test_fix_thing.py": "",
+    })
+    script = proj / "fix-thing.sh"
+    unrelated = tmp_path / "unrelated"
+    unrelated.mkdir()
+    monkeypatch.chdir(unrelated)
+    assert tools.main(["lint", "--script", str(script)]) == 0
+
+
+@needs_just
+def test_commented_tools_group_does_not_raise(tmp_path):
+    jf = "# example: [group('tools')]\ndefault:\n    @just --list\n"
+    proj = make_project(tmp_path, "p", jf)
+    assert tools.lint_repo(proj) == []
+
+
+@needs_just
+def test_sync_touches_global_justfile_when_current(tmp_path, monkeypatch):
+    root = tmp_path / "proj"
+    proj = make_project(root, "good", TOOL_JUSTFILE)
+    target = tmp_path / "global" / "justfile"
+    monkeypatch.setenv("PROJ_ROOT", str(root))
+    monkeypatch.setenv("GLOBAL_JUSTFILE", str(target))
+
+    assert tools.main(["sync"]) == 0
+    proj_jf = proj / "justfile"
+
+    time.sleep(0.02)
+    os.utime(proj_jf)
+    assert proj_jf.stat().st_mtime > target.stat().st_mtime
+
+    time.sleep(0.02)
+    assert tools.main(["sync"]) == 0
+    assert target.stat().st_mtime >= proj_jf.stat().st_mtime
+

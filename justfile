@@ -182,15 +182,16 @@ small *args:
 [group('tools')]
 [positional-arguments]
 tools *args:
-    cd "{{invocation_directory()}}" && python3 "{{source_directory()}}/scripts/tools.py" "$@"
+    cd {{quote(invocation_directory())}} && python3 {{quote(source_directory() / "scripts/tools.py")}} "$@"
 
 # jobs agents keep doing by hand, as candidates for new tools (default: last 30 days, 3+ sessions, 2+ steps)
 [group('tools')]
+[positional-arguments]
 tool-mine *args:
-    python3 scripts/tool_miner.py {{args}}
+    python3 {{quote(source_directory() / "scripts/tool_miner.py")}} "$@"
 
 # notes between projects: just inbox send <project> --topic T | list [PROJECT] | done <file> (runs in your cwd)
 [group('tools')]
 [positional-arguments]
 inbox *args:
-    cd "{{invocation_directory()}}" && python3 "{{source_directory()}}/scripts/inbox.py" "$@"
+    cd {{quote(invocation_directory())}} && python3 {{quote(source_directory() / "scripts/inbox.py")}} "$@"
