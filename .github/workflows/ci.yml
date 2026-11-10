@@ -77,12 +77,15 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       # tests/test_tools.py runs real `just` (modules, groups, --dump json); Ubuntu's
-      # apt package is too old for groups. Pinned to the version tested on the host.
+      # apt package is too old for groups. Pinned to the version tested on the host;
+      # the hash matches the release's SHA256SUMS (checked 2026-11-10).
       - name: just 1.40.0
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl -fsSL https://github.com/casey/just/releases/download/1.40.0/just-1.40.0-x86_64-unknown-linux-musl.tar.gz \
-            | tar -xz -C "$HOME/.local/bin" just
+          f=just-1.40.0-x86_64-unknown-linux-musl.tar.gz
+          curl -fsSLo "/tmp/$f" "https://github.com/casey/just/releases/download/1.40.0/$f"
+          echo "181b91d0ceebe8a57723fb648ed2ce1a44d849438ce2e658339df4f8db5f1263  /tmp/$f" | sha256sum -c -
+          tar -xzf "/tmp/$f" -C "$HOME/.local/bin" just
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/just" --version
 
