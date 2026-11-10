@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-10 — tool recipes: one standard, one catalog, notes between projects
+
+- New `docs/TOOLS-STANDARD.md`: what a ready-made tool is, written down from Bill's `debian-howto-guides` scripts. It's one script plus one `just` recipe in the `tools` group, with a header, `--help`, `--version`, `--check`, `--dry-run`, `--json`, a test, and no hard-coded home folders. Start from `features/tool-recipes/template.sh`
+- New `just tools`. `list [word]` searches every project's documented recipes (`*` marks tools). `lint [repo]` checks a repo's tools against the standard (`--all` reports the rest as backlog). `sync` writes `~/.config/just/justfile`, so `just -g <project> <recipe>` runs any project's recipe from any folder. It skips projects whose justfile fails to parse or runs commands when loaded, checks the result with `just --summary`, and never overwrites a file it didn't write
+- New `just inbox`: a project changes only its own things, and asks another project by leaving a note in its `inbox/`. The folder ignores itself in git. Names that would climb out of the inbox are refused
+- New `just tool-mine`: lists command sequences done by hand in 3+ sessions over 30 days that don't already call a recipe or script. Its first strong candidate is opening and merging Gitea PRs with `curl` and the API token (17 sessions, 5 projects)
+- New SessionStart hook (`features/tool-recipes/install.sh`, called from `install.sh`). It shows the project's unread notes, and re-syncs the global justfile in the background when a project's justfile is newer
+- Fixed: `preview` and `forcing-list` used `justfile_directory()`, which points at the global justfile under `just -g`. They now use `source_directory()`, and the lint flags the old form
+- CI installs `just` 1.40.0, checked against its published SHA-256, so the tests that run real `just` aren't skipped there
+- A second-opinion review (Gemini) found 17 issues, 16 now fixed. The biggest: a multi-line backtick assignment got past the load-time check, so it would have run on every `just -g` call. That check now reads just's own parse. Also, the installer could drop another hook sharing an entry with this one. The inbox no longer accepts project names that leave PROJ_ROOT, never moves its `.gitignore`, and never overwrites an archived note. The hook re-syncs when a project is deleted and stops re-checking once current
+
+## 2026-11-09 — strategy session: Autark's handover goal
+
+- Docs only. Recorded the handover direction for Autark in `HANDOFF.md`: Ansible for the host setup after an off-site copy and a successor drill, no Vagrant. The autark session owns the work and is waiting for Bill's confirmation
+- Added the scout find `scout/finds/gashel01__sandboxmcp.md`
+
 ## 2026-11-08 — Ollama stuck on CPU, fixed; RVN dropped
 
 - Ollama had stayed on CPU since a bench crowded the GPU, which slowed Heretic to 2 tok/s. A restart put it back on the GPU (77.8 tok/s, Heretic 14.0). RVN Qwen3.8-27B measured 3.8 tok/s on a quiet machine and is dropped. Docs only

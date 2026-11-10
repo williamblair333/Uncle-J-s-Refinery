@@ -1,5 +1,24 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-10 — tool recipes built
+
+- **Most important:** sessions started before this merge don't have the inbox notice. Restart them to get it. `just -g` already works everywhere, since the global justfile is written.
+- **What exists now:** `docs/TOOLS-STANDARD.md` is the rule set. `just -g tools <word>` searches 41 projects' recipes from any folder. `just tools lint <repo>` grades a repo. `just inbox` sends notes between projects. `just tool-mine` lists what keeps being done by hand.
+- **Not done, Bill's call:** bringing each project's tools up to the standard is that project's own session's job. Nothing was sent to other repos. `just tools lint /opt/proj/<x> --all` shows each one's backlog. Bill's `debian-howto-guides` scripts mostly pass already; the ssh and printer scripts lack only tests or `--json`.
+- **Next:** make "search the catalog before writing a new script" fire on its own (a hook or a CLAUDE.md line), since reinventing is the failure this targets. Then the first tool from `just tool-mine`: Gitea PR open and merge, done by hand in 17 sessions.
+- **Known gap, not fixed:** the lint counts a flag named in an inline shell comment (`echo hi # --help`) as present. Telling inline comments from `#` inside strings needs a real shell parser, and the case is rare.
+- **Other hosts:** pull, then `bash features/tool-recipes/install.sh`. Needs `just` ≥ 1.40 on that host, and `PROJ_ROOT` if the projects aren't in `/opt/proj`.
+
+## 2026-11-09 — strategy session: Autark's handover goal
+
+- **Most important:** Bill said someone else being able to run Autark is "the whole point", and that someone "could be anyone, another MSP etc". He'll revisit this later today and wants the focus on Autark for now.
+- **Where it stands:** the direction went to the autark session on 11-08. That session owns the repo and is holding everything until Bill confirms there, so nothing is built and no host changed. The full comparison and the private findings are in the gitignored `review/alternatives/2026-11-08-ansible-vagrant-autark.md`.
+- **Proposed order:** an encrypted off-site copy; a successor drill on a blank laptop using only the paper sheet and that copy; then Ansible for the host setup only, scoped by what the drill finds. `just` stays the front door. No Vagrant. A laptop is x86, so a fresh SD card in the real Pi is the last step.
+- **Bill's decisions still open:** confirm the direction in the autark session, and whether the off-site copy uses a dedicated cloud account. Also the wider question in `review/2026-11-07-backup-gap.md`, now partly answered for Autark only.
+- **Parked by Bill:** running "could a stranger pick this up?" on the other projects, and whether a handover pack is something the business could offer.
+- **Local `main` is one commit ahead of origin:** `b03fd9f`, a jcodemunch post-upgrade sync from about 2 hours before this entry, unpushed. `uv.lock` is also modified and uncommitted. Neither came from this session, so both were left alone.
+- **Hook-blocks log:** glanced at, not reviewed: 5,372 lines since 10-22. The last 400 are mostly edit-surface passes. Do the weekly review next.
+
 ## 2026-11-07 — session end: jail merged, bench gave no answers
 
 - **Most important:** Claude sessions started before #328 merged (09:38) still run the old unjailed `ask_agy` through their delegate server, until restarted. Three were running at 09:39.

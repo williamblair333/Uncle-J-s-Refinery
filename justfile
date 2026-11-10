@@ -79,7 +79,7 @@ chance-bench *args:
 
 # events this project's tests depend on, and how each gets forced: just forcing-list [--list] [--file F] (runs in your cwd)
 forcing-list *args:
-    cd "{{invocation_directory()}}" && python3 "{{justfile_directory()}}/scripts/forcing_list.py" {{args}}
+    cd "{{invocation_directory()}}" && python3 "{{source_directory()}}/scripts/forcing_list.py" {{args}}
 
 # hook bench: replay real transcripts through every behaviour-changing hook — fire rate, errors, false hits
 hook-bench *args:
@@ -124,7 +124,7 @@ scout-status:
 # live build view for any project: just preview publish|watch|status|list (runs in your cwd)
 [positional-arguments]
 preview *args:
-    cd "{{invocation_directory()}}" && "{{justfile_directory()}}/.venv/bin/python" "{{justfile_directory()}}/scripts/live_preview/cli.py" "$@"
+    cd "{{invocation_directory()}}" && "{{source_directory()}}/.venv/bin/python" "{{source_directory()}}/scripts/live_preview/cli.py" "$@"
 
 # chat page for the local model (+ Claude/agy offload) at http://127.0.0.1:8091
 chat *args:
@@ -177,3 +177,21 @@ tts *args:
 # small CPU model for the Pi / tc-vmh-03 (llama-server, 127.0.0.1:8096): SMALL_MODEL=qwen3.5-4b-heretic SMALL_GGUF=… just small up -d
 small *args:
     ./scripts/small.sh {{args}}
+
+# ready-made tools across projects: just tools list [TERM] [--tools] | lint [REPO] [--all] | sync [--check] (docs/TOOLS-STANDARD.md)
+[group('tools')]
+[positional-arguments]
+tools *args:
+    cd {{quote(invocation_directory())}} && python3 {{quote(source_directory() / "scripts/tools.py")}} "$@"
+
+# jobs agents keep doing by hand, as candidates for new tools (default: last 30 days, 3+ sessions, 2+ steps)
+[group('tools')]
+[positional-arguments]
+tool-mine *args:
+    python3 {{quote(source_directory() / "scripts/tool_miner.py")}} "$@"
+
+# notes between projects: just inbox send <project> --topic T | list [PROJECT] | done <file> (runs in your cwd)
+[group('tools')]
+[positional-arguments]
+inbox *args:
+    cd {{quote(invocation_directory())}} && python3 {{quote(source_directory() / "scripts/inbox.py")}} "$@"

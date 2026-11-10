@@ -631,6 +631,18 @@ else
     warn "dcup install failed — run: bash $STACK_ROOT/features/dcup/install.sh"
 fi
 
+# --- 6b3. tool recipes: inbox notice + global justfile -------------------------
+# A SessionStart hook shows the project's inbox notes and keeps ~/.config/just/justfile
+# current, so `just -g <project> <recipe>` works from any folder. docs/TOOLS-STANDARD.md.
+step "Installing tool recipes (inbox notice, global justfile)"
+if ! command -v just >/dev/null 2>&1; then
+    warn "just not installed — skipped tool recipes; install just, then: bash $STACK_ROOT/features/tool-recipes/install.sh"
+elif bash "$STACK_ROOT/features/tool-recipes/install.sh"; then
+    ok "tool recipes installed (just -g tools <word> finds a recipe in any project)"
+else
+    warn "tool recipes install failed — run: bash $STACK_ROOT/features/tool-recipes/install.sh"
+fi
+
 # --- 6c. Wire git post-merge hook (opt-in) ----------------------------------
 step "Optional features"
 echo ""
