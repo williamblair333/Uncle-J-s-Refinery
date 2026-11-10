@@ -14,6 +14,17 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Search the tool catalog before writing a new script** (filed 2026-11-10). The tool-recipes
+  system (`docs/TOOLS-STANDARD.md`) only pays off if sessions look before they build. Make it fire
+  by itself, for example a once-per-session PreToolUse reminder when a session creates a new `.sh`
+  or `.py`, naming `just -g tools <word>`. Bench it on transcripts first (`just hook-bench`).
+- **First tools from `just tool-mine`** (filed 2026-11-10). The top candidate is Gitea PR open and
+  merge through `curl` and the API token, done by hand in 17 sessions across 5 projects. It overlaps
+  with the Gitea bootstrap item below; build both as one Gitea tool in the gitea repo.
+- **Projects adopt the tools standard** (filed 2026-11-10). Each project's own session tags its
+  recipes `[group('tools')]` as they pass `just tools lint`. Bill decides whether to send each
+  project a note (`just inbox send`) or let it happen at the next session.
+
 - **Gitea new-repo bootstrap** (filed 2026-11-03 from lanscout; 3rd repeat after dfir and anatomy-lab in
   October). No sanctioned way for a session to create a Gitea repo: the stored token has only
   `write:repository`, `POST /user/repos` needs `write:user`, and push-guard blocks the first push to `main`.
