@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-11 — session end
+
+- **Most important:** restart running sessions so they pick up the tool-recipes inbox notice (merged 11-10, #335). Next work is in the 11-10 entry below: a hook so sessions search `just -g tools` before writing a script, then a Gitea PR tool.
+- Local `main` is no longer ahead: the jcodemunch syncs and `uv.lock` went in with this entry's PR.
+- **Hook-blocks log:** weekly review still not done.
+
 ## 2026-11-10 — tool recipes built
 
 - **Most important:** sessions started before this merge don't have the inbox notice. Restart them to get it. `just -g` already works everywhere, since the global justfile is written.

@@ -16,7 +16,7 @@
       "full_name": "nhatvu148/video-transcriber-mcp-rs",
       "reason": null,
       "rung": 1,
-      "watch_checked": "2026-11-02T14:47:58Z"
+      "watch_checked": "2026-11-10T09:46:17Z"
     },
     "1131217056": {
       "answer": "no",
@@ -26,6 +26,15 @@
       "note": "Hard Playwright dependency (Microsoft) plus a 550 MB Chromium download; SearXNG (127.0.0.1:8086) and just web2md already cover search and page-to-markdown.",
       "reason": "already have it",
       "rung": 1
+    },
+    "1155123554": {
+      "answer": "maybe",
+      "answered_at": "2026-11-10T09:46:17Z",
+      "expired": true,
+      "full_name": "affaan-m/agentshield",
+      "reason": null,
+      "rung": 1,
+      "watch_checked": "2026-11-10T09:46:17Z"
     },
     "1185389803": {
       "answer": "no",

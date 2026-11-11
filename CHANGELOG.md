@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-11 — land the unpushed jcodemunch syncs
+
+- Pushed the two post-upgrade syncs that sat on local `main` (`b03fd9f`, `1f46586`), plus `uv.lock` pinned to jcodemunch-mcp 1.108.434 (the installed version) and two new scout finds
+
 ## 2026-11-10 — tool recipes: one standard, one catalog, notes between projects
 
 - New `docs/TOOLS-STANDARD.md`: what a ready-made tool is, written down from Bill's `debian-howto-guides` scripts. It's one script plus one `just` recipe in the `tools` group, with a header, `--help`, `--version`, `--check`, `--dry-run`, `--json`, a test, and no hard-coded home folders. Start from `features/tool-recipes/template.sh`
