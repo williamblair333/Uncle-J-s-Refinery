@@ -8,6 +8,7 @@
 - **Next:** make "search the catalog before writing a new script" fire on its own (a hook or a CLAUDE.md line), since reinventing is the failure this targets. Then the first tool from `just tool-mine`: Gitea PR open and merge, done by hand in 17 sessions.
 - **Known gap, not fixed:** the lint counts a flag named in an inline shell comment (`echo hi # --help`) as present. Telling inline comments from `#` inside strings needs a real shell parser, and the case is rare.
 - **Other hosts:** pull, then `bash features/tool-recipes/install.sh`. Needs `just` ≥ 1.40 on that host, and `PROJ_ROOT` if the projects aren't in `/opt/proj`.
+- **jcodemunch-mcp breaking change**: v1.108.431 turns on `refresh_on_read` by default, so 12 read tools (search_*, get_symbol_source, find_references, get_blast_radius…) may now run git, re-index changed files and add a refresh body block. Callers that expect reads to be read-only or fast must handle that block, or set `refresh_on_read: false` / `JCODEMUNCH_REFRESH_ON_READ`.
 
 ## 2026-11-09 — strategy session: Autark's handover goal
 
