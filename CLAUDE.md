@@ -113,8 +113,8 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   `absent` — re-index under another `CODE_INDEX_PATH`.
 - `list_repos` lists only indexes in the server's working directory by default
   (`repo_visibility`). A top-level `visibility` block with `hidden_count` means other indexes
-  exist; a miss there is not grounds to re-index. Pass the exact repo id (it still loads), or
-  set `"repo_visibility": "all"` / `JCODEMUNCH_REPO_VISIBILITY=all` to list all of them.
+  exist; a miss isn't grounds to re-index. Pass the exact repo id, or set
+  `JCODEMUNCH_REPO_VISIBILITY=all`.
 - Project `.jcodemunch.jsonc` can only tighten settings.
 - Unfamiliar repo: `plan_turn`, then `get_repo_map` / `suggest_queries`. Familiar repo:
   `digest`. Analysis session: `get_repo_health` first.
@@ -125,8 +125,8 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   for multi-constraint queries. Small matches come back with code in `sources` (no follow-up
   fetch needed); fetch any counted in `sources_omitted`.
 - `file_pattern` with `/` is root-anchored (any depth: `**/src/*.py`); bare `*.py` isn't.
-- Also: `index_file` (surgical re-index after an edit; a file the folder walk excludes is
-  refused with `success: false` and the reason in `skipped`), `get_session_snapshot` (after
+- Also: `index_file` (re-index one edited file; an excluded file gets `success: false`,
+  reason in `skipped`), `get_session_snapshot` (after
   compaction), `index_dependency` (the *installed* version's source — prefer over context7
   when the exact API matters), `check_embedding_drift`.
 - `_meta` reaches you on this host (`meta_fields: null`); on a default install
@@ -134,10 +134,11 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 - **Freshness:** `get_watch_status` → read `index_freshness` (`fresh`/`stale`/`unknown`/
   `not_tracked`); gate on `any_stale is False` **and** `any_freshness_unknown is False`.
   `index_stale` is gone — code keyed on it reads missing as fresh.
+  `refresh_on_read` (on by default) re-indexes ≤50 git-changed files before 12 read tools
+  answer; a body block with a `reason` means it served stale.
 - **After a stack upgrade, re-index in full** (`invalidate_cache` then `index_folder`; over
-  `max_folder_files` (2,000), only `jcodemunch-mcp index` — invalidating shrinks to the cap, and
-  a capped call keeps old parses with the upgrade still due) before
-  trusting symbol counts, `parent`, member lists, or stored ids — git upgrades can move
+  `max_folder_files` (2,000), only `jcodemunch-mcp index` — a capped call keeps old parses)
+  before trusting symbol counts, `parent`, member lists, or stored ids — git upgrades can move
   ids or add symbols without a re-parse. A symbol-count jump after re-index is the
   fix, not a regression — so is a file-count drop from newly skipped build dirs
   (`discovery_skip_counts`). A not-found error may carry `near_miss_ids`; re-issue with one.

@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-11 — session end
+
+- **Most important:** restart running sessions so they pick up the tool-recipes inbox notice (merged 11-10, #335). Next work is in the 11-10 entry below: a hook so sessions search `just -g tools` before writing a script, then a Gitea PR tool.
+- Local `main` is no longer ahead: the jcodemunch syncs and `uv.lock` went in with this entry's PR.
+- **Hook-blocks log:** weekly review still not done.
+
 ## 2026-11-10 — tool recipes built
 
 - **Most important:** sessions started before this merge don't have the inbox notice. Restart them to get it. `just -g` already works everywhere, since the global justfile is written.
@@ -8,6 +14,7 @@
 - **Next:** make "search the catalog before writing a new script" fire on its own (a hook or a CLAUDE.md line), since reinventing is the failure this targets. Then the first tool from `just tool-mine`: Gitea PR open and merge, done by hand in 17 sessions.
 - **Known gap, not fixed:** the lint counts a flag named in an inline shell comment (`echo hi # --help`) as present. Telling inline comments from `#` inside strings needs a real shell parser, and the case is rare.
 - **Other hosts:** pull, then `bash features/tool-recipes/install.sh`. Needs `just` ≥ 1.40 on that host, and `PROJ_ROOT` if the projects aren't in `/opt/proj`.
+- **jcodemunch-mcp breaking change**: v1.108.431 turns on `refresh_on_read` by default, so 12 read tools (search_*, get_symbol_source, find_references, get_blast_radius…) may now run git, re-index changed files and add a refresh body block. Callers that expect reads to be read-only or fast must handle that block, or set `refresh_on_read: false` / `JCODEMUNCH_REFRESH_ON_READ`.
 
 ## 2026-11-09 — strategy session: Autark's handover goal
 
@@ -32,6 +39,7 @@
 - **Docs:** README updated for `just agy-login`; ROADMAP's jail item closed in #328.
 - **Guards:** the surface-write guard blocked a Bash heredoc writing a scratchpad `.sh`, and the credential guard blocks any command text naming the fixture filename, even in a test. Neither stopped the work. Check whether the first is too broad at the next weekly `state/hook-blocks.log` review (249 entries today across all sessions, not reviewed).
 - **jcodemunch-mcp breaking change**: A project's `.jcodemunch.jsonc` can now only tighten settings (v1.108.424, #1353), so anything that relied on one to set `trusted_folders` or loosen summarizer, `disabled_tools` or `response_max_bytes` values must move that setting to the global `config.jsonc`.
+- **jcodemunch-mcp breaking change**: The once-per-session steering text moved from `_meta.hint` to `_meta.steer_hint` and its search answer now stays in the compact encoding instead of JSON (#1359, v1.108.426), so anything reading the steering text must use the new key and accept MUNCH (no Refinery code reads the old key).
 
 ## 2026-11-07 — agy jobs run in an empty root
 
