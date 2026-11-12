@@ -131,9 +131,9 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   when the exact API matters), `check_embedding_drift`.
 - `_meta` reaches you on this host (`meta_fields: null`); on a default install
   (`meta_fields: []`) it is stripped, so only body-level keys survive.
-- **Freshness:** `get_watch_status` → read `index_freshness` (`fresh`/`stale`/`unknown`/
-  `not_tracked`); gate on `any_stale is False` **and** `any_freshness_unknown is False`.
-  `index_stale` is gone — code keyed on it reads missing as fresh.
+- **Freshness:** `get_watch_status` `index_freshness`: `fresh`/`stale`/`unknown`/`not_tracked`/
+  `incomplete` (holds a small part of the tree — re-index). Gate on `any_stale is False`
+  **and** `any_freshness_unknown is False`. `index_stale` is gone (missing reads as fresh).
   `refresh_on_read` (on by default) re-indexes ≤50 git-changed files before 12 read tools
   answer; a body block with a `reason` means it served stale.
 - **After a stack upgrade, re-index in full** (`invalidate_cache` then `index_folder`; over

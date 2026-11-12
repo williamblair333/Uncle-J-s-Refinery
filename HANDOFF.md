@@ -5,6 +5,7 @@
 - **Most important:** restart running sessions so they pick up the tool-recipes inbox notice (merged 11-10, #335). Next work is in the 11-10 entry below: a hook so sessions search `just -g tools` before writing a script, then a Gitea PR tool.
 - Local `main` is no longer ahead: the jcodemunch syncs and `uv.lock` went in with this entry's PR.
 - **Hook-blocks log:** weekly review still not done.
+- **jcodemunch-mcp breaking change**: `get_watch_status` `index_freshness` can now read `incomplete` (index holds a small part of the tree, v1.108.438) and `tokens_saved` is now a real token count, not bytes/4 — gates must treat `incomplete` as not fresh and old `tokens_saved` figures aren't comparable to new ones (taken from release subjects; source check was denied, see the session log).
 
 ## 2026-11-10 — tool recipes built
 
