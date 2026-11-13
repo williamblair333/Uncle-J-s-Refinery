@@ -1,5 +1,14 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-13 — scout review + no-Microsoft filter
+
+- **Most important:** the 04:15 scout on 11-14 runs rung-2 evaluations for agentshield, repo-forensics and vestigium (Claude answered yes for Bill), then sends them one a day on Telegram. Check `state/scout.log` for "evaluate: … →".
+- Bill 2026-11-13: anything Microsoft posts is the absolute last resort. The scout now drops Microsoft-owned repos (owner list in `scripts/scout/gh.py`, GitHub and LinkedIn included; drops are logged by name). Bill hasn't confirmed the GitHub/LinkedIn part: drop those two from `MICROSOFT_OWNERS` if he objects.
+- In-house follow-ups from the review are at the top of ROADMAP Planned. (d), a weekly Claude pass over unanswered finds, is the one that stops finds expiring unread.
+- Bill wants scout reports emailed once Autark has a mail server: note sent to `/opt/proj/autark/inbox/`.
+- Flaky: `tests/test_session_edit_guard.py::test_nested_worktree_is_own_checkout` failed in the full suite and passed alone. Not investigated.
+- Dreaming's env file is unquoted (`features/dreaming/install.sh:49` writes `DREAMING_CRON_SCHEDULE=0 9 * * *`), so sourcing it logs `9: command not found`. Harmless; quote it in `write_env_var`.
+
 ## 2026-11-13 — waiting sweep fix
 
 - `just waiting` scans repos nested one level down (games/mtw2 was missing). No follow-up.

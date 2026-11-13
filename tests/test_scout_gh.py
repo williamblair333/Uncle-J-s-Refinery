@@ -93,3 +93,18 @@ def test_search_failure_is_empty():
 def test_readme_caps_length_and_failure_is_empty():
     assert len(gh.readme("a/b", run=_runner(0, "x" * 50000))) == 20000
     assert gh.readme("a/b", run=_runner(1, "boom")) == ""
+
+
+def test_search_drops_microsoft_owned_repos():
+    # Bill 2026-11-13: anything Microsoft posts is the absolute last resort.
+    items = [_repo(id=1), _repo(id=2, full_name="microsoft/LLMLingua"),
+             _repo(id=3, full_name="Azure/azure-mcp"), _repo(id=4, full_name="github/x")]
+    got = gh.search("compression", run=_runner(0, {"items": items}))
+    assert [f.id for f in got] == [1]
+
+
+def test_is_microsoft_matches_owner_only_case_insensitive():
+    assert gh.is_microsoft("Microsoft/playwright-mcp")
+    assert gh.is_microsoft("MicrosoftDocs/mcp")
+    assert not gh.is_microsoft("feder-cr/microsoft-free")
+    assert not gh.is_microsoft("")

@@ -14,6 +14,19 @@ _clock = time.monotonic
 _sleep = time.sleep
 _last_search = 0.0
 
+# Bill 2026-11-13: anything Microsoft posts is the absolute last resort, so the scout never
+# surfaces it unless he asks by hand (inbox). GitHub and LinkedIn are Microsoft-owned.
+# Matched on the owner only, case-insensitive. Dependencies (Playwright, markitdown) are the
+# judge prompt's job: an owner list can't see them.
+MICROSOFT_OWNERS = frozenset({
+    "microsoft", "azure", "azure-samples", "microsoftdocs", "microsoftedge", "microsoftgraph",
+    "officedev", "dotnet", "powershell", "github", "linkedin",
+})
+
+
+def is_microsoft(full_name: str) -> bool:
+    return full_name.split("/", 1)[0].lower() in MICROSOFT_OWNERS
+
 
 @dataclass
 class Facts:
@@ -87,7 +100,7 @@ def search_checked(query: str, limit: int = 10, run=None):
         facts = [_facts(i) for i in items]
     except (ValueError, KeyError, TypeError, AttributeError):
         return None
-    return [f for f in facts if not f.archived and not f.fork]
+    return [f for f in facts if not f.archived and not f.fork and not is_microsoft(f.full_name)]
 
 
 def search(query: str, limit: int = 10, run=None) -> list:

@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-13 — scout: open finds answered, Microsoft filtered out
+
+- Answered the 22 open scout finds in `scout/answers.json` (#339): 3 yes (agentshield, repo-forensics, vestigium) for the rung-2 evaluation, 19 no with reasons; ROADMAP gets four in-house follow-ups
+- The scout never surfaces Microsoft-owned repos (GitHub and LinkedIn included): filtered in the GitHub search and again before sending, logged by name; inbox items are exempt. The judge prompt rules out Microsoft dependencies (Playwright, markitdown)
+
 ## 2026-11-13 — waiting sweep sees nested repos
 
 - `just waiting` now also lists repos one folder down (`games/mtw2`, `games/M2TWEOP-library`); before, mtw2's handoff never showed

@@ -29,7 +29,10 @@ SCOUT_SYSTEM = (
 
 GOALS = ("Bill's four goals, in order: accuracy, token efficiency (cheap in total), "
          "creativity, offline capability. Fit test: it must come in as an MCP server or a "
-         "script without taking over the runtime — Uncle J stays the runtime.")
+         "script without taking over the runtime — Uncle J stays the runtime. "
+         "Bill rules out Microsoft software, including GitHub- and LinkedIn-owned projects "
+         "and anything that depends on Microsoft code (e.g. Playwright, markitdown; "
+         "TypeScript as a build tool is fine): it fails the fit test.")
 
 
 def inventory(root: Path) -> str:
