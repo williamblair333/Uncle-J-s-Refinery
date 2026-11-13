@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-13 — waiting sweep sees nested repos
+
+- `just waiting` now also lists repos one folder down (`games/mtw2`, `games/M2TWEOP-library`); before, mtw2's handoff never showed
+
 ## 2026-11-11 — land the unpushed jcodemunch syncs
 
 - Pushed the two post-upgrade syncs that sat on local `main` (`b03fd9f`, `1f46586`), plus `uv.lock` pinned to jcodemunch-mcp 1.108.434 (the installed version) and two new scout finds

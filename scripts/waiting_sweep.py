@@ -137,6 +137,23 @@ def repo_state(repo):
     return branch, dirty_n, ahead
 
 
+def repo_names(root):
+    """Repos under root, plus repos one level down in grouping dirs (e.g. games/mtw2)."""
+    names = []
+    for name in sorted(os.listdir(root)):
+        path = os.path.join(root, name)
+        if os.path.isdir(os.path.join(path, ".git")):
+            names.append(name)
+        elif os.path.isdir(path) and not name.startswith("."):
+            try:
+                subs = sorted(os.listdir(path))
+            except OSError:
+                continue
+            names += [os.path.join(name, sub) for sub in subs
+                      if os.path.isdir(os.path.join(path, sub, ".git"))]
+    return names
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default="/opt/proj")
@@ -146,10 +163,8 @@ def main():
     a = ap.parse_args()
     cutoff = time.time() - a.days * 86400
     shown = 0
-    for name in sorted(os.listdir(a.root)):
+    for name in repo_names(a.root):
         repo = os.path.join(a.root, name)
-        if not os.path.isdir(os.path.join(repo, ".git")):
-            continue
         handoff = os.path.join(repo, "HANDOFF.md")
         roadmap = os.path.join(repo, "ROADMAP.md")
         recent = os.path.isfile(handoff) and os.path.getmtime(handoff) >= cutoff
