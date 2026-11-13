@@ -136,6 +136,27 @@ def test_run_gh_failure_sends_nothing_state_valid(tmp_path):
             json.loads(p.read_text())
 
 
+def test_send_drops_microsoft_outside_the_inbox(tmp_path):
+    # Bill 2026-11-13: never surface Microsoft repos unless he asked for one himself.
+    paths = setup(tmp_path)
+    item = {"rung": 1, "source": "discovered", "judgment": PICK,
+            "found_at": "2026-10-17T00:00:00Z"}
+    store.save_json(paths.queue, [{**item, "repo_id": 7, "full_name": "microsoft/playwright-mcp"},
+                                  {**item, "repo_id": 1, "full_name": "o/r1"}])
+    fake = Fake(repos=[F(7, "microsoft/playwright-mcp"), F(1)])
+    run.run_once(paths, fake.deps(), "INV")
+    assert len(fake.sent) == 1 and "o/r1" in fake.sent[0][0]
+    assert all(q["repo_id"] != 7 for q in store.load_json(paths.queue, []))
+    assert "microsoft/playwright-mcp (Microsoft-owned)" in paths.log.read_text()
+
+
+def test_send_keeps_microsoft_bill_put_in_his_inbox(tmp_path):
+    paths = setup(tmp_path, inbox=["microsoft/playwright-mcp"])
+    fake = Fake(repos=[F(7, "microsoft/playwright-mcp")])
+    run.run_once(paths, fake.deps(), "INV")
+    assert len(fake.sent) == 1
+
+
 def test_run_send_failure_keeps_item_queued(tmp_path):
     paths = setup(tmp_path, inbox=["o/r1"])
     fake = Fake(repos=[F(1)])

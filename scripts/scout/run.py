@@ -435,6 +435,11 @@ def step_send(paths, deps, queue, pending, dry_run, out):
         store.log(paths, f"send: already sent today ({marker.get('full_name')}); "
                          "next message tomorrow")
         return None
+    for q in [q for q in queue if q["source"] != "inbox" and gh.is_microsoft(q["full_name"])]:
+        queue.remove(q)  # Bill 2026-11-13: Microsoft only if he asks by hand (inbox)
+        store.log(paths, f"send: dropped {q['full_name']} (Microsoft-owned)")
+    if not queue:
+        return None
     queue.sort(key=lambda q: SOURCE_RANK[q["source"]])
     item = queue[0]
     facts = deps.facts(item["full_name"])
