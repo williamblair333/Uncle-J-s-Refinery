@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-13 — waiting sweep fix
+
+- `just waiting` scans repos nested one level down (games/mtw2 was missing). No follow-up.
+
 ## 2026-11-11 — session end
 
 - **Most important:** restart running sessions so they pick up the tool-recipes inbox notice (merged 11-10, #335). Next work is in the 11-10 entry below: a hook so sessions search `just -g tools` before writing a script, then a Gitea PR tool.

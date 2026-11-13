@@ -10,6 +10,14 @@ ws = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ws)
 
 
+def test_repo_names_includes_repos_in_grouping_dirs(tmp_path):
+    (tmp_path / "top" / ".git").mkdir(parents=True)
+    (tmp_path / "games" / "mtw2" / ".git").mkdir(parents=True)
+    (tmp_path / "games" / "notes").mkdir()
+    (tmp_path / ".hidden" / "x" / ".git").mkdir(parents=True)
+    assert ws.repo_names(str(tmp_path)) == ["games/mtw2", "top"]
+
+
 def test_bold_label_counts_as_waiting_heading():
     text = ("## 2026-10-22 — session end\n\n**Most important:** keep Ollama.\n\n**Open / next:**\n"
             "- fix grep-guard\n- lineup\n\n## 2026-10-21 — older\n**Open / next:**\n- stale item\n")
