@@ -14,6 +14,16 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Build in-house what the scout found only as ideas** (filed 2026-11-13, from the scout review
+  that answered 22 open finds in `scout/answers.json`). Each needs no outside project:
+  (a) a bench that asserts tool order over real transcripts ("jcodemunch before Read",
+  "memory_search first"), next to `hook_bench.py`. It moves the behaviour-bench-per-hook standard.
+  (b) a small stdlib tool so Claude Code can query our own SearXNG (127.0.0.1:8086).
+  (c) a transcribe tool (yt-dlp + our Whisper on :8092) feeding media-teardown.
+  (d) a weekly Claude pass over unanswered `scout/finds/`, so finds stop expiring to "maybe"
+  unread (7 had; 15 were never answered).
+  Rung-2 evaluations are queued for agentshield, repo-forensics and vestigium (answered yes).
+
 - **Search the tool catalog before writing a new script** (filed 2026-11-10). The tool-recipes
   system (`docs/TOOLS-STANDARD.md`) only pays off if sessions look before they build. Make it fire
   by itself, for example a once-per-session PreToolUse reminder when a session creates a new `.sh`
