@@ -1334,6 +1334,27 @@ check_llama_heretic_backend() {
     fi
 }
 
+# ----- 9o2. wheelhouse: offline copies of the venvs (>10 days = cron failing) ----
+check_wheelhouse() {
+    step "wheelhouse — offline copies of the venvs"
+    local v f age_d
+    for v in .venv .venv-memweave; do
+        f="$REPO_ROOT/state/wheelhouse/$v/built-at"
+        if [[ ! -f "$f" ]]; then
+            warn "no offline copy of $v yet"
+            hint "run: just wheelhouse cron"
+            continue
+        fi
+        age_d=$(( ($(date +%s) - $(stat -c %Y "$f")) / 86400 ))
+        if (( age_d <= 10 )); then
+            ok "offline copy of $v built ${age_d}d ago"
+        else
+            warn "offline copy of $v is ${age_d}d old (>10) — weekly cron likely failing"
+            hint "check: tail -20 $REPO_ROOT/state/wheelhouse.log ; fix: just wheelhouse cron"
+        fi
+    done
+}
+
 # ----- 9o. dreaming last-run freshness (>36h = cron failing) ---------------
 check_dreaming_runtime() {
     step "dreaming — runtime health (last-run freshness)"
@@ -1494,6 +1515,7 @@ check_ask_local_config
 check_ask_local_backend
 check_llama_heretic_backend
 check_dreaming_runtime
+check_wheelhouse
 check_auto_maintain_runtime
 check_repo_scout
 check_cron_catchup

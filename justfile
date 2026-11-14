@@ -121,6 +121,10 @@ scout *args:
 scout-status:
     python3 scripts/scout/run.py status
 
+# offline copies of both venvs + their Pythons: just wheelhouse build|verify|restore <venv> <dest>|cron
+wheelhouse *args:
+    bash scripts/wheelhouse.sh {{args}}
+
 # live build view for any project: just preview publish|watch|status|list (runs in your cwd)
 [positional-arguments]
 preview *args:

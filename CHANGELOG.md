@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-14 — offline copies of the venvs; scout rejects vendor kill switches
+
+- `just wheelhouse` keeps every package of `.venv` and `.venv-memweave` as a wheel (git deps built locally) plus the Python each runs on, in `state/wheelhouse/`; `verify` rebuilds both offline into a temp venv and fails by package name. Weekly cron Sunday 05:30 (build + verify); healthcheck warns past 10 days
+- First build found `turbovecdb`'s GitHub repo gone: the main venv could not have been rebuilt from scratch. It's a mempalace leftover nothing imports, so it's skipped with the reason
+- The scout's fit test now fails anything that stops working when a vendor's server goes away (hosted API, licence check, phone-home, run-time downloads)
+
 ## 2026-11-14 — vendor GUI steps: look them up, give the CLI way
 
 - New `ui-steps-scan` Stop hook (`scripts/ui_steps_scan.py`): a reply that gives GUI steps for someone else's product (click-paths, 3-level menu paths, vendor console URLs) gets one forced retry unless it fetched the current page that turn (WebFetch/WebSearch/context7) or labels the steps "from memory", and unless it names the CLI way (or says none exists and sketches one). Steps for our own local pages skip the lookup rule. Kill switch `UI_STEPS_SCAN=off`; `--replay` bench: 12 of 2031 turns over 30 days (0.6%)

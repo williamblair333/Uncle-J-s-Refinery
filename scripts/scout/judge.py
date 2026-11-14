@@ -32,7 +32,10 @@ GOALS = ("Bill's four goals, in order: accuracy, token efficiency (cheap in tota
          "script without taking over the runtime — Uncle J stays the runtime. "
          "Bill rules out Microsoft software, including GitHub- and LinkedIn-owned projects "
          "and anything that depends on Microsoft code (e.g. Playwright, markitdown; "
-         "TypeScript as a build tool is fine): it fails the fit test.")
+         "TypeScript as a build tool is fine): it fails the fit test. It also fails if it "
+         "stops working when a vendor's server goes away: a hosted API, account or licence "
+         "check, phone-home, or a model or binary fetched at run time that isn't kept "
+         "locally. Self-hosted and downloaded-once-then-offline is fine.")
 
 
 def inventory(root: Path) -> str:
