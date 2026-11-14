@@ -71,6 +71,7 @@ One install sets up ten MCP servers (an MCP server is a small program that gives
   - [22. Antigravity CLI (optional)](#22-antigravity-cli-agy--the-off-claude-agent-optional)
   - [23. Repo scout (optional)](#23-repo-scout--one-open-source-find-each-morning-optional)
   - [24. Prompt triggers (optional)](#24-prompt-triggers--naming-a-skill-invokes-it-optional)
+  - [25. Wheelhouse (optional)](#25-wheelhouse--rebuild-the-venvs-with-no-network-optional)
 - [Daily usage](#daily-usage)
 - [Troubleshooting](#troubleshooting)
 - [File map](#file-map)
@@ -638,7 +639,7 @@ just scout --dry-run                    # one run by hand, printed instead of se
 just scout-status                       # map review state, queue, pending, answers
 ```
 
-Scouting stays off until you set `reviewed: true` in `scout/map.md`. Repos you list in `scout/inbox.md` are scouted first. Answers are saved in `scout/answers.json`, and a find you said no to is never sent again. It needs `gh` logged in and the Telegram setup from section 10 or 13. Design: `docs/superpowers/specs/2026-10-17-repo-scout-design.md`.
+Scouting stays off until you set `reviewed: true` in `scout/map.md`. Repos you list in `scout/inbox.md` are scouted first. Answers are saved in `scout/answers.json`, and a find you said no to is never sent again. A find fails the fit test if it's Microsoft software (GitHub and LinkedIn included) or depends on it, or if it stops working when a vendor's server goes away (hosted API, licence check, phone-home, run-time downloads). It needs `gh` logged in and the Telegram setup from section 10 or 13. Design: `docs/superpowers/specs/2026-10-17-repo-scout-design.md`.
 
 ### 24. Prompt triggers — naming a skill invokes it (optional)
 
@@ -655,6 +656,24 @@ The same installer adds more hooks:
 bash features/prompt-triggers/install.sh              # registers it in ~/.claude/settings.json
 bash features/prompt-triggers/install.sh --uninstall
 ```
+
+### 25. Wheelhouse — rebuild the venvs with no network (optional)
+
+A rebuild normally needs PyPI, GitHub and the uv cache. `scripts/wheelhouse.sh` keeps local copies so it doesn't: for `.venv` and `.venv-memweave` it saves the exact freeze, every package as a wheel (git deps built locally) and the Python interpreter. Copies live in `state/wheelhouse/` (gitignored); the previous build stays as `<venv>.old`.
+
+```bash
+just wheelhouse build                   # refresh the copies
+just wheelhouse verify                  # rebuild each venv offline in a temp dir and compare
+just wheelhouse restore .venv /tmp/v    # rebuild one venv from the copies, offline
+```
+
+Weekly cron (not added by `install.sh`; add it by hand):
+
+```
+30 5 * * 0 PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin bash /opt/proj/Uncle-J-s-Refinery/scripts/wheelhouse.sh cron >> /opt/proj/Uncle-J-s-Refinery/state/wheelhouse.log 2>&1
+```
+
+`./healthcheck.sh` warns when there are no copies or they're over 10 days old. Docker images and model weights are not copied, and the copies sit on the same disk as the venvs.
 
 ---
 
