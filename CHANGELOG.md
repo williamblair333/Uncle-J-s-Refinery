@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-14 — agy friction review closed
+
+- `ask_agy_packet` returns `brief_echoes` (and a warning) when a run of 8+ words from the brief appears in the files agy wrote; `verifiable-task` now says not to check prose by exact phrases
+- `ask_agy`: a failed tool call followed by a successful call of the same tool on the same file is reported as `recovered_errors` with `ok: true`; deny-rule errors never count as recovered. Edit jobs are told their absolute working folder. Results list the `commands` agy ran
+- `self-work-budget.sh`: calls on files under `config/delegate-local-only.txt` (by path, session folder, or a root named in a Bash command) aren't counted and log `local_only`; `ask_agy_packet` counts as delegating
+- `tests/test_dcup_guard.py` logs to a temp dir; it had written 290 fake "BLOCKED dcup-guard" lines into the real `state/hook-blocks.log`
+- `turbovecdb` uninstalled from `.venv`
+
 ## 2026-11-14 — offline copies of the venvs; scout rejects vendor kill switches
 
 - `just wheelhouse` keeps every package of `.venv` and `.venv-memweave` as a wheel (git deps built locally) plus the Python each runs on, in `state/wheelhouse/`; `verify` rebuilds both offline into a temp venv and fails by package name. Weekly cron Sunday 05:30 (build + verify); healthcheck warns past 10 days

@@ -636,3 +636,62 @@ def test_library_ask_does_not_log(tmp_path, _temp_delegate_log):
     # the delegate server calls ask() and logs itself; logging there too would double-count
     run(tmp_path, [result("fine")])
     assert not _temp_delegate_log.exists()
+
+
+# --- agy friction review 11-06, item E: recovered write errors ---
+
+def write_step(idx, state, path, error=None):
+    info = {"name": "write_file", "parameters": {"TargetFile": path, "CodeContent": "x"}}
+    if error:
+        info["error"] = {"message": error}
+    return {"event": "step_update", "step_update": {"step_index": idx, "step_type": "tool",
+                                                    "tool_name": "write_file", "state": state, "tool_info": info}}
+
+
+def test_write_error_then_retry_on_same_file_is_recovered(tmp_path):
+    # 11-06: relative-path write_file calls failed, the absolute retries worked, and the
+    # result said ok: false with every file written.
+    events = [write_step(1, "ERROR", "draft.md", "path must be absolute"),
+              write_step(2, "DONE", str(tmp_path / "draft.md")), result("wrote draft.md")]
+    out, _ = run(tmp_path, events)
+    assert out["ok"] and out["tool_errors"] == []
+    assert len(out["recovered_errors"]) == 1 and "retry" in out["warning"]
+
+
+def test_write_error_on_a_different_file_still_fails(tmp_path):
+    events = [write_step(1, "ERROR", "a/draft.md", "path must be absolute"),
+              write_step(2, "DONE", str(tmp_path / "b" / "draft.md")), result("wrote it")]
+    out, _ = run(tmp_path, events)
+    assert not out["ok"] and len(out["tool_errors"]) == 1 and "recovered_errors" not in out
+
+
+def test_shared_content_is_not_a_shared_file(tmp_path):
+    def w(idx, state, path, error=None):
+        ev = write_step(idx, state, path, error)
+        ev["step_update"]["tool_info"]["parameters"]["CodeContent"] = "see docs/setup.md"
+        return ev
+    events = [w(1, "ERROR", "a.md", "path must be absolute"), w(2, "DONE", str(tmp_path / "b.md")), result("ok")]
+    out, _ = run(tmp_path, events)
+    assert not out["ok"] and "recovered_errors" not in out
+
+
+def test_denied_write_is_never_recovered(tmp_path):
+    events = [write_step(1, "ERROR", str(tmp_path / "x.md"), "permission denied by deny rule"),
+              write_step(2, "DONE", str(tmp_path / "x.md")), result("done")]
+    out, _ = run(tmp_path, events)
+    assert not out["ok"] and "recovered_errors" not in out
+
+
+def test_commands_agy_ran_are_listed(tmp_path):
+    events = [{"event": "step_update", "step_update": {"step_index": 1, "step_type": "tool", "tool_name": "run_command",
+               "state": "DONE", "tool_info": {"parameters": {"CommandLine": "ls -la"}}}}, result("done")]
+    out, _ = run(tmp_path, events)
+    assert out["commands"] == ["ls -la"]
+
+
+def test_edits_brief_names_the_absolute_folder(tmp_path):
+    script, argv_log = fake_agy(tmp_path, [result("ok")])
+    ask.ask("write notes.md", agy_bin=str(script), cwd=str(tmp_path), edits=True)
+    argv = json.loads(argv_log.read_text())
+    prompt = argv[argv.index("-p") + 1]
+    assert prompt.startswith(f"Your working folder is {tmp_path}.") and prompt.endswith("write notes.md")

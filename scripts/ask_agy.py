@@ -157,6 +157,41 @@ def fix_cause(out: dict) -> list[dict]:
     return items
 
 
+_PATHISH = re.compile(r"/|\.\w{1,8}$")
+_PATH_KEY = re.compile(r"path|file|target", re.I)
+
+
+def _targets(step: dict, cwd: str | None) -> set[str]:
+    """The files a tool step names, as absolute paths (relative ones resolved against cwd)."""
+    params = ((step or {}).get("tool_info") or {}).get("parameters") or {}
+    base = cwd or os.getcwd()
+    # Only path-named parameters (TargetFile, AbsolutePath, Path...): file content can contain "/" too.
+    return {os.path.normpath(os.path.join(base, v)) for k, v in params.items()
+            if _PATH_KEY.search(str(k)) and isinstance(v, str) and v and "\n" not in v
+            and len(v) < 500 and _PATHISH.search(v)}
+
+
+def split_recovered(errors: list, error_steps: list, steps: dict, cwd: str | None) -> tuple[list, list]:
+    """(errors still standing, errors a later step fixed).
+
+    An error counts as recovered when a later step of the same tool succeeded on the same file.
+    Why: 2026-11-06 a job's first write_file calls failed on relative paths and its retries with
+    absolute ones worked; the result said ok: false with every file written. Deny errors never
+    count as recovered: a refusal is a rule to fix, not a slip agy got past.
+    """
+    standing, recovered = [], []
+    for err, idx in zip(errors, error_steps):
+        mine = steps.get(idx) or {}
+        targets = _targets(mine, cwd)
+        fixed = targets and not _DENY_ERROR.search(err.get("message") or "") and any(
+            isinstance(i, int) and isinstance(idx, int) and i > idx
+            and s.get("tool_name") == err.get("tool") and s.get("state") not in (None, "ERROR")
+            and targets & _targets(s, cwd)
+            for i, s in steps.items())
+        (recovered if fixed else standing).append(err)
+    return standing, recovered
+
+
 def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         timeout: int = 300, model: str = None) -> dict:
     if cwd and not os.path.isdir(cwd):  # subprocess would raise FileNotFoundError, which reads as a missing agy
@@ -166,6 +201,9 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     resolved = shutil.which(agy, path=env["PATH"])
     if not resolved:  # the shell would otherwise report this as exit 127
         return {"ok": False, "error": f"agy not found: {agy}"}
+    if edits:  # write_file wants absolute paths; a brief with relative ones failed then recovered (11-06)
+        prompt = (f"Your working folder is {os.path.abspath(cwd or os.getcwd())}. "
+                  f"Tools that write files need absolute paths inside it.\n\n{prompt}")
     cmd = [resolved, "-p", prompt, "--output-format", "stream-json", "--print-timeout", f"{timeout}s"]
     if edits:
         cmd += ["--mode", "accept-edits"]
@@ -185,7 +223,7 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": f"agy did not finish within {timeout + 60}s"}
 
-    tool_errors, tool_steps, final = [], {}, None
+    tool_errors, tool_steps, final, error_steps = [], {}, None, []
     tool_by_index = {}
     conversation_id = None
     for line in proc.stdout.splitlines():
@@ -225,6 +263,7 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
                 "input": params.get("CommandLine") or (json.dumps(params, separators=(",", ":")) if params else None),
                 "message": (info.get("error") or {}).get("message", ""),
             })
+            error_steps.append(step.get("step_index"))
         if event.get("event") == "result":
             final = event.get("result") or {}
 
@@ -232,7 +271,16 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
     for k in tool_by_index.values():
         tool_counts[k] = tool_counts.get(k, 0) + 1
 
+    tool_errors, recovered = split_recovered(tool_errors, error_steps, tool_steps, cwd)
     out = {"ok": False, "response": "", "tool_errors": tool_errors, "denied": [], "tools": tool_counts}
+    if recovered:
+        out["recovered_errors"] = recovered
+    # The commands agy chose to run, for the caller only (delegate.jsonl stays content-free).
+    # 11-06: a job ran 10 unrequested commands and no log said which.
+    commands = [((s.get("tool_info") or {}).get("parameters") or {}).get("CommandLine")
+                for s in tool_steps.values() if s.get("tool_name") == "run_command"]
+    if commands := [c[:200] for c in commands if isinstance(c, str) and c][:30]:
+        out["commands"] = commands
     if conversation_id:
         out["conversation_id"] = conversation_id
     stderr_tail = (proc.stderr or "").strip()[-600:]
@@ -291,6 +339,9 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         out["ok"] = True
         if tool_errors:
             out["warning"] = f"{len(tool_errors)} lookup(s) failed and agy worked around them; fix the cause (see fix_cause) or file it"
+        elif recovered:
+            out["warning"] = (f"{len(recovered)} tool call(s) failed and a later retry on the same file worked "
+                              "(see recovered_errors); check the files")
     if causes := fix_cause(out):
         out["fix_cause"] = causes
     return out

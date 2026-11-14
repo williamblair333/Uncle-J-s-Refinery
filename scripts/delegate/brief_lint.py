@@ -86,6 +86,33 @@ def run_requests(prompt: str) -> list[str]:
     return found
 
 
+_WORD = re.compile(r"[a-z0-9']+")
+
+
+def echoed_runs(prompt: str, text: str, n: int = 8) -> list[str]:
+    """Runs of n or more words that appear in both the brief and agy's new text.
+
+    Why: 2026-11-06 agy pasted brief phrases ("do NOT make the client indemnify the contractor")
+    into contract drafts. A brief that lists exact phrases to check for rewards copying them.
+    Each run is reported once, at its longest.
+    """
+    p, t = _WORD.findall(prompt.lower()), _WORD.findall(text.lower())
+    if len(p) < n or len(t) < n:
+        return []
+    grams = {tuple(p[i:i + n]) for i in range(len(p) - n + 1)}
+    runs, i = [], 0
+    while i <= len(t) - n:
+        if tuple(t[i:i + n]) in grams:
+            j = i + n
+            while j < len(t) and tuple(t[j - n + 1:j + 1]) in grams:
+                j += 1
+            runs.append(" ".join(t[i:j]))
+            i = j
+        else:
+            i += 1
+    return runs
+
+
 def lint(prompt: str, cwd: str, rules=None) -> list[str]:
     """Problems with the brief, each naming the rule and the fix. Empty means send it."""
     problems: list[str] = []

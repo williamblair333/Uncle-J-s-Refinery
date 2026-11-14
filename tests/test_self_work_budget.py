@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-HOOK = REPO_ROOT / "hooks" / "discipline" / "self-work-budget.sh"
+HOOK = Path(os.environ.get("SELF_WORK_HOOK") or REPO_ROOT / "hooks" / "discipline" / "self-work-budget.sh")
 
 
 def run_hook(tmp_path, stdin_data: str | dict, env_extra: dict | None = None):
@@ -488,3 +488,69 @@ def test_bash_unrelated_commands_stay_self_work(tmp_path, bash_cmd):
     assert len(logs) == 3
     assert [l["decision"] for l in logs] == ["allow", "allow", "deny"]
     assert all(l["tool"] == "Bash" for l in logs)
+
+
+# --- agy friction review 11-06, items G and the packet gap ---
+
+def _local_only_env(tmp_path, budget="1"):
+    roots = tmp_path / "local-only.txt"
+    roots.write_text("# comment\n/opt/proj/secret-biz   # whole repo\n~/private-notes\n")
+    return {"SELF_WORK_BUDGET": budget, "SELF_WORK_LOCAL_ONLY_FILE": str(roots)}
+
+
+def _denied(proc):
+    return proc.stdout.strip() != "" and json.loads(proc.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_packet_tool_counts_as_delegation(tmp_path):
+    env = {"SELF_WORK_BUDGET": "1"}
+    base = {"session_id": "pkt-session-1", "cwd": "/opt/proj/x"}
+    run_hook(tmp_path, {**base, "tool_name": "Read"}, env)
+    run_hook(tmp_path, {**base, "tool_name": "mcp__delegate__ask_agy_packet"}, env)
+    assert not _denied(run_hook(tmp_path, {**base, "tool_name": "Read"}, env))
+    assert [r["decision"] for r in read_logs(tmp_path)][1] == "delegate"
+
+
+def test_local_only_file_path_never_counted(tmp_path):
+    env = _local_only_env(tmp_path)
+    base = {"session_id": "lo-session-1", "cwd": "/opt/proj/Uncle-J-s-Refinery"}
+    for _ in range(5):
+        proc = run_hook(tmp_path, {**base, "tool_name": "Read",
+                                   "tool_input": {"file_path": "/opt/proj/secret-biz/clients/a.md"}}, env)
+        assert not _denied(proc)
+    assert {r["decision"] for r in read_logs(tmp_path)} == {"local_only"}
+
+
+def test_local_only_cwd_relative_path_and_tilde(tmp_path):
+    env = _local_only_env(tmp_path)
+    base = {"session_id": "lo-session-2", "cwd": "/opt/proj/secret-biz"}
+    for _ in range(3):
+        assert not _denied(run_hook(tmp_path, {**base, "tool_name": "Grep", "tool_input": {"path": "clients"}}, env))
+    tilde = {"session_id": "lo-session-3", "cwd": "/opt/proj/x", "tool_name": "Read",
+             "tool_input": {"file_path": str(tmp_path / "private-notes" / "n.md")}}
+    for _ in range(3):
+        assert not _denied(run_hook(tmp_path, tilde, env))
+
+
+def test_local_only_named_in_bash_command(tmp_path):
+    env = _local_only_env(tmp_path)
+    base = {"session_id": "lo-session-4", "cwd": "/opt/proj/x", "tool_name": "Bash",
+            "tool_input": {"command": "ls\nwc -l /opt/proj/secret-biz/notes.md"}}
+    for _ in range(3):
+        assert not _denied(run_hook(tmp_path, base, env))
+
+
+def test_sibling_prefix_is_not_local_only(tmp_path):
+    env = _local_only_env(tmp_path)
+    base = {"session_id": "lo-session-5", "cwd": "/opt/proj/x", "tool_name": "Read",
+            "tool_input": {"file_path": "/opt/proj/secret-biz2/a.md"}}
+    run_hook(tmp_path, base, env)
+    assert _denied(run_hook(tmp_path, base, env))
+
+
+def test_missing_local_only_list_keeps_old_behaviour(tmp_path):
+    env = {"SELF_WORK_BUDGET": "1", "SELF_WORK_LOCAL_ONLY_FILE": str(tmp_path / "nope.txt")}
+    base = {"session_id": "lo-session-6", "cwd": "/opt/proj/secret-biz", "tool_name": "Read",
+            "tool_input": {"file_path": "/opt/proj/secret-biz/a.md"}}
+    run_hook(tmp_path, base, env)
+    assert _denied(run_hook(tmp_path, base, env))

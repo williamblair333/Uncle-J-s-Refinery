@@ -23,6 +23,12 @@ hand the work off, not after it comes back.
 Put the check in the delegation prompt too. A helper that knows the bar does better work,
 but its claim to have met the bar still counts for nothing.
 
+**For writing (prose, contracts, docs), don't make the check a list of exact phrases.** A helper
+told "I'll search for X" writes X, word for word: on 2026-11-06 agy pasted the brief's
+"do NOT make the client indemnify the contractor" into three contract drafts. Check prose by
+reading it against the source or the requirement instead. `ask_agy_packet` flags 8+ word runs
+copied from the brief as `brief_echoes`.
+
 ## Pick the route by whether a check exists
 
 | Task | Route |
