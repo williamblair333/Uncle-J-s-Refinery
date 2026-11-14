@@ -3,32 +3,41 @@
     "1013631213": {
       "answer": "no",
       "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "full_name": "lemonlyue/code-sandbox-mcp",
+      "note": "1 star, no licence, last push 2025-11; network egress default unknown.",
       "reason": "not my goals",
       "rung": 1,
-      "watch_checked": "2026-11-07T10:52:40Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "1 star, no licence, last push 2025-11; network egress default unknown."
+      "watch_checked": "2026-11-07T10:52:40Z"
     },
     "1104556034": {
       "answer": "no",
       "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "full_name": "nhatvu148/video-transcriber-mcp-rs",
+      "note": "Whisper already runs locally (dcup: whisper :8092). The gap is a thin transcribe tool (yt-dlp + our Whisper) for media-teardown, not a second whisper.cpp.",
       "reason": "already have it",
       "rung": 1,
-      "watch_checked": "2026-11-10T09:46:17Z",
+      "watch_checked": "2026-11-10T09:46:17Z"
+    },
+    "1110874991": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Whisper already runs locally (dcup: whisper :8092). The gap is a thin transcribe tool (yt-dlp + our Whisper) for media-teardown, not a second whisper.cpp."
+      "full_name": "ENTERPILOT/GoModel",
+      "note": "Second routing layer over delegate, with caching/routing that can change outputs silently (accuracy). delegate already logs and falls back.",
+      "reason": "not my goals",
+      "rung": 1
     },
     "1127551308": {
       "answer": "no",
       "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "full_name": "madebyaris/agent-orchestration",
+      "note": "Overlaps memweave and HANDOFF and auto-writes AGENTS.md; parallel agents already isolate via worktrees.",
       "reason": "already have it",
       "rung": 1,
-      "watch_checked": "2026-11-13T10:49:46Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Overlaps memweave and HANDOFF and auto-writes AGENTS.md; parallel agents already isolate via worktrees."
+      "watch_checked": "2026-11-13T10:49:46Z"
     },
     "1131217056": {
       "answer": "no",
@@ -42,12 +51,54 @@
     "1155123554": {
       "answer": "yes",
       "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "eval": {
+        "risks": [
+          "Likely false-positive flood on deliberate Uncle J patterns (2>/dev/null in hooks, uvx/npx launchers, many MCP servers), which would drag the score down without real risk",
+          "Installing through npm/npx adds supply-chain exposure from Microsoft-owned npm infrastructure; the README's GitHub Action and GitHub App channels fail Bill's rule, so only a vendored local build is acceptable",
+          "--fix rewrites config files and --opus sends config contents to a paid API, so both must stay off to keep it read-only and offline",
+          "Single-author project tied to a wider plugin ecosystem with sponsor promotion, so rule quality and long-term upkeep are uncertain"
+        ],
+        "summary": "AgentShield is a Node CLI that statically scans a .claude/ directory and grades it on secrets, permissions, hooks, MCP servers and agent prompts. It can run as a script you call on demand without taking over the runtime, so it passes the fit test as long as it's run from a pinned local build, not through the GitHub Action or GitHub App channels. Uncle J has red-team and blue-team skills but no mechanical scanner for its own hooks and MCP registrations, so this fills a real gap on accuracy and offline use. The adoption-eval method assumes a backend is being replaced; nothing is replaced here, so read this as an additive-tool judgment. The rule count and the breach statistics in the README are the author's own claims and haven't been verified.",
+        "trial_sketch": "Build a pinned copy in a throwaway directory with network disabled. Run `agentshield scan --path` with `--format json` against a copy of ~/.claude and the stack repo's mcp-clients config, never using --fix, --opus or --supply-chain-online. Hand-label each finding as true positive, false positive or noise, and record the runtime-confidence classification, wall-clock time and whether any network calls were attempted. Adopt only if real findings outnumber noise. If it's adopted, the JSON output would feed a refinery-doctor check at zero Claude tokens.",
+        "verdict": "trial"
+      },
+      "evaluated": true,
       "full_name": "affaan-m/agentshield",
+      "note": "Trial report-only, pinned version, never --fix: a static audit of ~/.claude settings/hooks/MCP/CLAUDE.md is a real gap. Queued for the scout rung-2 evaluation.",
       "reason": null,
       "rung": 1,
-      "watch_checked": "2026-11-10T09:46:17Z",
+      "watch_checked": "2026-11-10T09:46:17Z"
+    },
+    "1161198850": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Trial report-only, pinned version, never --fix: a static audit of ~/.claude settings/hooks/MCP/CLAUDE.md is a real gap. Queued for the scout rung-2 evaluation."
+      "full_name": "brcrusoe72/agent-search",
+      "note": "SearXNG already runs (127.0.0.1:8086) and just web2md does extraction. The remaining gap is a tiny local wrapper so Claude Code can call our SearXNG, not this stack.",
+      "reason": "already have it",
+      "rung": 1
+    },
+    "1168786009": {
+      "answer": "yes",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "eval": {
+        "risks": [
+          "Plugin mode auto-registers three Claude Code hooks, including a blocking PreToolUse gate, which would compete with Uncle J's own hooks and runtime control",
+          "Self-updating signed rule and IOC feeds need network access; with --offline detection quality goes stale, which hurts the offline and accuracy goals",
+          "Asking the host agent to settle WARN findings costs Claude tokens and puts snippets from the scanned repo in front of the model, despite the README's sanitizing claims",
+          "Detection-rate and false-positive claims are unverified and self-reported; a noisy scanner wired into the download gate could block legitimate installs"
+        ],
+        "summary": "Repo-forensics is a Python CLI that runs many scanners plus a correlation pass over a repo, skill, plugin or MCP server and returns a severity-ranked verdict with CI-style exit codes and JSON output. It would add a vetting step that Uncle J lacks: the alternatives-scan download gate checks whether better options exist but never checks whether a download is hostile, and the red-team skill is manual. It passes the fit test if it's called as a script from the gate, but its plugin install would add PreToolUse, PostToolUse and SessionStart hooks into Claude Code and should be skipped. It doesn't replace an incumbent backend, so the method's pain-history and migration sections mostly don't apply, and every number in the README comes from the author with no third-party check.",
+        "trial_sketch": "Clone it into a throwaway directory and run run_forensics.sh with --offline and JSON output, without installing it as a plugin. Point it at a hand-built bad skill (zero-width characters, an env-var read followed by an outbound POST, poisoned tools.json text), at Uncle J's own scripts and skills, and at a few already-vetted MCP repos. Measure true and false positives, wall-clock time, and how many tokens the JSON summary costs when passed into context. Also confirm that --offline makes no network calls, for example under a blocked-network namespace.",
+        "verdict": "trial"
+      },
+      "evaluated": true,
+      "full_name": "alexgreensh/repo-forensics",
+      "note": "Candidate behind the alternatives-scan download gate (offline static scan of a clone). Licence reads NOASSERTION on GitHub: check before adopting. Queued for rung-2 evaluation.",
+      "reason": null,
+      "rung": 1
     },
     "1185389803": {
       "answer": "no",
@@ -59,9 +110,37 @@
       "rung": 1,
       "watch_checked": "2026-10-21T09:51:08Z"
     },
+    "1214671166": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "full_name": "jia-gao/leanctx",
+      "note": "Wraps LLMLingua-2 (Microsoft); its own benchmark reports an accuracy cost, and accuracy outranks token savings.",
+      "reason": "not my goals",
+      "rung": 1
+    },
+    "1222665768": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "full_name": "gashel01/sandboxmcp",
+      "note": "1 star; default process backend is not a real boundary. Same sandbox gap as qafas: wait for an established option.",
+      "reason": "not my goals",
+      "rung": 1
+    },
+    "1253197381": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "full_name": "mohitbadwal/ringback",
+      "note": "Needs an outside SIP provider; Telegram already alerts. Revisit with the Jarvis track.",
+      "reason": "not now",
+      "rung": 1
+    },
     "1270868404": {
       "answer": "no",
       "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "eval": {
         "risks": [
           "Critical rules suppress the whole catalog, so one false positive on a first-party description (for example ask_local mentioning credential paths) could silently take a server's tools away",
@@ -75,30 +154,95 @@
       },
       "evaluated": true,
       "full_name": "mdombrov-33/vex-mcp",
+      "note": "2 stars and no push since 2026-06, sitting in every MCP call path: too much trust for too little track record. Regex catalog checks would also flag first-party servers.",
       "reason": "not my goals",
-      "rung": 2,
+      "rung": 2
+    },
+    "1282410797": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "2 stars and no push since 2026-06, sitting in every MCP call path: too much trust for too little track record. Regex catalog checks would also flag first-party servers."
+      "full_name": "Cem-Bas/TokenSurf-Open",
+      "note": "0 stars, pre-1.0. Trajectory pass/fail checks over transcripts are worth building in-house beside hook_bench/router_bench (behaviour-bench-per-hook standard), not via this.",
+      "reason": "not my goals",
+      "rung": 1
+    },
+    "1284604486": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "full_name": "WOLIKIMCHENG/agent-trace-evaluator",
+      "note": "0 stars. The idea is good: assert tool order (jcodemunch before Read) over transcripts. Build it as our own bench script, no dependency needed.",
+      "reason": "not my goals",
+      "rung": 1
     },
     "1350666319": {
       "answer": "no",
       "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "full_name": "lovesong1026/EvalCompass",
+      "note": "0 stars, maturity unproven. Same in-house trajectory-check idea as TokenSurf.",
       "reason": "not my goals",
       "rung": 1,
-      "watch_checked": "2026-11-13T10:49:46Z",
+      "watch_checked": "2026-11-13T10:49:46Z"
+    },
+    "1396688303": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "0 stars, maturity unproven. Same in-house trajectory-check idea as TokenSurf."
+      "full_name": "oss-invisible/playwright_mcp",
+      "note": "Playwright (Microsoft) plus anti-bot/captcha evasion, which breaks site terms; downloads a stranger-built browser binary. Repo moved from feder-cr/invisible_playwright_mcp.",
+      "reason": "not my goals",
+      "rung": 1
+    },
+    "1411651784": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "full_name": "exitCodeNihil/qafas-sandbox",
+      "note": "1 star, alpha, control plane + worker daemon + VM images. Sandboxing is a real gap, but not from a 1-star project; agy already runs jailed.",
+      "reason": "too heavy",
+      "rung": 1
+    },
+    "1429971301": {
+      "answer": "yes",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "eval": {
+        "risks": [
+          "Docling's dependency tree, OCR backend and model downloads could pull in Microsoft code (e.g. onnxruntime) or need network on first ingest; check before relying on offline use",
+          "Very young 0.1.x project; the benchmarks are the author's own and AI-graded with no human check, so the cost and accuracy numbers aren't independently verified",
+          "The optional 'rules' tool lets the agent change how documents are read, so text inside an untrusted PDF could try to steer it; keep it off",
+          "Parse quality varies from PDF to PDF, and the author's figure-question score was low (33% with Haiku), so check the quality report each ingest writes"
+        ],
+        "summary": "Vestigium is a local stdio MCP server. It parses a PDF once with Docling, with OCR for scans, builds a BM25 index with no embeddings and no model calls, and lets the agent read by address (sections, pages, tables, notes) with a PDF page attached to every passage. That fills a real gap: Uncle J has no PDF route that passes the fit test, since markitdown is Microsoft and ruled out. It also matches Bill's goals in order: page-cited answers for accuracy, reading by address for token efficiency, and offline indexing. But the project is at 0.1.x, and every benchmark was run by the author, graded by an AI judge with no human check, and tested only in Claude Code. A throwaway trial should come before any routing change.",
+        "trial_sketch": "Install it into a separate venv with VESTIGIUM_HOME pointing at a temp dir, and ingest 3\u20135 long PDFs Bill actually uses, including one scanned PDF. Network must be off during ingest and querying. Ask about 20 questions whose answers you've already checked by hand. Compare Vestigium with the whole text read through jdocmunch/Read: score accuracy and citation correctness yourself, not with an AI judge, and log tokens and time per answer from the session. Also check Docling's dependency tree (OCR backend, any onnxruntime pull) against the Microsoft rule before keeping it.",
+        "verdict": "trial"
+      },
+      "evaluated": true,
+      "full_name": "Yonagi043/vestigium",
+      "note": "PDF reading is a real gap: jdocmunch's PDF path needs the office extra (not installed here) and that pulls markitdown (Microsoft). Vestigium uses Docling instead. 13 stars and self-graded benchmarks, so it needs a trial on Bill's own PDFs. Queued for rung-2 evaluation.",
+      "reason": null,
+      "rung": 1
     },
     "663368311": {
       "answer": "no",
       "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "full_name": "microsoft/LLMLingua",
+      "note": "Microsoft; lossy compression drops facts, against the accuracy goal.",
       "reason": "not my goals",
       "rung": 1,
-      "watch_checked": "2026-11-08T09:15:01Z",
+      "watch_checked": "2026-11-08T09:15:01Z"
+    },
+    "776193274": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Microsoft; lossy compression drops facts, against the accuracy goal."
+      "full_name": "MaxMLang/pytector",
+      "note": "Classifier injection detectors give false confidence; untrusted text (scout, web2md) is already labelled as data. Revisit if an injection actually gets through.",
+      "reason": "not now",
+      "rung": 1
     },
     "787076358": {
       "answer": "no",
@@ -107,6 +251,24 @@
       "full_name": "firecrawl/firecrawl",
       "note": "Reviewed 2026-10-19: 7 services, 3.4 GiB, Playwright browser path. Replaced by just web2md (trafilatura), done 2026-10-22.",
       "reason": "too heavy",
+      "rung": 1
+    },
+    "951224571": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "full_name": "jae-jae/fetcher-mcp",
+      "note": "Playwright/Chromium (Microsoft). firefox-devtools-mcp (just browser) handles JS pages; web2md handles the rest.",
+      "reason": "already have it",
+      "rung": 1
+    },
+    "952646903": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
+      "full_name": "chriscarrollsmith/taskqueue-mcp",
+      "note": "No push since 2025-04; Claude Code task tracking plus HANDOFF/ROADMAP cover it; ~14 tool schemas cost tokens every session.",
+      "reason": "already have it",
       "rung": 1
     },
     "952688112": {
@@ -118,140 +280,14 @@
       "reason": "not my goals",
       "rung": 1
     },
-    "1168786009": {
-      "full_name": "alexgreensh/repo-forensics",
-      "rung": 1,
-      "answer": "yes",
-      "reason": null,
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Candidate behind the alternatives-scan download gate (offline static scan of a clone). Licence reads NOASSERTION on GitHub: check before adopting. Queued for rung-2 evaluation."
-    },
-    "1161198850": {
-      "full_name": "brcrusoe72/agent-search",
-      "rung": 1,
-      "answer": "no",
-      "reason": "already have it",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "SearXNG already runs (127.0.0.1:8086) and just web2md does extraction. The remaining gap is a tiny local wrapper so Claude Code can call our SearXNG, not this stack."
-    },
-    "1282410797": {
-      "full_name": "Cem-Bas/TokenSurf-Open",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not my goals",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "0 stars, pre-1.0. Trajectory pass/fail checks over transcripts are worth building in-house beside hook_bench/router_bench (behaviour-bench-per-hook standard), not via this."
-    },
-    "952646903": {
-      "full_name": "chriscarrollsmith/taskqueue-mcp",
-      "rung": 1,
-      "answer": "no",
-      "reason": "already have it",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "No push since 2025-04; Claude Code task tracking plus HANDOFF/ROADMAP cover it; ~14 tool schemas cost tokens every session."
-    },
-    "1110874991": {
-      "full_name": "ENTERPILOT/GoModel",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not my goals",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Second routing layer over delegate, with caching/routing that can change outputs silently (accuracy). delegate already logs and falls back."
-    },
-    "1411651784": {
-      "full_name": "exitCodeNihil/qafas-sandbox",
-      "rung": 1,
-      "answer": "no",
-      "reason": "too heavy",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "1 star, alpha, control plane + worker daemon + VM images. Sandboxing is a real gap, but not from a 1-star project; agy already runs jailed."
-    },
-    "1396688303": {
-      "full_name": "oss-invisible/playwright_mcp",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not my goals",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Playwright (Microsoft) plus anti-bot/captcha evasion, which breaks site terms; downloads a stranger-built browser binary. Repo moved from feder-cr/invisible_playwright_mcp."
-    },
-    "1222665768": {
-      "full_name": "gashel01/sandboxmcp",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not my goals",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "1 star; default process backend is not a real boundary. Same sandbox gap as qafas: wait for an established option."
-    },
-    "951224571": {
-      "full_name": "jae-jae/fetcher-mcp",
-      "rung": 1,
-      "answer": "no",
-      "reason": "already have it",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Playwright/Chromium (Microsoft). firefox-devtools-mcp (just browser) handles JS pages; web2md handles the rest."
-    },
-    "1214671166": {
-      "full_name": "jia-gao/leanctx",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not my goals",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Wraps LLMLingua-2 (Microsoft); its own benchmark reports an accuracy cost, and accuracy outranks token savings."
-    },
-    "776193274": {
-      "full_name": "MaxMLang/pytector",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not now",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Classifier injection detectors give false confidence; untrusted text (scout, web2md) is already labelled as data. Revisit if an injection actually gets through."
-    },
-    "1253197381": {
-      "full_name": "mohitbadwal/ringback",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not now",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Needs an outside SIP provider; Telegram already alerts. Revisit with the Jarvis track."
-    },
     "995518485": {
+      "answer": "no",
+      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "full_name": "SmartLittleApps/local-stt-mcp",
-      "rung": 1,
-      "answer": "no",
+      "note": "Apple-Silicon-tuned, no push since 2025-06; local Whisper already runs here.",
       "reason": "already have it",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "Apple-Silicon-tuned, no push since 2025-06; local Whisper already runs here."
-    },
-    "1284604486": {
-      "full_name": "WOLIKIMCHENG/agent-trace-evaluator",
-      "rung": 1,
-      "answer": "no",
-      "reason": "not my goals",
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "0 stars. The idea is good: assert tool order (jcodemunch before Read) over transcripts. Build it as our own bench script, no dependency needed."
-    },
-    "1429971301": {
-      "full_name": "Yonagi043/vestigium",
-      "rung": 1,
-      "answer": "yes",
-      "reason": null,
-      "answered_at": "2026-11-13T17:39:53Z",
-      "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
-      "note": "PDF reading is a real gap: jdocmunch's PDF path needs the office extra (not installed here) and that pulls markitdown (Microsoft). Vestigium uses Docling instead. 13 stars and self-graded benchmarks, so it needs a trial on Bill's own PDFs. Queued for rung-2 evaluation."
+      "rung": 1
     }
   }
 }
