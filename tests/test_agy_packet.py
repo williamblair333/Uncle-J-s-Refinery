@@ -65,6 +65,19 @@ def run(root, files, prompt="fix it", **kw):
     return d.run_agy_packet(prompt, files, str(root), **kw)
 
 
+def test_brief_copied_into_the_files_warns(repo):
+    # 11-06: agy pasted the brief's check phrases into contract drafts
+    phrase = "and do not make the client indemnify the contractor for its own negligence"
+    out = run(repo, ["tools/a.py"], prompt=f'Edit tools/a.py. Check that it never says "{phrase}".',
+              ask=agent(change=lambda h: (h / "tools" / "a.py").write_text(f"x = 1\n# {phrase}\n")))
+    assert out["brief_echoes"] == [phrase] and "copied from the brief" in out["warning"]
+
+
+def test_no_echo_warning_for_original_text(repo):
+    out = run(repo, ["tools/a.py"], ask=agent(change=lambda h: (h / "tools" / "a.py").write_text("x = 2\n")))
+    assert "brief_echoes" not in out
+
+
 def test_only_named_files_are_copied(repo):
     seen = {}
     out = run(repo, ["tools/a.py"], ask=agent(seen=seen))

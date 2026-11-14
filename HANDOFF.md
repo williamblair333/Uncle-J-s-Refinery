@@ -1,5 +1,15 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-14 — agy friction review closed
+
+- **Most important:** the 11-06 agy friction review (`review/2026-11-06-agy-friction.md`) is done. Items 1 and 2 were already in #325. This PR does 3 to 6: `ask_agy_packet` returns `brief_echoes` when 8+ words of the brief land in the files, and `verifiable-task` says not to check prose by exact phrases. A failed write that a later write to the same file fixes is now `recovered_errors` with `ok: true`. Edit jobs are told their absolute folder. Results list the `commands` agy ran.
+- **Budget hook:** `self-work-budget.sh` no longer counts work under `config/delegate-local-only.txt` (it logs `local_only`), and `ask_agy_packet` now counts as delegating. The hook is a symlink into this checkout, so it went live on save; it was tested as a copy first.
+- **Item 6 (113k tokens, 10 commands):** the log for that job holds only agy's stderr, so the commands can't be recovered. `delegate.jsonl` shows 7 `write_file` for 3 files, which fits item 4's failed-then-retried writes. The new `commands` field makes the next case readable.
+- **The "DCUP_GUARD=off" bypass attempt from 11-01 was the test suite.** `tests/test_dcup_guard.py` wrote to the real `state/hook-blocks.log` on every run (290 lines). Fixed: the test logs to a temp dir.
+- **Hook-blocks week 11-07 to 11-14:** 107 grep-guard, 88 edit-surface, 54 surface-write and 21 credential blocks. surface-write-guard blocked a `cat >>` heredoc into `tests/test_ask_agy.py`, while a `python3` write into `tests/test_self_work_budget.py` passed earlier in the same session. Which rule matched wasn't read. Not changed.
+- `turbovecdb` uninstalled from `.venv`.
+- **Not done:** quoting the Dreaming env value. `write_env_var` is shared by several installers, and readers may not `source` the file, so it isn't a one-line fix.
+
 ## 2026-11-14 — wheelhouse + vendor-server test
 
 - **Most important:** `state/wheelhouse/` now holds offline copies of both venvs and their Pythons (~250 MB, verified to rebuild offline). Rebuild a venv with `just wheelhouse restore .venv <dest>`. Weekly cron `# uncle-j-wheelhouse` runs Sundays 05:30 and logs to `state/wheelhouse.log`.

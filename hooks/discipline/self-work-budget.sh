@@ -9,24 +9,29 @@ command -v jq >/dev/null 2>&1 || exit 0
 INPUT=$(cat) || exit 0
 [ -n "$INPUT" ] || exit 0
 
-# Parse tool_name, session_id, cwd, CLAUDE-ONLY flag, and delegation command flag in one jq call
+# Parse tool_name, session_id, cwd, CLAUDE-ONLY flag, delegation command flag, target path
+# and the Bash command (newlines flattened so readarray keeps one line per field) in one jq call
 readarray -t PARSED < <(
   printf '%s' "$INPUT" | jq -r '
     (.tool_name // ""),
     (.session_id // ""),
     (.cwd // ""),
     (if (.tool_name == "Bash" and ((.tool_input.command // "") | contains("CLAUDE-ONLY:"))) then "1" else "0" end),
-    (if (.tool_name == "Bash" and (((.tool_input.command // "") | try test("(^|[\n;&|])\\s*([A-Za-z_][A-Za-z0-9_]*=\\S*\\s+)*((\\S*python[0-9.]*|uv\\s+run)\\s+([^\n;&|]*\\s+)?\\S*scripts/(ask_agy|referee)\\.py|just\\s+([^\n;&|]*\\s+)?(agy|referee|\\S*scripts/(ask_agy|referee)\\.py)|(\\./|/\\S*/)?scripts/(ask_agy|referee)\\.py)\\b") catch false))) then "1" else "0" end)
+    (if (.tool_name == "Bash" and (((.tool_input.command // "") | try test("(^|[\n;&|])\\s*([A-Za-z_][A-Za-z0-9_]*=\\S*\\s+)*((\\S*python[0-9.]*|uv\\s+run)\\s+([^\n;&|]*\\s+)?\\S*scripts/(ask_agy|referee)\\.py|just\\s+([^\n;&|]*\\s+)?(agy|referee|\\S*scripts/(ask_agy|referee)\\.py)|(\\./|/\\S*/)?scripts/(ask_agy|referee)\\.py)\\b") catch false))) then "1" else "0" end),
+    ((.tool_input.file_path // .tool_input.path // .tool_input.notebook_path // "") | tostring | gsub("[\r\n]"; " ")),
+    (if .tool_name == "Bash" then ((.tool_input.command // "") | tostring | gsub("[\r\n]"; " ")) else "" end)
   ' 2>/dev/null
 ) || exit 0
 
-[ "${#PARSED[@]}" -ge 5 ] || exit 0
+[ "${#PARSED[@]}" -ge 7 ] || exit 0
 
 TOOL_NAME="${PARSED[0]}"
 SESSION_ID="${PARSED[1]}"
 CWD="${PARSED[2]}"
 HAS_CLAUDE_ONLY="${PARSED[3]}"
 IS_BASH_DELEGATE="${PARSED[4]}"
+TARGET_PATH="${PARSED[5]}"
+BASH_CMD="${PARSED[6]}"
 
 # session_id and tool_name are required to track state; fail open if missing
 [ -n "$TOOL_NAME" ] && [ -n "$SESSION_ID" ] || exit 0
@@ -44,8 +49,12 @@ MAX_LOG_BYTES="${SELF_WORK_LOG_MAX_BYTES:-5242880}"
 [[ "$MAX_LOG_BYTES" =~ ^[0-9]+$ ]] || MAX_LOG_BYTES=5242880
 PRUNE_DAYS="${SELF_WORK_PRUNE_DAYS:-7}"
 [[ "$PRUNE_DAYS" =~ ^[0-9]+$ ]] || PRUNE_DAYS=7
+# The delegate server's local-only list, found from this hook's real location (it is
+# symlinked into ~/.claude/hooks). Missing list -> nothing is local-only, old behaviour.
+HOOK_REAL=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "")
+LOCAL_ONLY_FILE="${SELF_WORK_LOCAL_ONLY_FILE:-${HOOK_REAL:+$(dirname "$HOOK_REAL")/../../config/delegate-local-only.txt}}"
 
-log_decision() {  # $1 decision (allow/deny/delegate) — logging must never fail the hook
+log_decision() {  # $1 decision (allow/deny/delegate/local_only) — logging must never fail the hook
   local decision="$1"
   local ts sess proj clean_tool clean_proj log_size
   {
@@ -79,10 +88,43 @@ log_decision() {  # $1 decision (allow/deny/delegate) — logging must never fai
   } 2>/dev/null || true
 }
 
+# Is this call's work under a local-only root? Then agy/OpenAI may not take it, and a
+# deny that a retry always passes costs a turn and buys nothing (agy friction review, 11-06).
+# Checks the target path, the session cwd, and, for Bash, any root named in the command.
+local_only_work() {
+  local line root rel
+  [ -n "$LOCAL_ONLY_FILE" ] && [ -f "$LOCAL_ONLY_FILE" ] || return 1
+  rel="$TARGET_PATH"
+  if [ -n "$rel" ] && [ "${rel:0:1}" != "/" ] && [ -n "$CWD" ]; then
+    rel="$CWD/$rel"
+  fi
+  while IFS= read -r line || [ -n "$line" ]; do
+    root="${line%%#*}"
+    root="${root#"${root%%[![:space:]]*}"}"
+    root="${root%"${root##*[![:space:]]}"}"
+    [ -n "$root" ] || continue
+    root="${root/#\~/${HOME:-}}"
+    root="${root%/}"
+    [ -n "$root" ] || continue
+    for p in "$rel" "$CWD"; do
+      [ -n "$p" ] || continue
+      case "$p" in
+        "$root"|"$root"/*) return 0 ;;
+      esac
+    done
+    if [ -n "$BASH_CMD" ]; then
+      case "$BASH_CMD" in
+        *"$root"*) return 0 ;;
+      esac
+    fi
+  done < "$LOCAL_ONLY_FILE"
+  return 1
+}
+
 # 1. Delegation tool or Bash running delegation scripts: reset counter to 0, log delegate, allow
 is_delegation=0
 case "$TOOL_NAME" in
-  mcp__delegate__ask_agy|mcp__delegate__ask_heretic|mcp__delegate__ask_openai|\
+  mcp__delegate__ask_agy|mcp__delegate__ask_agy_packet|mcp__delegate__ask_heretic|mcp__delegate__ask_openai|\
   mcp__ask_local__ask_local|mcp__ask_local__summarize_local|mcp__ask_local__extract_local)
     is_delegation=1
     ;;
@@ -110,6 +152,11 @@ fi
 # 3. Self-work tools: increment count. When count exceeds BUDGET: deny once, reset to 0
 case "$TOOL_NAME" in
   Read|Edit|Write|MultiEdit|NotebookEdit|Bash|Grep|Glob)
+    # Local-only work is not counted: it can't legally be handed to agy.
+    if local_only_work; then
+      log_decision local_only
+      exit 0
+    fi
     current=0
     if [ -f "$COUNT_FILE" ]; then
       raw_count=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)

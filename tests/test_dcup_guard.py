@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -223,6 +224,9 @@ def test_fixed_host_port(spec, fixed):
 
 def _run_hook(payload, env_extra=None):
     env = {k: v for k, v in os.environ.items() if k != "DCUP_GUARD"}
+    # Log nowhere: without this every run wrote "BLOCKED dcup-guard cmd=DCUP_GUARD=off ..."
+    # to the real state/hook-blocks.log (290 lines by 11-14), which read as a bypass attempt.
+    env["UNCLE_J_PROJ_ROOT"] = tempfile.mkdtemp(prefix="dcup-guard-test-")
     env.update(env_extra or {})
     return subprocess.run([sys.executable, str(GUARD)], input=json.dumps(payload),
                           capture_output=True, text=True, env=env, timeout=30)

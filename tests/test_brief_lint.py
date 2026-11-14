@@ -118,3 +118,18 @@ def test_run_agy_refuses_before_calling_agy(monkeypatch, tmp_path):
     out = server.run_agy("Create a new branch and run: .venv/bin/python -m pytest", cwd=str(tmp_path),
                          ask=lambda *a, **k: called.append(1) or {"ok": True})
     assert out["error"] == "brief_lint" and not called and out["problems"]
+
+
+# --- agy friction review 11-06, item D: briefs copied into the output ---
+
+def test_echoed_runs_catches_the_msa_line():
+    brief = ('Check the indemnity clause. Search for the phrase "and do NOT make the client '
+             'indemnify the contractor for its own negligence" to confirm.')
+    draft = ("7. Indemnity. Each party indemnifies the other, and do NOT make the client "
+             "indemnify the contractor for its own negligence.")
+    runs = bl.echoed_runs(brief, draft)
+    assert runs == ["and do not make the client indemnify the contractor for its own negligence"]
+
+
+def test_echoed_runs_ignores_short_shared_phrases():
+    assert bl.echoed_runs("write a short note about the weekly backup job", "the weekly backup job ran") == []

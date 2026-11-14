@@ -606,7 +606,13 @@ def run_agy_packet(prompt: str, files: list[str], base: str, task: str | None = 
         return {"ok": False, "error": "packet_root_unusable", "detail": str(err)[:200]}
     changed = sorted(n for n in before.keys() | after.keys() if before.get(n) != after.get(n))
     diff = [line for n in changed for line in _packet_diff(n, before.get(n, b""), after.get(n, b""))]
-    return {**out, "diff": "".join(diff), "changed": changed}
+    result = {**out, "diff": "".join(diff), "changed": changed}
+    added = "\n".join(line[1:] for line in diff if line.startswith("+") and not line.startswith("+++"))
+    if echoes := brief_lint.echoed_runs(prompt, added):
+        result["brief_echoes"] = echoes[:10]
+        result["warning"] = (f"{len(echoes)} run(s) of 8+ words were copied from the brief into the files; "
+                             "read them: a brief's example phrases are not the text to write")
+    return result
 
 
 def run_openai(prompt: str, system: str | None = None, model: str | None = None,
