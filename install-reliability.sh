@@ -349,6 +349,24 @@ else
             ok "workaround-scan Stop hook already wired in settings.json"
         fi
 
+        # Wire ui-steps-scan Stop hook: vendor GUI steps must be looked up this turn and come
+        # with the CLI way (scripts/ui_steps_scan.py). Same once-per-turn, fail-open shape.
+        _ui_already=$(jq '[.hooks.Stop[]?.hooks[]?.command // ""] | map(select(contains("ui-steps-scan.sh"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_ui_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.Stop += [
+                {"hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/ui-steps-scan.sh || exit 0","timeout":10}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.Stop | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "ui-steps-scan Stop hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "ui-steps-scan Stop hook already wired in settings.json"
+        fi
+
         # Wire self-check Stop hook: forces one evidence-backed check pass on long replies
         # (scripts/self_check.py). Same once-per-turn, fail-open shape as workaround-scan.
         _sc_already=$(jq '[.hooks.Stop[]?.hooks[]?.command // ""] | map(select(contains("self-check.sh"))) | length' "$_settings" 2>/dev/null || echo 0)

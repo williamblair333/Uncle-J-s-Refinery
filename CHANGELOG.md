@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-14 — vendor GUI steps: look them up, give the CLI way
+
+- New `ui-steps-scan` Stop hook (`scripts/ui_steps_scan.py`): a reply that gives GUI steps for someone else's product (click-paths, 3-level menu paths, vendor console URLs) gets one forced retry unless it fetched the current page that turn (WebFetch/WebSearch/context7) or labels the steps "from memory", and unless it names the CLI way (or says none exists and sketches one). Steps for our own local pages skip the lookup rule. Kill switch `UI_STEPS_SCAN=off`; `--replay` bench: 12 of 2031 turns over 30 days (0.6%)
+- CLAUDE.md gets the matching two-line rule; nearby jdocmunch lines trimmed so the file stays under agy's 24 KB per-file cap
+
 ## 2026-11-13 — scout: open finds answered, Microsoft filtered out
 
 - Answered the 22 open scout finds in `scout/answers.json` (#339): 3 yes (agentshield, repo-forensics, vestigium) for the rung-2 evaluation, 19 no with reasons; ROADMAP gets four in-house follow-ups

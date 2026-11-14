@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-14 — ui-steps-scan hook
+
+- **Most important:** after merge, run `bash install-reliability.sh` (wires the Stop hook into settings.json; the symlink comes from the same script) and `bash scripts/refinery-doctor.sh --fix` (deploys CLAUDE.md). Sessions pick it up on restart.
+- Bench after a week: `python3 scripts/ui_steps_scan.py --replay --days 7` and `~/.claude/state/ui-steps-scan.jsonl`. Known borderline hits: game clicks (mtw2) and phone taps; one extra line each.
+- CLAUDE.md is at 22084 bytes; agy's cap check (`tests/test_ask_agy.py`) fails at 24000 minus the 1892-byte rules block. Every new CLAUDE.md line must be paid for by trimming.
+- Bill mentioned "another example" for this rule that never arrived in the chat. Ask for it.
+
 ## 2026-11-13 — scout review + no-Microsoft filter
 
 - **Most important:** the 04:15 scout on 11-14 runs rung-2 evaluations for agentshield, repo-forensics and vestigium (Claude answered yes for Bill), then sends them one a day on Telegram. Check `state/scout.log` for "evaluate: … →".

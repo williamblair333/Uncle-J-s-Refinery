@@ -215,18 +215,17 @@ an audit; it validates every evidence ref against what this session retrieved.
   **`truncated: false` ≠ everything indexed — read `coverage_complete`** and `skip_counts`.
   The `changes` list is capped; the `deleted` count is the authority. Check
   `corpus_selection_changed` — a silently shrunk corpus otherwise looks like success.
-- Merely installing `fastembed` switches an unconfigured host's embedding provider; any model
-  other than `all-MiniLM-L6-v2` forces a full re-embed.
+- Installing `fastembed` switches an unconfigured host's embedder; a model other than
+  `all-MiniLM-L6-v2` forces a full re-embed.
 - `verify_index`: gate on `drift_count == 0` **and** `skipped_count == 0`; default
   `source="cache"` doesn't prove the source is current (use `source="live"`).
-- A repo missing from `doc_list_repos` is `degraded`, not absent. `has_embeddings: false`
-  means word-only search.
-- `get_toc` / `get_toc_tree` / `list_docs` **refuse** (an `error`, not a short list) when the
-  answer would exceed `JDOCMUNCH_RESPONSE_MAX_BYTES` (default 1 MiB). Retry with `path_glob=`
-  or `limit=` (`suggested_limit` is given); page on `next_offset` until it's `None`.
-- Dotted dirs below the index root are skipped (except `.github`); opt in with
-  `include_dot_dirs=` by name. A root that is itself dotted is unaffected.
+- Missing from `doc_list_repos` = `degraded`, not absent; `has_embeddings: false` = word-only.
+- `get_toc`/`get_toc_tree`/`list_docs` **refuse** (an `error`) past
+  `JDOCMUNCH_RESPONSE_MAX_BYTES` (1 MiB): retry with `path_glob=`/`limit=`, page on `next_offset`.
+- Dotted dirs under the root are skipped (not `.github`); opt in via `include_dot_dirs=`.
 - Third-party library docs → **context7**, whenever a named library is involved.
+- **Vendor GUI steps** (console, settings, app menu): fetch the current page that turn and cite
+  it, or say "from memory". **Always add the CLI way**, or say none exists and sketch one.
 
 ### 4. Memory — memweave before WebSearch or re-asking
 - Start every non-trivial task with a memory search for prior work: **`memory_search`**
