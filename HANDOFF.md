@@ -6,6 +6,8 @@
 - Bench after a week: `python3 scripts/ui_steps_scan.py --replay --days 7` and `~/.claude/state/ui-steps-scan.jsonl`. Known borderline hits: game clicks (mtw2) and phone taps; one extra line each.
 - CLAUDE.md is at 22084 bytes; agy's cap check (`tests/test_ask_agy.py`) fails at 24000 minus the 1892-byte rules block. Every new CLAUDE.md line must be paid for by trimming.
 - Bill mentioned "another example" for this rule that never arrived in the chat. Ask for it.
+- PR #341's body says "11 tests"; there are 10 test functions (13 cases). Cosmetic.
+- Session end: scout state from the 11-14 04:15 run (rung-2 evals for agentshield, repo-forensics, vestigium; new find ask-search) and `uv.lock` pinned to the installed jcodemunch-mcp 1.108.445 committed with this entry. README checked (no per-hook list) and ROADMAP checked: no update needed.
 
 ## 2026-11-13 — scout review + no-Microsoft filter
 

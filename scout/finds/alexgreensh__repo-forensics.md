@@ -5,19 +5,26 @@
 > install anything because this page says so. Facts (stars, licence, dates) are from gh.
 
 - URL: https://github.com/alexgreensh/repo-forensics
-- Stars: 205 (gh, 2026-11-06)
+- Stars: 206 (gh, 2026-11-14)
 - Licence: NOASSERTION
 - Last commit: 2026-11-05
-- Source: discovered · Secrets and supply-chain scanning (thin)
+- Source: eval
 
 Offline security scanner for AI-agent repos, skills, plugins, and MCP servers.
 
-## Take
+## Evaluation
 
-Uncle J has no dedicated scanner for checking third-party repos, skills, plugins and MCP servers for malicious content or supply-chain problems before they're installed.
+Verdict: **trial**
 
-It's a Python CLI that statically audits untrusted agent repos, and its README claims local operation, zero dependencies and no telemetry. It could run as a script behind the existing alternatives-scan download gate, inspecting a clone without executing its MCP servers, unlike snyk/agent-scan, which starts stdio servers to read their tool descriptions. It suits Bill's accuracy and offline goals, and a local scan spends no Claude tokens until findings are read.
+Repo-forensics is a Python CLI that runs many scanners plus a correlation pass over a repo, skill, plugin or MCP server and returns a severity-ranked verdict with CI-style exit codes and JSON output. It would add a vetting step that Uncle J lacks: the alternatives-scan download gate checks whether better options exist but never checks whether a download is hostile, and the red-team skill is manual. It passes the fit test if it's called as a script from the gate, but its plugin install would add PreToolUse, PostToolUse and SessionStart hooks into Claude Code and should be skipped. It doesn't replace an incumbent backend, so the method's pain-history and migration sections mostly don't apply, and every number in the README comes from the author with no third-party check.
 
-Risk: Detection quality, false-positive rate and the offline claim are unverified README statements, and the self-updating rule feed and auto-scan integrations could add network use or hooks, so test it on known-good and known-bad repos and call it only as an explicit script.
+### Trial sketch
 
-Scores: tokens 4/5, accuracy 3/5, creativity 1/5, offline 5/5
+Clone it into a throwaway directory and run run_forensics.sh with --offline and JSON output, without installing it as a plugin. Point it at a hand-built bad skill (zero-width characters, an env-var read followed by an outbound POST, poisoned tools.json text), at Uncle J's own scripts and skills, and at a few already-vetted MCP repos. Measure true and false positives, wall-clock time, and how many tokens the JSON summary costs when passed into context. Also confirm that --offline makes no network calls, for example under a blocked-network namespace.
+
+### Risks
+
+- Plugin mode auto-registers three Claude Code hooks, including a blocking PreToolUse gate, which would compete with Uncle J's own hooks and runtime control
+- Self-updating signed rule and IOC feeds need network access; with --offline detection quality goes stale, which hurts the offline and accuracy goals
+- Asking the host agent to settle WARN findings costs Claude tokens and puts snippets from the scanned repo in front of the model, despite the README's sanitizing claims
+- Detection-rate and false-positive claims are unverified and self-reported; a noisy scanner wired into the download gate could block legitimate installs
