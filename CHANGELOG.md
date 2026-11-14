@@ -7,6 +7,7 @@
 - `just wheelhouse` keeps every package of `.venv` and `.venv-memweave` as a wheel (git deps built locally) plus the Python each runs on, in `state/wheelhouse/`; `verify` rebuilds both offline into a temp venv and fails by package name. Weekly cron Sunday 05:30 (build + verify); healthcheck warns past 10 days
 - First build found `turbovecdb`'s GitHub repo gone: the main venv could not have been rebuilt from scratch. It's a mempalace leftover nothing imports, so it's skipped with the reason
 - The scout's fit test now fails anything that stops working when a vendor's server goes away (hosted API, licence check, phone-home, run-time downloads)
+- README: new section 25 (wheelhouse, with the hand-added cron line) and the scout's Microsoft and vendor-server rules in section 23
 
 ## 2026-11-14 — vendor GUI steps: look them up, give the CLI way
 

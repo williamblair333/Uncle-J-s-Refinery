@@ -5,6 +5,7 @@
 - **Most important:** `state/wheelhouse/` now holds offline copies of both venvs and their Pythons (~250 MB, verified to rebuild offline). Rebuild a venv with `just wheelhouse restore .venv <dest>`. Weekly cron `# uncle-j-wheelhouse` runs Sundays 05:30 and logs to `state/wheelhouse.log`.
 - **Still exposed:** the copies sit on this one disk. Off-machine copies are the open backup question in `review/2026-11-07-backup-gap.md`. Docker images (Heretic, Ollama, ComfyUI, SearXNG, Whisper) and model weights aren't covered.
 - `turbovecdb` (github.com/williamblair333/turbovecdb) is gone from GitHub and Gitea. It's skipped in the copies. Uninstall it from `.venv` when convenient (nothing imports it).
+- The wheelhouse cron is in this host's crontab only. `install.sh` doesn't add it, so the pi server and tc-vmh-03 don't have it (README section 25 has the line).
 - memweave upstream PR #8 is approved with checks green since 11-05; only the maintainer can merge. We run PyPI 0.2.1, which doesn't have the fix.
 
 ## 2026-11-14 — ui-steps-scan hook
