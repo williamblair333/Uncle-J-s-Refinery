@@ -15,10 +15,10 @@ Completed items age out after ~4 weeks.
 ## Planned
 
 - **Buddy accounts: Claude acts on websites for Bill** (filed 2026-11-15; Bill's steps are in the
-  "Buddy accounts setup" Claude Doc). Done: `just browser-show` (#347) and `just mail` (#348).
-  Open: (a) Bill writes the app password and the mail tool's live test runs; (b) a JMP.chat number,
-  then an XMPP reader for SMS codes; (c) a buddy Vaultwarden account, a shared Buddy collection,
-  and the bw CLI for 2FA codes; (d) move the buddy off Autark's Gmail onto its own account once it
+  "Buddy accounts setup" Claude Doc). Done: `just browser-show` (#347), `just mail` (#348, live) and
+  `just vault` (#354, live; the TOTP read is untested until the vault holds an item).
+  Open: (b) a JMP.chat number, then an XMPP reader for SMS codes; (c) a shared Buddy collection;
+  (d) move the buddy off Autark's Gmail onto its own account once it
   has a number (Google refused a new signup on Bill's phone).
 
 - **Build in-house what the scout found only as ideas** (filed 2026-11-13, from the scout review

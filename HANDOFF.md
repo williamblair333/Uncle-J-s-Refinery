@@ -1,8 +1,15 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-15 (end of session) — pick up here
+
+1. **Vault 2FA test, mid-walkthrough.** `just vault` is live: Bill wrote `~/.config/uncle-j/buddy-vault.env`, and `just vault list` logged in to vault.home.arpa and synced (the vault is empty, so it returned `{"items": []}`). Bill is being walked through adding a test entry **one step at a time**. Step 1 was given: open https://vault.home.arpa and log in as the buddy account. Next: (2) **New → Login**, name `buddy-test`, username `test`; (3) paste the dummy key `JBSWY3DPEHPK3PXP` into **Authenticator key**, then Save; (4) run `just vault get buddy-test --field totp` and compare it with a locally computed TOTP for that key (e.g. `python3 -c` with hmac/base64; no download needed). Steps 2–3 are from memory: Bitwarden's help page covers the Authenticator key field but not the new-item buttons.
+2. `status` showing `locked` between calls is by design: each command unlocks, reads and drops the session key.
+3. Still open for buddy accounts (ROADMAP): the JMP.chat number and SMS reader, a shared Buddy collection, and moving off Autark's Gmail.
+4. Done this session's tail: the write_well session's `skill/sanderson-style` branch was merged (its untracked copy was byte-identical), and `uv.lock` (jcodemunch 1.108.445 → 1.108.447, the version installed when the suite passed 3689) was committed.
+
 ## 2026-11-15 — `just vault`: the buddy's own vault account
 
-- **Most important:** `just vault status|list|get ITEM --field username|password|totp` (`scripts/buddy_vault.py`) reads the buddy's own account on autark's Vaultwarden through the official `bw` CLI (2026.10.1, installed with `npm i -g --prefix ~/.local`; scan in `review/alternatives/2026-11-15-buddy-vault-cli.md`). It's read-only by construction, and its state is in `~/.config/uncle-j/bw`. Tested against a fake bw only. **Waiting on Bill:** write `~/.config/uncle-j/buddy-vault.env` (0600) with `BUDDY_VAULT_EMAIL` and `BUDDY_VAULT_PASSWORD` (the buddy account's master password). Then run `just vault status` and `just vault list` for the live check.
+- **Most important:** `just vault status|list|get ITEM --field username|password|totp` (`scripts/buddy_vault.py`) reads the buddy's own account on autark's Vaultwarden through the official `bw` CLI (2026.10.1, installed with `npm i -g --prefix ~/.local`; scan in `review/alternatives/2026-11-15-buddy-vault-cli.md`). It's read-only by construction, and its state is in `~/.config/uncle-j/bw`. The live check passed (see the entry above).
 - Gmail's 2FA is in Bill's authenticator app, so the buddy can't pass a Google web login on its own. IMAP and SMTP use the app password, so `just mail` doesn't need it. For the buddy to log in to sites by itself, their TOTP secrets go into its vault items, and `get --field totp` reads them.
 
 ## 2026-11-15 — skill router audit done; `just mail` live
