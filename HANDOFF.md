@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-15 — the "buddy" can use a visible browser
+
+- **Most important:** Bill wants Claude to act for him on web pages, using its own accounts. The browser part already existed (`just browser`, Mozilla's Firefox MCP, headless). This adds `just browser-show`, which opens a real window so Bill can watch and step in for captchas and 2FA. It stays out of the default config on purpose (Bill hasn't decided whether to load it by default).
+- **Next, from the same request:** (2) a mail tool for the buddy's mailbox (Proton) so it can send, read and search without a browser; (3) a rule for where the buddy's own passwords and 2FA secrets live (Bill's vault, never the repo). Bill also asked about a phone number of the buddy's own, for SMS checks.
+
 ## 2026-11-15 — DeepSeek V4.1 engine built, Paris smoke passed
 
 - **Most important:** DeepSeek V4.1 (IQ2_XXS, the uncensored overnight checker) now runs here. `strata-dsv41` is built for the RTX 3060, the pack is made, and the smoke test answered "The capital of France is Paris." (about 1.5 min including load). **Next: the blind test**: the 5 bench tasks as plain questions, plus grading Heretic's existing answers, judged blind against the 40/40 bar.

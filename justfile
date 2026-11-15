@@ -138,6 +138,10 @@ chat *args:
 browser *args:
     claude {{args}} --mcp-config "$(./scripts/firefox-mcp.sh --config)"
 
+# same as browser, but with a visible Firefox window you can watch and take over
+browser-show *args:
+    claude {{args}} --mcp-config "$(FIREFOX_MCP_SHOW=1 ./scripts/firefox-mcp.sh --config)"
+
 # web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
 web2md *args:
     uv run -q --script scripts/web2md.py {{args}}

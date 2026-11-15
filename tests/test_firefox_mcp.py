@@ -53,3 +53,25 @@ def test_launcher_passes_the_env_firefox_needs():
     # npx asks registry.npmjs.org on every start; the launcher runs node on a local install.
     assert not re.search(r"^\s*(exec\s+)?npx\b", text, re.M)
     assert re.search(r"^exec node ", text, re.M)
+
+
+def _config(tmp_path, **env):
+    r = subprocess.run(["bash", str(SCRIPT), "--config"], capture_output=True, text=True,
+                       timeout=30, env={"HOME": str(tmp_path), "PATH": "/usr/bin:/bin", **env})
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)["mcpServers"]["firefox"]
+
+
+def test_config_is_headless_by_default(tmp_path):
+    assert "env" not in _config(tmp_path)
+
+
+def test_config_carries_show_into_the_server(tmp_path):
+    # `just browser-show` sets FIREFOX_MCP_SHOW=1; the server process must see it.
+    assert _config(tmp_path, FIREFOX_MCP_SHOW="1")["env"] == {"FIREFOX_MCP_SHOW": "1"}
+
+
+def test_launcher_drops_headless_only_when_shown():
+    text = SCRIPT.read_text()
+    assert re.search(r'FIREFOX_MCP_SHOW:-0\}" != 1 \]\] && .*--headless', text)
+    assert not re.search(r"^\s*--headless \\$", text, re.M)
