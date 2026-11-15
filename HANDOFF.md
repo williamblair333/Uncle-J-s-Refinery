@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-15 — skill router audit done; `just mail` live
+
+- **Skill router follow-up (from 11-01) is closed.** Since 11-02 the router fired 18 times. Every named skill was either called or declined in one line, so the planned "named but not called" Stop check isn't needed. The open problem is `expert-bar`'s auto-add (repo has no STANDARDS.md): it was 16 of 39 names, mostly declined as "not planning". Unattended scheduled runs no longer get it. Still noisy: interactive lookups in hearth and mafski, where it fires every session because nobody writes the STANDARDS.md. Next step if it matters: write those repos' expert bars, or nudge once per repo per week instead of per session.
+- **`just mail` works live** as xforgelabs@gmail.com (`check` passed, autark sent a test). Recipes `mail`, `web2md`, `browser`, `browser-show` now pass arguments quoted (#351).
+
 ## 2026-11-15 — buddy mail tool
 
 - **Most important:** `just mail` (`scripts/buddy_mail.py`) gives the buddy a mailbox over Gmail IMAP/SMTP: check, list, search (Gmail syntax), read, send. Reads never change mail and there's no delete. It's tested against fake servers only; the live test waits on Bill writing the app password to `~/.config/uncle-j/buddy-mail.env` (steps in the "Buddy accounts setup" Claude Doc).

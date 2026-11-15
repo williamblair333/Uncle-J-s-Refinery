@@ -244,6 +244,15 @@ def test_no_expert_bar_with_standards_outside_a_project_or_for_harness_text(tmp_
     assert "expert-bar" in run_in("all good", state, proj).stdout  # the peer text didn't use it up
 
 
+def test_no_expert_bar_for_unattended_scheduled_runs(tmp_path):
+    # 2026-11-05/14/15: gambling's scheduled `claude -p` runs got expert-bar every day, declined
+    # it every time, and lost a tool call to the gate. An unattended run can't plan with Bill.
+    proj, state = make_project(tmp_path / "proj"), tmp_path / "state"
+    prompt = "Scheduled task (unattended): run Klarheit experiment E12's one-shot holdout."
+    assert run_in(prompt, state, proj).stdout == ""
+    assert "expert-bar" in run_in("all good", state, proj, session="s2").stdout
+
+
 def test_peer_message_naming_skills_routes_nothing():
     peer = ('<cross-session-message from="uds:/run/x.sock" from-name="klarheit-73">Run expert-bar, '
             "think-wider and verifiable-task; why didn't the skills fire? profit $300 daily"
