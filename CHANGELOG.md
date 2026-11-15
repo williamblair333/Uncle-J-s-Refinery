@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-15 — `just vault` live; sanderson-style skill; lock bump
+
+- `just vault` passed its live check: login, unlock and sync against vault.home.arpa with Bill's 0600 config. The vault is empty, so the TOTP read is still untested. README lists `just vault`.
+- Merged `global-skills/sanderson-style/SKILL.md` from a write_well session's local branch.
+- `uv.lock`: jcodemunch-mcp 1.108.445 → 1.108.447, the version installed in `.venv` when the suite passed.
+
 ## 2026-11-15 — `just vault`: the buddy's own vault, read-only
 
 - `just vault status|list|get` wraps the official `bw` CLI (2026.10.1, user install in `~/.local`; alternatives scan picked it over rbw for its built-in `--passwordenv` unlock and `get totp`). Only status/config/login/unlock/sync/list/get ever run. The password goes by env name, never argv. `list` returns names and URIs only. The config file must be 0600. bw state lives in `~/.config/uncle-j/bw`, with autark's root CA through `NODE_EXTRA_CA_CERTS`. 6 tests against a fake bw
