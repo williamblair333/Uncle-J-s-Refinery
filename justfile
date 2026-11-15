@@ -142,6 +142,10 @@ browser *args:
 browser-show *args:
     claude {{args}} --mcp-config "$(FIREFOX_MCP_SHOW=1 ./scripts/firefox-mcp.sh --config)"
 
+# the buddy's mailbox: just mail check | list | search QUERY | read UID | send --to A --subject S --body T
+mail *args:
+    .venv/bin/python scripts/buddy_mail.py {{args}}
+
 # web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
 web2md *args:
     uv run -q --script scripts/web2md.py {{args}}

@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-15 — buddy mail tool
+
+- **Most important:** `just mail` (`scripts/buddy_mail.py`) gives the buddy a mailbox over Gmail IMAP/SMTP: check, list, search (Gmail syntax), read, send. Reads never change mail and there's no delete. It's tested against fake servers only; the live test waits on Bill writing the app password to `~/.config/uncle-j/buddy-mail.env` (steps in the "Buddy accounts setup" Claude Doc).
+- **For now it uses Autark's Gmail account**, by Bill's choice: Proton Bridge was rejected (`cc@` is an alias on Bill's own Proton account, so Bridge needed all of it), and Google refused a new account because Bill's phone hit its signup limit. Move the buddy to its own account once it has a number (JMP) or a spare phone. Until then a Google lockout from the buddy's use hits Autark too, so keep sends few.
+
 ## 2026-11-15 — the "buddy" can use a visible browser
 
 - **Most important:** Bill wants Claude to act for him on web pages, using its own accounts. The browser part already existed (`just browser`, Mozilla's Firefox MCP, headless). This adds `just browser-show`, which opens a real window so Bill can watch and step in for captchas and 2FA. It stays out of the default config on purpose (Bill hasn't decided whether to load it by default).

@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-15 — buddy mail tool
+
+- `just mail check|list|search|read|send`: the buddy's Gmail over IMAP/SMTP, standard library only, JSON out. Readonly select + BODY.PEEK, no delete, list capped at 50, the password never printed. Config at `~/.config/uncle-j/buddy-mail.env` (0600, written by Bill). 7 tests against fake servers
+
 ## 2026-11-15 — browser with a visible window
 
 - `just browser-show` starts the same per-session Firefox browser as `just browser`, with a real window so Bill can watch and take over (captcha, 2FA). `FIREFOX_MCP_SHOW=1` rides in the `--config` env and drops `--headless`; the default stays headless. Live-tested: the session opened example.com in a visible window, and Firefox exited with the session
