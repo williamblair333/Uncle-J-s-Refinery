@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-15 — DeepSeek V4.1 engine built
+
+- Built `strata-dsv41` (sm_86, CUDA 13) in Strata's cached build image, fetched the pinned DSpark drafter and metadata shard (SHA-256 checked), packed the IQ2_XXS set, and passed the Paris smoke test. No repo code changed; HANDOFF records the run steps and two problems found along the way (a lost background agy result, and the packer recording container paths).
+
 ## 2026-11-14 — agy friction review closed
 
 - `ask_agy_packet` returns `brief_echoes` (and a warning) when a run of 8+ words from the brief appears in the files agy wrote; `verifiable-task` now says not to check prose by exact phrases

@@ -1,5 +1,15 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-15 — DeepSeek V4.1 engine built, Paris smoke passed
+
+- **Most important:** DeepSeek V4.1 (IQ2_XXS, the uncensored overnight checker) now runs here. `strata-dsv41` is built for the RTX 3060, the pack is made, and the smoke test answered "The capital of France is Paris." (about 1.5 min including load). **Next: the blind test**: the 5 bench tasks as plain questions, plus grading Heretic's existing answers, judged blind against the 40/40 bar.
+- **Where things are:** the engine is in `/opt/docker/strata/dsv41-build/engine/` (CUDA 13, build id c62d5e3). It was compiled inside the cached Strata build-stage image `34d0d0c42e1f`, because the host has only CUDA 12.4. The pack is `/opt/models/gguf/dsv41-pack/ist-das-2.00bpw`: 8.5 MB that points at the weights in place. The drafter and Unsloth's 5.8 MB metadata shard are in `/opt/models/gguf/dsv41-engram`, and both match the SHA-256 pins in Strata's `setup.py`. The exact run steps are in the auto-memory note `project_big-model-bench`.
+- **Before a run:** `just heretic down`, and unload Ollama's model (`keep_alive: 0`), which leaves about 18 GB of RAM free. Run `just heretic up -d` after. Heretic is up now.
+- **Filed, both hit this session:**
+  - **A background agy answer was lost.** An `ask_agy` call ran past 120 s and moved to the background (task `kf2j75933`). `state/delegate.jsonl` logs it `ok` (196 s, project `src`), but no result ever reached the session, so I redid the lookup by hand. Next: find out whether the harness drops MCP results that finish in the background. If it does, keep agy calls under 120 s, or have `ask_agy` write its answer to a file under `state/` that can be read back.
+  - **The packer writes the paths it sees.** Running `pack_gguf.py` in docker with the folders mounted at `/m` and `/e` put those paths into the pack, so it couldn't load on the host. Mount every folder at its host path. I patched this pack by hand; the originals are in the pack's `.orig/` folder.
+- The host `python3` has no `regex`, so Strata's tools run in the build image's `/venv/bin/python`. Note also that `cmd | tee log` hides the exit code unless `pipefail` is set; the first smoke run "passed" that way.
+
 ## 2026-11-14 — agy friction review closed
 
 - **Most important:** the 11-06 agy friction review (`review/2026-11-06-agy-friction.md`) is done. Items 1 and 2 were already in #325. This PR does 3 to 6: `ask_agy_packet` returns `brief_echoes` when 8+ words of the brief land in the files, and `verifiable-task` says not to check prose by exact phrases. A failed write that a later write to the same file fixes is now `recovered_errors` with `ok: true`. Edit jobs are told their absolute folder. Results list the `commands` agy ran.
