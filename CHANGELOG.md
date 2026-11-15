@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-15 — browser with a visible window
+
+- `just browser-show` starts the same per-session Firefox browser as `just browser`, with a real window so Bill can watch and take over (captcha, 2FA). `FIREFOX_MCP_SHOW=1` rides in the `--config` env and drops `--headless`; the default stays headless. Live-tested: the session opened example.com in a visible window, and Firefox exited with the session
+
 ## 2026-11-15 — DeepSeek V4.1 engine built
 
 - Built `strata-dsv41` (sm_86, CUDA 13) in Strata's cached build image, fetched the pinned DSpark drafter and metadata shard (SHA-256 checked), packed the IQ2_XXS set, and passed the Paris smoke test. No repo code changed; HANDOFF records the run steps and two problems found along the way (a lost background agy result, and the packer recording container paths).

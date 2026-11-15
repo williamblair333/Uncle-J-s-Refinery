@@ -9,6 +9,7 @@
 #   scripts/firefox-mcp.sh --install   # install the pinned package (needs npm once)
 #   scripts/firefox-mcp.sh --config    # print the --mcp-config JSON for one session
 #   just browser [claude args]         # start a Claude Code session with it loaded
+#   just browser-show [claude args]    # same, with a visible Firefox window (FIREFOX_MCP_SHOW=1)
 #
 # Not registered globally on purpose: load it per session with `just browser`.
 # Env: FIREFOX_MCP_HOME (profile + private config dir, default
@@ -21,8 +22,13 @@ VERSION="${FIREFOX_MCP_VERSION:-0.10.4}"
 HOME_DIR="${FIREFOX_MCP_HOME:-${XDG_STATE_HOME:-$HOME/.local/state}/uncle-j/firefox-mcp}"
 
 if [[ "${1:-}" == --config ]]; then
-    python3 -c 'import json,sys; print(json.dumps({"mcpServers": {"firefox": {"command": sys.argv[1], "args": []}}}))' \
-        "$HERE/firefox-mcp.sh"
+    # FIREFOX_MCP_SHOW=1 rides in the config's env, so the server sees it however it's spawned.
+    python3 -c 'import json,sys
+srv = {"command": sys.argv[1], "args": []}
+if sys.argv[2] == "1":
+    srv["env"] = {"FIREFOX_MCP_SHOW": "1"}
+print(json.dumps({"mcpServers": {"firefox": srv}}))' \
+        "$HERE/firefox-mcp.sh" "${FIREFOX_MCP_SHOW:-0}"
     exit 0
 fi
 
@@ -56,8 +62,12 @@ if [[ "$installed" != "$VERSION" ]]; then
 fi
 [[ "${1:-}" == --install ]] && exit 0
 
+# FIREFOX_MCP_SHOW=1 opens a real window, so Bill can watch and take over (captcha, 2FA).
+headless=()
+[[ "${FIREFOX_MCP_SHOW:-0}" != 1 ]] && headless=(--headless)
+
 exec node "$ENTRY" \
-    --headless \
+    "${headless[@]}" \
     --profilePath "$HOME_DIR" \
     --env MOZ_REMOTE_SETTINGS_DEVTOOLS=1 \
     --env "XDG_CONFIG_HOME=$HOME_DIR/xdg" \
