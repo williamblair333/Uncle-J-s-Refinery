@@ -149,6 +149,11 @@ browser-show *args:
 mail *args:
     .venv/bin/python scripts/buddy_mail.py "$@"
 
+# the buddy's own vault account, read-only: just vault status | list [SEARCH] | get ITEM [--field username|password|totp|uri|notes]
+[positional-arguments]
+vault *args:
+    .venv/bin/python scripts/buddy_vault.py "$@"
+
 # web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
 [positional-arguments]
 web2md *args:

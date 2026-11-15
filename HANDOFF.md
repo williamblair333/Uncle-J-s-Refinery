@@ -1,8 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-15 — `just vault`: the buddy's own vault account
+
+- **Most important:** `just vault status|list|get ITEM --field username|password|totp` (`scripts/buddy_vault.py`) reads the buddy's own account on autark's Vaultwarden through the official `bw` CLI (2026.10.1, installed with `npm i -g --prefix ~/.local`; scan in `review/alternatives/2026-11-15-buddy-vault-cli.md`). It's read-only by construction, and its state is in `~/.config/uncle-j/bw`. Tested against a fake bw only. **Waiting on Bill:** write `~/.config/uncle-j/buddy-vault.env` (0600) with `BUDDY_VAULT_EMAIL` and `BUDDY_VAULT_PASSWORD` (the buddy account's master password). Then run `just vault status` and `just vault list` for the live check.
+- Gmail's 2FA is in Bill's authenticator app, so the buddy can't pass a Google web login on its own. IMAP and SMTP use the app password, so `just mail` doesn't need it. For the buddy to log in to sites by itself, their TOTP secrets go into its vault items, and `get --field totp` reads them.
+
 ## 2026-11-15 — skill router audit done; `just mail` live
 
-- **Skill router follow-up (from 11-01) is closed.** Since 11-02 the router fired 18 times. Every named skill was either called or declined in one line, so the planned "named but not called" Stop check isn't needed. The open problem is `expert-bar`'s auto-add (repo has no STANDARDS.md): it was 16 of 39 names, mostly declined as "not planning". Unattended scheduled runs no longer get it. Still noisy: mafski, which has no STANDARDS.md, so it fires every session (its session was asked to write one on 11-15). Hearth's fires all came before its STANDARDS.md landed on 11-07, so it's quiet now. If it stays noisy elsewhere: nudge once per repo per week instead of per session.
+- **Skill router follow-up (from 11-01) is closed.** Since 11-02 the router fired 18 times. Every named skill was either called or declined in one line, so the planned "named but not called" Stop check isn't needed. The open problem is `expert-bar`'s auto-add (repo has no STANDARDS.md): it was 16 of 39 names, mostly declined as "not planning". Unattended scheduled runs no longer get it. Hearth (STANDARDS.md since 11-07) and mafski (#137, 11-15) are now quiet. If it gets noisy elsewhere: nudge once per repo per week instead of per session.
 - **`just mail` works live** as xforgelabs@gmail.com (`check` passed, autark sent a test). Recipes `mail`, `web2md`, `browser`, `browser-show` now pass arguments quoted (#351).
 
 ## 2026-11-15 — buddy mail tool
