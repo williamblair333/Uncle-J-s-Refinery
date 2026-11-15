@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-15 — `just vault`: the buddy's own vault, read-only
+
+- `just vault status|list|get` wraps the official `bw` CLI (2026.10.1, user install in `~/.local`; alternatives scan picked it over rbw for its built-in `--passwordenv` unlock and `get totp`). Only status/config/login/unlock/sync/list/get ever run. The password goes by env name, never argv. `list` returns names and URIs only. The config file must be 0600. bw state lives in `~/.config/uncle-j/bw`, with autark's root CA through `NODE_EXTRA_CA_CERTS`. 6 tests against a fake bw
+
 ## 2026-11-15 — skill router adoption audit; no expert-bar for unattended runs
 
 - Audit of every router fire since 2026-11-02 (transcript `hook_additional_context` entries): 18 fires, 39 skills named. Each was either called or declined in one line, so the gate works and the planned "named but not called" Stop check isn't needed. The precision problem is `expert-bar`, auto-added once per session in a repo with no STANDARDS.md: 16 of the 39 names, and most were declined as "not planning work" (lookups, deploys, reference pages, cron runs).
