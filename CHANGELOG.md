@@ -12,6 +12,7 @@
 
 ## 2026-11-15 — DeepSeek V4.1 engine built
 
+- Scheduled the DeepSeek blind test for 21:00 (one-shot user timer). It calibrates speed first and sizes each job to fit before 05:30, because the morning dry run timed out after an hour. Runner `/opt/docker/strata/bench/dsv41/blind.{sh,py}`, outside the repo.
 - Built `strata-dsv41` (sm_86, CUDA 13) in Strata's cached build image, fetched the pinned DSpark drafter and metadata shard (SHA-256 checked), packed the IQ2_XXS set, and passed the Paris smoke test. No repo code changed; HANDOFF records the run steps and two problems found along the way (a lost background agy result, and the packer recording container paths).
 
 ## 2026-11-14 — agy friction review closed
