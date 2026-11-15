@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-15 — just recipes pass arguments quoted
+
+- `mail`, `web2md`, `browser` and `browser-show` interpolated `{{args}}` unquoted, so an argument with a space or apostrophe broke the shell (autark's `just mail send` with "buddy's" in it failed). They now use `[positional-arguments]` + `"$@"`, like `preview` and `tools`. Checked: `just mail search "subject:buddy's test"` runs; live mail check passed as xforgelabs@gmail.com (inbox 15)
+
 ## 2026-11-15 — buddy mail tool
 
 - `just mail check|list|search|read|send`: the buddy's Gmail over IMAP/SMTP, standard library only, JSON out. Readonly select + BODY.PEEK, no delete, list capped at 50, the password never printed. Config at `~/.config/uncle-j/buddy-mail.env` (0600, written by Bill). 7 tests against fake servers
