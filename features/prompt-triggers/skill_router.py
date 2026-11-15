@@ -294,6 +294,9 @@ def record(session: str, hits: list[tuple[str, str]]) -> None:
 # session read it, never ran it, and gave Bill a thin design. A notice is advice; this holds a tool call.
 PROJECT_MARKERS = ("PRODUCT.md", "README.md", "justfile", "pyproject.toml", "package.json")
 EXPERT_BAR_WHY = "this project has no STANDARDS.md; write its expert bar before planning work"
+# Unattended scheduled runs (gambling's scheduled_claude.sh) can't plan with Bill. 2026-11-05/14/15
+# each got expert-bar, declined it, and lost a tool call to the gate. Routed hits still apply.
+UNATTENDED = re.compile(r"\s*Scheduled task \(unattended\)")
 
 
 def project_root(cwd: str | None) -> str | None:
@@ -340,8 +343,8 @@ def main() -> int:
         prompt = event.get("prompt") or ""
         hits = route(prompt, event.get("cwd"))
         session = event.get("session_id") or ""
-        if (prompt and is_from_bill(prompt) and all(s != "expert-bar" for s, _ in hits)
-                and needs_expert_bar(session, event.get("cwd"))):
+        if (prompt and is_from_bill(prompt) and not UNATTENDED.match(prompt)
+                and all(s != "expert-bar" for s, _ in hits) and needs_expert_bar(session, event.get("cwd"))):
             hits.append(("expert-bar", EXPERT_BAR_WHY))
     except Exception:
         return 0

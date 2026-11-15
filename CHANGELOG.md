@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-15 — skill router adoption audit; no expert-bar for unattended runs
+
+- Audit of every router fire since 2026-11-02 (transcript `hook_additional_context` entries): 18 fires, 39 skills named. Each was either called or declined in one line, so the gate works and the planned "named but not called" Stop check isn't needed. The precision problem is `expert-bar`, auto-added once per session in a repo with no STANDARDS.md: 16 of the 39 names, and most were declined as "not planning work" (lookups, deploys, reference pages, cron runs).
+- Fix for the clear-cut part: prompts starting `Scheduled task (unattended)` (gambling's scheduled runs, 3 of the declines) no longer get the auto-add. Routed hits still apply. Test added; suite 3683 passed
+
 ## 2026-11-15 — just recipes pass arguments quoted
 
 - `mail`, `web2md`, `browser` and `browser-show` interpolated `{{args}}` unquoted, so an argument with a space or apostrophe broke the shell (autark's `just mail send` with "buddy's" in it failed). They now use `[positional-arguments]` + `"$@"`, like `preview` and `tools`. Checked: `just mail search "subject:buddy's test"` runs; live mail check passed as xforgelabs@gmail.com (inbox 15)
