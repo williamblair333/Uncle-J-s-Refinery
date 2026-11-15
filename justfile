@@ -135,20 +135,24 @@ chat *args:
     .venv/bin/python scripts/local_chat/server.py {{args}}
 
 # Claude Code session with a quiet headless Firefox browser MCP (this session only)
+[positional-arguments]
 browser *args:
-    claude {{args}} --mcp-config "$(./scripts/firefox-mcp.sh --config)"
+    claude "$@" --mcp-config "$(./scripts/firefox-mcp.sh --config)"
 
 # same as browser, but with a visible Firefox window you can watch and take over
+[positional-arguments]
 browser-show *args:
-    claude {{args}} --mcp-config "$(FIREFOX_MCP_SHOW=1 ./scripts/firefox-mcp.sh --config)"
+    claude "$@" --mcp-config "$(FIREFOX_MCP_SHOW=1 ./scripts/firefox-mcp.sh --config)"
 
 # the buddy's mailbox: just mail check | list | search QUERY | read UID | send --to A --subject S --body T
+[positional-arguments]
 mail *args:
-    .venv/bin/python scripts/buddy_mail.py {{args}}
+    .venv/bin/python scripts/buddy_mail.py "$@"
 
 # web pages → markdown files for local retrieval: just web2md URL --out DIR [--sitemap|--crawl] [--max N]
+[positional-arguments]
 web2md *args:
-    uv run -q --script scripts/web2md.py {{args}}
+    uv run -q --script scripts/web2md.py "$@"
 
 # start whichever backend config/ask_local.env names (heretic, or Ollama + its model)
 ask-local-up:
