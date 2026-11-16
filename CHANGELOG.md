@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-16 — make_image: FLUX.2 klein 4B reference editing
+
+- `make_image` and `just image` now edit from up to 4 reference images (`ref_image` takes a list) with FLUX.2 klein 4B fp8 (Apache 2.0, so fine for sold books). `model="auto"` uses klein whenever refs are given; `model="z-image"` with one ref keeps the older img2img. The graph follows ComfyUI's klein edit template (ReferenceLatent chained per reference, 4 steps, cfg 1). Chosen by an alternatives scan: Qwen Image 2.1, Zen, klein 9B and Kontext dev are non-commercial.
+- Models: +4.4 GB in `/opt/models/flux2-klein` (model 4.07 GB + VAE 0.34 GB, sha256-pinned in `models.txt`). It reuses Z-Image's Qwen3-4B text encoder. compose mounts the new folder and `extra_model_paths.yaml` (no image rebuild).
+- Live check, lineup sheet → riverbank scene, 1344×768: 46 s, peak 10.4 GB VRAM for ComfyUI. All six characters kept their faces, outfits and props. The elf drifted (female, brighter red hair), and the pose stayed a lineup rather than "walking single file". Z-Image still works on the new mounts (116 s, same seed).
+
 ## 2026-11-16 — make_image: size, seed, img2img reference
 
 - `make_image` (delegate MCP) and `just image` take width/height (multiples of 16, 256–2048), seed, and a reference image with `denoise` (img2img, default 0.6). Results return the seed. The reference is uploaded to ComfyUI's `/upload/image` under a content-hash name; only stock nodes (LoadImage, ImageScale/ImageScaleToTotalPixels, VAEEncode) are used, so no new models. Prompts now go after `--`, so one starting with `-` isn't read as an option.

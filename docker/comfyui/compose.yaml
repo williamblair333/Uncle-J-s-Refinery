@@ -19,6 +19,8 @@ services:
     volumes:
       - /opt/models/z-image-turbo:/models/z-image-turbo:ro
       - /opt/models/wan2.2:/models/wan2.2:ro
+      - /opt/models/flux2-klein:/models/flux2-klein:ro
+      - ./extra_model_paths.yaml:/opt/ComfyUI/extra_model_paths.yaml:ro
       - /opt/outputs/comfyui:/data/output
       - comfyui-user:/data/user
     shm_size: "8gb"

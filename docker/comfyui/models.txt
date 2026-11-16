@@ -10,6 +10,13 @@ z-image-turbo/diffusion_models/z_image_turbo_bf16.safetensors https://huggingfac
 z-image-turbo/text_encoders/qwen_3_4b_fp8_mixed.safetensors https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/text_encoders/qwen_3_4b_fp8_mixed.safetensors
 z-image-turbo/vae/ae.safetensors https://huggingface.co/Comfy-Org/Z-Image-Turbo/resolve/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/vae/ae.safetensors
 #
+# FLUX.2 [klein] 4B fp8 (Black Forest Labs, Apache 2.0; the 9B is non-commercial, not used),
+# for multi-reference editing. Its text encoder is the same Qwen3-4B as Z-Image's (same LFS
+# sha256 in Comfy-Org's repos), so it reuses qwen_3_4b_fp8_mixed above. Licenses read 2026-11-16;
+# scan: review/alternatives/2026-11-16-image-edit-model.md.
+flux2-klein/diffusion_models/flux-2-klein-4b-fp8.safetensors https://huggingface.co/black-forest-labs/FLUX.2-klein-4b-fp8/resolve/5b4408e59397a4a37ccb46afe426d8ed86379441/flux-2-klein-4b-fp8.safetensors
+flux2-klein/vae/flux2-vae.safetensors https://huggingface.co/Comfy-Org/Flux-2-Klein-4B/resolve/5b3abca5c0dc1ecd4eaf3340868d09063fc1c965/split_files/vae/flux2-vae.safetensors
+#
 # Wan 2.2 T2V A14B (Wan-AI, Apache 2.0): GGUF Q4_K_M by QuantStack (Apache 2.0); the two
 # experts run in turn (high noise, then low noise), so only one is on the GPU at a time.
 wan2.2/diffusion_models/Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/73eafba53a1a8f29254e4c77f92e74ea27d7cd6f/HighNoise/Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf
