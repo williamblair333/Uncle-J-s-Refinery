@@ -16,7 +16,7 @@ Completed items age out after ~4 weeks.
 
 - **Buddy accounts: Claude acts on websites for Bill** (filed 2026-11-15; Bill's steps are in the
   "Buddy accounts setup" Claude Doc). Done: `just browser-show` (#347), `just mail` (#348, live) and
-  `just vault` (#354, live; the TOTP read is untested until the vault holds an item).
+  `just vault` (#354, live, TOTP read verified 2026-11-16).
   Open: (b) a JMP.chat number, then an XMPP reader for SMS codes; (c) a shared Buddy collection;
   (d) move the buddy off Autark's Gmail onto its own account once it
   has a number (Google refused a new signup on Bill's phone).

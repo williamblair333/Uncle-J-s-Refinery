@@ -142,13 +142,14 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   ids or add symbols without a re-parse. A symbol-count jump after re-index is the
   fix, not a regression — so is a file-count drop from newly skipped build dirs
   (`discovery_skip_counts`). A not-found error may carry `near_miss_ids`; re-issue with one.
-  `index_warning`: capped index, hits aren't the whole repo.
+  `index_warning`: capped index or `max_file_size` skips; hits aren't the whole repo.
 - If `JCODEMUNCH_EMBED_MODEL` ever changes, re-embed every repo (`embed_repo`); a mixed-width
   store silently drops vectors. `embed_repo` returning `all_batches_failed: true` embedded nothing.
 
 **Reading results**
 - `identity_type` grades `exact` / `normalized` / `prefix` / `segment` — accept `normalized`
   too; filtering on `exact` drops real hits.
+- A `language`/`kind`/`decorator` filter refuses `absent`; drop it before an absence claim.
 - Lexical ranking scores test-file symbols ×0.25 unless the query mentions tests, fixtures
   or mocks. To find test code, say "test" in the query. Confidence and absence verdicts
   use the unreduced score.
@@ -258,7 +259,6 @@ an audit; it validates every evidence ref against what this session retrieved.
 - Pass `format="auto"` on jcodemunch calls that may return a lot; parse the MUNCH shape
   (`#MUNCH/1 …`, `@n=` back-refs, `t,` rows) when it comes back. A large response arriving
   as JSON is the encoder failing safe, not the argument being ignored.
-- An empty `search_ast` result from v1.108.282–.302 is not evidence of a clean repo — re-run.
 - `get_ranked_context(compress=True)` fits more per budget; `get_symbol_source(verify=True)`
   for `content_hash`; a class returns an outline — `class_body="full"` for all.
 

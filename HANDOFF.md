@@ -1,11 +1,12 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-11-15 (end of session) — pick up here
+## 2026-11-16 — pick up here
 
-1. **Vault 2FA test, mid-walkthrough.** `just vault` is live: Bill wrote `~/.config/uncle-j/buddy-vault.env`, and `just vault list` logged in to vault.home.arpa and synced (the vault is empty, so it returned `{"items": []}`). Bill is being walked through adding a test entry **one step at a time**. Step 1 was given: open https://vault.home.arpa and log in as the buddy account. Next: (2) **New → Login**, name `buddy-test`, username `test`; (3) paste the dummy key `JBSWY3DPEHPK3PXP` into **Authenticator key**, then Save; (4) run `just vault get buddy-test --field totp` and compare it with a locally computed TOTP for that key (e.g. `python3 -c` with hmac/base64; no download needed). Steps 2–3 are from memory: Bitwarden's help page covers the Authenticator key field but not the new-item buttons.
+1. **Buddy vault fully verified.** Bill added the test entry `buddy-test` (dummy key `JBSWY3DPEHPK3PXP`) in the web vault. `just vault get buddy-test --field totp` returned the same code as a local RFC 6238 calculation, and `list` showed the name without secrets. Bill's call: real-site entries get added **only when a task needs the buddy to log in**, so ask him then, naming the site and the fields (Authenticator key, Website URI).
 2. `status` showing `locked` between calls is by design: each command unlocks, reads and drops the session key.
 3. Still open for buddy accounts (ROADMAP): the JMP.chat number and SMS reader, a shared Buddy collection, and moving off Autark's Gmail.
-4. Done this session's tail: the write_well session's `skill/sanderson-style` branch was merged (its untracked copy was byte-identical), and `uv.lock` (jcodemunch 1.108.445 → 1.108.447, the version installed when the suite passed 3689) was committed.
+4. The 03:00 auto-maintain commit (`14941ce`, post-upgrade CLAUDE.md sync) was local only and is pushed with this entry. `uv.lock` is committed at jcodemunch-mcp 1.108.453 and jdocmunch-mcp 1.151.1, the installed versions; the suite passed 3702 on them.
+- **jcodemunch-mcp breaking change** (from auto-maintain, 2026-11-16): since v1.108.448 a `search_symbols` filtered by `language`/`kind`/`decorator` refuses `absent` (names the filter instead), so callers must drop the filter before making an absence claim; CLAUDE.md updated (and the obsolete v1.108.282–.302 `search_ast` caveat removed to stay under agy's 24,000-byte cap, now 5 bytes under).
 
 ## 2026-11-15 — `just vault`: the buddy's own vault account
 
