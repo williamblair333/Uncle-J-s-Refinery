@@ -591,3 +591,34 @@ def test_missing_quota_pools_key_works(routing, tmp_path, monkeypatch):
     assert "gemini-3.8-flash-low" in quota
     assert "gpt-oss-120b-medium" not in quota
 
+
+# ── make_image extras ─────────────────────────────────────────────────────
+def test_media_args_builds_flags_and_needs_absolute_ref():
+    assert d.media_args() == []
+    assert d.media_args(width=1344, height=768, seed=5, denoise=0.5) == [
+        "--width", "1344", "--height", "768", "--seed", "5", "--denoise", "0.5"]
+    assert d.media_args(ref_image="/x/a.png") == ["--ref", "/x/a.png"]
+    assert "absolute" in d.media_args(ref_image="a.png")["error"]
+
+
+def test_run_media_passes_extras_before_prompt_and_returns_seed(monkeypatch, tmp_path):
+    seen = {}
+
+    class LC:
+        OUTPUTS = tmp_path
+        JOB_TIMEOUT = {"image": 9}
+
+        @staticmethod
+        def _run(cmd, timeout):
+            seen["cmd"] = cmd
+            return {"ok": True, "output": f"{tmp_path}/image_1.png\nimage: 50 s, seed 42"}
+
+        @staticmethod
+        def media_kind(p):
+            return "image"
+    monkeypatch.setattr(d, "local_chat", lambda: LC)
+    monkeypatch.setattr(d, "_log", lambda *a, **k: None)
+    out = d.run_media("image", "-dash prompt", extra=["--seed", "42"])
+    assert out == {"ok": True, "files": [f"{tmp_path}/image_1.png"], "seed": 42}
+    assert seen["cmd"][-4:] == ["--seed", "42", "--", "-dash prompt"]
+

@@ -651,17 +651,41 @@ def run_heretic(prompt: str, system: str | None = None, think: bool = False, cwd
     return out
 
 
-def run_media(kind: str, prompt: str, cwd: str | None = None) -> dict:
+_SEED_RE = re.compile(r"\bseed (\d+)")
+
+
+def media_args(width: int | None = None, height: int | None = None, seed: int | None = None,
+               ref_image: str | None = None, denoise: float | None = None) -> list[str] | dict:
+    """comfy_job.py options for make_image's extras, or {"error": ...} for a bad ref path."""
+    args: list[str] = []
+    for flag, v in (("--width", width), ("--height", height), ("--seed", seed),
+                    ("--denoise", denoise)):
+        if v is not None:
+            args += [flag, str(v)]
+    if ref_image:
+        ref = Path(ref_image).expanduser()
+        if not ref.is_absolute():
+            return {"ok": False, "error": f"ref_image must be an absolute path: {ref_image}"}
+        args += ["--ref", str(ref)]
+    return args
+
+
+def run_media(kind: str, prompt: str, cwd: str | None = None,
+              extra: list[str] | None = None) -> dict:
     lc = local_chat()
     started = time.time()
     if kind == "speak":
         out = lc.speak(prompt)
     else:
-        r = lc._run([sys.executable, str(_REPO / "scripts" / "comfy_job.py"), kind, prompt],
-                    timeout=lc.JOB_TIMEOUT[kind])
+        # "--" so a prompt starting with "-" is never read as an option
+        r = lc._run([sys.executable, str(_REPO / "scripts" / "comfy_job.py"), kind,
+                     *(extra or []), "--", prompt], timeout=lc.JOB_TIMEOUT[kind])
         files = [p for p in r["output"].splitlines()
                  if p.startswith(str(lc.OUTPUTS)) and lc.media_kind(p)]
         out = {"ok": r["ok"] and bool(files), "files": files}
+        seeds = _SEED_RE.findall(r["output"])
+        if seeds:
+            out["seed"] = int(seeds[-1])
         if not out["ok"]:
             out["error"] = r["output"][-1500:]
     _log(kind, None, started, out, cwd=cwd)
@@ -746,9 +770,21 @@ def build_server():
         return run_openai(prompt, system, model, max_tokens)
 
     @mcp.tool(name="make_image")
-    def _image(prompt: str) -> dict:
-        """Text-to-image (Z-Image-Turbo on ComfyUI, ~1 min). Returns saved file paths."""
-        return run_media("image", prompt)
+    def _image(prompt: str, width: int | None = None, height: int | None = None,
+               seed: int | None = None, ref_image: str | None = None,
+               denoise: float | None = None) -> dict:
+        """Text-to-image (Z-Image-Turbo on ComfyUI, ~1 min). Returns saved file paths and seed.
+
+        width/height: multiples of 16, 256-2048 (default 1024x1024). seed: reuse one from an
+        earlier result to reproduce it or vary only the prompt. ref_image: absolute path to a
+        png/jpg/webp to start from (img2img); denoise 0-1 (default 0.6) sets how far to move
+        from it. img2img keeps the reference's layout and colours; it does NOT put the same
+        character into a new pose or scene. Without width/height a reference keeps its aspect.
+        """
+        extra = media_args(width, height, seed, ref_image, denoise)
+        if isinstance(extra, dict):
+            return extra
+        return run_media("image", prompt, extra=extra)
 
     @mcp.tool(name="make_video")
     def _video(prompt: str) -> dict:

@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-16 — make_image size/seed/reference (for write_well)
+
+1. `make_image` takes width/height/seed and an img2img `ref_image` + `denoise`. The live check on the party lineup worked, but img2img keeps the **layout**, not character identity. Real consistency needs an edit model. Z-Image-Edit is still "to be released" (Tongyi-MAI/Z-Image). Candidates: Qwen-Image-Edit (GGUF), Flux Kontext dev (non-commercial license; matters for a sold book), and Zen Image Edit (Oct 2026, multi-reference, GGUF Q5 for 16 GB, license unstated). Each means a large download and needs an alternatives scan plus a license check first; this needs Bill's go-ahead.
+2. **agy review tier times out:** two `ask_agy(task="review")` calls on a 3-file diff hit the 300 s and 600 s print timeouts on `gemini-3.8-flash-high` (61k thinking tokens, no answer; logs `state/agy-logs/20261116-102622-*`, `-103633-*`). `gemini-4-argon-high` was quota-exhausted until 11-21. Fix the tier or cap thinking before relying on agy reviews; I reviewed by hand.
+
 ## 2026-11-16 — pick up here
 
 1. **Buddy vault fully verified.** Bill added the test entry `buddy-test` (dummy key `JBSWY3DPEHPK3PXP`) in the web vault. `just vault get buddy-test --field totp` returned the same code as a local RFC 6238 calculation, and `list` showed the name without secrets. Bill's call: real-site entries get added **only when a task needs the buddy to log in**, so ask him then, naming the site and the fields (Authenticator key, Website URI).
