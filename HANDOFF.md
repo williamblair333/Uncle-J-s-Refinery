@@ -6,6 +6,7 @@
 2. `status` showing `locked` between calls is by design: each command unlocks, reads and drops the session key.
 3. Still open for buddy accounts (ROADMAP): the JMP.chat number and SMS reader, a shared Buddy collection, and moving off Autark's Gmail.
 4. Done this session's tail: the write_well session's `skill/sanderson-style` branch was merged (its untracked copy was byte-identical), and `uv.lock` (jcodemunch 1.108.445 → 1.108.447, the version installed when the suite passed 3689) was committed.
+- **jcodemunch-mcp breaking change**: since v1.108.448 a `search_symbols` filtered by `language`/`kind`/`decorator` refuses `absent` (names the filter instead), so callers must drop the filter before making an absence claim; CLAUDE.md updated (and the obsolete v1.108.282–.302 `search_ast` caveat removed to stay under agy's 24,000-byte cap, now 5 bytes under).
 
 ## 2026-11-15 — `just vault`: the buddy's own vault account
 
