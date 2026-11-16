@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-16 — buddy vault TOTP verified; lock bump
+
+- `just vault get --field totp` checked live: a test entry's code matched a local RFC 6238 calculation.
+- `uv.lock`: jcodemunch-mcp 1.108.447 → 1.108.453, jdocmunch-mcp 1.151.0 → 1.151.1 (installed versions; suite 3702 passed). Pushes the 03:00 auto-maintain CLAUDE.md sync (`14941ce`).
+
 ## 2026-11-15 — `just vault` live; sanderson-style skill; lock bump
 
 - `just vault` passed its live check: login, unlock and sync against vault.home.arpa with Bill's 0600 config. The vault is empty, so the TOTP read is still untested. README lists `just vault`.
