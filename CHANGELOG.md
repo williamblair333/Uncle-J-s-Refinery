@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-16 — make_image: size, seed, img2img reference
+
+- `make_image` (delegate MCP) and `just image` take width/height (multiples of 16, 256–2048), seed, and a reference image with `denoise` (img2img, default 0.6). Results return the seed. The reference is uploaded to ComfyUI's `/upload/image` under a content-hash name; only stock nodes (LoadImage, ImageScale/ImageScaleToTotalPixels, VAEEncode) are used, so no new models. Prompts now go after `--`, so one starting with `-` isn't read as an option.
+- Live check with write_well's party lineup sheet (2752×1536): 70 s, 1376×768 output, peak 10.2 GB VRAM for ComfyUI. img2img kept the six-figure layout and heights but not identities (the tree-man became an armoured woman, the purple jacket went brown). Character consistency needs a real edit model; Z-Image-Edit is still unreleased.
+- Asked for by Bill via write_well (Gemini's daily image quota keeps running out). 9 new tests; suite 3710 passed.
+
 ## 2026-11-16 — buddy vault TOTP verified; lock bump
 
 - `just vault get --field totp` checked live: a test entry's code matched a local RFC 6238 calculation.

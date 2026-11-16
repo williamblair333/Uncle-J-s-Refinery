@@ -314,3 +314,95 @@ def test_keep_up_skips_the_stop(monkeypatch):
     monkeypatch.setattr(cj, "_with_gpu", lambda a, wf, seed: 0)
     assert cj.main(["image", "x", "--ignore-klarheit", "--keep-up"]) == 0
     assert events == []
+
+
+def test_image_workflow_size_without_ref():
+    wf = cj.image_workflow("x", 1, width=1344, height=768)
+    assert (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"]) == (1344, 768)
+    assert wf["8"]["inputs"]["denoise"] == 1.0 and "11" not in wf
+
+
+def test_image_workflow_ref_is_img2img():
+    wf = cj.image_workflow("x", 1, ref_image="ref-abc.png", denoise=0.45)
+    _links_resolve(wf)
+    assert wf["11"] == {"class_type": "LoadImage", "inputs": {"image": "ref-abc.png"}}
+    assert wf["12"]["class_type"] == "ImageScaleToTotalPixels"
+    assert wf["12"]["inputs"]["resolution_steps"] == 16
+    assert wf["7"]["class_type"] == "VAEEncode" and wf["7"]["inputs"]["pixels"] == ["12", 0]
+    assert wf["8"]["inputs"]["denoise"] == 0.45
+    sized = cj.image_workflow("x", 1, width=1024, height=576, ref_image="r.png")
+    assert sized["12"]["class_type"] == "ImageScale"
+    assert (sized["12"]["inputs"]["width"], sized["12"]["inputs"]["crop"]) == (1024, "center")
+
+
+def test_bad_size_ref_or_denoise_exits_2_before_anything_runs(tmp_path, monkeypatch, capsys):
+    def never(*a, **k):
+        raise AssertionError("waited for Klarheit despite a bad argument")
+    monkeypatch.setattr(cj, "wait_for_klarheit", never)
+    assert cj.main(["image", "x", "--width", "1000"]) == 2
+    assert cj.main(["image", "--seed", "-5", "--", "x"]) == 2
+    assert cj.main(["image", "x", "--ref", str(tmp_path / "none.png")]) == 2
+    other = tmp_path / "notes.key"
+    other.write_text("not an image")
+    assert cj.main(["image", "x", "--ref", str(other)]) == 2
+    img = tmp_path / "a.png"
+    img.write_bytes(b"png")
+    assert cj.main(["image", "x", "--ref", str(img), "--denoise", "0"]) == 2
+    assert cj.main(["video", "x", "--ref", str(img)]) == 2
+    err = capsys.readouterr().err
+    assert "multiple of 16" in err and "no such file" in err and "images only" in err
+
+
+def test_ref_is_uploaded_once_comfy_is_up(tmp_path, monkeypatch):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"png")
+    events, got = [], {}
+    monkeypatch.setattr(cj, "comfy_up", lambda url: True)
+    monkeypatch.setattr(cj, "upload_image", lambda url, p: events.append(("up", p)) or "ref-1.png")
+    monkeypatch.setattr(cj, "_with_gpu", lambda a, wf, seed: got.update(wf=wf) or 0)
+    assert cj.main(["image", "x", "--ignore-klarheit", "--ref", str(img), "--seed", "3"]) == 0
+    assert events == [("up", img)]
+    assert got["wf"]["11"]["inputs"]["image"] == "ref-1.png"
+    assert got["wf"]["8"]["inputs"]["denoise"] == cj.DEFAULT_DENOISE
+
+
+def test_upload_failure_still_stops_comfy_it_started(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"png")
+    events = []
+    monkeypatch.setattr(cj, "comfy_up", lambda url: False)
+    monkeypatch.setattr(cj, "start_comfy", lambda url: True)
+    monkeypatch.setattr(cj, "stop_comfy", lambda: events.append("stop"))
+
+    def refuse(url, p):
+        raise cj.urllib.error.URLError("refused")
+    monkeypatch.setattr(cj, "upload_image", refuse)
+    assert cj.main(["image", "x", "--ignore-klarheit", "--ref", str(img)]) == 1
+    assert events == ["stop"] and "could not upload" in capsys.readouterr().err
+
+
+def test_upload_image_names_by_hash(tmp_path, monkeypatch):
+    import json
+    import re
+    img = tmp_path / "Lineup.JPEG"
+    img.write_bytes(b"abc")
+    sent = {}
+
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return json.dumps({"name": sent["name"], "subfolder": "", "type": "input"}).encode()
+
+    def opener(req, timeout):
+        sent["body"], sent["ct"] = req.data, req.headers["Content-type"]
+        sent["name"] = re.search(rb'filename="([^"]+)"', req.data).group(1).decode()
+        return Resp()
+    monkeypatch.setattr(cj.urllib.request, "urlopen", opener)
+    assert cj.upload_image("http://u", img) == "ref-ba7816bf8f01.jpeg"
+    assert b"\r\nabc\r\n" in sent["body"]
+    assert sent["ct"].startswith("multipart/form-data; boundary=")

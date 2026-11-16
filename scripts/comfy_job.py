@@ -15,6 +15,7 @@ Stdlib only, so it runs with the system python3.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
 import shutil
@@ -25,6 +26,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import uuid
 from pathlib import Path
 
 DEFAULT_URL = "http://127.0.0.1:8188"
@@ -53,10 +55,23 @@ WAN_NEGATIVE = ("色调艳丽，过曝，静态，细节模糊不清，字幕，
                 "杂乱的背景，三条腿，背景人很多，倒着走")
 
 
-def image_workflow(prompt: str, seed: int, width: int = 1024, height: int = 1024,
-                   steps: int = 9, prefix: str = "image") -> dict:
-    """Z-Image-Turbo text-to-image, per the ComfyUI template (cfg 1, res_multistep, shift 3)."""
-    return {
+REF_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+DEFAULT_DENOISE = 0.6   # with a reference: lower keeps more of it, higher follows the prompt
+SIZE_STEP, SIZE_MIN, SIZE_MAX = 16, 256, 2048   # Z-Image latents: 8x VAE, then 2x2 patches
+
+
+def image_workflow(prompt: str, seed: int, width: int | None = None, height: int | None = None,
+                   steps: int = 9, prefix: str = "image", ref_image: str | None = None,
+                   denoise: float = DEFAULT_DENOISE) -> dict:
+    """Z-Image-Turbo text-to-image, per the ComfyUI template (cfg 1, res_multistep, shift 3).
+
+    With ref_image (a file name in ComfyUI's input folder, see upload_image) it is img2img:
+    the reference is scaled, VAE-encoded and sampled from at `denoise` instead of 1.0. That
+    keeps the reference's layout and colours; it does not carry a character into a new pose.
+    Without width/height the reference keeps its aspect ratio at ~1 megapixel, sides snapped
+    to 16 (ImageScaleToTotalPixels' resolution_steps, present in ComfyUI v0.39.0).
+    """
+    wf = {
         "1": {"class_type": "UNETLoader",
               "inputs": {"unet_name": IMAGE_MODELS["unet"], "weight_dtype": "default"}},
         "2": {"class_type": "CLIPLoader",
@@ -66,7 +81,7 @@ def image_workflow(prompt: str, seed: int, width: int = 1024, height: int = 1024
         "5": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
         "6": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["5", 0]}},
         "7": {"class_type": "EmptySD3LatentImage",
-              "inputs": {"width": width, "height": height, "batch_size": 1}},
+              "inputs": {"width": width or 1024, "height": height or 1024, "batch_size": 1}},
         "8": {"class_type": "KSampler",
               "inputs": {"model": ["4", 0], "seed": seed, "steps": steps, "cfg": 1.0,
                          "sampler_name": "res_multistep", "scheduler": "simple",
@@ -75,6 +90,61 @@ def image_workflow(prompt: str, seed: int, width: int = 1024, height: int = 1024
         "9": {"class_type": "VAEDecode", "inputs": {"samples": ["8", 0], "vae": ["3", 0]}},
         "10": {"class_type": "SaveImage", "inputs": {"images": ["9", 0], "filename_prefix": prefix}},
     }
+    if ref_image is None:
+        return wf
+    wf["11"] = {"class_type": "LoadImage", "inputs": {"image": ref_image}}
+    if width and height:
+        wf["12"] = {"class_type": "ImageScale",
+                    "inputs": {"image": ["11", 0], "upscale_method": "lanczos",
+                               "width": width, "height": height, "crop": "center"}}
+    else:
+        wf["12"] = {"class_type": "ImageScaleToTotalPixels",
+                    "inputs": {"image": ["11", 0], "upscale_method": "lanczos",
+                               "megapixels": 1.0, "resolution_steps": SIZE_STEP}}
+    wf["7"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["12", 0], "vae": ["3", 0]}}
+    wf["8"]["inputs"]["denoise"] = denoise
+    return wf
+
+
+def check_size(value: int | None) -> str | None:
+    """Why a width/height is unusable for Z-Image, or None if it's fine."""
+    if value is None:
+        return None
+    if not SIZE_MIN <= value <= SIZE_MAX or value % SIZE_STEP:
+        return (f"{value} px: sides must be a multiple of {SIZE_STEP} "
+                f"between {SIZE_MIN} and {SIZE_MAX}")
+    return None
+
+
+def check_ref(path: Path) -> str | None:
+    """Why a reference image can't be used, or None if it can."""
+    if path.suffix.lower() not in REF_SUFFIXES:
+        return f"{path}: reference must be one of {', '.join(sorted(REF_SUFFIXES))}"
+    if not path.is_file():
+        return f"{path}: no such file"
+    return None
+
+
+def upload_image(url: str, path: Path, timeout: float = 60) -> str:
+    """Copy a local image into ComfyUI's input folder (POST /upload/image); return its name.
+
+    Named by content hash, so two jobs never swap references and a repeat upload is a no-op.
+    """
+    data = path.read_bytes()
+    name = f"ref-{hashlib.sha256(data).hexdigest()[:12]}{path.suffix.lower()}"
+    boundary = f"----comfyjob{uuid.uuid4().hex}"
+    body = b"".join([
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"overwrite\"\r\n\r\ntrue\r\n"
+        .encode(),
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"{name}\"\r\n"
+        f"Content-Type: application/octet-stream\r\n\r\n".encode(),
+        data, f"\r\n--{boundary}--\r\n".encode()])
+    req = urllib.request.Request(f"{url}/upload/image", data=body, headers={
+        "Content-Type": f"multipart/form-data; boundary={boundary}"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        out = json.loads(resp.read() or b"{}")
+    sub = out.get("subfolder") or ""
+    return f"{sub}/{out['name']}" if sub else out["name"]
 
 
 def video_workflow(prompt: str, seed: int, width: int = 832, height: int = 480,
@@ -341,6 +411,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--height", type=int)
     ap.add_argument("--steps", type=int)
     ap.add_argument("--frames", type=int, default=81, help="video only; 81 = 5 s at 16 fps")
+    ap.add_argument("--ref", type=Path,
+                    help="image only: start from this picture (img2img); keeps its layout and "
+                         "colours, not a character's identity in a new pose")
+    ap.add_argument("--denoise", type=float, default=DEFAULT_DENOISE,
+                    help=f"with --ref: 0-1, how far to move from it (default {DEFAULT_DENOISE})")
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--timeout", type=float, default=3600, help="seconds to wait for the job")
     ap.add_argument("--keep-loaded", action="store_true",
@@ -361,10 +436,32 @@ def main(argv: list[str] | None = None) -> int:
     seed = args.seed if args.seed is not None else random.randint(0, 2**32 - 1)
     sizes = {k: v for k, v in (("width", args.width), ("height", args.height),
                                 ("steps", args.steps)) if v is not None}
+    problems = []
+    if not 0 <= seed < 2**64:
+        problems.append(f"--seed {seed}: ComfyUI takes 0 to 2^64-1")
     if args.kind == "image":
-        wf = image_workflow(args.prompt, seed, prefix="image", **sizes)
-    else:
-        wf = video_workflow(args.prompt, seed, frames=args.frames, prefix="video", **sizes)
+        problems += [p for p in (check_size(args.width), check_size(args.height)) if p]
+    if args.ref is not None:
+        if args.kind != "image":
+            problems.append("--ref works for images only")
+        else:
+            problems += [p for p in [check_ref(args.ref)] if p]
+        if not 0 < args.denoise <= 1:
+            problems.append(f"--denoise {args.denoise}: must be above 0 and at most 1")
+    if problems:
+        for p in problems:
+            print(f"error: {p}", file=sys.stderr)
+        return 2
+
+    def build() -> dict:
+        if args.kind == "video":
+            return video_workflow(args.prompt, seed, frames=args.frames, prefix="video", **sizes)
+        if args.ref is None:
+            return image_workflow(args.prompt, seed, prefix="image", **sizes)
+        name = upload_image(args.url, args.ref)
+        print(f"reference {args.ref} uploaded as {name}, denoise {args.denoise}", file=sys.stderr)
+        return image_workflow(args.prompt, seed, prefix="image", ref_image=name,
+                              denoise=args.denoise, **sizes)
 
     if args.no_autostart and not comfy_up(args.url):
         print(f"ComfyUI is not answering at {args.url}; start it: just comfy up -d", file=sys.stderr)
@@ -379,6 +476,11 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         started = True
     try:
+        try:
+            wf = build()
+        except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
+            print(f"could not upload the reference to ComfyUI: {exc}", file=sys.stderr)
+            return 1
         return _with_gpu(args, wf, seed)
     finally:
         if started and not args.keep_up:
