@@ -129,6 +129,7 @@ def test_manifest_urls_are_commit_pinned():
     assert rows and all(len(r) == 2 and pinned.match(r[1]) for r in rows)
     names = {Path(r[0]).name for r in rows}
     assert set(cj.IMAGE_MODELS.values()) | set(cj.VIDEO_MODELS.values()) <= names
+    assert set(cj.EDIT_MODELS.values()) <= names
 
 
 # ── comfy_job.py ──────────────────────────────────────────────────────────
@@ -360,10 +361,55 @@ def test_ref_is_uploaded_once_comfy_is_up(tmp_path, monkeypatch):
     monkeypatch.setattr(cj, "comfy_up", lambda url: True)
     monkeypatch.setattr(cj, "upload_image", lambda url, p: events.append(("up", p)) or "ref-1.png")
     monkeypatch.setattr(cj, "_with_gpu", lambda a, wf, seed: got.update(wf=wf) or 0)
-    assert cj.main(["image", "x", "--ignore-klarheit", "--ref", str(img), "--seed", "3"]) == 0
+    assert cj.main(["image", "x", "--ignore-klarheit", "--ref", str(img), "--seed", "3",
+                    "--model", "z-image"]) == 0
     assert events == [("up", img)]
     assert got["wf"]["11"]["inputs"]["image"] == "ref-1.png"
     assert got["wf"]["8"]["inputs"]["denoise"] == cj.DEFAULT_DENOISE
+
+
+def test_auto_model_edits_with_klein_from_several_refs(tmp_path, monkeypatch):
+    a, b = tmp_path / "a.png", tmp_path / "b.jpg"
+    a.write_bytes(b"1")
+    b.write_bytes(b"2")
+    got = {}
+    monkeypatch.setattr(cj, "comfy_up", lambda url: True)
+    monkeypatch.setattr(cj, "upload_image", lambda url, p: f"ref-{p.stem}.png")
+    monkeypatch.setattr(cj, "_with_gpu", lambda a_, wf, seed: got.update(wf=wf) or 0)
+    assert cj.main(["image", "--ignore-klarheit", "--ref", str(a), "--ref", str(b),
+                    "--", "the two from image 1 and image 2 by a river"]) == 0
+    wf = got["wf"]
+    assert wf["1"]["inputs"]["unet_name"] == cj.EDIT_MODELS["unet"]
+    assert [wf[k]["inputs"]["image"] for k in ("r0l", "r1l")] == ["ref-a.png", "ref-b.png"]
+
+
+def test_edit_workflow_chains_references_like_the_template():
+    wf = cj.edit_workflow("p", 9, ["a.png", "b.png"])
+    _links_resolve(wf)
+    assert wf["2"]["inputs"]["type"] == "flux2"
+    assert wf["r1p"]["inputs"]["conditioning"] == ["r0p", 0]
+    assert wf["r0n"]["inputs"]["conditioning"] == ["5", 0]
+    g = wf["11"]["inputs"]
+    assert (g["positive"], g["negative"], g["cfg"]) == (["r1p", 0], ["r1n", 0], 1.0)
+    assert wf["8"]["inputs"]["steps"] == 4 and wf["9"]["inputs"]["noise_seed"] == 9
+    assert wf["7"]["inputs"]["width"] == ["6", 0]          # first reference's size
+    sized = cj.edit_workflow("p", 9, ["a.png"], width=1344, height=768)
+    assert "6" not in sized and sized["8"]["inputs"]["width"] == 1344
+
+
+def test_model_and_ref_count_rules(tmp_path, monkeypatch, capsys):
+    def never(*a, **k):
+        raise AssertionError("waited for Klarheit despite a bad argument")
+    monkeypatch.setattr(cj, "wait_for_klarheit", never)
+    img = tmp_path / "a.png"
+    img.write_bytes(b"png")
+    refs = [x for _ in range(2) for x in ("--ref", str(img))]
+    assert cj.main(["image", "x", "--model", "z-image", *refs]) == 2
+    assert cj.main(["image", "x", "--model", "klein"]) == 2
+    assert cj.main(["image", "x", *(refs * 3)]) == 2
+    err = capsys.readouterr().err
+    assert "one --ref" in err and "from 1 to 4" in err
+    assert cj.pick_model("auto", []) == "z-image" and cj.pick_model("auto", [img]) == "klein"
 
 
 def test_upload_failure_still_stops_comfy_it_started(tmp_path, monkeypatch, capsys):

@@ -655,17 +655,19 @@ _SEED_RE = re.compile(r"\bseed (\d+)")
 
 
 def media_args(width: int | None = None, height: int | None = None, seed: int | None = None,
-               ref_image: str | None = None, denoise: float | None = None) -> list[str] | dict:
+               ref_image: str | list[str] | None = None, denoise: float | None = None,
+               model: str | None = None) -> list[str] | dict:
     """comfy_job.py options for make_image's extras, or {"error": ...} for a bad ref path."""
     args: list[str] = []
     for flag, v in (("--width", width), ("--height", height), ("--seed", seed),
-                    ("--denoise", denoise)):
+                    ("--denoise", denoise), ("--model", model)):
         if v is not None:
             args += [flag, str(v)]
-    if ref_image:
-        ref = Path(ref_image).expanduser()
+    refs = [ref_image] if isinstance(ref_image, str) else list(ref_image or [])
+    for r in refs:
+        ref = Path(r).expanduser()
         if not ref.is_absolute():
-            return {"ok": False, "error": f"ref_image must be an absolute path: {ref_image}"}
+            return {"ok": False, "error": f"ref_image must be an absolute path: {r}"}
         args += ["--ref", str(ref)]
     return args
 
@@ -771,17 +773,20 @@ def build_server():
 
     @mcp.tool(name="make_image")
     def _image(prompt: str, width: int | None = None, height: int | None = None,
-               seed: int | None = None, ref_image: str | None = None,
-               denoise: float | None = None) -> dict:
-        """Text-to-image (Z-Image-Turbo on ComfyUI, ~1 min). Returns saved file paths and seed.
+               seed: int | None = None, ref_image: str | list[str] | None = None,
+               model: str = "auto", denoise: float | None = None) -> dict:
+        """Text-to-image or reference edit on ComfyUI (~1-2 min). Returns file paths and seed.
 
-        width/height: multiples of 16, 256-2048 (default 1024x1024). seed: reuse one from an
-        earlier result to reproduce it or vary only the prompt. ref_image: absolute path to a
-        png/jpg/webp to start from (img2img); denoise 0-1 (default 0.6) sets how far to move
-        from it. img2img keeps the reference's layout and colours; it does NOT put the same
-        character into a new pose or scene. Without width/height a reference keeps its aspect.
+        No ref_image: Z-Image-Turbo text-to-image. ref_image (absolute path, or a list of up
+        to 4) with model "auto"/"klein": FLUX.2 klein 4B edit; the prompt calls them image 1,
+        image 2, ... and can put their characters into a new scene ("the six people from image
+        1 walking along a riverbank"). model "z-image" with one ref: img2img, denoise 0-1
+        (default 0.6), keeps layout/colours only, for small variations of one picture.
+        width/height: multiples of 16, 256-2048 (default 1024x1024, or the first reference's
+        aspect at ~1 MP). seed: reuse one from an earlier result to vary only the prompt.
         """
-        extra = media_args(width, height, seed, ref_image, denoise)
+        extra = media_args(width, height, seed, ref_image, denoise,
+                           None if model == "auto" else model)
         if isinstance(extra, dict):
             return extra
         return run_media("image", prompt, extra=extra)

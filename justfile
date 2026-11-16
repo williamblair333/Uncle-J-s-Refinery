@@ -179,7 +179,7 @@ comfy *args:
 comfy-models *args:
     ./scripts/comfy-models.sh {{args}}
 
-# one Z-Image-Turbo image → /opt/outputs/comfyui: just image "prompt" [--seed N] [--width W --height H] [--ref pic.png --denoise 0.6]
+# one image → /opt/outputs/comfyui: just image "prompt" [--seed N] [--width W --height H] [--ref pic.png ...] (refs → FLUX.2 klein edit; --model z-image --ref → img2img)
 image prompt *args:
     python3 scripts/comfy_job.py image "{{prompt}}" {{args}}
 

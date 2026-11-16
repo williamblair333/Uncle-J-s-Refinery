@@ -1,4 +1,6 @@
 # Model folders mounted read-only from /opt/models/<name>/ (see compose.yaml, models.txt).
+# compose.yaml also mounts this file over the copy baked into the image, so a new folder
+# needs only `just comfy down` + up, not a rebuild.
 z_image_turbo:
   base_path: /models/z-image-turbo
   diffusion_models: diffusion_models
@@ -10,3 +12,7 @@ wan2_2:
   text_encoders: text_encoders
   vae: vae
   loras: loras
+flux2_klein:
+  base_path: /models/flux2-klein
+  diffusion_models: diffusion_models
+  vae: vae

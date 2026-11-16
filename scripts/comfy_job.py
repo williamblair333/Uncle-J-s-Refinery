@@ -39,6 +39,14 @@ IMAGE_MODELS = {
     "clip": "qwen_3_4b_fp8_mixed.safetensors",
     "vae": "ae.safetensors",
 }
+# FLUX.2 [klein] 4B (Apache 2.0) for reference-based editing. The text encoder is Z-Image's:
+# both use the same Qwen3-4B (docker/comfyui/models.txt).
+EDIT_MODELS = {
+    "unet": "flux-2-klein-4b-fp8.safetensors",
+    "clip": IMAGE_MODELS["clip"],
+    "vae": "flux2-vae.safetensors",
+}
+MAX_REFS = 4
 VIDEO_MODELS = {
     "high": "Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf",
     "low": "Wan2.2-T2V-A14B-LowNoise-Q4_K_M.gguf",
@@ -104,6 +112,65 @@ def image_workflow(prompt: str, seed: int, width: int | None = None, height: int
     wf["7"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["12", 0], "vae": ["3", 0]}}
     wf["8"]["inputs"]["denoise"] = denoise
     return wf
+
+
+def edit_workflow(prompt: str, seed: int, refs: list[str], width: int | None = None,
+                  height: int | None = None, steps: int = 4, prefix: str = "edit") -> dict:
+    """FLUX.2 [klein] 4B multi-reference edit, per ComfyUI's image_flux2_klein_image_edit_4b
+    template (distilled: 4 steps, cfg 1, euler).
+
+    refs are file names in ComfyUI's input folder (upload_image), referred to in the prompt as
+    image 1, image 2, ... Each is scaled to ~1 megapixel, VAE-encoded and attached to both the
+    prompt and the zeroed negative with ReferenceLatent. Without width/height the output takes
+    the first reference's size.
+    """
+    wf = {
+        "1": {"class_type": "UNETLoader",
+              "inputs": {"unet_name": EDIT_MODELS["unet"], "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader",
+              "inputs": {"clip_name": EDIT_MODELS["clip"], "type": "flux2", "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": EDIT_MODELS["vae"]}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["2", 0]}},
+        "5": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["4", 0]}},
+    }
+    pos, neg = ["4", 0], ["5", 0]
+    for i, name in enumerate(refs):
+        load, scale, enc, rp, rn = (f"r{i}{k}" for k in "lsepn")
+        wf[load] = {"class_type": "LoadImage", "inputs": {"image": name}}
+        wf[scale] = {"class_type": "ImageScaleToTotalPixels",
+                     "inputs": {"image": [load, 0], "upscale_method": "lanczos",
+                                "megapixels": 1.0, "resolution_steps": SIZE_STEP}}
+        wf[enc] = {"class_type": "VAEEncode", "inputs": {"pixels": [scale, 0], "vae": ["3", 0]}}
+        wf[rp] = {"class_type": "ReferenceLatent", "inputs": {"conditioning": pos, "latent": [enc, 0]}}
+        wf[rn] = {"class_type": "ReferenceLatent", "inputs": {"conditioning": neg, "latent": [enc, 0]}}
+        pos, neg = [rp, 0], [rn, 0]
+    if width and height:
+        w, h = width, height
+    else:
+        wf["6"] = {"class_type": "GetImageSize", "inputs": {"image": ["r0s", 0]}}
+        w, h = ["6", 0], ["6", 1]
+    wf.update({
+        "7": {"class_type": "EmptyFlux2LatentImage",
+              "inputs": {"width": w, "height": h, "batch_size": 1}},
+        "8": {"class_type": "Flux2Scheduler", "inputs": {"steps": steps, "width": w, "height": h}},
+        "9": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
+        "10": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
+        "11": {"class_type": "CFGGuider",
+               "inputs": {"model": ["1", 0], "positive": pos, "negative": neg, "cfg": 1.0}},
+        "12": {"class_type": "SamplerCustomAdvanced",
+               "inputs": {"noise": ["9", 0], "guider": ["11", 0], "sampler": ["10", 0],
+                          "sigmas": ["8", 0], "latent_image": ["7", 0]}},
+        "13": {"class_type": "VAEDecode", "inputs": {"samples": ["12", 0], "vae": ["3", 0]}},
+        "14": {"class_type": "SaveImage", "inputs": {"images": ["13", 0], "filename_prefix": prefix}},
+    })
+    return wf
+
+
+def pick_model(model: str, refs: list) -> str:
+    """'auto' edits with klein when references are given, else Z-Image text-to-image."""
+    if model != "auto":
+        return model
+    return "klein" if refs else "z-image"
 
 
 def check_size(value: int | None) -> str | None:
@@ -411,11 +478,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--height", type=int)
     ap.add_argument("--steps", type=int)
     ap.add_argument("--frames", type=int, default=81, help="video only; 81 = 5 s at 16 fps")
-    ap.add_argument("--ref", type=Path,
-                    help="image only: start from this picture (img2img); keeps its layout and "
-                         "colours, not a character's identity in a new pose")
+    ap.add_argument("--ref", type=Path, action="append", default=[],
+                    help=f"image only, repeatable (up to {MAX_REFS}): reference picture(s). With "
+                         "klein the prompt calls them image 1, image 2, ... and can put their "
+                         "characters in a new scene; with z-image (one ref) it is img2img")
+    ap.add_argument("--model", choices=["auto", "z-image", "klein"], default="auto",
+                    help="auto (default): klein when --ref is given, else z-image")
     ap.add_argument("--denoise", type=float, default=DEFAULT_DENOISE,
-                    help=f"with --ref: 0-1, how far to move from it (default {DEFAULT_DENOISE})")
+                    help=f"z-image with --ref: 0-1, how far to move from it "
+                         f"(default {DEFAULT_DENOISE})")
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--timeout", type=float, default=3600, help="seconds to wait for the job")
     ap.add_argument("--keep-loaded", action="store_true",
@@ -441,13 +512,18 @@ def main(argv: list[str] | None = None) -> int:
         problems.append(f"--seed {seed}: ComfyUI takes 0 to 2^64-1")
     if args.kind == "image":
         problems += [p for p in (check_size(args.width), check_size(args.height)) if p]
-    if args.ref is not None:
+    model = pick_model(args.model, args.ref)
+    if args.ref:
         if args.kind != "image":
             problems.append("--ref works for images only")
         else:
-            problems += [p for p in [check_ref(args.ref)] if p]
+            problems += [p for p in map(check_ref, args.ref) if p]
         if not 0 < args.denoise <= 1:
             problems.append(f"--denoise {args.denoise}: must be above 0 and at most 1")
+    if model == "z-image" and len(args.ref) > 1:
+        problems.append("z-image takes one --ref (img2img); use --model klein for several")
+    if model == "klein" and not 1 <= len(args.ref) <= MAX_REFS:
+        problems.append(f"klein edits from 1 to {MAX_REFS} --ref pictures")
     if problems:
         for p in problems:
             print(f"error: {p}", file=sys.stderr)
@@ -456,11 +532,16 @@ def main(argv: list[str] | None = None) -> int:
     def build() -> dict:
         if args.kind == "video":
             return video_workflow(args.prompt, seed, frames=args.frames, prefix="video", **sizes)
-        if args.ref is None:
+        if not args.ref:
             return image_workflow(args.prompt, seed, prefix="image", **sizes)
-        name = upload_image(args.url, args.ref)
-        print(f"reference {args.ref} uploaded as {name}, denoise {args.denoise}", file=sys.stderr)
-        return image_workflow(args.prompt, seed, prefix="image", ref_image=name,
+        names = [upload_image(args.url, p) for p in args.ref]
+        for p, n in zip(args.ref, names):
+            print(f"reference {p} uploaded as {n}", file=sys.stderr)
+        if model == "klein":
+            print(f"klein edit from {len(names)} reference(s)", file=sys.stderr)
+            return edit_workflow(args.prompt, seed, names, prefix="edit", **sizes)
+        print(f"z-image img2img, denoise {args.denoise}", file=sys.stderr)
+        return image_workflow(args.prompt, seed, prefix="image", ref_image=names[0],
                               denoise=args.denoise, **sizes)
 
     if args.no_autostart and not comfy_up(args.url):

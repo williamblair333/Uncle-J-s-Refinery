@@ -599,6 +599,9 @@ def test_media_args_builds_flags_and_needs_absolute_ref():
         "--width", "1344", "--height", "768", "--seed", "5", "--denoise", "0.5"]
     assert d.media_args(ref_image="/x/a.png") == ["--ref", "/x/a.png"]
     assert "absolute" in d.media_args(ref_image="a.png")["error"]
+    assert d.media_args(ref_image=["/x/a.png", "/x/b.png"], model="klein") == [
+        "--model", "klein", "--ref", "/x/a.png", "--ref", "/x/b.png"]
+    assert "absolute" in d.media_args(ref_image=["/x/a.png", "b.png"])["error"]
 
 
 def test_run_media_passes_extras_before_prompt_and_returns_seed(monkeypatch, tmp_path):
