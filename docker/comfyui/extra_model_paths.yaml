@@ -16,3 +16,9 @@ flux2_klein:
   base_path: /models/flux2-klein
   diffusion_models: diffusion_models
   vae: vae
+qwen_image_edit:
+  base_path: /models/qwen-image-edit
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+  loras: loras
