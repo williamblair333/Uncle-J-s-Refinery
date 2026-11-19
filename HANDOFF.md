@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-19 — 14:00 Qwen out-of-memory traced; RAM guard added
+
+1. **What the journal shows:** the kernel OOM-killed Chrome (9.1 GB peak) at 14:00:30, 60 s after comfy_job restarted Heretic between batch jobs (13:59:30). immich/langfuse came back at 14:00:48, after the kill.
+2. **Measured:** restarting Heretic alone (ComfyUI down) costs ~1.2 GiB anon; its 14 GB of mmap'd model pages are reclaimable cache, so Heretic isn't the cause on its own. One guarded Qwen job (seed 7, full scene, 104 s) took MemAvailable from ~25 to 14.8 GiB (ComfyUI anon peak ~12.9 GB) at the end of the job. So one job fits under the 20 GiB gate; the 14:00 run was the old back-to-back batch script (`review/2026-11-17-idritzia-qwen/qwen_scenes.py`) and wasn't reproduced.
+3. **Fix:** `run_job` kills ComfyUI when free RAM falls under 4 GiB (checks every 0.5 s), so a tight run fails the job instead of a desktop app. Run Qwen jobs one at a time through `just image` / comfy_job, not the old batch script.
+4. Bill's Idritzia answers went to write-well-3c: face ref approved, elves can't grow beards (committed there as 18e85c3, PR #99), and do both (`--region` repair + Qwen redraws).
+
 ## 2026-11-19 — buddy account tested a friend's website
 
 1. Bill asked the buddy to sign up on a friend's site, join a game there and build a character, then report. All done; the report is a private Claude Doc, and the notes plus links are in gitignored `review/2026-11-19-nightbook-feedback.md`. Bill still has to share the doc with his friend.

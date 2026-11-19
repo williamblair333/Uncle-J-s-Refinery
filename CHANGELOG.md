@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-19 — comfy_job kills ComfyUI before the kernel's OOM killer picks the desktop
+
+- `run_job` checks MemAvailable every 0.5 s while a job runs (`watch_ram`); below 4 GiB (`RAM_GUARD_FLOOR_GIB`) it runs `docker kill comfyui`, says why and returns 1. At 14:00 the kernel had OOM-killed Chrome at the end of a Qwen batch job. A guarded live Qwen job (104 s) dropped free RAM from ~25 to 14.8 GiB, ~1.4 GiB/s at the end. 4 new tests; suite 3739 passed.
+
 ## 2026-11-19 — first buddy-account website task
 
 - The buddy (Firefox MCP + `just mail`) registered on a friend's site, joined a game, built and submitted a character, toured the site and wrote a test report (private Claude Doc; notes in gitignored `review/`). No tracked code changed. Local-only: `.claude/settings.local.json` allows `mcp__firefox__*`.

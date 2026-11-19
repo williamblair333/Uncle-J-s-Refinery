@@ -781,3 +781,48 @@ def test_region_crop_and_paste_leave_outside_pixels_identical(tmp_path):
     r = subprocess.run([py, "-I", str(script), str(REPO / "scripts" / "comfy_job.py"),
                         str(tmp_path)], capture_output=True, text=True, timeout=120)
     assert "REGION-OK" in r.stdout, r.stdout + r.stderr
+
+
+# --- RAM guard (2026-11-19: the kernel OOM-killed Chrome at the end of a Qwen job) ---
+
+def test_ram_guard_trips_only_below_the_floor():
+    assert cj.ram_guard_tripped(3.9)
+    assert not cj.ram_guard_tripped(4.0)
+    assert not cj.ram_guard_tripped(None)  # unreadable meminfo never kills a job
+
+
+def test_watch_ram_returns_the_low_reading_mid_wait():
+    readings = iter([10.0, 8.0, 3.5, 20.0])
+    sleeps = []
+    low = cj.watch_ram(2, available=lambda: next(readings), sleep=sleeps.append, poll=0.5)
+    assert low == 3.5
+    assert sleeps == [0.5, 0.5]
+
+
+def test_watch_ram_waits_the_full_time_when_ram_is_fine():
+    sleeps = []
+    assert cj.watch_ram(2, available=lambda: 20.0, sleep=sleeps.append, poll=0.5) is None
+    assert sum(sleeps) == 2
+
+
+def test_run_job_kills_comfyui_when_the_guard_trips(monkeypatch, capsys):
+    import argparse
+
+    class Sampler:
+        peak_proc = peak_total = 0
+        def __init__(self, pid): pass
+        def start(self): pass
+        def stop(self): pass
+
+    calls = []
+    monkeypatch.setattr(cj, "VramSampler", Sampler)
+    monkeypatch.setattr(cj, "container_pid", lambda: None)
+    monkeypatch.setattr(cj, "_http",
+                        lambda url, payload=None: {"prompt_id": "p1"} if payload else {})
+    monkeypatch.setattr(cj, "watch_ram", lambda s: 2.5)
+    monkeypatch.setattr(cj, "_docker", lambda *a: calls.append(a) or True)
+    monkeypatch.setattr(cj, "free_vram", lambda url: calls.append(("free",)) or True)
+    args = argparse.Namespace(url="http://x", kind="image", timeout=60, keep_loaded=False)
+    assert cj.run_job(args, {}, 7) == 1
+    assert calls == [("kill", "comfyui")]
+    assert "free RAM fell to 2.5 GiB" in capsys.readouterr().err
