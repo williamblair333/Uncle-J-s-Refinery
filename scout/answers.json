@@ -50,7 +50,7 @@
     },
     "1155123554": {
       "answer": "yes",
-      "answered_at": "2026-11-13T17:39:53Z",
+      "answered_at": "2026-11-17T09:15:01Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "eval": {
         "risks": [
@@ -65,9 +65,10 @@
       },
       "evaluated": true,
       "full_name": "affaan-m/agentshield",
+      "handed_off": true,
       "note": "Trial report-only, pinned version, never --fix: a static audit of ~/.claude settings/hooks/MCP/CLAUDE.md is a real gap. Queued for the scout rung-2 evaluation.",
       "reason": null,
-      "rung": 1,
+      "rung": 2,
       "watch_checked": "2026-11-10T09:46:17Z"
     },
     "1161198850": {
@@ -80,8 +81,8 @@
       "rung": 1
     },
     "1168786009": {
-      "answer": "yes",
-      "answered_at": "2026-11-13T17:39:53Z",
+      "answer": "maybe",
+      "answered_at": "2026-11-19T09:15:01Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "eval": {
         "risks": [
@@ -95,10 +96,11 @@
         "verdict": "trial"
       },
       "evaluated": true,
+      "expired": true,
       "full_name": "alexgreensh/repo-forensics",
       "note": "Candidate behind the alternatives-scan download gate (offline static scan of a clone). Licence reads NOASSERTION on GitHub: check before adopting. Queued for rung-2 evaluation.",
       "reason": null,
-      "rung": 1
+      "rung": 2
     },
     "1185389803": {
       "answer": "no",

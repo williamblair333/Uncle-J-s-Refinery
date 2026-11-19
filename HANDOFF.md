@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-19 — buddy account tested a friend's website
+
+1. Bill asked the buddy to sign up on a friend's site, join a game there and build a character, then report. All done; the report is a private Claude Doc, and the notes plus links are in gitignored `review/2026-11-19-nightbook-feedback.md`. Bill still has to share the doc with his friend.
+2. **Waiting on Bill:** the site login is in `~/.config/uncle-j/<site>.env` (0600), not yet in the vault (the buddy's vault access is read-only). The profile birthdate is a placeholder (1990-01-01).
+3. `.claude/settings.local.json` now allows `mcp__firefox__*` (Bill's call 11-19): browser sessions run with no prompts. A pre-mortem flagged prompt injection from web pages as the MEDIUM risk; the email-send `ask` rules still apply.
+4. Firefox MCP quirk: `evaluate_script` is cut off after about 10 s whatever `timeout` says (BiDi timeout), so loop over one tab or step per call. Setting a select value with a native setter + `change` event works with this site's app; `fill_by_uid` only works on the first match of a selector snapshot.
+5. `just mail search` missed a mail that arrived seconds earlier (Gmail's search index lags); `just mail list` saw it. Not a bug.
+
 ## 2026-11-19 — Qwen blocked while the Windows VM runs
 
 1. The gitea-win-runner VM holds 8.4 GB; with it up, MemAvailable is ~10 GiB and every Qwen job refuses even after unloading Ollama and parking (~2.7 GiB). Bill is using the VM (11-19), so Qwen batches (write-well's S6 face fixes, 5b's scenes) wait until it's off. comfy_job no longer cycles immich/langfuse when parking can't close the gap.
