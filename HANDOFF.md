@@ -12,6 +12,7 @@
 
 1. `make_image` takes width/height/seed and reference images. With refs it now edits with **FLUX.2 klein 4B fp8** (Apache 2.0, 4.4 GB, multi-reference); `model="z-image"` + one ref is still img2img, which keeps layout only. Picked by the alternatives scan `review/alternatives/2026-11-16-image-edit-model.md`: Zen Image Edit and Qwen Image 2.1 are **non-commercial** (Qwen Research License §2a), which rules them out for sold books. Step up to Qwen-Image-Edit-2511 (Apache, ~23 GB, slow on 12 GB) if klein loses identity.
 2. **agy review tier times out:** two `ask_agy(task="review")` calls on a 3-file diff hit the 300 s and 600 s print timeouts on `gemini-3.8-flash-high` (61k thinking tokens, no answer; logs `state/agy-logs/20261116-102622-*`, `-103633-*`). `gemini-4-argon-high` was quota-exhausted until 11-21. Fix the tier or cap thinking before relying on agy reviews; I reviewed by hand.
+- **jcodemunch-mcp breaking change**: `get_watch_status` service `active` is now `None` when the probe can't ask (read the new `status` field instead), and `get_changed_symbols` reports a rename as one `renamed` row with `previous_name`/`previous_symbol_id` instead of `added`+`removed` — callers testing `not active` or counting added/removed must update.
 
 ## 2026-11-16 — pick up here
 
