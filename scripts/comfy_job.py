@@ -377,23 +377,80 @@ def unload_ollama(url: str = OLLAMA_URL, http=None) -> list[str]:
     return names
 
 
+# Compose projects stopped for a job when unloading Ollama still leaves too little RAM
+# (Bill's call, 2026-11-19: the desktop alone left 16 GiB). Restarted when the job ends.
+RAM_PARK_PROJECTS = ("immich", "claude-code-langfuse-template")
+_DB_HINTS = ("postgres", "redis", "clickhouse", "minio")
+
+
+def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> list[str]:
+    """Stop the running containers of these compose projects; return their names."""
+    names: list[str] = []
+    for project in projects:
+        try:
+            r = run(["docker", "ps", "--filter", f"label=com.docker.compose.project={project}",
+                     "--format", "{{.Names}}"], capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        names += [n for n in r.stdout.split() if n] if r.returncode == 0 else []
+    if not names:
+        return []
+    print(f"stopping {' '.join(names)} for the job; if this run is killed, restart them: "
+          f"docker start {' '.join(names)}", file=sys.stderr)
+    try:
+        run(["docker", "stop", *names], capture_output=True, text=True, timeout=180)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    # Return every name whatever happened: `docker start` on a running container is a no-op.
+    return names
+
+
+def unpark_containers(names: list[str], run=subprocess.run) -> bool:
+    """Start them again, databases first so the apps find them."""
+    if not names:
+        return True
+    ordered = sorted(names, key=lambda n: not any(h in n for h in _DB_HINTS))
+    try:
+        ok = run(["docker", "start", *ordered], capture_output=True, text=True,
+                 timeout=180).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    if ok:
+        print(f"restarted {' '.join(ordered)}", file=sys.stderr)
+    else:
+        print(f"could not restart them; run: docker start {' '.join(ordered)}", file=sys.stderr)
+    return ok
+
+
 def free_ram_for(model: str, unload=None, available=None, sleep=time.sleep,
-                 wait: float = 15) -> str | None:
-    """The RAM gate, unloading Ollama's idle models first if that's what it takes.
+                 wait: float = 15, park=None, parked: list[str] | None = None) -> str | None:
+    """The RAM gate: unload Ollama's idle models, then stop RAM_PARK_PROJECTS, if that's
+    what it takes. Names of stopped containers go into `parked`; the caller restarts them.
 
     Returns why the model still can't start, or None if it may."""
     unload = unload or unload_ollama
     available = available or ram_available_gib
+    park = park or park_containers
     if not ram_problem(model, available()):
         return None
+
+    def settled() -> bool:
+        for _ in range(int(wait)):
+            if not ram_problem(model, available()):
+                return True
+            sleep(1)
+        return False
+
     freed = unload()
     if freed:
         print(f"unloaded Ollama's idle {', '.join(freed)} to free RAM "
               "(it reloads at its next request)", file=sys.stderr)
-        for _ in range(int(wait)):
-            if not ram_problem(model, available()):
-                return None
-            sleep(1)
+        if settled():
+            return None
+    if parked is not None:
+        parked += park()
+        if parked and settled():
+            return None
     return ram_problem(model, available())
 
 
@@ -776,8 +833,11 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 from PIL import Image
                 with Image.open(args.ref[0]) as im:
-                    size = im.size
+                    size, mode = im.size, im.mode
                 problems += [p for p in [region_problem(region, size)] if p]
+                if mode not in ("RGB", "RGBA", "L"):
+                    problems.append(f"--region: {args.ref[0]} is a {mode} image; convert it to "
+                                    "RGB first (palette and 16-bit pictures aren't handled)")
             except ImportError:
                 problems.append("--region needs Pillow (python3-pil); the system python3 has it")
                 region = None
@@ -812,14 +872,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: {p}", file=sys.stderr)
         return 2
 
-    def build() -> dict:
+    def build(workdir: Path) -> dict:
         if args.kind == "video":
             return video_workflow(args.prompt, seed, frames=args.frames, prefix="video", **sizes)
         if not args.ref:
             return image_workflow(args.prompt, seed, prefix="image", **sizes)
         uploads = list(args.ref)
         if region:
-            uploads[0] = crop_region(args.ref[0], region, Path(tmp.name) / "region-crop.png")
+            uploads[0] = crop_region(args.ref[0], region, workdir / "region-crop.png")
             print(f"region {region[2]}×{region[3]} at {region[0]},{region[1]}; generating it "
                   f"at {sizes['width']}×{sizes['height']}", file=sys.stderr)
         names = [upload_image(args.url, p) for p in uploads]
@@ -848,10 +908,20 @@ def main(argv: list[str] | None = None) -> int:
         print("gave up after an hour waiting for Klarheit's trials", file=sys.stderr)
         return 1
     # Only after the Klarheit wait: unloading Ollama's model is safe while no trial is due.
-    low_ram = free_ram_for(model)
-    if low_ram:
-        print(f"error: {low_ram}", file=sys.stderr)
-        return 1
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, _exit_on_signal)  # so `finally` restarts parked containers
+    parked: list[str] = []
+    try:
+        low_ram = free_ram_for(model, parked=parked)
+        if low_ram:
+            print(f"error: {low_ram}", file=sys.stderr)
+            return 1
+        return _start_and_run(args, build, seed, region)
+    finally:
+        unpark_containers(parked)
+
+
+def _start_and_run(args: argparse.Namespace, build, seed: int, region) -> int:
     started = False
     if not comfy_up(args.url):
         print("ComfyUI isn't running; starting it (just comfy up -d)…", file=sys.stderr)
@@ -862,7 +932,7 @@ def main(argv: list[str] | None = None) -> int:
     args.outputs = []
     try:
         try:
-            wf = build()
+            wf = build(Path(tmp.name))
         except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
             print(f"could not upload the reference to ComfyUI: {exc}", file=sys.stderr)
             return 1

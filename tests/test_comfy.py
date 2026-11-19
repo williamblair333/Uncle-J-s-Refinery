@@ -15,6 +15,11 @@ _spec.loader.exec_module(cj)
 # Never wait on a real comfy_job run's lock from the tests.
 import tempfile as _tempfile  # noqa: E402
 cj.LOCK_PATH = Path(_tempfile.mkdtemp()) / "comfy_job.lock"
+# Never stop or start real containers from the tests; the real functions are tested
+# through these saved references with a fake `run`.
+_real_park, _real_unpark = cj.park_containers, cj.unpark_containers
+cj.park_containers = lambda *a, **k: []
+cj.unpark_containers = lambda names, **k: True
 
 
 # ── comfy.sh ──────────────────────────────────────────────────────────────
@@ -615,6 +620,59 @@ def test_region_gen_size_keeps_aspect_at_about_a_megapixel():
     assert w % 16 == 0 and h % 16 == 0
     assert abs(w / h - 300 / 450) < 0.03
     assert 0.9e6 < w * h < 1.1e6
+
+
+class _DockerRun:
+    def __init__(self, ps):
+        self.calls, self.ps = [], ps
+
+    def __call__(self, cmd, **kw):
+        self.calls.append(cmd)
+        out = ""
+        if cmd[:2] == ["docker", "ps"]:
+            out = self.ps.get(cmd[3].rsplit("=", 1)[1], "")
+        return subprocess.CompletedProcess(cmd, 0, out, "")
+
+
+def test_park_stops_both_projects_and_unpark_starts_databases_first():
+    run = _DockerRun({"immich": "immich_server\nimmich_postgres\n",
+                "claude-code-langfuse-template": "lf-web-1\nlf-clickhouse-1\n"})
+    names = _real_park(run=run)
+    assert names == ["immich_server", "immich_postgres", "lf-web-1", "lf-clickhouse-1"]
+    assert run.calls[-1] == ["docker", "stop", *names]
+    _real_unpark(names, run=run)
+    assert run.calls[-1] == ["docker", "start", "immich_postgres", "lf-clickhouse-1",
+                             "immich_server", "lf-web-1"]
+
+
+def test_park_with_nothing_running_stops_nothing():
+    run = _DockerRun({})
+    assert _real_park(run=run) == []
+    assert not any(c[:2] == ["docker", "stop"] for c in run.calls)
+
+
+def test_ram_gate_parks_only_when_unloading_ollama_is_not_enough():
+    ram = iter([16.0, 16.0, 16.0, 23.0])
+    parked: list[str] = []
+    got = cj.free_ram_for("qwen", unload=lambda: [], available=lambda: next(ram),
+                          sleep=lambda s: None, wait=2, park=lambda: ["immich_server"],
+                          parked=parked)
+    assert got is None and parked == ["immich_server"]
+    # enough RAM at once: nothing parked
+    parked = []
+    assert cj.free_ram_for("qwen", unload=lambda: [], available=lambda: 25.0,
+                           park=lambda: ["x"], parked=parked) is None and parked == []
+
+
+def test_main_restarts_parked_containers_even_when_the_gate_still_fails(monkeypatch):
+    restarted = []
+    monkeypatch.setattr(cj, "wait_for_klarheit", lambda kind, max_wait: True)
+    monkeypatch.setattr(cj, "comfy_up", lambda url: True)
+    monkeypatch.setattr(cj, "free_ram_for",
+                        lambda model, parked: parked.append("immich_server") or "still short")
+    monkeypatch.setattr(cj, "unpark_containers", lambda names: restarted.extend(names))
+    assert cj.main(["image", "x", "--model", "z-image"]) == 1
+    assert restarted == ["immich_server"]
 
 
 def test_second_run_waits_for_the_lock(tmp_path):
