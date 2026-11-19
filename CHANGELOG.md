@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-19 — first buddy-account website task
+
+- The buddy (Firefox MCP + `just mail`) registered on a friend's site, joined a game, built and submitted a character, toured the site and wrote a test report (private Claude Doc; notes in gitignored `review/`). No tracked code changed. Local-only: `.claude/settings.local.json` allows `mcp__firefox__*`.
+
 ## 2026-11-19 — comfy_job parks immich/langfuse only when that closes the RAM gap
 
 - `free_ram_for` estimates what parking would free (`park_estimate_gib`, docker stats; 2.7 GiB live) and skips the stop/start when free RAM plus that is still under the gate. With the gitea-win-runner VM up (8.4 GB, Bill is using it) a 5-job Qwen batch refused at 13.5–14 GiB and cycled all 10 containers five times for nothing. 2 new tests; 59 comfy tests pass.
