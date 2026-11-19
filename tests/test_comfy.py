@@ -20,6 +20,8 @@ cj.LOCK_PATH = Path(_tempfile.mkdtemp()) / "comfy_job.lock"
 _real_park, _real_unpark = cj.park_containers, cj.unpark_containers
 cj.park_containers = lambda *a, **k: []
 cj.unpark_containers = lambda names, **k: True
+_real_estimate = cj.park_estimate_gib
+cj.park_estimate_gib = lambda *a, **k: 100.0
 
 
 # ── comfy.sh ──────────────────────────────────────────────────────────────
@@ -662,6 +664,26 @@ def test_ram_gate_parks_only_when_unloading_ollama_is_not_enough():
     parked = []
     assert cj.free_ram_for("qwen", unload=lambda: [], available=lambda: 25.0,
                            park=lambda: ["x"], parked=parked) is None and parked == []
+
+
+def test_ram_gate_does_not_park_when_parking_cannot_reach_the_gate():
+    parks = []
+    got = cj.free_ram_for("qwen", unload=lambda: [], available=lambda: 13.5,
+                          sleep=lambda s: None, wait=2, park=lambda: parks.append(1) or ["x"],
+                          parked=[], estimate=lambda: 2.8)
+    assert got and parks == []          # 13.5 + 2.8 < 20: nothing stopped, still refused
+
+
+def test_park_estimate_sums_docker_stats():
+    class R(_DockerRun):
+        def __call__(self, cmd, **kw):
+            if cmd[:2] == ["docker", "stats"]:
+                return subprocess.CompletedProcess(
+                    cmd, 0, "446.2MiB / 46.84GiB\n1.5GiB / 46.84GiB\n0B / 0B\n", "")
+            return super().__call__(cmd, **kw)
+    est = _real_estimate(run=R({"immich": "a\nb\n", "claude-code-langfuse-template": "c\n"}))
+    assert abs(est - (446.2 / 1024 + 1.5)) < 1e-6
+    assert cj._mem_gib("junk") == 0.0
 
 
 def test_main_restarts_parked_containers_even_when_the_gate_still_fails(monkeypatch):
