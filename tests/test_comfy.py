@@ -456,17 +456,24 @@ def test_upload_image_names_by_hash(tmp_path, monkeypatch):
 
 # --- Qwen-Image-Edit-2511 -------------------------------------------------------------
 
-def _qwen_setup(monkeypatch, got, ram=30.0, waited=None):
+def _qwen_setup(monkeypatch, got, ram=30.0, waited=None, unloaded=None):
+    """Never touches the real Ollama: unload_ollama is always replaced here."""
     monkeypatch.setattr(cj, "comfy_up", lambda url: True)
     monkeypatch.setattr(cj, "upload_image", lambda url, p: f"ref-{p.stem}.png")
-    monkeypatch.setattr(cj, "ram_available_gib", lambda: ram)
+    monkeypatch.setattr(cj, "ram_available_gib", ram if callable(ram) else (lambda: ram))
     monkeypatch.setattr(cj, "_with_gpu", lambda a_, wf, seed: got.update(wf=wf) or 0)
+    events = waited if waited is not None else []
 
     def wait(kind, max_wait):
-        if waited is not None:
-            waited.append(kind)
+        events.append(kind)
         return True
     monkeypatch.setattr(cj, "wait_for_klarheit", wait)
+
+    def unload():
+        events.append("unload")
+        return list(unloaded or [])
+    monkeypatch.setattr(cj, "unload_ollama", unload)
+    return events
 
 
 def test_qwen_builds_its_graph_from_up_to_three_refs(tmp_path, monkeypatch):
@@ -518,7 +525,7 @@ def test_qwen_waits_for_klarheit_even_when_told_to_ignore_it(tmp_path, monkeypat
     _qwen_setup(monkeypatch, got, waited=waited)
     assert cj.main(["image", "--model", "qwen", "--ignore-klarheit", "--ref", str(img),
                     "--", "x"]) == 0
-    assert waited == ["qwen"]
+    assert waited == ["qwen"]  # 30 GiB free: nothing unloaded
     assert "always waits for Klarheit" in capsys.readouterr().err
 
 
@@ -531,6 +538,49 @@ def test_ram_gate_only_applies_to_listed_models(tmp_path):
     mi.write_text("MemTotal: 48000000 kB\nMemAvailable: 20971520 kB\n")
     assert cj.ram_available_gib(mi) == 20.0
     assert cj.ram_available_gib(tmp_path / "missing") is None
+
+
+def test_qwen_unloads_ollama_after_the_klarheit_wait_then_runs(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+    got = {}
+    readings = iter([13.0, 20.5, 20.5])
+    events = _qwen_setup(monkeypatch, got, ram=lambda: next(readings), unloaded=["qwen3.5:9b"])
+    assert cj.main(["image", "--model", "qwen", "--ref", str(img), "--", "x"]) == 0
+    assert events == ["qwen", "unload"]  # never unloads before Klarheit is clear
+    assert "wf" in got
+    assert "unloaded Ollama's idle qwen3.5:9b" in capsys.readouterr().err
+
+
+def test_free_ram_for_gives_up_when_unloading_is_not_enough():
+    slept = []
+    calls = []
+    why = cj.free_ram_for("qwen", unload=lambda: calls.append(1) or ["m"],
+                          available=lambda: 14.0, sleep=slept.append, wait=3)
+    assert "needs 20 GiB" in why and "14.0 GiB" in why
+    assert calls == [1] and slept == [1, 1, 1]
+
+
+def test_free_ram_for_leaves_ollama_alone_when_ram_is_fine_or_ungated():
+    def boom():
+        raise AssertionError("unloaded Ollama without need")
+    assert cj.free_ram_for("qwen", unload=boom, available=lambda: 25.0) is None
+    assert cj.free_ram_for("klein", unload=boom, available=lambda: 1.0) is None
+
+
+def test_unload_ollama_sets_keep_alive_zero_for_each_loaded_model():
+    sent = []
+
+    def http(url, payload=None, timeout=30):
+        sent.append((url, payload))
+        return {"models": [{"name": "qwen3.5:9b"}, {"name": "other"}]} if url.endswith("/api/ps") else {}
+    assert cj.unload_ollama("http://o", http=http) == ["qwen3.5:9b", "other"]
+    assert sent[1:] == [("http://o/api/generate", {"model": "qwen3.5:9b", "keep_alive": 0}),
+                        ("http://o/api/generate", {"model": "other", "keep_alive": 0})]
+
+    def down(url, payload=None, timeout=30):
+        raise cj.urllib.error.URLError("refused")
+    assert cj.unload_ollama("http://o", http=down) == []
 
 
 def test_qwen_waits_longer_before_a_trial():

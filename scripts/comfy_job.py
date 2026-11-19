@@ -243,6 +243,45 @@ def ram_problem(model: str, available: float | None) -> str | None:
             "stop other models (Ollama, llama-heretic) or try again after Klarheit's trial")
 
 
+OLLAMA_URL = "http://127.0.0.1:11434"
+
+
+def unload_ollama(url: str = OLLAMA_URL, http=None) -> list[str]:
+    """Unload every model Ollama holds in memory (keep_alive 0); return their names.
+
+    Ollama keeps Klarheit's 9B resident between trials (~7 GiB of RAM). The service keeps
+    running and reloads the model on its next request, a few seconds. Callers must have
+    checked that no Klarheit trial is running or due. [] if Ollama can't be reached."""
+    http = http or _http
+    try:
+        names = [m["name"] for m in http(f"{url}/api/ps", timeout=5).get("models", [])]
+        for name in names:
+            http(f"{url}/api/generate", {"model": name, "keep_alive": 0}, timeout=30)
+    except (urllib.error.URLError, OSError, KeyError, TypeError, ValueError):
+        return []
+    return names
+
+
+def free_ram_for(model: str, unload=None, available=None, sleep=time.sleep,
+                 wait: float = 15) -> str | None:
+    """The RAM gate, unloading Ollama's idle models first if that's what it takes.
+
+    Returns why the model still can't start, or None if it may."""
+    unload = unload or unload_ollama
+    available = available or ram_available_gib
+    if not ram_problem(model, available()):
+        return None
+    freed = unload()
+    if freed:
+        print(f"unloaded Ollama's idle {', '.join(freed)} to free RAM "
+              "(it reloads at its next request)", file=sys.stderr)
+        for _ in range(int(wait)):
+            if not ram_problem(model, available()):
+                return None
+            sleep(1)
+    return ram_problem(model, available())
+
+
 def pick_model(model: str, refs: list) -> str:
     """'auto' edits with klein when references are given, else Z-Image text-to-image."""
     if model != "auto":
@@ -517,7 +556,10 @@ def container_pid(name: str = "comfyui") -> int | None:
 
 
 def gpu_warnings(apps: dict[int, tuple[str, int]]) -> list[str]:
-    """What else holds the GPU. Heretic can be stopped; Ollama serves Klarheit — leave it."""
+    """What else holds the GPU. Heretic can be stopped; Ollama serves Klarheit — leave it.
+
+    (Qwen jobs may unload Ollama's idle model to free RAM — see free_ram_for — but never
+    stop the service.)"""
     notes = []
     for name, mib in apps.values():
         if "llama-server" in name:
@@ -640,7 +682,8 @@ def main(argv: list[str] | None = None) -> int:
                                            max_wait=3600):
         print("gave up after an hour waiting for Klarheit's trials", file=sys.stderr)
         return 1
-    low_ram = ram_problem(model, ram_available_gib())
+    # Only after the Klarheit wait: unloading Ollama's model is safe while no trial is due.
+    low_ram = free_ram_for(model)
     if low_ram:
         print(f"error: {low_ram}", file=sys.stderr)
         return 1

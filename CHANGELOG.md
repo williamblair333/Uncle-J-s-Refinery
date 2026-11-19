@@ -5,7 +5,8 @@
 ## 2026-11-19 — `--model qwen` in comfy_job / make_image, with a free-RAM gate
 
 - `scripts/comfy_job.py`: `--model qwen` (1-3 refs, called Picture 1-3) builds the Qwen-Image-Edit-2511 graph (`qwen_workflow`, refs scaled to 0.6 MP). Qwen refuses to start below 20 GiB MemAvailable (`ram_problem`, `ram_available_gib`), and always waits for Klarheit's trials with a 6-minute window, even with `--ignore-klarheit`. `make_image(model="qwen")` passes it through; docstring updated. 6 new tests in `tests/test_comfy.py`; suite 3719 passed.
-- Live check: with Ollama's idle 9B resident (7 GiB) the host has 13 GiB free, so Qwen refuses with a clear message. Not yet decided: unload Ollama's idle model before a Qwen job.
+- Live check: with Ollama's idle 9B resident (7 GiB) the host has 13 GiB free, so Qwen refuses with a clear message.
+- Bill chose auto-unload: when the RAM gate fails, `free_ram_for` (after the Klarheit wait) calls `unload_ollama`, which lists Ollama's loaded models (`/api/ps`) and unloads each with `keep_alive: 0`. The service keeps running and reloads on its next request. It then polls MemAvailable for up to 15 s and refuses as before if still short. 4 new tests; the Qwen test helper always fakes the unload so `just test` never touches the real Ollama.
 
 ## 2026-11-17 — Qwen-Image-Edit-2511 models registered (WIP, branch only)
 

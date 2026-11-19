@@ -2,7 +2,7 @@
 
 ## 2026-11-19 — Qwen wired in (branch only, not pushed)
 
-1. `--model qwen` works in `comfy_job.py` / `make_image`, gated on 20 GiB free RAM and always waiting for Klarheit. At idle the host has ~13 GiB free because Ollama keeps Klarheit's 9B resident (7 GiB), so **Qwen refuses until that's freed**. Options: unload Ollama's idle model in comfy_job before a Qwen job (`keep_alive: 0`; needs its own pre-mortem), or stop Ollama by hand first.
+1. `--model qwen` works in `comfy_job.py` / `make_image`, gated on 20 GiB free RAM and always waiting for Klarheit. At idle the host has ~13 GiB free because Ollama keeps Klarheit's 9B resident (7 GiB), so Qwen used to refuse. **Bill chose auto-unload (11-19):** comfy_job now unloads Ollama's idle models (`keep_alive: 0`) after the Klarheit wait when the gate fails. Known gap: another session's `ask_local` call can reload the 9B mid-job (~13 GiB left with ComfyUI's 12.4); if the host slows during a Qwen job, look there first.
 2. Correction to 11-17 item 2: `--keep-up` does NOT skip freeing VRAM (`run_job` frees after every job unless `--keep-loaded`). The every-other-job Qwen OOM at ~11.1 GiB VRAM is unexplained.
 3. `klarheit-m12.service` fails every run (evenings since at least 11-15, middays since 11-17), including runs with no image jobs, so not caused by them. No Klarheit session was live to tell; told Bill.
 4. Qwen scene review: identities right in all 5, but 3 of 5 duplicate or add a character (two Tarfangs in 6, second Alaric in 1, extra figure in 7) and actions mostly don't happen. Findings sent to write-well-ed 11-19; canon questions are Bill's.
