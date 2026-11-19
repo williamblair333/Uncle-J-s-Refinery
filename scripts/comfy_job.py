@@ -358,6 +358,33 @@ def ram_problem(model: str, available: float | None) -> str | None:
             "stop other models (Ollama, llama-heretic) or try again after Klarheit's trial")
 
 
+# Below this much MemAvailable mid-job, kill ComfyUI before the kernel's OOM killer picks
+# the desktop (2026-11-19 14:00 it took Chrome). A measured Qwen job draws ~10-11 GiB and
+# fell ~1.4 GiB/s at its end, so RAM is checked every 0.5 s.
+RAM_GUARD_FLOOR_GIB = 4.0
+RAM_GUARD_POLL_S = 0.5
+
+
+def ram_guard_tripped(available: float | None, floor: float = RAM_GUARD_FLOOR_GIB) -> bool:
+    """True when free RAM has fallen below the floor and the job must be killed."""
+    return available is not None and available < floor
+
+
+def watch_ram(seconds: float, available=ram_available_gib, sleep=time.sleep,
+              poll: float = RAM_GUARD_POLL_S) -> float | None:
+    """Wait `seconds`, checking free RAM every `poll`; return the reading that tripped
+    the guard, or None if it never did."""
+    waited = 0.0
+    while True:
+        now = available()
+        if ram_guard_tripped(now):
+            return now
+        if waited >= seconds:
+            return None
+        sleep(poll)
+        waited += poll
+
+
 OLLAMA_URL = "http://127.0.0.1:11434"
 
 
@@ -1085,7 +1112,14 @@ def run_job(args: argparse.Namespace, wf: dict, seed: int) -> int:
         history = _http(f"{args.url}/history/{prompt_id}")
         if job_finished(history, prompt_id):
             break
-        time.sleep(2)
+        low = watch_ram(2)
+        if low is not None:
+            sampler.stop()
+            _docker("kill", "comfyui")
+            print(f"stopped: free RAM fell to {low:.1f} GiB (floor {RAM_GUARD_FLOOR_GIB} GiB), "
+                  "so ComfyUI was killed before the kernel's OOM killer could take a desktop "
+                  "app; the next run restarts it", file=sys.stderr)
+            return 1
     else:
         sampler.stop()
         print(f"timed out after {args.timeout:.0f} s; the job may still be running", file=sys.stderr)
