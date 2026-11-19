@@ -452,3 +452,90 @@ def test_upload_image_names_by_hash(tmp_path, monkeypatch):
     assert cj.upload_image("http://u", img) == "ref-ba7816bf8f01.jpeg"
     assert b"\r\nabc\r\n" in sent["body"]
     assert sent["ct"].startswith("multipart/form-data; boundary=")
+
+
+# --- Qwen-Image-Edit-2511 -------------------------------------------------------------
+
+def _qwen_setup(monkeypatch, got, ram=30.0, waited=None):
+    monkeypatch.setattr(cj, "comfy_up", lambda url: True)
+    monkeypatch.setattr(cj, "upload_image", lambda url, p: f"ref-{p.stem}.png")
+    monkeypatch.setattr(cj, "ram_available_gib", lambda: ram)
+    monkeypatch.setattr(cj, "_with_gpu", lambda a_, wf, seed: got.update(wf=wf) or 0)
+
+    def wait(kind, max_wait):
+        if waited is not None:
+            waited.append(kind)
+        return True
+    monkeypatch.setattr(cj, "wait_for_klarheit", wait)
+
+
+def test_qwen_builds_its_graph_from_up_to_three_refs(tmp_path, monkeypatch):
+    refs = []
+    for n in "abc":
+        p = tmp_path / f"{n}.png"
+        p.write_bytes(b"1")
+        refs += ["--ref", str(p)]
+    got = {}
+    _qwen_setup(monkeypatch, got)
+    assert cj.main(["image", "--model", "qwen", *refs, "--", "Picture 1 and 2 by a river"]) == 0
+    wf = got["wf"]
+    _links_resolve(wf)
+    assert wf["1"]["class_type"] == "UnetLoaderGGUF"
+    assert wf["1"]["inputs"]["unet_name"] == cj.QWEN_MODELS["unet"]
+    enc = wf["tp"]["inputs"]
+    assert [wf[enc[f"image{i}"][0]]["inputs"]["image"][0] for i in (1, 2, 3)] == ["r0l", "r1l", "r2l"]
+    assert wf["r0l"]["inputs"]["image"] == "ref-a.png"
+    assert wf["8"]["inputs"]["positive"] == ["mp", 0] and wf["8"]["inputs"]["cfg"] == 1.0
+
+
+def test_qwen_ref_count_rules(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+
+    def never(*a, **k):
+        raise AssertionError("waited for Klarheit despite a bad argument")
+    monkeypatch.setattr(cj, "wait_for_klarheit", never)
+    assert cj.main(["image", "x", "--model", "qwen"]) == 2
+    assert cj.main(["image", "x", "--model", "qwen", *(["--ref", str(img)] * 4)]) == 2
+    assert cj.main(["video", "x", "--model", "qwen", "--ref", str(img)]) == 2
+    assert "from 1 to 3" in capsys.readouterr().err
+
+
+def test_qwen_refuses_when_ram_is_low(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+    got = {}
+    _qwen_setup(monkeypatch, got, ram=12.5)
+    assert cj.main(["image", "--model", "qwen", "--ref", str(img), "--", "x"]) == 1
+    assert "wf" not in got
+    assert "needs 20 GiB" in capsys.readouterr().err
+
+
+def test_qwen_waits_for_klarheit_even_when_told_to_ignore_it(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+    got, waited = {}, []
+    _qwen_setup(monkeypatch, got, waited=waited)
+    assert cj.main(["image", "--model", "qwen", "--ignore-klarheit", "--ref", str(img),
+                    "--", "x"]) == 0
+    assert waited == ["qwen"]
+    assert "always waits for Klarheit" in capsys.readouterr().err
+
+
+def test_ram_gate_only_applies_to_listed_models(tmp_path):
+    assert cj.ram_problem("klein", 1.0) is None
+    assert cj.ram_problem("qwen", None) is None
+    assert cj.ram_problem("qwen", 20.0) is None
+    assert "12.0 GiB" in cj.ram_problem("qwen", 12.0)
+    mi = tmp_path / "meminfo"
+    mi.write_text("MemTotal: 48000000 kB\nMemAvailable: 20971520 kB\n")
+    assert cj.ram_available_gib(mi) == 20.0
+    assert cj.ram_available_gib(tmp_path / "missing") is None
+
+
+def test_qwen_waits_longer_before_a_trial():
+    import datetime as dt
+    start = cj.next_trial(dt.datetime(2026, 11, 19, 12, 0))
+    four_min_before = start - dt.timedelta(minutes=4)
+    assert cj.klarheit_wait_reason("image", four_min_before, False) is None
+    assert cj.klarheit_wait_reason("qwen", four_min_before, False)

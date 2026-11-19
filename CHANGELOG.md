@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-19 — `--model qwen` in comfy_job / make_image, with a free-RAM gate
+
+- `scripts/comfy_job.py`: `--model qwen` (1-3 refs, called Picture 1-3) builds the Qwen-Image-Edit-2511 graph (`qwen_workflow`, refs scaled to 0.6 MP). Qwen refuses to start below 20 GiB MemAvailable (`ram_problem`, `ram_available_gib`), and always waits for Klarheit's trials with a 6-minute window, even with `--ignore-klarheit`. `make_image(model="qwen")` passes it through; docstring updated. 6 new tests in `tests/test_comfy.py`; suite 3719 passed.
+- Live check: with Ollama's idle 9B resident (7 GiB) the host has 13 GiB free, so Qwen refuses with a clear message. Not yet decided: unload Ollama's idle model before a Qwen job.
+
 ## 2026-11-17 — Qwen-Image-Edit-2511 models registered (WIP, branch only)
 
 - `docker/comfyui/models.txt` pins Qwen-Image-Edit-2511 GGUF Q4_K_M (unsloth), the Lightning 4-step LoRA (lightx2v), the Qwen2.5-VL-7B fp8 encoder and the VAE (all Apache 2.0, 22 GB on disk, sha256-verified by `just comfy-models qwen-image-edit`). compose mounts `/opt/models/qwen-image-edit`; `extra_model_paths.yaml` lists it. Not yet wired into `scripts/comfy_job.py` / `make_image`.

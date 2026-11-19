@@ -47,6 +47,21 @@ EDIT_MODELS = {
     "vae": "flux2-vae.safetensors",
 }
 MAX_REFS = 4
+# Qwen-Image-Edit-2511 (Apache 2.0): keeps several characters' faces and outfits apart far
+# better than klein, at ~3 min an image, ~11 GB VRAM and ~12 GB of RAM for the offloaded
+# weights. Its text encoder takes at most 3 pictures.
+QWEN_MODELS = {
+    "unet": "qwen-image-edit-2511-Q4_K_M.gguf",
+    "lora": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+    "clip": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+    "vae": "qwen_image_vae.safetensors",
+}
+QWEN_MAX_REFS = 3
+QWEN_REF_MEGAPIXELS = 0.6
+# Free RAM (MemAvailable) a job needs before it starts. 2026-11-17: a Qwen batch run with
+# --ignore-klarheit beside Klarheit's Ollama 9B filled the 46 GB host and its swap (load 69,
+# desktop froze). So Qwen also always waits for Klarheit, --ignore-klarheit or not.
+MIN_FREE_RAM_GIB = {"qwen": 20}
 VIDEO_MODELS = {
     "high": "Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf",
     "low": "Wan2.2-T2V-A14B-LowNoise-Q4_K_M.gguf",
@@ -164,6 +179,68 @@ def edit_workflow(prompt: str, seed: int, refs: list[str], width: int | None = N
         "14": {"class_type": "SaveImage", "inputs": {"images": ["13", 0], "filename_prefix": prefix}},
     })
     return wf
+
+
+def qwen_workflow(prompt: str, seed: int, refs: list[str], width: int | None = None,
+                  height: int | None = None, steps: int = 4, prefix: str = "qwen") -> dict:
+    """Qwen-Image-Edit-2511, per ComfyUI's image_qwen_image_edit_2511 template, with the
+    Lightning 4-step LoRA (cfg 1). The prompt calls the references Picture 1, 2, 3."""
+    wf = {
+        "1": {"class_type": "UnetLoaderGGUF", "inputs": {"unet_name": QWEN_MODELS["unet"]}},
+        "1l": {"class_type": "LoraLoaderModelOnly",
+               "inputs": {"model": ["1", 0], "lora_name": QWEN_MODELS["lora"],
+                          "strength_model": 1.0}},
+        "1s": {"class_type": "ModelSamplingAuraFlow", "inputs": {"model": ["1l", 0], "shift": 3.1}},
+        "1n": {"class_type": "CFGNorm", "inputs": {"model": ["1s", 0], "strength": 1.0}},
+        "2": {"class_type": "CLIPLoader",
+              "inputs": {"clip_name": QWEN_MODELS["clip"], "type": "qwen_image",
+                         "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": QWEN_MODELS["vae"]}},
+    }
+    images = {}
+    for i, name in enumerate(refs[:QWEN_MAX_REFS]):
+        wf[f"r{i}l"] = {"class_type": "LoadImage", "inputs": {"image": name}}
+        wf[f"r{i}s"] = {"class_type": "ImageScaleToTotalPixels",
+                        "inputs": {"image": [f"r{i}l", 0], "upscale_method": "lanczos",
+                                   "megapixels": QWEN_REF_MEGAPIXELS, "resolution_steps": 16}}
+        images[f"image{i + 1}"] = [f"r{i}s", 0]
+    for key, text in (("p", prompt), ("n", "")):
+        wf[f"t{key}"] = {"class_type": "TextEncodeQwenImageEditPlus",
+                         "inputs": {"clip": ["2", 0], "prompt": text, "vae": ["3", 0], **images}}
+        wf[f"m{key}"] = {"class_type": "FluxKontextMultiReferenceLatentMethod",
+                         "inputs": {"conditioning": [f"t{key}", 0],
+                                    "reference_latents_method": "index_timestep_zero"}}
+    wf.update({
+        "7": {"class_type": "EmptySD3LatentImage",
+              "inputs": {"width": width or 1024, "height": height or 1024, "batch_size": 1}},
+        "8": {"class_type": "KSampler",
+              "inputs": {"model": ["1n", 0], "positive": ["mp", 0], "negative": ["mn", 0],
+                         "latent_image": ["7", 0], "seed": seed, "steps": steps, "cfg": 1.0,
+                         "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}},
+        "9": {"class_type": "VAEDecode", "inputs": {"samples": ["8", 0], "vae": ["3", 0]}},
+        "10": {"class_type": "SaveImage", "inputs": {"images": ["9", 0], "filename_prefix": prefix}},
+    })
+    return wf
+
+
+def ram_available_gib(meminfo: Path = Path("/proc/meminfo")) -> float | None:
+    """MemAvailable in GiB, or None where /proc/meminfo can't be read (not Linux)."""
+    try:
+        for line in meminfo.read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) / 2**20
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+def ram_problem(model: str, available: float | None) -> str | None:
+    """Why there isn't enough free RAM to start this model now, or None if it may start."""
+    need = MIN_FREE_RAM_GIB.get(model)
+    if need is None or available is None or available >= need:
+        return None
+    return (f"{model} needs {need} GiB of free RAM and only {available:.1f} GiB is available; "
+            "stop other models (Ollama, llama-heretic) or try again after Klarheit's trial")
 
 
 def pick_model(model: str, refs: list) -> str:
@@ -310,7 +387,7 @@ def _http(url: str, payload: dict | None = None, timeout: float = 30) -> dict:
 # never start while a trial runs, and never start one that would still be running when the
 # next trial begins. Trials: klarheit-rv hourly at :05, klarheit-m12 at 10:35 and 20:35.
 KLARHEIT_UNITS = ("klarheit-rv.service", "klarheit-m12.service")
-EXPECTED_MIN = {"image": 3, "video": 12}   # generous upper bounds, with model loading
+EXPECTED_MIN = {"image": 3, "video": 12, "qwen": 6}   # generous upper bounds, with model loading
 
 
 def next_trial(now) -> "datetime.datetime":
@@ -482,8 +559,11 @@ def main(argv: list[str] | None = None) -> int:
                     help=f"image only, repeatable (up to {MAX_REFS}): reference picture(s). With "
                          "klein the prompt calls them image 1, image 2, ... and can put their "
                          "characters in a new scene; with z-image (one ref) it is img2img")
-    ap.add_argument("--model", choices=["auto", "z-image", "klein"], default="auto",
-                    help="auto (default): klein when --ref is given, else z-image")
+    ap.add_argument("--model", choices=["auto", "z-image", "klein", "qwen"], default="auto",
+                    help="auto (default): klein when --ref is given, else z-image. qwen: "
+                         "Qwen-Image-Edit-2511, 1-3 refs called Picture 1-3, keeps several "
+                         "characters apart better; ~3 min, needs 20 GiB free RAM and always "
+                         "waits for Klarheit")
     ap.add_argument("--denoise", type=float, default=DEFAULT_DENOISE,
                     help=f"z-image with --ref: 0-1, how far to move from it "
                          f"(default {DEFAULT_DENOISE})")
@@ -524,6 +604,8 @@ def main(argv: list[str] | None = None) -> int:
         problems.append("z-image takes one --ref (img2img); use --model klein for several")
     if model == "klein" and not 1 <= len(args.ref) <= MAX_REFS:
         problems.append(f"klein edits from 1 to {MAX_REFS} --ref pictures")
+    if model == "qwen" and (args.kind != "image" or not 1 <= len(args.ref) <= QWEN_MAX_REFS):
+        problems.append(f"qwen edits images from 1 to {QWEN_MAX_REFS} --ref pictures")
     if problems:
         for p in problems:
             print(f"error: {p}", file=sys.stderr)
@@ -537,6 +619,9 @@ def main(argv: list[str] | None = None) -> int:
         names = [upload_image(args.url, p) for p in args.ref]
         for p, n in zip(args.ref, names):
             print(f"reference {p} uploaded as {n}", file=sys.stderr)
+        if model == "qwen":
+            print(f"qwen edit from {len(names)} reference(s)", file=sys.stderr)
+            return qwen_workflow(args.prompt, seed, names, prefix="qwen", **sizes)
         if model == "klein":
             print(f"klein edit from {len(names)} reference(s)", file=sys.stderr)
             return edit_workflow(args.prompt, seed, names, prefix="edit", **sizes)
@@ -547,8 +632,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.no_autostart and not comfy_up(args.url):
         print(f"ComfyUI is not answering at {args.url}; start it: just comfy up -d", file=sys.stderr)
         return 2
-    if not args.ignore_klarheit and not wait_for_klarheit(args.kind, max_wait=3600):
+    if model == "qwen" and args.ignore_klarheit:
+        print("note: qwen always waits for Klarheit (its RAM use froze the host on 11-17)",
+              file=sys.stderr)
+    must_wait = model == "qwen" or not args.ignore_klarheit
+    if must_wait and not wait_for_klarheit("qwen" if model == "qwen" else args.kind,
+                                           max_wait=3600):
         print("gave up after an hour waiting for Klarheit's trials", file=sys.stderr)
+        return 1
+    low_ram = ram_problem(model, ram_available_gib())
+    if low_ram:
+        print(f"error: {low_ram}", file=sys.stderr)
         return 1
     started = False
     if not comfy_up(args.url):

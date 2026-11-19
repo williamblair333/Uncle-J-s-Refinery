@@ -1,6 +1,13 @@
 # Handoff — Uncle J's Refinery
 
-## 2026-11-17 — Idritzia illustrations: Qwen-Image-Edit-2511 trial (pick up here)
+## 2026-11-19 — Qwen wired in (branch only, not pushed)
+
+1. `--model qwen` works in `comfy_job.py` / `make_image`, gated on 20 GiB free RAM and always waiting for Klarheit. At idle the host has ~13 GiB free because Ollama keeps Klarheit's 9B resident (7 GiB), so **Qwen refuses until that's freed**. Options: unload Ollama's idle model in comfy_job before a Qwen job (`keep_alive: 0`; needs its own pre-mortem), or stop Ollama by hand first.
+2. Correction to 11-17 item 2: `--keep-up` does NOT skip freeing VRAM (`run_job` frees after every job unless `--keep-loaded`). The every-other-job Qwen OOM at ~11.1 GiB VRAM is unexplained.
+3. `klarheit-m12.service` fails every run (evenings since at least 11-15, middays since 11-17), including runs with no image jobs, so not caused by them. No Klarheit session was live to tell; told Bill.
+4. Qwen scene review: identities right in all 5, but 3 of 5 duplicate or add a character (two Tarfangs in 6, second Alaric in 1, extra figure in 7) and actions mostly don't happen. Findings sent to write-well-ed 11-19; canon questions are Bill's.
+
+## 2026-11-17 — Idritzia illustrations: Qwen-Image-Edit-2511 trial
 
 1. **Most important: Qwen + Klarheit's Ollama 9B don't fit in 46 GB RAM.** Running Qwen with `--ignore-klarheit` (Bill: "this work supersedes Klarheit today") during the 17:05 klarheit-rv run filled RAM and swap; load hit 69 and the desktop froze. ComfyUI was stopped. Before running Qwen again: add a free-RAM gate (refuse below ~20 GB available) and drop `--ignore-klarheit` for Qwen. `klarheit-m12.service` shows **failed** in `systemctl --user`; cause not checked yet (possibly the image jobs).
 2. **Branch `feat/qwen-image-edit-2511`** (local commit, not pushed, no PR): Qwen model lines in `models.txt`, compose mount, `extra_model_paths.yaml`. Still to do before a PR: Qwen graph in `scripts/comfy_job.py` (template is `review/2026-11-17-idritzia-qwen/qwen_job.py`), free VRAM between back-to-back `--keep-up` jobs (every second Qwen job OOMed without it), tests, docs, pre-mortem. Other hosts must run `just comfy-models qwen-image-edit` before `comfy up`.
