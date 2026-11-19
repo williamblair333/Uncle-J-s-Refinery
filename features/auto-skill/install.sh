@@ -154,8 +154,9 @@ if [[ -f "$ENV_FILE" ]]; then
 
   if [[ -f "$PROJ_ROOT/lib/notify.sh" ]]; then
     source "$PROJ_ROOT/lib/notify.sh"
-    notify_send_text "🧠 Uncle J skill-suggest <b>active</b>. A skill draft will be auto-generated after sessions that demonstrate reusable workflows."
-    ok "Test message sent"
+    notify_send_text "🧠 Uncle J skill-suggest <b>active</b>. A skill draft will be auto-generated after sessions that demonstrate reusable workflows." \
+      && ok "Test message sent" \
+      || warn "Telegram test message failed to send (non-fatal)"
   fi
 fi
 

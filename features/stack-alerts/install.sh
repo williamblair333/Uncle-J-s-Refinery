@@ -101,8 +101,9 @@ ok "Poll cron: */2 * * * *"
 step "Sending test Telegram message"
 set -a; source "$ENV_FILE"; set +a
 source "$PROJ_ROOT/lib/notify.sh"
-notify_send_text "✅ Uncle J's Refinery stack alerts configured. You'll receive upgrade pitches at ${ALERT_SEND_TIME} daily."
-ok "Test message sent — check your Telegram."
+notify_send_text "✅ Uncle J's Refinery stack alerts configured. You'll receive upgrade pitches at ${ALERT_SEND_TIME} daily." \
+  && ok "Test message sent — check your Telegram." \
+  || warn "Telegram test message failed to send (non-fatal)"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 step "Done"

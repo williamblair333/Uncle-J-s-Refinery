@@ -103,4 +103,5 @@ else
   SUMMARY="$BODY"
 fi
 
-notify_send_text "$SUMMARY"
+# A failed send must not fail the Stop hook; say so on stderr instead.
+notify_send_text "$SUMMARY" || echo "session-notify: Telegram send failed" >&2

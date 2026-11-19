@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-19 — `notify_send_text` reports failed sends
+
+- `_tg_send_text` (`lib/notify-telegram.sh`) returned 0 even when curl failed (`|| true`), so callers' failure branches never fired and installers printed "Test message sent" for messages that never went out. It now returns curl's exit code. The five callers that called it bare under `set -e` (four `features/*/install.sh` smoke tests and the `scripts/session-notify.sh` Stop hook) now warn and carry on instead of aborting; github-webhook's installer swaps `|| true` for a warning. The other 10 callers already handled failure. 4 new tests (`tests/test_notify_send_text.py`); suite 3743 passed.
+
 ## 2026-11-19 — comfy_job kills ComfyUI before the kernel's OOM killer picks the desktop
 
 - `run_job` checks MemAvailable every 0.5 s while a job runs (`watch_ram`); below 4 GiB (`RAM_GUARD_FLOOR_GIB`) it runs `docker kill comfyui`, says why and returns 1. At 14:00 the kernel had OOM-killed Chrome at the end of a Qwen batch job. A guarded live Qwen job (104 s) dropped free RAM from ~25 to 14.8 GiB, ~1.4 GiB/s at the end. 4 new tests; suite 3739 passed.
