@@ -170,9 +170,9 @@ source "$ENV_FILE"
 set +a
 
 source "$PROJ_ROOT/lib/notify.sh"
-notify_send_text "🔔 Uncle J session notifications <b>active</b>. You'll receive a summary after each Claude session."
-
-ok "Test message sent"
+notify_send_text "🔔 Uncle J session notifications <b>active</b>. You'll receive a summary after each Claude session." \
+  && ok "Test message sent" \
+  || warn "Telegram test message failed to send (non-fatal)"
 
 # ---------------------------------------------------------------------------
 # Done

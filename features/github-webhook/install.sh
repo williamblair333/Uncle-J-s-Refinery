@@ -243,7 +243,8 @@ Repo: <code>${GITHUB_REPO}</code>
 Endpoint: <code>${WEBHOOK_URL}</code>
 Port: <code>${GITHUB_WEBHOOK_PORT}</code>
 
-Events: push → health check, pull_request → auto-review" || true
+Events: push → health check, pull_request → auto-review" \
+    || warn "Telegram confirmation failed to send (non-fatal)"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

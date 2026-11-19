@@ -100,8 +100,12 @@ PYEOF
     || { rm -f "$tmppy" "$tmppayload"; return 1; }
   rm -f "$tmppy"
 
+  # Report a failed send (HTTP error, network, bad token) so callers can tell;
+  # each caller decides whether a failure is fatal.
+  local rc=0
   _tg_curl sendMessage -sf -X POST \
     -H "Content-Type: application/json" \
-    -d "@${tmppayload}" > /dev/null 2>&1 || true
+    -d "@${tmppayload}" > /dev/null 2>&1 || rc=$?
   rm -f "$tmppayload"
+  return "$rc"
 }

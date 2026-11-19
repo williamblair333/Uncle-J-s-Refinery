@@ -158,8 +158,7 @@ def telegram_credentials(repo_root: Path, environ=os.environ) -> tuple[str, str]
 def send_notification(repo_root: Path, message: str, urlopen=urllib.request.urlopen) -> None:
     """Post to Telegram and check its reply, so a failed send leaves state unchanged for a retry.
 
-    Not lib/notify.sh: _tg_send_text swallows curl's exit status, and its HTML parse mode rejects
-    a run title containing `<`. Errors are reduced to their type: urllib's text holds the URL,
+    Not lib/notify.sh: its HTML parse mode rejects a run title containing `<`. Errors are reduced to their type: urllib's text holds the URL,
     which holds the token.
     """
     token, chat_id = telegram_credentials(repo_root)

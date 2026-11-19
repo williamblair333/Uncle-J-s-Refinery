@@ -118,8 +118,9 @@ ok "Cron installed: */2 * * * *"
 # ── Send Telegram confirmation ────────────────────────────────────────────────
 step "Sending Telegram confirmation"
 source "$PROJ_ROOT/lib/notify.sh"
-notify_send_text "✅ Uncle J's Telegram gateway is <b>active</b>. Messages from chat ID <code>${TELEGRAM_CHAT_ID}</code> will be forwarded to Claude every 2 minutes."
-ok "Confirmation sent to chat ID ${TELEGRAM_CHAT_ID}"
+notify_send_text "✅ Uncle J's Telegram gateway is <b>active</b>. Messages from chat ID <code>${TELEGRAM_CHAT_ID}</code> will be forwarded to Claude every 2 minutes." \
+  && ok "Confirmation sent to chat ID ${TELEGRAM_CHAT_ID}" \
+  || warn "Telegram test message failed to send (non-fatal)"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 step "Done"
