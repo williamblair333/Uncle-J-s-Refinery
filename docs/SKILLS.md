@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 83 repo, 1 workflows.
+Totals: 84 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -80,6 +80,7 @@ Totals: 83 repo, 1 workflows.
 | `referee` | Use when work you produced is about to be acted on and a second opinion from a different model provider would catch what you can't see in your own output — bef… | auto | any agent | repo |
 | `retro` | Conduct a retrospective on a coding session. | you | Claude Code | vendored: mattpocock/skills |
 | `review-queue-triage` | Audit _review/ items, classify by completion signals (status: resolved, REPO-ASSESSMENT + landing commit), auto-move resolved items to _reviewed/, leave uncert… | auto | any agent | repo |
+| `sanderson-style` | Use when the user asks to write, draft, rewrite or revise fiction in Brandon Sanderson's style: "write this like Sanderson", "Sanderson-style", "make the magic… | auto | any agent | repo |
 | `session-end-checklist` | Session wrap-up checklist — updates CHANGELOG, HANDOFF, considers ROADMAP/README, then commits. | auto | Refinery stack | repo |
 | `session-status-briefing` | Produce a comprehensive session-start status report combining git state, HANDOFF, every open ROADMAP/memory/scout item waiting to be done, code health metrics,… | auto | Refinery stack | repo |
 | `skill-adoption-audit` | Use when a skill or memory note was installed to fix a recurring agent failure, but the failure happened again. | auto | any agent | repo |
