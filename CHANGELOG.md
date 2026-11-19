@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-19 — grep-guard allows reads of gitignored files
+
+- `hooks/discipline/grep-guard.sh` now lets cat/sed/head/grep read a file git reports as ignored (resolved path, regular file, inside the repo): jcodemunch never indexes those, so `review/` files had no allowed route at all (blocked twice on 11-19). Tracked files, `git add -f` files, and symlinks or `..` hops that land on tracked source stay denied; recursive greps are unchanged. Both the Python analyzer and the bash fallback carry the rule. Git runs only for a source-named operand that would otherwise be denied, and `subprocess` loads lazily, so overhead on other reads is ~1–3 ms. Bench (800 real calls, 14 days): 30 → 28 fires, 0 errors, no new denies. 14 new tests (`tests/test_grep_guard_gitignored.py`); suite 3757 passed. Implementation by agy, reviewed and tuned here.
+
 ## 2026-11-19 — `notify_send_text` reports failed sends
 
 - `_tg_send_text` (`lib/notify-telegram.sh`) returned 0 even when curl failed (`|| true`), so callers' failure branches never fired and installers printed "Test message sent" for messages that never went out. It now returns curl's exit code. The five callers that called it bare under `set -e` (four `features/*/install.sh` smoke tests and the `scripts/session-notify.sh` Stop hook) now warn and carry on instead of aborting; github-webhook's installer swaps `|| true` for a warning. The other 10 callers already handled failure. 4 new tests (`tests/test_notify_send_text.py`); suite 3743 passed.
