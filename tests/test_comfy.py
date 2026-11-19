@@ -12,6 +12,9 @@ COMPOSE = REPO / "docker" / "comfyui" / "compose.yaml"
 _spec = importlib.util.spec_from_file_location("comfy_job", REPO / "scripts" / "comfy_job.py")
 cj = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cj)
+# Never wait on a real comfy_job run's lock from the tests.
+import tempfile as _tempfile  # noqa: E402
+cj.LOCK_PATH = Path(_tempfile.mkdtemp()) / "comfy_job.lock"
 
 
 # ── comfy.sh ──────────────────────────────────────────────────────────────
@@ -614,6 +617,21 @@ def test_region_gen_size_keeps_aspect_at_about_a_megapixel():
     assert 0.9e6 < w * h < 1.1e6
 
 
+def test_second_run_waits_for_the_lock(tmp_path):
+    lock = tmp_path / "l"
+    held = cj.hold_lock(lock)
+    child = subprocess.run(
+        ["/usr/bin/python3", "-c",
+         "import fcntl,sys; f=open(sys.argv[1],'a')\n"
+         "try:\n fcntl.flock(f, fcntl.LOCK_EX|fcntl.LOCK_NB); print('GOT')\n"
+         "except BlockingIOError: print('BLOCKED')", str(lock)],
+        capture_output=True, text=True, timeout=30)
+    assert child.stdout.strip() == "BLOCKED"
+    held.close()
+    again = cj.hold_lock(lock)
+    again.close()
+
+
 def test_region_flags_need_region():
     assert cj.main(["image", "x", "--feather", "8"]) == 2
 
@@ -627,6 +645,7 @@ from PIL import Image
 spec = importlib.util.spec_from_file_location("cj", sys.argv[1])
 cj = importlib.util.module_from_spec(spec); spec.loader.exec_module(cj)
 tmp = Path(sys.argv[2])
+cj.LOCK_PATH = tmp / "comfy_job.lock"
 scene = tmp / "scene.png"
 im = Image.new("RGB", (640, 480))
 im.putdata([((x * 7) % 256, (y * 3) % 256, (x + y) % 256) for y in range(480) for x in range(640)])

@@ -4,7 +4,8 @@
 
 1. `just image "…" --ref scene.png --ref face.png --region X,Y,W,H` changes only that box (crop → Qwen → feathered paste) and checks the rest of the picture is byte-identical. Built because ChatGPT redrew whole Idritzia S6 scenes when asked to fix one face. write-well (`write-well-3f`) runs the scenes; it has the list (Samel + Tarfang in 01/02/06/07, Tarfang only in 00/03/04/05/09/11).
 2. Bill hasn't approved a face reference yet. `idritzia_s06_lineup-llm-reference.png` (Downloads) has the new middle-aged Samel and friendly Tarfang; write-well wants Bill's OK on it before batch runs. Scene 06 is mirrored on purpose; flip the face crop to match if the head faces the other way.
-3. Idea logged in `docs/research-later.md`: a chat room where all LLM sessions (and agy/Heretic) can talk when Bill asks.
+3. comfy_job now runs one job at a time (fcntl lock); a second run prints "waiting: another comfy_job run is using ComfyUI" and blocks until the first exits.
+4. Idea logged in `docs/research-later.md`: a chat room where all LLM sessions (and agy/Heretic) can talk when Bill asks.
 
 ## 2026-11-19 — Qwen wired in (branch only, not pushed)
 

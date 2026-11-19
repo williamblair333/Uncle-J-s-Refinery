@@ -6,6 +6,7 @@
 
 - `scripts/comfy_job.py`: `--region X,Y,W,H` (Qwen only; `--feather`, `--out`). Pillow crops the box from the first `--ref`; Qwen edits the crop as Picture 1 (later refs are face references) at about 1 MP in the crop's aspect; the result is scaled back and pasted through a feathered mask (0 at the box edge). `outside_unchanged` then proves every pixel outside the box equals the original, or the run fails. Never overwrites; default output `<scene>.region-<seed>.png`. Keeps the Klarheit-wait → free-RAM order. Pillow is imported only in this mode.
 - 5 new tests; the pixel test runs under `/usr/bin/python3` because `.venv` has no Pillow. It caught a real bug first: `getbbox()` on RGBA looks at alpha only, so a colour change outside the box read as "identical" (now `alpha_only=False`).
+- One comfy_job run at a time: `hold_lock` takes an fcntl lock (`$XDG_RUNTIME_DIR/comfy_job.lock`) before the Klarheit wait and holds it until exit. Two Qwen jobs queued behind the same Klarheit trial would both pass the RAM gate together, and the one that started ComfyUI stopped it under the other. Tests point the lock at a temp file.
 - `docs/research-later.md`: Bill's idea of a chat room for all the LLM sessions.
 
 ## 2026-11-19 — `--model qwen` in comfy_job / make_image, with a free-RAM gate

@@ -21,6 +21,8 @@ import random
 import shutil
 import signal
 import subprocess
+import fcntl
+import os
 import sys
 import tempfile
 import threading
@@ -317,6 +319,23 @@ def outside_unchanged(a: Path, b: Path, region: tuple[int, int, int, int]) -> bo
 
 def region_out_path(scene: Path, seed: int) -> Path:
     return scene.with_name(f"{scene.stem}.region-{seed}.png")
+
+
+# One comfy_job at a time. Two runs waiting on the same Klarheit trial both passed the RAM
+# gate together and shared one ComfyUI; the one that started it stopped it under the other.
+LOCK_PATH = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "comfy_job.lock"
+
+
+def hold_lock(path: Path | None = None):
+    """Block until no other comfy_job run holds the lock; the returned file keeps it (the
+    kernel releases it when this process exits, however it exits)."""
+    f = open(path or LOCK_PATH, "a")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("waiting: another comfy_job run is using ComfyUI", file=sys.stderr)
+        fcntl.flock(f, fcntl.LOCK_EX)
+    return f
 
 
 def ram_available_gib(meminfo: Path = Path("/proc/meminfo")) -> float | None:
@@ -819,6 +838,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.no_autostart and not comfy_up(args.url):
         print(f"ComfyUI is not answering at {args.url}; start it: just comfy up -d", file=sys.stderr)
         return 2
+    lock = hold_lock()  # noqa: F841 — held until this process exits
     if model == "qwen" and args.ignore_klarheit:
         print("note: qwen always waits for Klarheit (its RAM use froze the host on 11-17)",
               file=sys.stderr)
