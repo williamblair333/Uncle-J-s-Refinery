@@ -180,6 +180,7 @@ comfy-models *args:
     ./scripts/comfy-models.sh {{args}}
 
 # one image → /opt/outputs/comfyui: just image "prompt" [--seed N] [--width W --height H] [--ref pic.png ...] (refs → FLUX.2 klein edit; --model z-image --ref → img2img)
+# fix one box only: just image "prompt" --ref scene.png --ref face.png --region X,Y,W,H (Qwen; outside pixels kept exactly; writes scene.region-<seed>.png)
 image prompt *args:
     python3 scripts/comfy_job.py image "{{prompt}}" {{args}}
 

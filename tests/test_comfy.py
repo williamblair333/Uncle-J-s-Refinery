@@ -12,6 +12,14 @@ COMPOSE = REPO / "docker" / "comfyui" / "compose.yaml"
 _spec = importlib.util.spec_from_file_location("comfy_job", REPO / "scripts" / "comfy_job.py")
 cj = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(cj)
+# Never wait on a real comfy_job run's lock from the tests.
+import tempfile as _tempfile  # noqa: E402
+cj.LOCK_PATH = Path(_tempfile.mkdtemp()) / "comfy_job.lock"
+# Never stop or start real containers from the tests; the real functions are tested
+# through these saved references with a fake `run`.
+_real_park, _real_unpark = cj.park_containers, cj.unpark_containers
+cj.park_containers = lambda *a, **k: []
+cj.unpark_containers = lambda names, **k: True
 
 
 # ── comfy.sh ──────────────────────────────────────────────────────────────
@@ -589,3 +597,165 @@ def test_qwen_waits_longer_before_a_trial():
     four_min_before = start - dt.timedelta(minutes=4)
     assert cj.klarheit_wait_reason("image", four_min_before, False) is None
     assert cj.klarheit_wait_reason("qwen", four_min_before, False)
+
+
+# ── --region (crop, Qwen edit, paste back) ────────────────────────────────
+def test_parse_region_and_its_errors():
+    assert cj.parse_region("10, 20,300,400") == (10, 20, 300, 400)
+    for bad in ("1,2,3", "a,b,c,d", "-1,0,100,100", "0,0,10,100"):
+        try:
+            cj.parse_region(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"{bad!r} was accepted")
+
+
+def test_region_must_fit_the_picture():
+    assert cj.region_problem((0, 0, 1536, 1024), (1536, 1024)) is None
+    assert "past the picture's edge" in cj.region_problem((1400, 0, 200, 100), (1536, 1024))
+
+
+def test_region_gen_size_keeps_aspect_at_about_a_megapixel():
+    w, h = cj.region_gen_size(300, 450)
+    assert w % 16 == 0 and h % 16 == 0
+    assert abs(w / h - 300 / 450) < 0.03
+    assert 0.9e6 < w * h < 1.1e6
+
+
+class _DockerRun:
+    def __init__(self, ps):
+        self.calls, self.ps = [], ps
+
+    def __call__(self, cmd, **kw):
+        self.calls.append(cmd)
+        out = ""
+        if cmd[:2] == ["docker", "ps"]:
+            out = self.ps.get(cmd[3].rsplit("=", 1)[1], "")
+        return subprocess.CompletedProcess(cmd, 0, out, "")
+
+
+def test_park_stops_both_projects_and_unpark_starts_databases_first():
+    run = _DockerRun({"immich": "immich_server\nimmich_postgres\n",
+                "claude-code-langfuse-template": "lf-web-1\nlf-clickhouse-1\n"})
+    names = _real_park(run=run)
+    assert names == ["immich_server", "immich_postgres", "lf-web-1", "lf-clickhouse-1"]
+    assert run.calls[-1] == ["docker", "stop", *names]
+    _real_unpark(names, run=run)
+    assert run.calls[-1] == ["docker", "start", "immich_postgres", "lf-clickhouse-1",
+                             "immich_server", "lf-web-1"]
+
+
+def test_park_with_nothing_running_stops_nothing():
+    run = _DockerRun({})
+    assert _real_park(run=run) == []
+    assert not any(c[:2] == ["docker", "stop"] for c in run.calls)
+
+
+def test_ram_gate_parks_only_when_unloading_ollama_is_not_enough():
+    ram = iter([16.0, 16.0, 16.0, 23.0])
+    parked: list[str] = []
+    got = cj.free_ram_for("qwen", unload=lambda: [], available=lambda: next(ram),
+                          sleep=lambda s: None, wait=2, park=lambda: ["immich_server"],
+                          parked=parked)
+    assert got is None and parked == ["immich_server"]
+    # enough RAM at once: nothing parked
+    parked = []
+    assert cj.free_ram_for("qwen", unload=lambda: [], available=lambda: 25.0,
+                           park=lambda: ["x"], parked=parked) is None and parked == []
+
+
+def test_main_restarts_parked_containers_even_when_the_gate_still_fails(monkeypatch):
+    restarted = []
+    monkeypatch.setattr(cj, "wait_for_klarheit", lambda kind, max_wait: True)
+    monkeypatch.setattr(cj, "comfy_up", lambda url: True)
+    monkeypatch.setattr(cj, "free_ram_for",
+                        lambda model, parked: parked.append("immich_server") or "still short")
+    monkeypatch.setattr(cj, "unpark_containers", lambda names: restarted.extend(names))
+    assert cj.main(["image", "x", "--model", "z-image"]) == 1
+    assert restarted == ["immich_server"]
+
+
+def test_second_run_waits_for_the_lock(tmp_path):
+    lock = tmp_path / "l"
+    held = cj.hold_lock(lock)
+    child = subprocess.run(
+        ["/usr/bin/python3", "-c",
+         "import fcntl,sys; f=open(sys.argv[1],'a')\n"
+         "try:\n fcntl.flock(f, fcntl.LOCK_EX|fcntl.LOCK_NB); print('GOT')\n"
+         "except BlockingIOError: print('BLOCKED')", str(lock)],
+        capture_output=True, text=True, timeout=30)
+    assert child.stdout.strip() == "BLOCKED"
+    held.close()
+    again = cj.hold_lock(lock)
+    again.close()
+
+
+def test_region_flags_need_region():
+    assert cj.main(["image", "x", "--feather", "8"]) == 2
+
+
+# Pillow is in the system python3 (which `just image` runs) but not in .venv, so the pixel
+# test runs there: crop → fake job → paste, and every pixel outside the box must be equal.
+_REGION_SCRIPT = r'''
+import importlib.util, sys
+from pathlib import Path
+from PIL import Image
+spec = importlib.util.spec_from_file_location("cj", sys.argv[1])
+cj = importlib.util.module_from_spec(spec); spec.loader.exec_module(cj)
+tmp = Path(sys.argv[2])
+cj.LOCK_PATH = tmp / "comfy_job.lock"
+scene = tmp / "scene.png"
+im = Image.new("RGB", (640, 480))
+im.putdata([((x * 7) % 256, (y * 3) % 256, (x + y) % 256) for y in range(480) for x in range(640)])
+im.save(scene)
+face = tmp / "face.png"; Image.new("RGB", (64, 64), (9, 9, 9)).save(face)
+got = {}
+cj.comfy_up = lambda url: True
+cj.ram_available_gib = lambda: 30.0
+cj.unload_ollama = lambda: []
+def wait(kind, max_wait):
+    got["waited"] = kind
+    return True
+cj.wait_for_klarheit = wait
+def upload(url, p):
+    got.setdefault("uploaded", []).append(Image.open(p).size)
+    return p.name
+cj.upload_image = upload
+def fake_gpu(args, wf, seed):
+    got["latent"] = (wf["7"]["inputs"]["width"], wf["7"]["inputs"]["height"])
+    patch = tmp / "patch.png"
+    Image.new("RGB", got["latent"], (255, 0, 0)).save(patch)
+    args.outputs = [patch]
+    return 0
+cj._with_gpu = fake_gpu
+out = tmp / "fixed.png"
+rc = cj.main(["image", "fix the face", "--ref", str(scene), "--ref", str(face),
+              "--region", "100,50,200,160", "--out", str(out), "--seed", "1"])
+assert rc == 0, rc
+assert got["waited"] == "qwen"
+assert got["uploaded"] == [(200, 160), (64, 64)], got   # the crop, then the face ref
+assert abs(got["latent"][0] / got["latent"][1] - 200 / 160) < 0.05
+assert cj.outside_unchanged(scene, out, (100, 50, 200, 160))
+res = Image.open(out)
+assert res.getpixel((200, 130)) == (255, 0, 0)            # centre of the box: replaced
+assert res.getpixel((100, 50)) == im.getpixel((100, 50))  # box corner: faded to original
+# never overwrites, refuses a box off the picture, catches a change outside the box
+assert cj.main(["image", "again", "--ref", str(scene), "--region", "100,50,200,160",
+                "--out", str(out), "--seed", "2"]) == 2
+assert cj.main(["image", "x", "--ref", str(scene), "--region", "600,0,100,100",
+                "--out", str(tmp / "o2.png")]) == 2
+other = tmp / "other.png"; Image.new("RGB", (640, 480)).save(other)
+assert not cj.outside_unchanged(scene, other, (100, 50, 200, 160))
+print("REGION-OK")
+'''
+
+
+def test_region_crop_and_paste_leave_outside_pixels_identical(tmp_path):
+    py = "/usr/bin/python3"
+    probe = subprocess.run([py, "-c", "import PIL"], capture_output=True)
+    assert probe.returncode == 0, "system python3 lacks Pillow, which `just image --region` needs"
+    script = tmp_path / "region_check.py"
+    script.write_text(_REGION_SCRIPT)
+    r = subprocess.run([py, "-I", str(script), str(REPO / "scripts" / "comfy_job.py"),
+                        str(tmp_path)], capture_output=True, text=True, timeout=120)
+    assert "REGION-OK" in r.stdout, r.stdout + r.stderr

@@ -21,7 +21,10 @@ import random
 import shutil
 import signal
 import subprocess
+import fcntl
+import os
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -223,6 +226,118 @@ def qwen_workflow(prompt: str, seed: int, refs: list[str], width: int | None = N
     return wf
 
 
+# ── --region: fix one part of a picture, leave every other pixel alone ─────────────────
+# The model only ever sees a crop. Its output is scaled back to the crop's size and pasted
+# onto the original through a mask that is 0 on the box's border and ramps up to 255 inside,
+# so pixels outside the box are copied, never redrawn, and the seam fades. Pillow is needed
+# for this mode only (the system python3 has it; the rest of this file stays stdlib).
+REGION_MEGAPIXELS = 1.0
+
+
+def parse_region(text: str) -> tuple[int, int, int, int]:
+    """'X,Y,W,H' in pixels of the original picture."""
+    parts = text.replace(" ", "").split(",")
+    if len(parts) != 4:
+        raise ValueError(f"--region {text!r}: want X,Y,W,H")
+    try:
+        x, y, w, h = (int(p) for p in parts)
+    except ValueError:
+        raise ValueError(f"--region {text!r}: want four whole numbers X,Y,W,H") from None
+    if x < 0 or y < 0 or w < 32 or h < 32:
+        raise ValueError(f"--region {text!r}: X and Y must be 0 or more, W and H at least 32")
+    return x, y, w, h
+
+
+def region_problem(region: tuple[int, int, int, int], size: tuple[int, int]) -> str | None:
+    x, y, w, h = region
+    if x + w > size[0] or y + h > size[1]:
+        return (f"--region {x},{y},{w},{h} runs past the picture's edge "
+                f"({size[0]}×{size[1]})")
+    return None
+
+
+def region_gen_size(w: int, h: int, megapixels: float = REGION_MEGAPIXELS) -> tuple[int, int]:
+    """Size to generate the crop at: its aspect ratio, about `megapixels`, multiples of 16."""
+    scale = (megapixels * 1e6 / (w * h)) ** 0.5
+    return (max(256, round(w * scale / 16) * 16), max(256, round(h * scale / 16) * 16))
+
+
+def default_feather(w: int, h: int) -> int:
+    return max(4, min(w, h) // 8)
+
+
+def feather_mask(w: int, h: int, feather: int):
+    """L-mode mask: 0 on the border, rising linearly to 255 `feather` px in."""
+    from PIL import Image, ImageChops
+
+    def ramp(n: int) -> list[int]:
+        if feather <= 0:
+            return [255] * n
+        return [min(255, round(255 * min(i, n - 1 - i) / feather)) for i in range(n)]
+    cols = Image.new("L", (w, 1))
+    cols.putdata(ramp(w))
+    rows = Image.new("L", (1, h))
+    rows.putdata(ramp(h))
+    return ImageChops.darker(cols.resize((w, h), Image.NEAREST),
+                             rows.resize((w, h), Image.NEAREST))
+
+
+def crop_region(src: Path, region: tuple[int, int, int, int], dest: Path) -> Path:
+    from PIL import Image
+    x, y, w, h = region
+    with Image.open(src) as im:
+        im.convert("RGB").crop((x, y, x + w, y + h)).save(dest)
+    return dest
+
+
+def paste_region(original: Path, patch: Path, region: tuple[int, int, int, int],
+                 feather: int, dest: Path) -> None:
+    """Write original + patch (scaled to the box) to dest; refuse to overwrite."""
+    from PIL import Image
+    x, y, w, h = region
+    if dest.exists():
+        raise FileExistsError(f"{dest} exists; not overwriting it")
+    with Image.open(original) as orig, Image.open(patch) as p:
+        out = orig.copy()
+        fitted = p.convert(out.mode).resize((w, h), Image.LANCZOS)
+        out.paste(fitted, (x, y), feather_mask(w, h, feather))
+        out.save(dest)
+
+
+def outside_unchanged(a: Path, b: Path, region: tuple[int, int, int, int]) -> bool:
+    """True when a and b have the same pixels everywhere outside the box."""
+    from PIL import Image, ImageChops
+    x, y, w, h = region
+    with Image.open(a) as ia, Image.open(b) as ib:
+        if ia.size != ib.size or ia.mode != ib.mode:
+            return False
+        diff = ImageChops.difference(ia.convert("RGBA"), ib.convert("RGBA"))
+    diff.paste((0, 0, 0, 0), (x, y, x + w, y + h))
+    # getbbox() on RGBA looks at alpha only by default, which would miss colour changes.
+    return diff.getbbox(alpha_only=False) is None
+
+
+def region_out_path(scene: Path, seed: int) -> Path:
+    return scene.with_name(f"{scene.stem}.region-{seed}.png")
+
+
+# One comfy_job at a time. Two runs waiting on the same Klarheit trial both passed the RAM
+# gate together and shared one ComfyUI; the one that started it stopped it under the other.
+LOCK_PATH = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "comfy_job.lock"
+
+
+def hold_lock(path: Path | None = None):
+    """Block until no other comfy_job run holds the lock; the returned file keeps it (the
+    kernel releases it when this process exits, however it exits)."""
+    f = open(path or LOCK_PATH, "a")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("waiting: another comfy_job run is using ComfyUI", file=sys.stderr)
+        fcntl.flock(f, fcntl.LOCK_EX)
+    return f
+
+
 def ram_available_gib(meminfo: Path = Path("/proc/meminfo")) -> float | None:
     """MemAvailable in GiB, or None where /proc/meminfo can't be read (not Linux)."""
     try:
@@ -262,23 +377,80 @@ def unload_ollama(url: str = OLLAMA_URL, http=None) -> list[str]:
     return names
 
 
+# Compose projects stopped for a job when unloading Ollama still leaves too little RAM
+# (Bill's call, 2026-11-19: the desktop alone left 16 GiB). Restarted when the job ends.
+RAM_PARK_PROJECTS = ("immich", "claude-code-langfuse-template")
+_DB_HINTS = ("postgres", "redis", "clickhouse", "minio")
+
+
+def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> list[str]:
+    """Stop the running containers of these compose projects; return their names."""
+    names: list[str] = []
+    for project in projects:
+        try:
+            r = run(["docker", "ps", "--filter", f"label=com.docker.compose.project={project}",
+                     "--format", "{{.Names}}"], capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        names += [n for n in r.stdout.split() if n] if r.returncode == 0 else []
+    if not names:
+        return []
+    print(f"stopping {' '.join(names)} for the job; if this run is killed, restart them: "
+          f"docker start {' '.join(names)}", file=sys.stderr)
+    try:
+        run(["docker", "stop", *names], capture_output=True, text=True, timeout=180)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    # Return every name whatever happened: `docker start` on a running container is a no-op.
+    return names
+
+
+def unpark_containers(names: list[str], run=subprocess.run) -> bool:
+    """Start them again, databases first so the apps find them."""
+    if not names:
+        return True
+    ordered = sorted(names, key=lambda n: not any(h in n for h in _DB_HINTS))
+    try:
+        ok = run(["docker", "start", *ordered], capture_output=True, text=True,
+                 timeout=180).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    if ok:
+        print(f"restarted {' '.join(ordered)}", file=sys.stderr)
+    else:
+        print(f"could not restart them; run: docker start {' '.join(ordered)}", file=sys.stderr)
+    return ok
+
+
 def free_ram_for(model: str, unload=None, available=None, sleep=time.sleep,
-                 wait: float = 15) -> str | None:
-    """The RAM gate, unloading Ollama's idle models first if that's what it takes.
+                 wait: float = 15, park=None, parked: list[str] | None = None) -> str | None:
+    """The RAM gate: unload Ollama's idle models, then stop RAM_PARK_PROJECTS, if that's
+    what it takes. Names of stopped containers go into `parked`; the caller restarts them.
 
     Returns why the model still can't start, or None if it may."""
     unload = unload or unload_ollama
     available = available or ram_available_gib
+    park = park or park_containers
     if not ram_problem(model, available()):
         return None
+
+    def settled() -> bool:
+        for _ in range(int(wait)):
+            if not ram_problem(model, available()):
+                return True
+            sleep(1)
+        return False
+
     freed = unload()
     if freed:
         print(f"unloaded Ollama's idle {', '.join(freed)} to free RAM "
               "(it reloads at its next request)", file=sys.stderr)
-        for _ in range(int(wait)):
-            if not ram_problem(model, available()):
-                return None
-            sleep(1)
+        if settled():
+            return None
+    if parked is not None:
+        parked += park()
+        if parked and settled():
+            return None
     return ram_problem(model, available())
 
 
@@ -609,6 +781,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--denoise", type=float, default=DEFAULT_DENOISE,
                     help=f"z-image with --ref: 0-1, how far to move from it "
                          f"(default {DEFAULT_DENOISE})")
+    ap.add_argument("--region", metavar="X,Y,W,H",
+                    help="qwen only: change just this box of the first --ref. The model sees "
+                         "the crop as Picture 1 (later refs are Picture 2-3, e.g. a face "
+                         "reference); the result is pasted back through a feathered mask and "
+                         "every pixel outside the box is copied unchanged")
+    ap.add_argument("--feather", type=int,
+                    help="--region: px of fade inside the box's edge (default: 1/8 of its "
+                         "shorter side)")
+    ap.add_argument("--out", type=Path,
+                    help="--region: where to write the result (default: next to the first "
+                         "--ref as <name>.region-<seed>.png); never overwrites")
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--timeout", type=float, default=3600, help="seconds to wait for the job")
     ap.add_argument("--keep-loaded", action="store_true",
@@ -634,6 +817,42 @@ def main(argv: list[str] | None = None) -> int:
         problems.append(f"--seed {seed}: ComfyUI takes 0 to 2^64-1")
     if args.kind == "image":
         problems += [p for p in (check_size(args.width), check_size(args.height)) if p]
+    region = None
+    if args.region:
+        if args.model in ("auto", "qwen"):
+            args.model = "qwen"
+        else:
+            problems.append("--region works with --model qwen only")
+        try:
+            region = parse_region(args.region)
+        except ValueError as exc:
+            problems.append(str(exc))
+        if not args.ref:
+            problems.append("--region needs the picture to fix as the first --ref")
+        elif region and not check_ref(args.ref[0]):
+            try:
+                from PIL import Image
+                with Image.open(args.ref[0]) as im:
+                    size, mode = im.size, im.mode
+                problems += [p for p in [region_problem(region, size)] if p]
+                if mode not in ("RGB", "RGBA", "L"):
+                    problems.append(f"--region: {args.ref[0]} is a {mode} image; convert it to "
+                                    "RGB first (palette and 16-bit pictures aren't handled)")
+            except ImportError:
+                problems.append("--region needs Pillow (python3-pil); the system python3 has it")
+                region = None
+            except OSError as exc:
+                problems.append(f"--ref {args.ref[0]}: can't open it as a picture ({exc})")
+        if region and args.ref:
+            args.out = args.out or region_out_path(args.ref[0], seed)
+            if args.out.exists():
+                problems.append(f"--out {args.out} exists; not overwriting it")
+            if args.width is None and args.height is None:
+                sizes["width"], sizes["height"] = region_gen_size(region[2], region[3])
+    elif args.feather is not None or args.out is not None:
+        problems.append("--feather and --out go with --region")
+    if args.feather is not None and args.feather < 0:
+        problems.append(f"--feather {args.feather}: must be 0 or more")
     model = pick_model(args.model, args.ref)
     if args.ref:
         if args.kind != "image":
@@ -653,13 +872,18 @@ def main(argv: list[str] | None = None) -> int:
             print(f"error: {p}", file=sys.stderr)
         return 2
 
-    def build() -> dict:
+    def build(workdir: Path) -> dict:
         if args.kind == "video":
             return video_workflow(args.prompt, seed, frames=args.frames, prefix="video", **sizes)
         if not args.ref:
             return image_workflow(args.prompt, seed, prefix="image", **sizes)
-        names = [upload_image(args.url, p) for p in args.ref]
-        for p, n in zip(args.ref, names):
+        uploads = list(args.ref)
+        if region:
+            uploads[0] = crop_region(args.ref[0], region, workdir / "region-crop.png")
+            print(f"region {region[2]}×{region[3]} at {region[0]},{region[1]}; generating it "
+                  f"at {sizes['width']}×{sizes['height']}", file=sys.stderr)
+        names = [upload_image(args.url, p) for p in uploads]
+        for p, n in zip(uploads, names):
             print(f"reference {p} uploaded as {n}", file=sys.stderr)
         if model == "qwen":
             print(f"qwen edit from {len(names)} reference(s)", file=sys.stderr)
@@ -674,6 +898,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.no_autostart and not comfy_up(args.url):
         print(f"ComfyUI is not answering at {args.url}; start it: just comfy up -d", file=sys.stderr)
         return 2
+    lock = hold_lock()  # noqa: F841 — held until this process exits
     if model == "qwen" and args.ignore_klarheit:
         print("note: qwen always waits for Klarheit (its RAM use froze the host on 11-17)",
               file=sys.stderr)
@@ -683,26 +908,64 @@ def main(argv: list[str] | None = None) -> int:
         print("gave up after an hour waiting for Klarheit's trials", file=sys.stderr)
         return 1
     # Only after the Klarheit wait: unloading Ollama's model is safe while no trial is due.
-    low_ram = free_ram_for(model)
-    if low_ram:
-        print(f"error: {low_ram}", file=sys.stderr)
-        return 1
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, _exit_on_signal)  # so `finally` restarts parked containers
+    parked: list[str] = []
+    try:
+        low_ram = free_ram_for(model, parked=parked)
+        if low_ram:
+            print(f"error: {low_ram}", file=sys.stderr)
+            return 1
+        return _start_and_run(args, build, seed, region)
+    finally:
+        unpark_containers(parked)
+
+
+def _start_and_run(args: argparse.Namespace, build, seed: int, region) -> int:
     started = False
     if not comfy_up(args.url):
         print("ComfyUI isn't running; starting it (just comfy up -d)…", file=sys.stderr)
         if not start_comfy(args.url):
             return 2
         started = True
+    tmp = tempfile.TemporaryDirectory(prefix="comfy-region-")
+    args.outputs = []
     try:
         try:
-            wf = build()
+            wf = build(Path(tmp.name))
         except (urllib.error.URLError, OSError, KeyError, ValueError) as exc:
             print(f"could not upload the reference to ComfyUI: {exc}", file=sys.stderr)
             return 1
-        return _with_gpu(args, wf, seed)
+        rc = _with_gpu(args, wf, seed)
+        if rc != 0 or not region:
+            return rc
+        return finish_region(args.ref[0], args.outputs, region, args.feather, args.out)
     finally:
+        tmp.cleanup()
         if started and not args.keep_up:
             stop_comfy()
+
+
+def finish_region(scene: Path, outputs: list[Path], region: tuple[int, int, int, int],
+                  feather: int | None, out: Path) -> int:
+    """Paste the generated crop back into the scene and prove nothing outside it changed."""
+    if not outputs:
+        print("error: the job produced no image to paste back", file=sys.stderr)
+        return 1
+    feather = default_feather(region[2], region[3]) if feather is None else feather
+    try:
+        paste_region(scene, outputs[0], region, feather, out)
+    except (OSError, FileExistsError) as exc:
+        print(f"error: could not write {out}: {exc}", file=sys.stderr)
+        return 1
+    if not outside_unchanged(scene, out, region):
+        print(f"error: {out} differs from {scene} outside the region; don't use it",
+              file=sys.stderr)
+        return 1
+    print(out)
+    print(f"region pasted (feather {feather} px); outside the box: identical to {scene.name}",
+          file=sys.stderr)
+    return 0
 
 
 def comfy_up(url: str) -> bool:
@@ -791,6 +1054,7 @@ def run_job(args: argparse.Namespace, wf: dict, seed: int) -> int:
         print(f"failed after {elapsed:.1f} s: {err}", file=sys.stderr)
         return 1
     files = output_files(history, prompt_id)
+    args.outputs = files
     for f in files:
         print(f)
     print(f"{args.kind}: {elapsed:.1f} s ({elapsed / 60:.1f} min), peak VRAM "

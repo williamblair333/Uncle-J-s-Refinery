@@ -3,6 +3,14 @@
 Topics Bill flagged to look into when there's room. Newest first. When one is researched,
 move it to the bottom under **Done** with a one-line verdict and a link to the write-up.
 
+- **A chat room for all the LLM sessions** (added 2026-11-19). Bill wants a place where
+  Claude sessions (Uncle J, write-well, the project sessions), agy, Heretic and other models
+  can talk together when he asks them to. Today it's one-to-one `SendMessage` between local
+  Claude sessions only, so nothing reaches agy or Heretic and there's no shared transcript.
+  Starting questions: does an existing multi-agent chat (an MCP server, a Matrix or IRC room
+  with bots) fit, or is a thin room over the delegate server enough? Who speaks when, and how
+  is a loop of models talking forever stopped?
+
 - **Local 125B agent model, once the machine has 128 GB RAM** (added 2026-11-04). Shelved
   at 46 GB: the only 125B that fit was Strata's Qwen3.8-Flash-Next-GSQ-RCO **IQ1_M**. Under
   Claude Code it answered 0/5 bench tasks (context), and nobody has shown the ~40 t/s goal on a 12 GB card.
