@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-19 — DeepSeek V4.1 blind test failed; PR #333 notes landed; lock bump
+
+1. **The 11-15 blind test of DeepSeek V4.1 failed.** `/opt/docker/strata/bench/results/dsv41-blind-20261115-2100/summary.txt`: 1 of 9 jobs finished, the other 8 timed out; 0 of 1 grades agreed with the source-checked judge (3 of 4 pairs gave no usable grade). Calibration said decode 58.8 tok/s, but prefill was 2.0 tok/s and the one graded job ran at 0.11 tok/s. At that prefill a 2k-token grading prompt takes ~17 min before any output, so this model can't be the overnight checker on this box as built. Whether to tune it (smaller prompts, a different quant, the Engram on NVMe) or drop it is open; nobody has looked at why prefill is that slow.
+2. **Carried from PR #333 (11-08, never merged; closed as landed here):** `notify_send_text` in `lib/notify-telegram.sh` never reports a failed send (it ends in `|| true`), so callers can't tell; worth fixing. The Engram is on the SATA disk; moving it to the NVMe (128 GB free then) is untested. Also from then: a healthcheck warning when Ollama runs on CPU with VRAM free, and filtering `__pycache__` from `ask_agy_packet` diffs.
+3. `uv.lock` committed at jcodemunch-mcp 1.108.467 and jdocmunch-mcp 1.151.2 (auto-maintain's bump; installed versions match); suite 3739 passed, 3 skipped.
+
 ## 2026-11-19 — 14:00 Qwen out-of-memory traced; RAM guard added
 
 1. **What the journal shows:** the kernel OOM-killed Chrome (9.1 GB peak) at 14:00:30, 60 s after comfy_job restarted Heretic between batch jobs (13:59:30). immich/langfuse came back at 14:00:48, after the kill.
