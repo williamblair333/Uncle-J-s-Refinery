@@ -782,6 +782,10 @@ def build_server():
         image 2, ... and can put their characters into a new scene ("the six people from image
         1 walking along a riverbank"). model "z-image" with one ref: img2img, denoise 0-1
         (default 0.6), keeps layout/colours only, for small variations of one picture.
+        model "qwen" with 1-3 refs (prompt calls them Picture 1-3): Qwen-Image-Edit-2511,
+        keeps several characters' faces and outfits apart far better than klein; ~3 min,
+        refuses below 20 GiB free RAM and always waits for Klarheit's trials. One ref per
+        visible character; describe outfits literally; negations get drawn.
         width/height: multiples of 16, 256-2048 (default 1024x1024, or the first reference's
         aspect at ~1 MP). seed: reuse one from an earlier result to vary only the prompt.
         """

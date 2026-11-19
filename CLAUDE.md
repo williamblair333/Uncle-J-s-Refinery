@@ -129,19 +129,18 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   reason in `skipped`), `get_session_snapshot` (after
   compaction), `index_dependency` (the *installed* version's source — prefer over context7
   when the exact API matters), `check_embedding_drift`.
-- `_meta` reaches you on this host (`meta_fields: null`); on a default install
-  (`meta_fields: []`) it is stripped, so only body-level keys survive.
+- `_meta` reaches you here (`meta_fields: null`); a default install (`[]`) strips it.
 - **Freshness:** `get_watch_status` `index_freshness`: `fresh`/`stale`/`unknown`/`not_tracked`/
   `incomplete` (holds a small part of the tree — re-index). Gate on `any_stale is False`
   **and** `any_freshness_unknown is False`. `index_stale` is gone (missing reads as fresh).
-  `refresh_on_read` (on by default) re-indexes ≤50 git-changed files before 12 read tools
-  answer; a body block with a `reason` means it served stale.
+  Watch service: read `status`; `active: None` means it couldn't ask, not stopped.
+  `refresh_on_read` (default on) re-indexes ≤50 changed files before reads answer; a body
+  block with a `reason` means it served stale.
 - **After a stack upgrade, re-index in full** (`invalidate_cache` then `index_folder`; over
   `max_folder_files` (2,000), only `jcodemunch-mcp index` — a capped call keeps old parses)
-  before trusting symbol counts, `parent`, member lists, or stored ids — git upgrades can move
-  ids or add symbols without a re-parse. A symbol-count jump after re-index is the
-  fix, not a regression — so is a file-count drop from newly skipped build dirs
-  (`discovery_skip_counts`). A not-found error may carry `near_miss_ids`; re-issue with one.
+  before trusting symbol counts, `parent`, member lists or stored ids. A symbol-count jump
+  or a file-count drop (`discovery_skip_counts`) after re-index is the fix, not a regression.
+  A not-found error may carry `near_miss_ids`; re-issue with one.
   `index_warning`: capped index or `max_file_size` skips; hits aren't the whole repo.
 - If `JCODEMUNCH_EMBED_MODEL` ever changes, re-embed every repo (`embed_repo`); a mixed-width
   store silently drops vectors. `embed_repo` returning `all_batches_failed: true` embedded nothing.
@@ -254,6 +253,7 @@ an audit; it validates every evidence ref against what this session retrieved.
   `get_pr_risk_profile`. Report the risk score.
 - An empty changed-symbol list means "nothing changed" only when `symbol_diff_complete` is
   true; an empty blast means "no impact" only when `absence_refused` is false.
+- A rename is one `renamed` row (`previous_symbol_id`), not `added` + `removed`.
 
 ### 7. Format economy
 - Pass `format="auto"` on jcodemunch calls that may return a lot; parse the MUNCH shape

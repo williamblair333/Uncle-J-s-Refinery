@@ -17,6 +17,14 @@ z-image-turbo/vae/ae.safetensors https://huggingface.co/Comfy-Org/Z-Image-Turbo/
 flux2-klein/diffusion_models/flux-2-klein-4b-fp8.safetensors https://huggingface.co/black-forest-labs/FLUX.2-klein-4b-fp8/resolve/5b4408e59397a4a37ccb46afe426d8ed86379441/flux-2-klein-4b-fp8.safetensors
 flux2-klein/vae/flux2-vae.safetensors https://huggingface.co/Comfy-Org/Flux-2-Klein-4B/resolve/5b3abca5c0dc1ecd4eaf3340868d09063fc1c965/split_files/vae/flux2-vae.safetensors
 #
+# Qwen-Image-Edit-2511 (Qwen, Apache 2.0) for crowded scenes klein can't keep apart: GGUF
+# Q4_K_M by unsloth (Apache 2.0), Lightning 4-step LoRA by lightx2v (Apache 2.0), text encoder
+# Qwen2.5-VL-7B fp8 + VAE from Comfy-Org/Qwen-Image (Apache 2.0). Licenses read 2026-11-17.
+qwen-image-edit/diffusion_models/qwen-image-edit-2511-Q4_K_M.gguf https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/52838251db242ddd8e8d0118de36c71006d7c397/qwen-image-edit-2511-Q4_K_M.gguf
+qwen-image-edit/loras/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/107d238d68b8387e32843d0b4a2e24ceb0d3ad86/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors
+qwen-image-edit/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors https://huggingface.co/Comfy-Org/Qwen-Image/resolve/1f12b17be14c89b026c51a91d67c32f84bb047bc/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors
+qwen-image-edit/vae/qwen_image_vae.safetensors https://huggingface.co/Comfy-Org/Qwen-Image/resolve/1f12b17be14c89b026c51a91d67c32f84bb047bc/split_files/vae/qwen_image_vae.safetensors
+#
 # Wan 2.2 T2V A14B (Wan-AI, Apache 2.0): GGUF Q4_K_M by QuantStack (Apache 2.0); the two
 # experts run in turn (high noise, then low noise), so only one is on the GPU at a time.
 wan2.2/diffusion_models/Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/73eafba53a1a8f29254e4c77f92e74ea27d7cd6f/HighNoise/Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf

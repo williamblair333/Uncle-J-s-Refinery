@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-11-19 — `--model qwen` in comfy_job / make_image, with a free-RAM gate
+
+- `scripts/comfy_job.py`: `--model qwen` (1-3 refs, called Picture 1-3) builds the Qwen-Image-Edit-2511 graph (`qwen_workflow`, refs scaled to 0.6 MP). Qwen refuses to start below 20 GiB MemAvailable (`ram_problem`, `ram_available_gib`), and always waits for Klarheit's trials with a 6-minute window, even with `--ignore-klarheit`. `make_image(model="qwen")` passes it through; docstring updated. 6 new tests in `tests/test_comfy.py`; suite 3719 passed.
+- Live check: with Ollama's idle 9B resident (7 GiB) the host has 13 GiB free, so Qwen refuses with a clear message.
+- Bill chose auto-unload: when the RAM gate fails, `free_ram_for` (after the Klarheit wait) calls `unload_ollama`, which lists Ollama's loaded models (`/api/ps`) and unloads each with `keep_alive: 0`. The service keeps running and reloads on its next request. It then polls MemAvailable for up to 15 s and refuses as before if still short. 4 new tests; the Qwen test helper always fakes the unload so `just test` never touches the real Ollama.
+
+## 2026-11-17 — Qwen-Image-Edit-2511 models registered (WIP, branch only)
+
+- `docker/comfyui/models.txt` pins Qwen-Image-Edit-2511 GGUF Q4_K_M (unsloth), the Lightning 4-step LoRA (lightx2v), the Qwen2.5-VL-7B fp8 encoder and the VAE (all Apache 2.0, 22 GB on disk, sha256-verified by `just comfy-models qwen-image-edit`). compose mounts `/opt/models/qwen-image-edit`; `extra_model_paths.yaml` lists it. Not yet wired into `scripts/comfy_job.py` / `make_image`.
+- Measured: ~3 min per 1344×768 image with 3 refs, peak ~11.2 GB of 12 GB VRAM, ComfyUI ~12.4 GB RAM. Keeps lineup identities far better than klein (Samel, Erobus, Alaric all recognisable), still bleeds actions between people.
+
 ## 2026-11-16 — make_image: FLUX.2 klein 4B reference editing
 
 - `make_image` and `just image` now edit from up to 4 reference images (`ref_image` takes a list) with FLUX.2 klein 4B fp8 (Apache 2.0, so fine for sold books). `model="auto"` uses klein whenever refs are given; `model="z-image"` with one ref keeps the older img2img. The graph follows ComfyUI's klein edit template (ReferenceLatent chained per reference, 4 steps, cfg 1). Chosen by an alternatives scan: Qwen Image 2.1, Zen, klein 9B and Kontext dev are non-commercial.

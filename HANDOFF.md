@@ -1,9 +1,25 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-19 — Qwen wired in (branch only, not pushed)
+
+1. `--model qwen` works in `comfy_job.py` / `make_image`, gated on 20 GiB free RAM and always waiting for Klarheit. At idle the host has ~13 GiB free because Ollama keeps Klarheit's 9B resident (7 GiB), so Qwen used to refuse. **Bill chose auto-unload (11-19):** comfy_job now unloads Ollama's idle models (`keep_alive: 0`) after the Klarheit wait when the gate fails. Known gap: another session's `ask_local` call can reload the 9B mid-job (~13 GiB left with ComfyUI's 12.4); if the host slows during a Qwen job, look there first.
+2. Correction to 11-17 item 2: `--keep-up` does NOT skip freeing VRAM (`run_job` frees after every job unless `--keep-loaded`). The every-other-job Qwen OOM at ~11.1 GiB VRAM is unexplained.
+3. `klarheit-m12.service` fails every run (evenings since at least 11-15, middays since 11-17), including runs with no image jobs, so not caused by them. No Klarheit session was live to tell; told Bill.
+4. Qwen scene review: identities right in all 5, but 3 of 5 duplicate or add a character (two Tarfangs in 6, second Alaric in 1, extra figure in 7) and actions mostly don't happen. Findings sent to write-well-ed 11-19; canon questions are Bill's.
+
+## 2026-11-17 — Idritzia illustrations: Qwen-Image-Edit-2511 trial
+
+1. **Most important: Qwen + Klarheit's Ollama 9B don't fit in 46 GB RAM.** Running Qwen with `--ignore-klarheit` (Bill: "this work supersedes Klarheit today") during the 17:05 klarheit-rv run filled RAM and swap; load hit 69 and the desktop froze. ComfyUI was stopped. Before running Qwen again: add a free-RAM gate (refuse below ~20 GB available) and drop `--ignore-klarheit` for Qwen. `klarheit-m12.service` shows **failed** in `systemctl --user`; cause not checked yet (possibly the image jobs).
+2. **Branch `feat/qwen-image-edit-2511`** (local commit, not pushed, no PR): Qwen model lines in `models.txt`, compose mount, `extra_model_paths.yaml`. Still to do before a PR: Qwen graph in `scripts/comfy_job.py` (template is `review/2026-11-17-idritzia-qwen/qwen_job.py`), free VRAM between back-to-back `--keep-up` jobs (every second Qwen job OOMed without it), tests, docs, pre-mortem. Other hosts must run `just comfy-models qwen-image-edit` before `comfy up`.
+3. **Results so far** (`/opt/outputs/comfyui/`): Qwen walk-out test `edit_00092`–`00094` (identities right; still wrong: action bleed, Erobus looks up instead of Samel, extra sword/staff); `idritzia-s06-qwen/` has 5 images (scenes 1, 6, 7 s1; 10 s1–2), **not yet reviewed**; scene 14 not run. klein v4b set in `idritzia-s06-klein-v4b/` (3 seeds each) mostly unreviewed. Scripts: `review/2026-11-17-idritzia-qwen/` (`qwen_scenes.py` frees VRAM per job and resumes).
+4. Lessons: describe outfits literally from `/home/bill/Downloads/party_lineup.jpeg` (Alaric = sleeveless quilted purple vest); every visible character needs a reference image or it's a stranger; negations get drawn; `pgrep -f`/`pkill -f` on a pattern that's in your own command line matches yourself (stuck the waiter 3 h).
+5. For write-well when free (don't edit its repo): lineup-vs-canon mismatches (Erobus bright steel vs dark plate, Redspots' human face + knife, Tarfang's shoes), image 8 "black-skinned", barefoot Tarfang refs in `/opt/outputs/comfyui/idritzia-chars/`.
+
 ## 2026-11-16 — make_image size/seed/reference (for write_well)
 
 1. `make_image` takes width/height/seed and reference images. With refs it now edits with **FLUX.2 klein 4B fp8** (Apache 2.0, 4.4 GB, multi-reference); `model="z-image"` + one ref is still img2img, which keeps layout only. Picked by the alternatives scan `review/alternatives/2026-11-16-image-edit-model.md`: Zen Image Edit and Qwen Image 2.1 are **non-commercial** (Qwen Research License §2a), which rules them out for sold books. Step up to Qwen-Image-Edit-2511 (Apache, ~23 GB, slow on 12 GB) if klein loses identity.
 2. **agy review tier times out:** two `ask_agy(task="review")` calls on a 3-file diff hit the 300 s and 600 s print timeouts on `gemini-3.8-flash-high` (61k thinking tokens, no answer; logs `state/agy-logs/20261116-102622-*`, `-103633-*`). `gemini-4-argon-high` was quota-exhausted until 11-21. Fix the tier or cap thinking before relying on agy reviews; I reviewed by hand.
+- **jcodemunch-mcp breaking change**: `get_watch_status` service `active` is now `None` when the probe can't ask (read the new `status` field instead), and `get_changed_symbols` reports a rename as one `renamed` row with `previous_name`/`previous_symbol_id` instead of `added`+`removed` — callers testing `not active` or counting added/removed must update.
 
 ## 2026-11-16 — pick up here
 

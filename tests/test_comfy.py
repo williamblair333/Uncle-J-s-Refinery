@@ -452,3 +452,140 @@ def test_upload_image_names_by_hash(tmp_path, monkeypatch):
     assert cj.upload_image("http://u", img) == "ref-ba7816bf8f01.jpeg"
     assert b"\r\nabc\r\n" in sent["body"]
     assert sent["ct"].startswith("multipart/form-data; boundary=")
+
+
+# --- Qwen-Image-Edit-2511 -------------------------------------------------------------
+
+def _qwen_setup(monkeypatch, got, ram=30.0, waited=None, unloaded=None):
+    """Never touches the real Ollama: unload_ollama is always replaced here."""
+    monkeypatch.setattr(cj, "comfy_up", lambda url: True)
+    monkeypatch.setattr(cj, "upload_image", lambda url, p: f"ref-{p.stem}.png")
+    monkeypatch.setattr(cj, "ram_available_gib", ram if callable(ram) else (lambda: ram))
+    monkeypatch.setattr(cj, "_with_gpu", lambda a_, wf, seed: got.update(wf=wf) or 0)
+    events = waited if waited is not None else []
+
+    def wait(kind, max_wait):
+        events.append(kind)
+        return True
+    monkeypatch.setattr(cj, "wait_for_klarheit", wait)
+
+    def unload():
+        events.append("unload")
+        return list(unloaded or [])
+    monkeypatch.setattr(cj, "unload_ollama", unload)
+    return events
+
+
+def test_qwen_builds_its_graph_from_up_to_three_refs(tmp_path, monkeypatch):
+    refs = []
+    for n in "abc":
+        p = tmp_path / f"{n}.png"
+        p.write_bytes(b"1")
+        refs += ["--ref", str(p)]
+    got = {}
+    _qwen_setup(monkeypatch, got)
+    assert cj.main(["image", "--model", "qwen", *refs, "--", "Picture 1 and 2 by a river"]) == 0
+    wf = got["wf"]
+    _links_resolve(wf)
+    assert wf["1"]["class_type"] == "UnetLoaderGGUF"
+    assert wf["1"]["inputs"]["unet_name"] == cj.QWEN_MODELS["unet"]
+    enc = wf["tp"]["inputs"]
+    assert [wf[enc[f"image{i}"][0]]["inputs"]["image"][0] for i in (1, 2, 3)] == ["r0l", "r1l", "r2l"]
+    assert wf["r0l"]["inputs"]["image"] == "ref-a.png"
+    assert wf["8"]["inputs"]["positive"] == ["mp", 0] and wf["8"]["inputs"]["cfg"] == 1.0
+
+
+def test_qwen_ref_count_rules(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+
+    def never(*a, **k):
+        raise AssertionError("waited for Klarheit despite a bad argument")
+    monkeypatch.setattr(cj, "wait_for_klarheit", never)
+    assert cj.main(["image", "x", "--model", "qwen"]) == 2
+    assert cj.main(["image", "x", "--model", "qwen", *(["--ref", str(img)] * 4)]) == 2
+    assert cj.main(["video", "x", "--model", "qwen", "--ref", str(img)]) == 2
+    assert "from 1 to 3" in capsys.readouterr().err
+
+
+def test_qwen_refuses_when_ram_is_low(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+    got = {}
+    _qwen_setup(monkeypatch, got, ram=12.5)
+    assert cj.main(["image", "--model", "qwen", "--ref", str(img), "--", "x"]) == 1
+    assert "wf" not in got
+    assert "needs 20 GiB" in capsys.readouterr().err
+
+
+def test_qwen_waits_for_klarheit_even_when_told_to_ignore_it(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+    got, waited = {}, []
+    _qwen_setup(monkeypatch, got, waited=waited)
+    assert cj.main(["image", "--model", "qwen", "--ignore-klarheit", "--ref", str(img),
+                    "--", "x"]) == 0
+    assert waited == ["qwen"]  # 30 GiB free: nothing unloaded
+    assert "always waits for Klarheit" in capsys.readouterr().err
+
+
+def test_ram_gate_only_applies_to_listed_models(tmp_path):
+    assert cj.ram_problem("klein", 1.0) is None
+    assert cj.ram_problem("qwen", None) is None
+    assert cj.ram_problem("qwen", 20.0) is None
+    assert "12.0 GiB" in cj.ram_problem("qwen", 12.0)
+    mi = tmp_path / "meminfo"
+    mi.write_text("MemTotal: 48000000 kB\nMemAvailable: 20971520 kB\n")
+    assert cj.ram_available_gib(mi) == 20.0
+    assert cj.ram_available_gib(tmp_path / "missing") is None
+
+
+def test_qwen_unloads_ollama_after_the_klarheit_wait_then_runs(tmp_path, monkeypatch, capsys):
+    img = tmp_path / "a.png"
+    img.write_bytes(b"1")
+    got = {}
+    readings = iter([13.0, 20.5, 20.5])
+    events = _qwen_setup(monkeypatch, got, ram=lambda: next(readings), unloaded=["qwen3.5:9b"])
+    assert cj.main(["image", "--model", "qwen", "--ref", str(img), "--", "x"]) == 0
+    assert events == ["qwen", "unload"]  # never unloads before Klarheit is clear
+    assert "wf" in got
+    assert "unloaded Ollama's idle qwen3.5:9b" in capsys.readouterr().err
+
+
+def test_free_ram_for_gives_up_when_unloading_is_not_enough():
+    slept = []
+    calls = []
+    why = cj.free_ram_for("qwen", unload=lambda: calls.append(1) or ["m"],
+                          available=lambda: 14.0, sleep=slept.append, wait=3)
+    assert "needs 20 GiB" in why and "14.0 GiB" in why
+    assert calls == [1] and slept == [1, 1, 1]
+
+
+def test_free_ram_for_leaves_ollama_alone_when_ram_is_fine_or_ungated():
+    def boom():
+        raise AssertionError("unloaded Ollama without need")
+    assert cj.free_ram_for("qwen", unload=boom, available=lambda: 25.0) is None
+    assert cj.free_ram_for("klein", unload=boom, available=lambda: 1.0) is None
+
+
+def test_unload_ollama_sets_keep_alive_zero_for_each_loaded_model():
+    sent = []
+
+    def http(url, payload=None, timeout=30):
+        sent.append((url, payload))
+        return {"models": [{"name": "qwen3.5:9b"}, {"name": "other"}]} if url.endswith("/api/ps") else {}
+    assert cj.unload_ollama("http://o", http=http) == ["qwen3.5:9b", "other"]
+    assert sent[1:] == [("http://o/api/generate", {"model": "qwen3.5:9b", "keep_alive": 0}),
+                        ("http://o/api/generate", {"model": "other", "keep_alive": 0})]
+
+    def down(url, payload=None, timeout=30):
+        raise cj.urllib.error.URLError("refused")
+    assert cj.unload_ollama("http://o", http=down) == []
+
+
+def test_qwen_waits_longer_before_a_trial():
+    import datetime as dt
+    start = cj.next_trial(dt.datetime(2026, 11, 19, 12, 0))
+    four_min_before = start - dt.timedelta(minutes=4)
+    assert cj.klarheit_wait_reason("image", four_min_before, False) is None
+    assert cj.klarheit_wait_reason("qwen", four_min_before, False)
