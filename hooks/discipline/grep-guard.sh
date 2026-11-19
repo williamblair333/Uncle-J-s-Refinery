@@ -2,9 +2,10 @@
 # PreToolUse guard — routes SOURCE-CODE exploration to jcodemunch (token + accuracy
 # economy). DENIES reading/searching repo source via grep/egrep/fgrep/rg/ag/ack and
 # cat/sed/head/tail. ALLOWS everything else: stdin pipes, log/state/tmp/proc targets,
-# non-source files, source files OUTSIDE the repo (jcode can't help), in-place edits
-# (sed -i), and ALL output redirections / heredocs (writes — incl. the pre-mortem
-# audit sink and clearance-token flows).
+# non-source files, gitignored files (jcode never indexes them), source files
+# OUTSIDE the repo (jcode can't help), in-place edits (sed -i), and ALL output
+# redirections / heredocs (writes — incl. the pre-mortem audit sink and clearance-token
+# flows).
 #
 # Detection is PER COMMAND-SEGMENT: a source file is only flagged when it is an argument
 # to THAT segment's read-tool command. So `pytest a.py | tail -8` is allowed (a.py is
@@ -85,20 +86,39 @@ abs_of() {
   fi
 }
 
+# True when the operand resolves to an existing regular file inside a repo root
+# that git reports as ignored (not tracked, not force-added).
+is_gitignored_file() {
+  local t="$1" a rp rdir
+  a=$(abs_of "$t"); [[ -z "$a" ]] && return 1
+  rp=$(realpath -- "$a" 2>/dev/null) || return 1
+  if command -v cygpath >/dev/null 2>&1; then
+    rp=$(cygpath -u "$rp" 2>/dev/null) || rp="$rp"
+  fi
+  [[ -n "$rp" && -f "$rp" ]] || return 1
+  in_repo "$rp" || return 1
+  rdir=$(dirname -- "$rp" 2>/dev/null) || return 1
+  [[ -n "$rdir" && -d "$rdir" ]] || return 1
+  git -C "$rdir" check-ignore -q -- "$rp" 2>/dev/null
+}
+
 # An allowed (non-source) location, judged on where the path LANDS: the literal
 # token must match ALLOWED_RE, and if it resolves into the repo, the repo-relative
 # resolved remainder must match too. So state/x.py stays allowed, while
 # /tmp/link.py -> <repo>/scripts/x.py and scripts/hook-blocks/../x.py do not.
+# Gitignored regular files inside the repo are also allowed.
 allowed_loc() {
   local t="$1" a rp
-  printf '%s' "$t" | grep -qE "$ALLOWED_RE" || return 1
-  a=$(abs_of "$t"); [[ -z "$a" ]] && return 0
-  rp=$(resolve_path "$a")
-  in_repo "$rp" || return 0
-  # realpath drops a trailing slash, and ALLOWED_RE needs one on `state/`.
-  local rel="$IN_REPO_REL"
-  [[ "$t" == */ || -d "$rp" ]] && rel="$rel/"
-  printf '%s' "$rel" | grep -qE "$ALLOWED_RE"
+  if printf '%s' "$t" | grep -qE "$ALLOWED_RE"; then
+    a=$(abs_of "$t"); [[ -z "$a" ]] && return 0
+    rp=$(resolve_path "$a")
+    in_repo "$rp" || return 0
+    # realpath drops a trailing slash, and ALLOWED_RE needs one on `state/`.
+    local rel="$IN_REPO_REL"
+    [[ "$t" == */ || -d "$rp" ]] && rel="$rel/"
+    printf '%s' "$rel" | grep -qE "$ALLOWED_RE" && return 0
+  fi
+  is_gitignored_file "$t"
 }
 
 # The guard sees the RAW command, so a glob operand (`docs/*.md`) arrives as a
@@ -289,7 +309,51 @@ import codecs, os, posixpath, re, sys
 
 cmd = sys.stdin.buffer.read().decode("utf-8", "surrogateescape")
 SESSION_CWD = sys.argv[1] if len(sys.argv) > 1 else ""
+REPO_ROOTS = [r.rstrip("/") for r in sys.argv[2:] if r] if len(sys.argv) > 2 else []
 HOME = os.environ.get("HOME", "")
+
+
+def is_gitignored_file(path, cwds):
+    import subprocess   # lazy: ~10 ms, paid only when a source operand needs the check
+    if not path or "\x00" in path or "\x01" in path:
+        return False
+    if path == "~" or path.startswith("~/"):
+        path = (HOME + path[1:]) if HOME else path
+    if posixpath.isabs(path):
+        candidates = [path]
+    else:
+        candidates = []
+        for c in (cwds or {SESSION_CWD}):
+            base_dir = c if c else SESSION_CWD
+            if base_dir:
+                candidates.append(posixpath.join(base_dir, path))
+            else:
+                return False
+    if not candidates:
+        return False
+    for cand in candidates:
+        try:
+            rp = os.path.realpath(cand)
+            if not os.path.isfile(rp):
+                return False
+            if REPO_ROOTS:
+                if not any(rp == r or rp.startswith(r + "/") for r in REPO_ROOTS):
+                    return False
+            else:
+                top = subprocess.run(["git", "-C", os.path.dirname(rp), "rev-parse", "--show-toplevel"],
+                                     capture_output=True, timeout=0.5)
+                if top.returncode != 0:
+                    return False
+            rdir = os.path.dirname(rp)
+            if not rdir or not os.path.isdir(rdir):
+                return False
+            r = subprocess.run(["git", "-C", rdir, "check-ignore", "-q", "--", rp],
+                               capture_output=True, timeout=0.5)
+            if r.returncode != 0:
+                return False
+        except Exception:
+            return False
+    return True
 
 DYN = "\x00"                       # text bash computes at run time
 VO, VC = "\x01", "\x02"            # \x01NAME\x02 = an unresolved $NAME
@@ -1062,6 +1126,11 @@ class Analyzer:
                         for c in sorted(cwds):
                             self.records.append(("P", c, pdir or "."))
                 return
+            # Gitignored source isn't indexed, so allow it. Only a source-named operand
+            # pays for the git call; skipping it can only keep a deny, never add an allow.
+            if (kind == "F" and SRC_EXT.search(path) and not ALLOWED.search(path)
+                    and is_gitignored_file(path, cwds)):
+                return
             if path.startswith(("/", "~")):
                 cwds = {""}
         for c in sorted(cwds):
@@ -1477,7 +1546,7 @@ USE_LEGACY=1
 if command -v python3 >/dev/null 2>&1; then
   # -S: skip site.py (~10 ms of a ~15 ms start; the analyzer is stdlib-only).
   # -E: ignore PYTHON* env vars, so PYTHONPATH/PYTHONSTARTUP can't swap in code.
-  RECORDS=$(printf '%s' "$CMD" | python3 -S -E -c "$GG_PROG" "$CWD_REAL" 2>/dev/null)
+  RECORDS=$(printf '%s' "$CMD" | python3 -S -E -c "$GG_PROG" "$CWD_REAL" "${ROOTS[@]}" 2>/dev/null)
   prc=$?
   if [[ $prc -eq 2 ]]; then
     deny=1; USE_LEGACY=0
@@ -1758,7 +1827,7 @@ REASON="Reading/searching repo source via shell is blocked — use jcodemunch (s
   • read/outline a file    → mcp__jcodemunch__get_file_outline / get_file_content
 
 Allowed without jcode: stdin pipes (… | grep), logs/state/tmp/proc targets, non-source
-files, source outside this repo, and writes (redirects/heredocs/sed -i).
+files, gitignored files, source outside this repo, and writes (redirects/heredocs/sed -i).
 
 Find the repo id with mcp__jcodemunch__list_repos(). Logged to state/hook-blocks.log"
 
