@@ -383,8 +383,7 @@ RAM_PARK_PROJECTS = ("immich", "claude-code-langfuse-template")
 _DB_HINTS = ("postgres", "redis", "clickhouse", "minio")
 
 
-def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> list[str]:
-    """Stop the running containers of these compose projects; return their names."""
+def _project_containers(projects, run) -> list[str]:
     names: list[str] = []
     for project in projects:
         try:
@@ -393,6 +392,41 @@ def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> list[str]
         except (OSError, subprocess.SubprocessError):
             continue
         names += [n for n in r.stdout.split() if n] if r.returncode == 0 else []
+    return names
+
+
+_MEM_UNITS = {"KiB": 2**-20, "MiB": 2**-10, "GiB": 1.0, "TiB": 2**10,
+              "kB": 1e3 / 2**30, "MB": 1e6 / 2**30, "GB": 1e9 / 2**30, "B": 2**-30}
+
+
+def _mem_gib(text: str) -> float:
+    """'446.2MiB' → GiB; 0 for anything unreadable."""
+    text = text.strip()
+    for unit in sorted(_MEM_UNITS, key=len, reverse=True):
+        if text.endswith(unit):
+            try:
+                return float(text[:-len(unit)]) * _MEM_UNITS[unit]
+            except ValueError:
+                return 0.0
+    return 0.0
+
+
+def park_estimate_gib(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> float:
+    """About how much RAM stopping these projects would free (docker stats MemUsage)."""
+    names = _project_containers(projects, run)
+    if not names:
+        return 0.0
+    try:
+        r = run(["docker", "stats", "--no-stream", "--format", "{{.MemUsage}}", *names],
+                capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return 0.0
+    return sum(_mem_gib(line.split("/")[0]) for line in r.stdout.splitlines() if line.strip())
+
+
+def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> list[str]:
+    """Stop the running containers of these compose projects; return their names."""
+    names = _project_containers(projects, run)
     if not names:
         return []
     print(f"stopping {' '.join(names)} for the job; if this run is killed, restart them: "
@@ -423,14 +457,17 @@ def unpark_containers(names: list[str], run=subprocess.run) -> bool:
 
 
 def free_ram_for(model: str, unload=None, available=None, sleep=time.sleep,
-                 wait: float = 15, park=None, parked: list[str] | None = None) -> str | None:
+                 wait: float = 15, park=None, parked: list[str] | None = None,
+                 estimate=None) -> str | None:
     """The RAM gate: unload Ollama's idle models, then stop RAM_PARK_PROJECTS, if that's
-    what it takes. Names of stopped containers go into `parked`; the caller restarts them.
+    what it takes and it would be enough. Names of stopped containers go into `parked`;
+    the caller restarts them.
 
     Returns why the model still can't start, or None if it may."""
     unload = unload or unload_ollama
     available = available or ram_available_gib
     park = park or park_containers
+    estimate = estimate or park_estimate_gib
     if not ram_problem(model, available()):
         return None
 
@@ -448,9 +485,18 @@ def free_ram_for(model: str, unload=None, available=None, sleep=time.sleep,
         if settled():
             return None
     if parked is not None:
-        parked += park()
-        if parked and settled():
-            return None
+        # 11-19: with an 8 GB VM up, parking still left 13.5 GiB, and a 5-job batch cycled
+        # all 10 containers five times for nothing. Only park when it can close the gap.
+        have, could_free = available() or 0.0, estimate()
+        need = MIN_FREE_RAM_GIB.get(model, 0)
+        if have + could_free < need:
+            print(f"not stopping {', '.join(RAM_PARK_PROJECTS)}: they hold ~{could_free:.1f} "
+                  f"GiB, and {have:.1f} + {could_free:.1f} is still under {need} GiB",
+                  file=sys.stderr)
+        else:
+            parked += park()
+            if parked and settled():
+                return None
     return ram_problem(model, available())
 
 

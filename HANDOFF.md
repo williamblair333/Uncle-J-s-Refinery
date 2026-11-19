@@ -1,5 +1,9 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-19 — Qwen blocked while the Windows VM runs
+
+1. The gitea-win-runner VM holds 8.4 GB; with it up, MemAvailable is ~10 GiB and every Qwen job refuses even after unloading Ollama and parking (~2.7 GiB). Bill is using the VM (11-19), so Qwen batches (write-well's S6 face fixes, 5b's scenes) wait until it's off. comfy_job no longer cycles immich/langfuse when parking can't close the gap.
+
 ## 2026-11-19 — `--region` for write-well's face fixes
 
 1. `just image "…" --ref scene.png --ref face.png --region X,Y,W,H` changes only that box (crop → Qwen → feathered paste) and checks the rest of the picture is byte-identical. Built because ChatGPT redrew whole Idritzia S6 scenes when asked to fix one face. write-well (`write-well-3f`) runs the scenes; it has the list (Samel + Tarfang in 01/02/06/07, Tarfang only in 00/03/04/05/09/11).

@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-19 — comfy_job parks immich/langfuse only when that closes the RAM gap
+
+- `free_ram_for` estimates what parking would free (`park_estimate_gib`, docker stats; 2.7 GiB live) and skips the stop/start when free RAM plus that is still under the gate. With the gitea-win-runner VM up (8.4 GB, Bill is using it) a 5-job Qwen batch refused at 13.5–14 GiB and cycled all 10 containers five times for nothing. 2 new tests; 59 comfy tests pass.
+
 ## 2026-11-19 — `--region`: fix one box of a picture, keep every other pixel
 
 - `scripts/comfy_job.py`: `--region X,Y,W,H` (Qwen only; `--feather`, `--out`). Pillow crops the box from the first `--ref`; Qwen edits the crop as Picture 1 (later refs are face references) at about 1 MP in the crop's aspect; the result is scaled back and pasted through a feathered mask (0 at the box edge). `outside_unchanged` then proves every pixel outside the box equals the original, or the run fails. Never overwrites; default output `<scene>.region-<seed>.png`. Keeps the Klarheit-wait → free-RAM order. Pillow is imported only in this mode.
