@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-20 — long ask_agy jobs no longer die at Claude Code's 1800 s idle limit
+
+- `ask_agy` and `ask_agy_packet` (`scripts/delegate/server.py`) were sync FastMCP tools, so each call blocked the server's event loop and could send nothing until agy finished. Claude Code aborts a call that sends "no response or progress for 1800s", and two mtw2 edit jobs (timeout=1800) were lost that way on 11-20: no result, though one left staged edits behind. The tools are now async. agy runs in a worker thread under a lock (one job at a time, as before), and the tool sends a progress notification every 60 s while it runs. When the client gave no progress token, the agy timeout is clamped to `DELEGATE_CLIENT_IDLE_S` (1800) minus 120 s, so agy's own timeout result comes back. Results carry `no_progress_token` / `timeout_clamped` when either applies. A failed ping never costs the result, and a job error comes back unwrapped. Checked through a real MCP client session: 4 pings on a token call, clamped 1800 → 1680 without one. 8 new tests; suite 3765 passed, 3 skipped.
+
 ## 2026-11-19 — grep-guard allows reads of gitignored files
 
 - `hooks/discipline/grep-guard.sh` now lets cat/sed/head/grep read a file git reports as ignored (resolved path, regular file, inside the repo): jcodemunch never indexes those, so `review/` files had no allowed route at all (blocked twice on 11-19). Tracked files, `git add -f` files, and symlinks or `..` hops that land on tracked source stay denied; recursive greps are unchanged. Both the Python analyzer and the bash fallback carry the rule. Git runs only for a source-named operand that would otherwise be denied, and `subprocess` loads lazily, so overhead on other reads is ~1–3 ms. Bench (800 real calls, 14 days): 30 → 28 fires, 0 errors, no new denies. 14 new tests (`tests/test_grep_guard_gitignored.py`); suite 3757 passed. Implementation by agy, reviewed and tuned here.
