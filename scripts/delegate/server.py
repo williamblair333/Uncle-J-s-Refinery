@@ -37,6 +37,7 @@ import re
 import shutil
 import sys
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -50,6 +51,14 @@ import brief_lint  # noqa: E402
 
 AGY_MODEL = os.environ.get("DELEGATE_AGY_MODEL", "gemini-3.8-flash-medium")
 AGY_TIMEOUT = int(os.environ.get("DELEGATE_AGY_TIMEOUT", "300"))
+# Claude Code aborts an MCP call that sends "no response or progress for 1800s" (two mtw2 edit jobs
+# lost that way on 2026-11-20). The agy tools ping progress every PING_S while agy runs; when the
+# client gave no progress token there is nothing to ping, so the agy timeout is clamped under the
+# client's idle limit instead and the call returns agy's own timeout result, not nothing.
+CLIENT_IDLE_S = int(os.environ.get("DELEGATE_CLIENT_IDLE_S", "1800"))
+IDLE_MARGIN_S = 120
+PING_S = 60.0
+_AGY_LOCK = threading.Lock()  # one agy job at a time, as when the tools blocked the event loop
 OPENAI_URL = os.environ.get("DELEGATE_OPENAI_URL", "https://api.openai.com/v1").rstrip("/")
 OPENAI_MODEL = os.environ.get("DELEGATE_OPENAI_MODEL", "")
 OPENAI_KEY_ENV = os.environ.get("DELEGATE_OPENAI_KEY_ENV", "OPENAI_API_KEY")
@@ -720,8 +729,76 @@ def status() -> dict:
     }
 
 
+def has_progress_token(ctx) -> bool:
+    """Did the client ask for progress on this call? (FastMCP's report_progress is a no-op without.)"""
+    try:
+        meta = ctx.request_context.meta
+    except Exception:  # no request in flight (tests, direct calls)
+        return False
+    return bool(meta is not None and getattr(meta, "progressToken", None) is not None)
+
+
+def clamp_timeout(timeout: int | None, pinging: bool) -> tuple[int, int | None]:
+    """(timeout to use, the asked-for timeout when it was clamped, else None)."""
+    t = timeout or AGY_TIMEOUT
+    cap = CLIENT_IDLE_S - IDLE_MARGIN_S
+    return (t, None) if pinging or t <= cap else (cap, t)
+
+
+async def keep_alive(ctx, pinging: bool, fn, *args, **kwargs):
+    """Run blocking fn in a worker thread under _AGY_LOCK; while it runs, send a progress
+    notification every PING_S so the client's idle timer doesn't abort the call. A failed ping
+    (client gone, stream closed) stops the pinging and never costs the result."""
+    import anyio
+
+    done = anyio.Event()
+
+    async def pinger():
+        n = 0
+        while True:
+            with anyio.move_on_after(PING_S):
+                await done.wait()
+            if done.is_set():
+                return
+            n += 1
+            try:
+                await ctx.report_progress(n, message=f"agy still running ({round(n * PING_S)} s)")
+            except Exception:
+                return
+
+    def locked():
+        with _AGY_LOCK:
+            return fn(*args, **kwargs)
+
+    box = {}
+    async with anyio.create_task_group() as tg:
+        if pinging:
+            tg.start_soon(pinger)
+        try:
+            box["result"] = await anyio.to_thread.run_sync(locked)
+        except Exception as e:  # raised after the group closes, so callers see it unwrapped
+            box["error"] = e
+        finally:
+            done.set()
+    if "error" in box:
+        raise box["error"]
+    return box["result"]
+
+
+async def _agy_tool(ctx, run, timeout, *args, **kwargs) -> dict:
+    pinging = has_progress_token(ctx)
+    t, asked = clamp_timeout(timeout, pinging)
+    out = await keep_alive(ctx, pinging, run, *args, timeout=t, **kwargs)
+    if isinstance(out, dict):
+        if not pinging:
+            out["no_progress_token"] = True
+        if asked is not None:
+            out["timeout_clamped"] = {"asked": asked, "used": t, "client_idle_s": CLIENT_IDLE_S}
+    return out
+
+
 def build_server():
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.fastmcp import Context, FastMCP
 
     mcp = FastMCP("delegate", log_level="WARNING", instructions=(
         "Hand work to a model other than Claude: Gemini via agy (subscription quota, off "
@@ -736,8 +813,8 @@ def build_server():
         return status()
 
     @mcp.tool(name="ask_agy")
-    def _agy(prompt: str, cwd: str | None = None, task: str | None = None,
-             model: str | None = None, timeout: int | None = None, edits: bool = False) -> dict:
+    async def _agy(ctx: Context, prompt: str, cwd: str | None = None, task: str | None = None,
+                   model: str | None = None, timeout: int | None = None, edits: bool = False) -> dict:
         """Run one prompt in Antigravity CLI. agy reads files and calls the stack's MCP servers
         read-only; edits=True lets it write inside cwd. Default cwd is the session's project.
         task picks the model, falling back when a quota is spent: light=trivial lookups/summaries,
@@ -745,19 +822,23 @@ def build_server():
         file path and without edits), then Gemini Flash low; code=default, ordinary coding and
         research; hard=deep reasoning (Opus first); review=second opinion on Claude's work
         (non-Claude first). model overrides task ("local:heretic" / "local:ask_local" too).
-        In a local-only directory only the local models run."""
-        return run_agy(prompt, cwd, model, timeout, edits, task=task)
+        In a local-only directory only the local models run. Long jobs send progress every 60 s;
+        a client that takes no progress gets timeout clamped under its idle limit
+        (timeout_clamped in the result)."""
+        return await _agy_tool(ctx, run_agy, timeout, prompt, cwd, model, edits=edits, task=task)
 
     @mcp.tool(name="ask_agy_packet")
-    def _agy_packet(prompt: str, files: list[str], base: str | None = None, task: str | None = None,
-                    model: str | None = None, timeout: int | None = None) -> dict:
+    async def _agy_packet(ctx: Context, prompt: str, files: list[str], base: str | None = None,
+                          task: str | None = None, model: str | None = None,
+                          timeout: int | None = None) -> dict:
         """Run agy on a throwaway copy of the named files, and return `diff` and `changed` for you to
         review and apply. Live files are never touched. files are relative to base (default: the
         session's project). Each must be under config/delegate-packet-allow.txt or its .local.txt, and
         be UTF-8 text with nothing from the repo's private/packet-refuse-words.txt, or the whole call
         is refused. This limits which files you hand over, not what agy can reach: it keeps its other
         tools. Name files by relative path in the prompt, and keep private details out of it."""
-        return run_agy_packet(prompt, files, base or os.getcwd(), task, model, timeout)
+        return await _agy_tool(ctx, run_agy_packet, timeout, prompt, files, base or os.getcwd(),
+                               task, model)
 
     @mcp.tool(name="ask_heretic")
     def _heretic(prompt: str, system: str | None = None, think: bool = False) -> dict:

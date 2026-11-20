@@ -625,3 +625,90 @@ def test_run_media_passes_extras_before_prompt_and_returns_seed(monkeypatch, tmp
     assert out == {"ok": True, "files": [f"{tmp_path}/image_1.png"], "seed": 42}
     assert seen["cmd"][-4:] == ["--seed", "42", "--", "-dash prompt"]
 
+
+# --- keep-alive: Claude Code aborts a call silent for 1800 s (mtw2, 2026-11-20) ---
+
+class FakeCtx:
+    """Stands in for FastMCP's Context: a progress token or none, and a report_progress log."""
+    def __init__(self, token="tok", fail=False):
+        self.calls, self.fail = [], fail
+        meta = type("Meta", (), {"progressToken": token})() if token is not None else None
+        self.request_context = type("RC", (), {"meta": meta})()
+
+    async def report_progress(self, progress, total=None, message=None):
+        if self.fail:
+            raise RuntimeError("stream closed")
+        self.calls.append((progress, message))
+
+
+def test_clamp_timeout_only_without_progress():
+    cap = d.CLIENT_IDLE_S - d.IDLE_MARGIN_S
+    assert d.clamp_timeout(1800, pinging=True) == (1800, None)
+    assert d.clamp_timeout(1800, pinging=False) == (cap, 1800)
+    assert d.clamp_timeout(600, pinging=False) == (600, None)
+    assert d.clamp_timeout(None, pinging=False) == (d.AGY_TIMEOUT, None)
+
+
+def test_has_progress_token():
+    assert d.has_progress_token(FakeCtx("t")) is True
+    assert d.has_progress_token(FakeCtx(None)) is False
+    assert d.has_progress_token(object()) is False
+
+
+def test_keep_alive_pings_while_the_job_runs(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(d, "PING_S", 0.05)
+    ctx = FakeCtx()
+    out = asyncio.run(d.keep_alive(ctx, True, lambda: (time.sleep(0.3), {"ok": True})[1]))
+    assert out == {"ok": True}
+    assert len(ctx.calls) >= 3 and ctx.calls[0][0] == 1
+
+
+def test_keep_alive_no_token_no_pings(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(d, "PING_S", 0.05)
+    ctx = FakeCtx(None)
+    assert asyncio.run(d.keep_alive(ctx, False, lambda: (time.sleep(0.2), 7)[1])) == 7
+    assert ctx.calls == []
+
+
+def test_keep_alive_failed_ping_keeps_the_result(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(d, "PING_S", 0.05)
+    out = asyncio.run(d.keep_alive(FakeCtx(fail=True), True, lambda: (time.sleep(0.2), "done")[1]))
+    assert out == "done"
+
+
+def test_keep_alive_job_error_propagates(monkeypatch):
+    import asyncio
+    monkeypatch.setattr(d, "PING_S", 0.05)
+
+    def boom():
+        time.sleep(0.1)
+        raise ValueError("agy wrapper bug")
+    with pytest.raises(ValueError):
+        asyncio.run(d.keep_alive(FakeCtx(), True, boom))
+
+
+def test_agy_tool_marks_clamp_and_missing_token():
+    import asyncio
+    seen = {}
+
+    def run(prompt, cwd, model, timeout=None, edits=False, task=None):
+        seen["timeout"] = timeout
+        return {"ok": True}
+    out = asyncio.run(d._agy_tool(FakeCtx(None), run, 1800, "p", "/tmp", None, edits=True, task="code"))
+    assert seen["timeout"] == d.CLIENT_IDLE_S - d.IDLE_MARGIN_S
+    assert out["no_progress_token"] is True
+    assert out["timeout_clamped"] == {"asked": 1800, "used": seen["timeout"], "client_idle_s": d.CLIENT_IDLE_S}
+    out = asyncio.run(d._agy_tool(FakeCtx("t"), run, 1800, "p", "/tmp", None))
+    assert seen["timeout"] == 1800 and "timeout_clamped" not in out and "no_progress_token" not in out
+
+
+def test_agy_tools_hide_ctx_from_the_schema():
+    import asyncio
+    tools = {t.name: t for t in asyncio.run(d.build_server().list_tools())}
+    for name in ("ask_agy", "ask_agy_packet"):
+        props = tools[name].inputSchema["properties"]
+        assert "ctx" not in props and "prompt" in props and "timeout" in props
+
