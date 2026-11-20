@@ -328,6 +328,14 @@ def test_cd_and_dash_C_move_the_push(tmp_path):
     assert _blocked('cd "$X" && git push', cwd=feat) is True     # unknown dir blocks
 
 
+@pytest.mark.parametrize("cmd", ["cd - && git push", "popd && git push",
+                                 "pushd +1 && git push"])
+def test_dir_stack_moves_are_unknown(cmd, tmp_path):
+    """These used to fall through to `cd` with no target (→ ~, not a repo → allow),
+    so `cd -` back onto a main checkout pushed main."""
+    assert _blocked(cmd, cwd=_repo(tmp_path / "f", "feat/y")) is True
+
+
 @pytest.mark.parametrize("flag", ["--all", "--mirror", "--branches"])
 def test_push_every_branch_is_blocked(flag):
     assert _blocked(f"git push origin {flag}") is True

@@ -505,9 +505,11 @@ def analyze(text, depth, cwd=START_DIR):
         words = rec["words"]
         # `cd X && git push` runs the push in X. Tracked in command order; a
         # computed target makes the directory unknown (None), which blocks.
-        if words and words[0] in ("cd", "pushd"):
+        if words and words[0] in ("cd", "pushd", "popd"):
             target = next((t for t in words[1:] if not t.startswith("-")), None)
-            if target is None:
+            if words[0] == "popd" or "-" in words[1:] or (target or "").startswith("+"):
+                cwd = None    # `cd -`, `popd`, `pushd +N`: the dir stack, unknown here
+            elif target is None:
                 cwd = os.path.expanduser("~")
             else:
                 cwd = resolve_dir(cwd, os.path.expanduser(target))

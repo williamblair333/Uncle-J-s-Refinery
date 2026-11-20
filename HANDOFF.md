@@ -2,7 +2,7 @@
 
 ## 2026-11-20 — push-guard closes the bare-push hole
 
-- A bare `git push` on main is now blocked, and so are `origin`, `HEAD` and `--all`. It is resolved from the payload `cwd`, `cd X &&` and `git -C X`. Branch `fix/push-guard-implicit-target`; see CHANGELOG. Only `tests/test_push_guard.py` was run, not the full suite. Run `just test` before merging.
+- A bare `git push` on main is now blocked, and so are `origin`, `HEAD` and `--all`. It is resolved from the payload `cwd`, `cd X &&` and `git -C X`. Branch `fix/push-guard-implicit-target`; see CHANGELOG. Full `just test` rc 0; `cd -`/`popd`/`pushd +N` now block too. PR #370. CI's only failure is `test_comfy` (runner lacks Pillow), unrelated.
 - The hook is a symlink to this working tree, so it is live already, even while unmerged.
 
 ## 2026-11-20 — DeepSeek diagnosis; ask_agy keep-alive
