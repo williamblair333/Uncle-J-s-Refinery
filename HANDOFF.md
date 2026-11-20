@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-20 — push-guard closes the bare-push hole
+
+- A bare `git push` on main is now blocked, and so are `origin`, `HEAD` and `--all`. It is resolved from the payload `cwd`, `cd X &&` and `git -C X`. Branch `fix/push-guard-implicit-target`; see CHANGELOG. Full `just test` rc 0; `cd -`/`popd`/`pushd +N` now block too. PR #370. CI's only failure is `test_comfy` (runner lacks Pillow), unrelated.
+- The hook is a symlink to this working tree, so it is live already, even while unmerged.
+
 ## 2026-11-20 — DeepSeek diagnosis; ask_agy keep-alive
 
 1. **DeepSeek V4.1: the 11-15 test was partly the runner's fault.** Its calibration read 58.8 tok/s decode, but the old `calibrate()` took the difference between two whole runs' wall times, clamped to 1 s, on "Name three colours.". grade-t30 shows the real speed was ~0.28 tok/s (2439 prompt + 245 out in 2131 s), about 30x below Strata's own 3060/46 GB figure (8-10 tok/s, DEEPSEEK41.md). Measured today: the NVMe (Crucial P2, PCIe 3 x4) reads expert-sized blocks at ~0.8-1 GB/s, and only 19 GB of RAM was free at the 11-15 start. Moving the Engram is off the list: it doesn't fit (111 GB, NVMe 91 GB free), and SATA small random reads are 254 µs against the NVMe's 186. `blind.py` now records the engine's own `prompt:`/`decode:`/`CPU lane:` lines and saves each run's stderr. blind.sh's Telegram now loads the env file (the 11-15 send died on unbound TELEGRAM_CHAT_ID). **Tonight 21:10** `dsv41-diag.timer` runs `/opt/docker/strata/bench/dsv41/diag.sh`: a baseline calibration, then one with immich + langfuse parked. **Next session: read `/opt/docker/strata/bench/results/dsv41-diag-*/` (both calibration.stderr files)**, then Bill's tune-or-drop.

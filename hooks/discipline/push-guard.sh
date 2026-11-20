@@ -45,12 +45,18 @@
 #   x=1 git push origin main          · env-assignment prefixes skipped
 #   git -C /repo push origin main     · git global options skipped
 #
-# ── STILL NOT BLOCKED (deliberate parity with upstream) ─────────────────────
-#   git push            · no refspec; blocking it would break ordinary flows
+# ── IMPLICIT TARGETS (2026-11-20) ────────────────────────────────────────────
+#   git push / git push origin / git push origin HEAD / @   · push the CURRENT
+#     branch: blocked when the repo (session cwd, `cd X &&`, `git -C X`) is on a
+#     protected branch, allowed on a feature branch. An agent used a bare
+#     `git push` on main to land a new repo's first commit with no PR.
+#   git push --all / --mirror / --branches   · push every branch: blocked.
+#
+# ── STILL NOT BLOCKED ────────────────────────────────────────────────────────
 #   git push origin main:refs/heads/backup   · pushes main TO backup; main unchanged
 #
 # ── RESIDUAL (text matching cannot see these; accepted, not a sandbox) ───────
-#   git push origin HEAD / "$(git branch --show-current)" while ON main
+#   git push origin "$(git branch --show-current)" while ON main
 #   a command held whole in a variable or array: "${cmd[@]}", $CMD
 #   code synthesised from data: bash -c "$(printf …)", base64 | bash, a script file
 #   git aliases (git config alias.p push; git p origin main)
@@ -59,6 +65,9 @@ set -uo pipefail
 
 PAYLOAD=$(cat)
 CMD=$(printf '%s' "$PAYLOAD" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+# The session's working directory: a push with no protected ref in it still lands
+# on the CURRENT branch, so the analyzer has to know which repo it runs in.
+HOOK_CWD=$(printf '%s' "$PAYLOAD" | jq -r '.cwd // empty' 2>/dev/null || true)
 [ -n "$CMD" ] || exit 0
 
 deny() {
@@ -133,7 +142,7 @@ fi
 # var (CMD="$CMD"), and exec refuses any single string over 128 KiB, so a long
 # command never reached the analyzer and silently got the weaker regex.
 IFS= read -r -d '' PROG <<'PY' || true
-import codecs, os, re, sys
+import codecs, os, re, subprocess, sys
 
 cmd = sys.stdin.buffer.read().decode("utf-8", "surrogateescape")
 if not cmd.strip():
@@ -392,24 +401,90 @@ class Lexer:
         return n
 
 
-def pushes_protected(words):
+PUSH_OPTS_WITH_VALUE = {"-o", "--push-option", "--repo", "--receive-pack", "--exec"}
+PUSHES_EVERY_BRANCH = {"--all", "--mirror", "--branches"}
+
+
+_BRANCH_CACHE = {}
+
+
+def branch_protected(repo_dir):
+    """The branch checked out in repo_dir is main/master/production.
+    A directory bash computes at run time is unknown, and unknown means block."""
+    if repo_dir is None:
+        return True
+    if repo_dir in _BRANCH_CACHE:
+        return _BRANCH_CACHE[repo_dir]
+    _BRANCH_CACHE[repo_dir] = True        # a failed lookup below stays a block
+    try:
+        r = subprocess.run(["git", "-C", repo_dir, "symbolic-ref", "--short", "-q", "HEAD"],
+                           capture_output=True, text=True, timeout=5)
+    except Exception:
+        return True
+    if r.returncode != 0:
+        _BRANCH_CACHE[repo_dir] = False   # detached HEAD or not a repo: git refuses the push
+    else:
+        _BRANCH_CACHE[repo_dir] = bool(REF.search(r.stdout.strip()))
+    return _BRANCH_CACHE[repo_dir]
+
+
+def implicit_push_to_protected(args, repo_dir):
+    """`git push`, `git push origin`, `git push origin HEAD` and `@` push the
+    CURRENT branch; --all/--mirror push every branch. Until 2026-11-20 these were
+    allowed as "parity with upstream", and a bare `git push` on main put a
+    first commit straight onto a new repo's main with no PR."""
+    positional, k = [], 0
+    while k < len(args):
+        a = args[k]; k += 1
+        if a in PUSHES_EVERY_BRANCH:
+            return True
+        if a.startswith("-"):
+            if a in PUSH_OPTS_WITH_VALUE:
+                k += 1
+            continue
+        positional.append(a)
+    refspecs = positional[1:]
+    if refspecs and not any(static(r).lstrip("+") in ("HEAD", "@") for r in refspecs):
+        return False
+    return branch_protected(repo_dir)
+
+
+def resolve_dir(cwd, sub):
+    if dynamic(sub):
+        return None
+    if os.path.isabs(sub):
+        return sub
+    return None if cwd is None else os.path.join(cwd, sub)
+
+
+def pushes_protected(words, cwd=None):
     # tail[i]: some word at or after i names a protected ref. Precomputed so a long
     # `git push git push …` is linear — a hook that times out fails OPEN.
     tail = [False] * (len(words) + 1)
     for i in range(len(words) - 1, -1, -1):
         t = words[i]
         tail[i] = tail[i + 1] or bool(REF.search(t) or REF.search(static(t)))
+    implicit_checked = False
     for j, w in enumerate(words):
         if not (base(w) == "git" or dynamic(w)):
             continue
         k = j + 1
+        repo_dir = cwd
         while k < len(words) and words[k].startswith("-"):
             opt = words[k]; k += 1
             if opt in GIT_OPTS_WITH_VALUE and k < len(words):
+                if opt == "-C":
+                    repo_dir = resolve_dir(repo_dir, words[k])
                 k += 1
         if k < len(words) and (words[k] == "push" or (dynamic(words[k]) and base(w) == "git")):
             if tail[k + 1]:
                 return True
+            # Only the first `git push` is the one bash runs; later ones are its
+            # arguments. Checking each would be quadratic on `git push git push …`.
+            if not implicit_checked:
+                implicit_checked = True
+                if implicit_push_to_protected(words[k + 1:], repo_dir):
+                    return True
     return False
 
 
@@ -422,10 +497,24 @@ def static(word):
     return VAR.sub("", word.replace(DYN, ""))
 
 
-def analyze(text, depth):
+START_DIR = os.environ.get("HOOK_CWD") or os.getcwd()
+
+
+def analyze(text, depth, cwd=START_DIR):
     for rec in Lexer(text, depth).run():
         words = rec["words"]
-        if pushes_protected(words):
+        # `cd X && git push` runs the push in X. Tracked in command order; a
+        # computed target makes the directory unknown (None), which blocks.
+        if words and words[0] in ("cd", "pushd", "popd"):
+            target = next((t for t in words[1:] if not t.startswith("-")), None)
+            if words[0] == "popd" or "-" in words[1:] or (target or "").startswith("+"):
+                cwd = None    # `cd -`, `popd`, `pushd +N`: the dir stack, unknown here
+            elif target is None:
+                cwd = os.path.expanduser("~")
+            else:
+                cwd = resolve_dir(cwd, os.path.expanduser(target))
+            continue
+        if pushes_protected(words, cwd):
             return True
         feeds_shell = evaled = False
         for j, w in enumerate(words):
@@ -436,7 +525,7 @@ def analyze(text, depth):
                 for k in range(j + 1, len(words)):
                     if re.fullmatch(r"-[A-Za-z]*c[A-Za-z]*", words[k]):
                         has_c = True
-                        if k + 1 < len(words) and analyze(words[k + 1], depth + 1):
+                        if k + 1 < len(words) and analyze(words[k + 1], depth + 1, cwd):
                             return True
                         break
                     if not words[k].startswith(("-", "+")):
@@ -456,7 +545,7 @@ def analyze(text, depth):
                 # Only the first: its re-analysis already covers every later word,
                 # and re-analysing per occurrence is exponential in `eval eval …`.
                 feeds_shell = evaled = True
-                if analyze(" ".join(words[j + 1:]), depth + 1):
+                if analyze(" ".join(words[j + 1:]), depth + 1, cwd):
                     return True
             elif b in INTERPRETERS:
                 for k in range(j + 1, len(words) - 1):
@@ -464,7 +553,7 @@ def analyze(text, depth):
                         return True
         if feeds_shell:
             for body in rec["stdin"]:
-                if analyze(body, depth + 1):
+                if analyze(body, depth + 1, cwd):
                     return True
     return False
 
@@ -481,7 +570,7 @@ except TooDeep:
 except Exception:
     sys.exit(2)
 PY
-printf '%s' "$CMD" | python3 -c "$PROG"
+printf '%s' "$CMD" | HOOK_CWD="$HOOK_CWD" python3 -c "$PROG"
 
 rc=$?
 case "$rc" in
