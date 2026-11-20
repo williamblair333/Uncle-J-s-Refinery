@@ -149,12 +149,11 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 - `identity_type` grades `exact` / `normalized` / `prefix` / `segment` — accept `normalized`
   too; filtering on `exact` drops real hits.
 - A `language`/`kind`/`decorator` filter refuses `absent`; drop it before an absence claim.
+- `search_symbols` cuts `signature` at 200 chars (1.108.470+); full: `get_symbol_source`.
 - Lexical ranking scores test-file symbols ×0.25 unless the query mentions tests, fixtures
-  or mocks. To find test code, say "test" in the query. Confidence and absence verdicts
-  use the unreduced score.
+  or mocks. Confidence and absence verdicts use the unreduced score.
 - `kind` enum: `function`, `class`, `method`, `constant`, `type`, `template`, `import`,
-  `field`, `property`, `variable`. Mutable state is `variable`/`property`/`field`, not
-  `constant`.
+  `field`, `property`, `variable`. Mutable state is never `constant`.
 - Semantic/hybrid search: a nonzero `skipped_dim_mismatch` means a partial corpus; a
   `semantic_topup` block means part of the ranking is lexical-only; a semantic channel of
   `unavailable` (with `semantic_channel_error`) is a failure, not "no embeddings".
