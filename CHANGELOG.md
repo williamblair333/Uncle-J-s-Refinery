@@ -6,6 +6,7 @@
 
 - `hooks/discipline/push-guard.sh` allowed `git push`, `git push origin` and `git push origin HEAD` by design ("parity with upstream"). These push the CURRENT branch. On 11-20 an agent in `/opt/proj/me` used a bare `git -c push.autoSetupRemote=true push` on main to land a new repo's first commit with no PR, and Bill had to catch it. The analyzer now resolves the repo the push runs in: the payload's `cwd`, any `cd X &&` before it, and `git -C X`. It blocks these implicit-target pushes when that repo is on main/master/production, and allows them on a feature branch. A computed directory (`cd "$X"`) is unknown and blocks. `--all`, `--mirror` and `--branches` always block. Only the first `git push` in a command is checked (later ones are its arguments) and the branch lookup is cached, so the 20,000-word pathological case stays under the 5 s limit. 15 new cases in `tests/test_push_guard.py`; that file passes in full. Live check: a bare push from a scratch repo on main is blocked (rc 2), and pushes from feature-branch repos are allowed.
 - Follow-up: `cd -`, `popd` and `pushd +N` fell through to a target-less `cd` (→ `~`, not a repo → allow), so `cd - && git push` back onto a main checkout was allowed. They now count as an unknown directory and block. 3 more cases; file passes (108); full `just test` rc 0.
+- Merged as PR #370 (`4c3fce4`). Design invariants and closed vectors recorded in the memweave audit baselines.
 
 ## 2026-11-20 — long ask_agy jobs no longer die at Claude Code's 1800 s idle limit
 

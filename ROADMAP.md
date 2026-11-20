@@ -44,7 +44,7 @@ Completed items age out after ~4 weeks.
 
 - **Gitea new-repo bootstrap** (filed 2026-11-03 from lanscout; 3rd repeat after dfir and anatomy-lab in
   October). No sanctioned way for a session to create a Gitea repo: the stored token has only
-  `write:repository`, `POST /user/repos` needs `write:user`, and push-guard blocks the first push to `main`.
+  `write:repository`, `POST /user/repos` needs `write:user`, and push-guard blocks the first push to `main` (since 2026-11-20, PR #370, a bare `git push` too).
   Each repo improvised: mint a token via `docker exec -u git gitea gitea admin user generate-access-token
   --scopes write:repository,write:user --raw` → create private with `auto_init` → rebase local history onto
   the init commit → import by PR. Each run leaves a `write:user` token only Bill can revoke in the UI
