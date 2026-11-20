@@ -28,14 +28,33 @@ import pytest
 HOOK = os.path.join(os.path.dirname(__file__), "..", "hooks", "discipline", "push-guard.sh")
 
 
-def _run(cmd: str, env=None):
-    payload = json.dumps({"tool_input": {"command": cmd}, "session_id": "test"})
+def _repo(path, branch):
+    subprocess.run(["git", "init", "-q", "-b", branch, str(path)], check=True)
+    return str(path)
+
+
+_FEATURE_REPO = None
+
+
+def _feature_repo():
+    """Default cwd for every case: a repo on a feature branch, so bare `git push`
+    is judged by its refspec alone, never by whatever branch the suite runs on."""
+    global _FEATURE_REPO
+    if _FEATURE_REPO is None:
+        import tempfile
+        _FEATURE_REPO = _repo(tempfile.mkdtemp(prefix="pushguard-feat-"), "feat/x")
+    return _FEATURE_REPO
+
+
+def _run(cmd: str, env=None, cwd=None):
+    payload = json.dumps({"tool_input": {"command": cmd}, "session_id": "test",
+                          "cwd": cwd or _feature_repo()})
     return subprocess.run(["bash", HOOK], input=payload, capture_output=True,
                           text=True, env=env)
 
 
-def _blocked(cmd: str) -> bool:
-    r = _run(cmd)
+def _blocked(cmd: str, cwd=None) -> bool:
+    r = _run(cmd, cwd=cwd)
     if r.returncode == 2:
         assert "BLOCKED" in r.stderr, f"a block must explain itself: {r.stderr!r}"
         return True
@@ -124,8 +143,9 @@ MUST_ALLOW = [
     "git push origin main:refs/heads/backup",   # pushes main TO backup; main unchanged
     "git push origin main2",
     "git push origin feature",
-    "git push",                                 # no refspec -- parity with upstream
+    "git push",                                 # on a feature branch: pushes feat/x
     "git push origin",
+    "git push -u origin HEAD",
     "git rev-parse main",
     "git status; echo main",
 ]
@@ -282,3 +302,37 @@ def test_empty_and_malformed_payloads_allow():
     for payload in ["", "not json", "{}", '{"tool_input":{}}']:
         r = subprocess.run(["bash", HOOK], input=payload, capture_output=True, text=True)
         assert r.returncode == 0, f"must allow on {payload!r}, got {r.returncode}"
+
+
+# ── Implicit targets: the push lands on whatever branch is checked out ─────
+
+IMPLICIT = ["git push", "git push origin", "git push -u origin HEAD", "git push origin @",
+            "git -c push.autoSetupRemote=true push", "git push --force-with-lease"]
+
+
+@pytest.mark.parametrize("cmd", IMPLICIT)
+def test_implicit_push_on_main_is_blocked(cmd, tmp_path):
+    """2026-11-20: a bare `git push` on main put a new repo's first commit on
+    main with no PR. Allowed on a feature branch, blocked on a protected one."""
+    main = _repo(tmp_path / "m", "main")
+    assert _blocked(cmd, cwd=main) is True
+    assert _blocked(cmd, cwd=_repo(tmp_path / "f", "feat/y")) is False
+
+
+def test_cd_and_dash_C_move_the_push(tmp_path):
+    main = _repo(tmp_path / "m", "main")
+    feat = _repo(tmp_path / "f", "feat/y")
+    assert _blocked(f"cd {main} && git push", cwd=feat) is True
+    assert _blocked(f"git -C {main} push", cwd=feat) is True
+    assert _blocked(f"cd {feat} && git push", cwd=main) is False
+    assert _blocked('cd "$X" && git push', cwd=feat) is True     # unknown dir blocks
+
+
+@pytest.mark.parametrize("flag", ["--all", "--mirror", "--branches"])
+def test_push_every_branch_is_blocked(flag):
+    assert _blocked(f"git push origin {flag}") is True
+
+
+def test_explicit_feature_ref_on_main_is_allowed(tmp_path):
+    main = _repo(tmp_path / "m", "main")
+    assert _blocked("git push -u origin fix/thing", cwd=main) is False
