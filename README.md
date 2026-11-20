@@ -1068,7 +1068,7 @@ Cloned at install time (gitignored):
 │   ├── discipline/                     ← blocking PreToolUse guards + Stop hook (step 6)
 │   │   ├── edit-surface-guard.sh       ← blocks Edit/Write on listed sensitive files until a pre-mortem has run
 │   │   ├── grep-guard.sh               ← sends source-code reads (grep/rg/cat/sed/head/tail) to jcodemunch; checks each part of a command, allows pipes, logs and writes
-│   │   ├── push-guard.sh               ← blocks direct pushes to main/master/production. Splits the command with python3+shlex (not a regex), falls back to a regex, and never lets a push through on error. Replaces the upstream guardrails hook; see docs/RELIABILITY.md
+│   │   ├── push-guard.sh               ← blocks direct pushes to main/master/production, including a bare `git push` / `HEAD` / `--all` when the repo it runs in is on one. Splits the command with python3+shlex (not a regex), falls back to a regex, and never lets a push through on error. Replaces the upstream guardrails hook; see docs/RELIABILITY.md
 │   │   └── unpushed-warn.sh            ← Stop hook: warns when the branch is ahead of the remote
 │   ├── pre-mortem-guard/               ← pre-mortem enforcement, kept in the repo (linked to ~/.claude/hooks/pre-mortem-guard/)
 │   │   ├── surface-write-guard.sh      ← blocks shell writes that would get around the Edit/Write guard; fails loudly without jq

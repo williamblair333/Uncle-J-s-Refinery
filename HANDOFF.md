@@ -2,8 +2,9 @@
 
 ## 2026-11-20 — push-guard closes the bare-push hole
 
-- A bare `git push` on main is now blocked, and so are `origin`, `HEAD` and `--all`. It is resolved from the payload `cwd`, `cd X &&` and `git -C X`. Branch `fix/push-guard-implicit-target`; see CHANGELOG. Full `just test` rc 0; `cd -`/`popd`/`pushd +N` now block too. PR #370. CI's only failure is `test_comfy` (runner lacks Pillow), unrelated.
-- The hook is a symlink to this working tree, so it is live already, even while unmerged.
+- **Merged** (PR #370 → `4c3fce4`). A bare `git push` on main is now blocked, and so are `origin`, `HEAD`/`@`, `--all`/`--mirror`/`--branches`, and `cd -`/`popd`/`pushd +N` before a push. The repo is resolved from the payload `cwd`, `cd X &&` and `git -C X`; an unknown dir blocks. Live now (the hook is a symlink into this checkout). Full `just test` rc 0; CI's only failure is `test_comfy` (the runner lacks Pillow), unrelated and still open.
+- No independent review: the `ask_agy` review hit agy's 300 s print timeout with no output after its last model call (log `state/agy-logs/20261120-100925-*`). Design invariants + closed vectors are in `~/.uncle-j-memory/memory/audit-baselines.md` (push-guard implicit targets, 2026-11-20). Open residual: `git push origin "$(git branch --show-current)"` on main.
+- New-repo first push: a session creating a Gitea repo can no longer `git push` its first commit from main. It has to push a branch and open a PR (see ROADMAP "Gitea new-repo bootstrap").
 
 ## 2026-11-20 — DeepSeek diagnosis; ask_agy keep-alive
 
