@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-21 — agy fetch ignores robots.txt
+
+- **Done:** agy's fetch MCP now runs with `--ignore-robots-txt` (CHANGELOG 2026-11-21). The cause was texaslottery.com's `robots.txt` 403, which the server read as a refusal.
+- **Needs a re-sync to take effect:** `python3 features/antigravity/sync_mcp.py`, or the install step that runs it.
+- **Open, Bill's call:** the Gitea API token has `write:repository` but not `write:issue`, so sessions can't file issues. This one was recorded in Klarheit's HANDOFF instead. Adding `write:issue` would let cross-repo problems go to the owning repo's tracker.
+
 ## 2026-11-20 — push-guard closes the bare-push hole
 
 - **Merged** (PR #370 → `4c3fce4`). A bare `git push` on main is now blocked, and so are `origin`, `HEAD`/`@`, `--all`/`--mirror`/`--branches`, and `cd -`/`popd`/`pushd +N` before a push. The repo is resolved from the payload `cwd`, `cd X &&` and `git -C X`; an unknown dir blocks. Live now (the hook is a symlink into this checkout). Full `just test` rc 0; CI's only failure is `test_comfy` (the runner lacks Pillow), unrelated and still open.

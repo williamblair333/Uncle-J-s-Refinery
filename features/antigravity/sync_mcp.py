@@ -25,7 +25,10 @@ SKIP = ("delegate", "memweave")
 # agy-only servers, always written: headless agy has no web tool of its own (read_url is not
 # registered in print mode, probed 2026-10-26). The reference fetch server refuses private
 # and LAN addresses by default. Pinned to a release more than two weeks old.
-AGY_EXTRA = {"fetch": {"command": "uvx", "args": ["mcp-server-fetch==2026.10.10"]}}
+# --ignore-robots-txt: the server treats a robots.txt 403 as a refusal, which blocked official
+# public data (texaslottery.com, 2026-11-21). robots.txt is crawler etiquette, not access
+# control; private/LAN addresses stay blocked, and fetch is a read-only GET.
+AGY_EXTRA = {"fetch": {"command": "uvx", "args": ["mcp-server-fetch==2026.10.10", "--ignore-robots-txt"]}}
 
 
 def sync(claude: Path, target: Path) -> list:
