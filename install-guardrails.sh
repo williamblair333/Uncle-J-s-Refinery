@@ -87,6 +87,11 @@ bash "$STACK_ROOT/scripts/fix-guardrails-grep.sh"
 step "Repairing upstream prompt-injection defender"
 bash "$STACK_ROOT/scripts/fix-guardrails-defender.sh" || warn "defender left as is — see message above"
 
+# Upstream scan-commit flags every 64-hex string, so a pinned image digest
+# (image@sha256:…) can never be committed. Mask hex that follows "sha256:".
+step "Repairing upstream scan-commit digest check"
+bash "$STACK_ROOT/scripts/fix-guardrails-digest.sh" || warn "scan-commit left as is — see message above"
+
 step "Guardrails installed"
 cat <<EOF
 

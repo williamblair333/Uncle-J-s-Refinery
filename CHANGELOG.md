@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-21 — scan-commit lets pinned image digests through
+
+- **The problem:** upstream claude-guardrails `scan-commit.sh` flags every 64-hex string as a secret. An `image@sha256:<digest>` pin matches, so an agent could never commit a pinned compose file. autark's Pi-hole and ntfy were both blocked; ntfy sat unmerged from 10:34.
+- **The fix:** `scripts/fix-guardrails-digest.sh` adds one line to the installed hook. It masks hex that directly follows `sha256:` before the patterns run. A bare 64-hex string still blocks. `install-guardrails.sh` runs it after every install, and `--check` reports whether the patch is there. It's idempotent and keeps a `.bak`.
+- **Test:** `tests/test_fix_guardrails_digest.py`: the upstream copy blocks a digest (baseline), the patched copy allows it, a bare hex still blocks, and a second run changes nothing. Applied live on dma64.
+
 ## 2026-11-21 — agy's fetch MCP ignores robots.txt
 
 - **The problem:** the reference fetch server (`mcp-server-fetch==2026.10.10`) reads a `robots.txt` 403 as "autonomous fetching not allowed". texaslottery.com answers `robots.txt` with a 403, so agy refused the official Pick 3 CSVs during a Klarheit research call. curl got 200 for the same files.
