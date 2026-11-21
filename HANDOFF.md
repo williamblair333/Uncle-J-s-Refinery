@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-21 — scan-commit digest carve-out; idle sessions
+
+- **Done:** pinned image digests commit again (CHANGELOG 2026-11-21). Live on dma64. **tc-vmh-03 and the Pi need** `bash scripts/fix-guardrails-digest.sh` after their next pull.
+- **Pattern Bill flagged 11-21:** write-well, mtw2 and autark each sat idle for hours. write-well's five queued image jobs waited on each other from 13:11 to 15:26. mtw2's queued bench runs stalled for 77 min. autark missed its ntfy agent's result after compaction. In each case a background wait could only report "finished", never "stuck". write-well and mtw2 each started a repo-local guard on 11-21. A global one (every background wait gets a stall/deadline wake) is the Refinery's job; not built yet.
+- Local main had auto-maintain's unpushed `934889e` (jcodemunch sync) when this branch was cut from origin/main.
+
 ## 2026-11-21 — agy fetch ignores robots.txt
 
 - **Done:** agy's fetch MCP now runs with `--ignore-robots-txt` (CHANGELOG 2026-11-21). The cause was texaslottery.com's `robots.txt` 403, which the server read as a refusal.
