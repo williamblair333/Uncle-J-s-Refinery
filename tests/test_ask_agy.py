@@ -505,6 +505,8 @@ def test_sync_mcp_always_gives_agy_a_pinned_fetch_server(tmp_path):
     fetch = json.loads(target.read_text())["mcpServers"]["fetch"]
     assert fetch["command"] == "uvx" and fetch["args"][0].startswith("mcp-server-fetch==")
     assert "--allow-private-ips" not in fetch["args"]
+    # a robots.txt 403 (texaslottery.com, 2026-11-21) made agy refuse official public data
+    assert "--ignore-robots-txt" in fetch["args"]
     rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
     assert "mcp(fetch/*)" in rules["allow"]
 

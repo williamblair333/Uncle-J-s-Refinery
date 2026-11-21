@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-11-21 — agy's fetch MCP ignores robots.txt
+
+- **The problem:** the reference fetch server (`mcp-server-fetch==2026.10.10`) reads a `robots.txt` 403 as "autonomous fetching not allowed". texaslottery.com answers `robots.txt` with a 403, so agy refused the official Pick 3 CSVs during a Klarheit research call. curl got 200 for the same files.
+- **The fix:** `features/antigravity/sync_mcp.py` `AGY_EXTRA` now passes `--ignore-robots-txt`. The server has no per-host allow-list; only this global flag.
+  - Private and LAN addresses stay blocked (no `--allow-private-ips`).
+  - fetch is a read-only GET.
+- **Test:** `tests/test_ask_agy.py::test_sync_mcp_always_gives_agy_a_pinned_fetch_server` asserts the flag. It failed before the fix and passes after; the file passes in full (61).
+- **Live after:** the next `sync_mcp` run, plus an agy restart.
+
 ## 2026-11-20 — push-guard blocks a bare `git push` on main
 
 - `hooks/discipline/push-guard.sh` allowed `git push`, `git push origin` and `git push origin HEAD` by design ("parity with upstream"). These push the CURRENT branch. On 11-20 an agent in `/opt/proj/me` used a bare `git -c push.autoSetupRemote=true push` on main to land a new repo's first commit with no PR, and Bill had to catch it. The analyzer now resolves the repo the push runs in: the payload's `cwd`, any `cd X &&` before it, and `git -C X`. It blocks these implicit-target pushes when that repo is on main/master/production, and allows them on a feature branch. A computed directory (`cd "$X"`) is unknown and blocks. `--all`, `--mirror` and `--branches` always block. Only the first `git push` in a command is checked (later ones are its arguments) and the branch lookup is cached, so the 20,000-word pathological case stays under the 5 s limit. 15 new cases in `tests/test_push_guard.py`; that file passes in full. Live check: a bare push from a scratch repo on main is blocked (rc 2), and pushes from feature-branch repos are allowed.
