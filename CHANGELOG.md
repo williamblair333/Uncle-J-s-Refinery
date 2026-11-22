@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-22 — CI: install Pillow for the region test
+
+- **Fixed:** GitHub CI had been red on every push since 2026-11-19: `tests/test_comfy.py::test_region_crop_and_paste_leave_outside_pixels_identical` runs under `/usr/bin/python3` and asserts Pillow is there (a real requirement of `just image --region`), but the runner's system python had none. The pytest job now installs `python3-pil`; the assertion stays, so a host missing Pillow still fails loudly.
+
 ## 2026-11-22 — session end: Bill's priorities, PR sweep
 
 - **Decided (Bill):** DeepSeek V4.1 is the next work item; Klarheit is dropped for now; write-well adopts Refinery changes in its own time. Recorded in HANDOFF and Claude's project memory.
