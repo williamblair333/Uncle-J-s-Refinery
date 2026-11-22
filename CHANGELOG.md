@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-22 — vault mirror copies deleted
+
+- **Changed:** William deleted the brain-vault mirror copies at `~/.uncle-j-memory/memory/vault/` (39 files; the store went from 3,322 to 3,283). `premortem-audit.md` and the dream notes are untouched. A session's `rm -rf` there is denied by the permission rules, so William ran it with `!`. README and ROADMAP checked, no update needed.
+
 ## 2026-11-22 — session end: DeepSeek diagnosis, vault archived, name change
 
 - **Session summary:** five PRs (#381 hook-bench log leak, #382 DeepSeek `--window 16` finding, #383 brain vault archived, #384 agy hashers, #385 William). DeepSeek round 2 scheduled for 21:10 (`dsv41-diag2.timer`). write-well asked whether the Steward should be its own repo: the recommendation was to keep it in write-well until it has run on a second work; nothing was sent to write-well. `docs/SKILLS.md` regenerated (formatting only). README and ROADMAP checked, no update needed.
