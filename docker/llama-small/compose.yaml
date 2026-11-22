@@ -6,7 +6,7 @@
 #   tc-vmh-03: qwen3.5-4b-heretic  (Qwen3.5-4B-Heretic-Q4_K_M.gguf, 2.8 GB)
 # Both: darrellbest/Qwen3.5-{2B,4B}-Heretic-GGUF on Hugging Face, Apache-2.0, sha256 checked
 # 2026-10-23. Copy /opt/models/gguf/qwen3.5-*-heretic/ from the main host.
-# Loopback only (Bill, 2026-10-23: local only for now).
+# Loopback only (William, 2026-10-23: local only for now).
 services:
   llama-small:
     image: ghcr.io/ggml-org/llama.cpp:server-b11459   # multi-arch: amd64, arm64

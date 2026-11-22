@@ -3,7 +3,7 @@
 
 For each git repo under the projects root (default /opt/proj) it reports:
 - HANDOFF.md sections whose heading, or bold label on its own line ("**Open / next:**"),
-  says the work is waiting or next ("Waiting on Bill", "Next session", "Blocked", "Pick up",
+  says the work is waiting or next ("Waiting on William", "Next session", "Blocked", "Pick up",
   "Open questions", "TODO")
 - ROADMAP.md items under "In Progress" and "Planned" headings, one line each, minus
   ones marked done
@@ -28,13 +28,14 @@ import time
 HEADING = re.compile(r"^(#{1,4})\s+(.*)$")
 BOLD_LABEL = re.compile(r"^\*\*([^*]+)\*\*\s*$")
 DATE = re.compile(r"(20\d\d-\d\d-\d\d)")
-WAITING = re.compile(r"\bwaiting|next|blocked|pick up|open question|todo|to do|needs bill|bill to|for bill", re.I)
+WAITING = re.compile(r"\bwaiting|next|blocked|pick up|open question|todo|to do|needs (?:william|bill)|(?:william|bill) to|for (?:william|bill)", re.I)
+# (both names: he went by Bill until 2026-11-22, and older HANDOFF entries still say so)
 ROADMAP_OPEN = re.compile(r"in progress|planned", re.I)
 ROADMAP_ITEM = re.compile(r"^- \*\*(.+?)\*\*")
 DONE = re.compile(r"^\[?(done|resolved|closed)\b|^~~|✅", re.I)
-# "waiting on X" where X is not Bill: something outside our control, which needs a way to force it
+# "waiting on X" where X is not William: something outside our control, which needs a way to force it
 WAITS_ON = re.compile(r"\b(?:waiting (?:on|for)|blocked (?:on|by)|pending (?:live|upstream|merge|release|review)"
-                      r"|until (?:the )?(?:next|upstream|it fires|it happens))\b(?! (?:Bill|you|your)\b)", re.I)
+                      r"|until (?:the )?(?:next|upstream|it fires|it happens))\b(?! (?:William|Bill|you|your)\b)", re.I)
 HAS_PLAN = re.compile(r"\bwatch|cron|retry|poll|trigger|force|repro|bench|ping|nudge|deadline|by 20\d\d|"
                       r"fake|simulat|fixture|then (?:bump|run|merge)", re.I)
 NO_PLAN = "  ⚠ no plan to force it"

@@ -43,7 +43,7 @@ SEND_UNCERTAIN = "uncertain"  # send() result: request went out, delivery unknow
 COVERED_RECHECK = datetime.timedelta(days=30)
 STATUS_RANK = {"blank": 0, "thin": 1, "covered": 2}
 SOURCE_RANK = {"eval": 0, "inbox": 1, "watchlist": 2, "discovered": 3, "top100": 3}
-INBOX_CATEGORY = "Bill's inbox"
+INBOX_CATEGORY = "William's inbox"
 WATCH_EVERY = datetime.timedelta(days=7)
 # GitHub's top 100 overall and the top 100 tagged llm, one search each (sorted by stars).
 TOP_QUERIES = ("stars:>10000", "topic:llm stars:>1000")
@@ -189,8 +189,8 @@ def _write_handoff(paths: store.Paths, key: str, entry: dict) -> None:
     risks = [_defang(r) for r in ev.get("risks", [])]
     text = "\n".join([
         f"# Trial hand-off: {name}", "",
-        "Bill said yes twice: to the find and to the evaluation. Next step is a throwaway",
-        "spike **in a session with Bill**, in a separate working copy outside this repo,",
+        "William said yes twice: to the find and to the evaluation. Next step is a throwaway",
+        "spike **in a session with William**, in a separate working copy outside this repo,",
         "measured against the current setup on tokens, accuracy and offline use.", "",
         UNTRUSTED_BANNER,
         f"- Repo: https://github.com/{name}",
@@ -273,7 +273,7 @@ def step_inbox(paths, deps, inv, answers, queue, pending):
 
 
 def step_watchlist(paths, deps, inv, answers, queue, pending):
-    """A 'maybe' comes back when the project ships a release after Bill answered.
+    """A 'maybe' comes back when the project ships a release after William answered.
     Each one is checked at most weekly."""
     if deps.latest_release is None:
         return
@@ -293,7 +293,7 @@ def step_watchlist(paths, deps, inv, answers, queue, pending):
         facts = deps.facts(e["full_name"])
         if facts is None:
             continue
-        j = deps.ask(judge.pick_prompt(inv, "new release since Bill's maybe", [facts],
+        j = deps.ask(judge.pick_prompt(inv, "new release since William's maybe", [facts],
                                        {facts.full_name: deps.readme(facts.full_name)}),
                      judge.validate_pick)
         if j is None:
@@ -436,7 +436,7 @@ def step_send(paths, deps, queue, pending, dry_run, out):
                          "next message tomorrow")
         return None
     for q in [q for q in queue if q["source"] != "inbox" and gh.is_microsoft(q["full_name"])]:
-        queue.remove(q)  # Bill 2026-11-13: Microsoft only if he asks by hand (inbox)
+        queue.remove(q)  # William 2026-11-13: Microsoft only if he asks by hand (inbox)
         store.log(paths, f"send: dropped {q['full_name']} (Microsoft-owned)")
     if not queue:
         return None
@@ -491,7 +491,7 @@ def step_send(paths, deps, queue, pending, dry_run, out):
 def run_once(paths: store.Paths, deps: Deps, inv: str, dry_run=False, out=print) -> None:
     if dry_run:
         # A dry run works on a throwaway copy of scout/ and state/, so it can never
-        # consume Bill's taps, move the rotation, or write find pages for real.
+        # consume William's taps, move the rotation, or write find pages for real.
         with tempfile.TemporaryDirectory(prefix="scout-dry-") as td:
             for sub in ("scout", "state"):
                 if (paths.root / sub).is_dir():

@@ -1,11 +1,11 @@
 ---
 name: auditor
-description: "Use when Bill states a plan, decision, or change to how he works or what his systems do — deferring a fix, turning something off, choosing how something looks — and when he asks to be challenged, audited, or stress-tested (\"challenge me\", \"audit me\", /auditor). Not for lookups, edits, or questions with no decision in them."
+description: "Use when William states a plan, decision, or change to how he works or what his systems do — deferring a fix, turning something off, choosing how something looks — and when he asks to be challenged, audited, or stress-tested (\"challenge me\", \"audit me\", /auditor). Not for lookups, edits, or questions with no decision in them."
 ---
 
 # auditor
 
-Bill's aim is to be the best he can be, measured against his seven goals: happiness, eternal youth, immortality, eternal freedom, and remembering, knowing and understanding what he chooses (and forgetting at will). The auditor holds his plans to that standard. It aims at reasoning and choices, never at character.
+William's aim is to be the best he can be, measured against his seven goals: happiness, eternal youth, immortality, eternal freedom, and remembering, knowing and understanding what he chooses (and forgetting at will). The auditor holds his plans to that standard. It aims at reasoning and choices, never at character.
 
 Two modes. Quiet runs during ordinary work. Deep runs only when he asks.
 
@@ -34,7 +34,7 @@ When asked, reply in this order:
 5. **Verdict:** sound, sound if X, or unsound because Y. "Sound" is a valid answer.
 6. **Next:** the one question whose answer would move this furthest.
 
-Claims about Bill come from evidence in the conversation or memory, cited, or they become questions. "You skipped the step between X and Y" is the shape; "you lack discipline" is not.
+Claims about William come from evidence in the conversation or memory, cited, or they become questions. "You skipped the step between X and Y" is the shape; "you lack discipline" is not.
 
 ## Examples
 

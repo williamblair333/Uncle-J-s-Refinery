@@ -71,7 +71,7 @@ def test_one_message_per_calendar_day(tmp_path):
     fake = Fake(repos=[F(1), F(2)])
     run.run_once(paths, fake.deps(), "INV")
     assert len(fake.sent) == 1
-    # Bill answers straight away; a second run the same day still sends nothing.
+    # William answers straight away; a second run the same day still sends nothing.
     paths.callbacks.write_text(json.dumps({"message_id": 1001, "data": "scout:no:1"}) + "\n")
     run.run_once(paths, fake.deps(), "INV")
     assert len(fake.sent) == 1

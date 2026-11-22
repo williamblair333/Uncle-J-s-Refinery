@@ -15,7 +15,7 @@ ag = importlib.util.module_from_spec(_spec)
 sys.path.insert(0, str(REPO / "scripts"))
 _spec.loader.exec_module(ag)
 
-# Real turn endings from transcripts. The first is the mtw2 turn Bill complained about, 2026-11-06.
+# Real turn endings from transcripts. The first is the mtw2 turn William complained about, 2026-11-06.
 ASKS = [
     "It would also help `forced-events`, one of the phase's open standards. Want me to look into "
     "it while the live run plays?",
@@ -29,7 +29,7 @@ ASKS = [
     "The next step is the bench. Say the word and I'll start.",
     "If you want, I can write the test.",
 ]
-# Bill's to decide, or no ask at all.
+# William's to decide, or no ask at all.
 QUIET = [
     "Should I merge PR #38 now, or wait until you've printed the coupons?",
     "Want me to push it?",
@@ -69,7 +69,7 @@ def test_real_decisions_and_plain_replies_pass(text):
 def test_reason_quotes_the_ask_and_keeps_the_way_out():
     r = ag.decide({"last_assistant_message": ASKS[1]})["reason"]
     assert "find where the generator" in r
-    assert "start it now" in r and "Bill's call" in r and "better way" in r
+    assert "start it now" in r and "William's call" in r and "better way" in r
     assert "analysis, a draft or a review" in r   # "analyze X" must not turn into building X
 
 

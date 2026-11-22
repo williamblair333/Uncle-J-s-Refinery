@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit hook: when Bill asks why he had to catch something, make the fix mechanical.
+"""UserPromptSubmit hook: when William asks why he had to catch something, make the fix mechanical.
 
 "Why did I have to request this", "you should have seen this", "I'm tired of having to solve
 the problems": each says the agent missed something it could have seen. Left alone, sessions
 answer with an apology and a memory note, which is read only when the model remembers to read
 it, so the same miss comes back (mtw2, 2026-11-01: STANDARDS had the rule, the session never
-checked it, and it answered Bill's complaint with one more memory note).
+checked it, and it answered William's complaint with one more memory note).
 
 This hook detects those prompts with scripts/meta_questions.is_meta (the same detector the
 weekly meta-question count uses, so the bench and the trigger agree) plus a few "tired of
@@ -77,7 +77,7 @@ ORDER_MESSAGE = (
 )
 
 MESSAGE = (
-    "Bill is pointing at a miss you could have caught yourself. Before answering:\n"
+    "William is pointing at a miss you could have caught yourself. Before answering:\n"
     "1. Invoke the expert-bar skill with the Skill tool (and think-wider if the miss was in how "
     "you planned the work).\n"
     "2. Name the step a senior practitioner would have taken, and why it didn't happen.\n"
@@ -94,7 +94,7 @@ def is_from_bill(prompt: str) -> bool:
     return not (head.startswith("<task-notification") or "<task-notification>" in head
                 or "[SYSTEM NOTIFICATION" in head or head.startswith("<system-reminder>")
                 or head.startswith("This session is being continued from a previous conversation")
-                or "<cross-session-message" in head)     # a peer session's text, not Bill's
+                or "<cross-session-message" in head)     # a peer session's text, not William's
 
 
 def triggered(prompt: str) -> bool:
@@ -104,20 +104,20 @@ def triggered(prompt: str) -> bool:
     if is_meta(prompt):
         return True
     # is_meta skips pasted terminal exchanges ("●"), whose agent text is full of "you should
-    # have". Bill's own lines count wherever they sit: before the paste, on its ❯ lines, after it.
+    # have". William's own lines count wherever they sit: before the paste, on its ❯ lines, after it.
     own = bills_lines(prompt)
     if own != prompt and is_meta(own):
         return True
     if len(own) <= 3000 and EXTRA.search(own):
         return True
-    # Bill sometimes types straight on after a pasted reply, on its last line.
+    # William sometimes types straight on after a pasted reply, on its last line.
     tail = prompt.rsplit("●", 1)[-1]
     return len(tail) <= 3000 and bool(EXTRA.search(tail))
 
 
 def bills_lines(prompt: str) -> str:
     """The prompt without pasted agent replies. A reply starts at a "●" line and runs through its
-    indented and blank lines; the first flush-left line after it is Bill's again."""
+    indented and blank lines; the first flush-left line after it is William's again."""
     kept, in_reply = [], False
     for line in prompt.splitlines():
         stripped = line.lstrip()

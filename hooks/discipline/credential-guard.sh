@@ -121,7 +121,7 @@ fi
 REASON="Blocked by credential-guard: this $TOOL call touches a credential or system secret file (matched: $HIT).
 
 Every tool is covered, read-only included, by design. Don't work around it with another
-tool or an indirect path. If the file is genuinely needed, ask Bill to run the command
+tool or an indirect path. If the file is genuinely needed, ask William to run the command
 himself with \`!\`. Logged to state/hook-blocks.log"
 
 jq -n --arg r "$REASON" '{

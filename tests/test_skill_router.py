@@ -1,4 +1,4 @@
-"""features/prompt-triggers/skill_router.py: Bill's prompts name the judgment skills they match."""
+"""features/prompt-triggers/skill_router.py: William's prompts name the judgment skills they match."""
 import json
 import os
 import subprocess
@@ -12,7 +12,7 @@ SCRIPT = REPO / "features" / "prompt-triggers" / "skill_router.py"
 sys.path.insert(0, str(SCRIPT.parent))
 import skill_router as sr  # noqa: E402
 
-# Bill's own words from real sessions (2026-10-18 .. 2026-11-01), and the skill each should route to.
+# William's own words from real sessions (2026-10-18 .. 2026-11-01), and the skill each should route to.
 HITS = [
     ("that is fine but I really wanted a statue and not a relief", "think-wider"),
     ("i want a persistent connection. easiest way to do that. is a tool needed?", "gttp"),
@@ -28,7 +28,7 @@ HITS = [
     ("why does the bridge keep failing after a restart", "occams-razor"),
     ("get a second opinion from gemini on this plan", "referee"),
     ("review this critique and tell me if it's right", "validate-external-audit"),
-    # 2026-11-02: a handoff review ran with no review skills until Bill asked twice.
+    # 2026-11-02: a handoff review ran with no review skills until William asked twice.
     ("review /home/bill/Downloads/daily-digest-handoff.md", "verify-handoff-claims"),
     ("review /home/bill/Downloads/daily-digest-handoff.md", "product-focus-review"),
     ("review /home/bill/Downloads/daily-digest-handoff.md", "think-wider"),
@@ -38,7 +38,7 @@ HITS = [
     ("/home/bill/Downloads/125b-local-performance-handoff.md should answer your strata question. "
      "please analyze / review", "verify-handoff-claims"),
     ("the plan in notes.md — can you critique it", "product-focus-review"),
-    # Klarheit 2026-11-04: five design turns, zero skills, until Bill complained.
+    # Klarheit 2026-11-04: five design turns, zero skills, until William complained.
     ("let's talk about the lotto and using my birth chart + whatever factors regarding the date "
      "of drawing  and what else?", "think-wider"),
     ("let's talk about the lotto and using my birth chart", "superpowers:brainstorming"),
@@ -246,7 +246,7 @@ def test_no_expert_bar_with_standards_outside_a_project_or_for_harness_text(tmp_
 
 def test_no_expert_bar_for_unattended_scheduled_runs(tmp_path):
     # 2026-11-05/14/15: gambling's scheduled `claude -p` runs got expert-bar every day, declined
-    # it every time, and lost a tool call to the gate. An unattended run can't plan with Bill.
+    # it every time, and lost a tool call to the gate. An unattended run can't plan with William.
     proj, state = make_project(tmp_path / "proj"), tmp_path / "state"
     prompt = "Scheduled task (unattended): run Klarheit experiment E12's one-shot holdout."
     assert run_in(prompt, state, proj).stdout == ""

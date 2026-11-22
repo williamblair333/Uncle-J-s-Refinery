@@ -114,7 +114,7 @@ def test_kill_switch_headless_and_hook_bench(monkeypatch):
     assert cc.decide(hook, ask=must_not_call) is None
 
 
-# Text-leaving-the-machine: the risk Bill accepted by name, on the condition this holds.
+# Text-leaving-the-machine: the risk William accepted by name, on the condition this holds.
 @pytest.mark.parametrize("url", [
     "http://10.0.0.100:8090", "https://api.example.com", "http://127.0.0.1.evil.com:8090",
     "http://localhost@evil.com/", "http://127.0.0.1:8090@evil.com/", "ftp://127.0.0.1:8090", "not a url", "",

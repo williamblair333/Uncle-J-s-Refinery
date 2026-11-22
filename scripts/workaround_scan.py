@@ -5,7 +5,7 @@ Reads the hook JSON on stdin, scans the assistant text of the turn that just end
 workaround phrases ("worked around", "hand-fed", "waiting on", "can't X, so"...) and, on a
 hit, blocks the stop once with a reason that asks for the cause to be fixed or filed.
 `stop_hook_active` means this is the continuation the hook forced, so it never blocks twice.
-False positives cost one short extra reply; a missed workaround costs Bill catching it.
+False positives cost one short extra reply; a missed workaround costs William catching it.
 
 Skills fire on the same in-the-moment judgment that misses these, which is why this is
 mechanical (ROADMAP "Workarounds must surface the cause", 2026-10-30).
@@ -28,8 +28,8 @@ PHRASES = [
     r"(?<!n't )(?<!not )\b(?:a|the|this|that)\s+workaround\b(?![-\w]|\s+(?:detector|scan|scanner|check|hook|tests?|bench)\b)",
     r"hand[- ]fe(?:d|eding)\b",  # the turn's own act; "hand-feeds" describes the habit
     r"fed (?:it|them|agy) by hand",
-    # the turn's own wait, not a list item or another process's; Bill's answer is not a block
-    r"\b(?:I'm|I am|I'll be|we're|we are|now|still)\s+(?:still\s+)?waiting on (?!(?:you|your|Bill)\b)",
+    # the turn's own wait, not a list item or another process's; William's answer is not a block
+    r"\b(?:I'm|I am|I'll be|we're|we are|now|still)\s+(?:still\s+)?waiting on (?!(?:you|your|William|Bill)\b)",
     r"pending (?:a )?live",
     r"clicked past",
     r"\b(?:can't|cannot|couldn't)\b[^.\n]{0,80}?,? so (?:I|I'll|we|instead)\b",
@@ -55,7 +55,7 @@ def _texts(content) -> list[str]:
 
 
 def _is_prompt(entry: dict) -> bool:
-    """A user entry Bill typed, as opposed to a tool result fed back to the model."""
+    """A user entry William typed, as opposed to a tool result fed back to the model."""
     if entry.get("type") != "user" or entry.get("isMeta"):
         return False
     content = (entry.get("message") or {}).get("content")

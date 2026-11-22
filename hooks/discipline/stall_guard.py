@@ -2,7 +2,7 @@
 """PreToolUse (Bash) stall guard: refuse waits that can hang without anyone being told.
 
 A background Bash command notifies its session only when it exits. Anything that can hang
-without exiting, or exit with the wrong status, leaves the session idle until Bill asks.
+without exiting, or exit with the wrong status, leaves the session idle until William asks.
 On 2026-11-21 that cost write-well 2 h (two `ps | grep` waits matched each other), mtw2 3 h
 (a `pgrep -f` matched its own `bash -c` line, in a loop with no clock) and hid a RAM stop
 behind `| tail`. This merges write-well's comfy_guard.py and mtw2's preflight_waits.py.

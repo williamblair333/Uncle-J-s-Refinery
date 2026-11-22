@@ -8,12 +8,12 @@
     just mail send --to A --subject S (--body TEXT | --body-file F)
 
 Config: KEY=VALUE file at $BUDDY_MAIL_ENV (default ~/.config/uncle-j/buddy-mail.env), 0600,
-written by Bill (see the "Buddy accounts setup" doc): BUDDY_MAIL_USER, BUDDY_MAIL_APP_PASSWORD,
+written by William (see the "Buddy accounts setup" doc): BUDDY_MAIL_USER, BUDDY_MAIL_APP_PASSWORD,
 optional BUDDY_MAIL_IMAP (imap.gmail.com:993), BUDDY_MAIL_SMTP (smtp.gmail.com:465).
 
 Reads never change mail (readonly select, BODY.PEEK); there is no delete. Output is one JSON
 object; failures carry "error" and exit 1. The password is never printed.
-Policy, not code: mail to anyone but Bill is confirm-first.
+Policy, not code: mail to anyone but William is confirm-first.
 """
 
 import argparse

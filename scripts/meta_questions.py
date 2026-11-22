@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Bill's meta-questions counted per session, per ISO week.
+"""William's meta-questions counted per session, per ISO week.
 
-Walks Claude Code transcripts, finds prompts where Bill asked why the agent didn't anticipate
+Walks Claude Code transcripts, finds prompts where William asked why the agent didn't anticipate
 something ("why didn't you…", "why did I have to ask", "is this the best approach", "why not
 from the get-go"). It is the outcome metric for STANDARDS.md `meta-question-rate`.
 
@@ -27,7 +27,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from workaround_scan import _is_prompt, _texts  # noqa: E402
 
-# Grouped by symptom. Each pattern is about the agent ("you") or about Bill having had to
+# Grouped by symptom. Each pattern is about the agent ("you") or about William having had to
 # ask; a "why" about the world ("why is it slow") is an ordinary question and stays out.
 _NT = r"(?:n['’]?t|\s+not)"  # didn't / didnt / did not
 _META_PATTERNS = [
@@ -42,7 +42,7 @@ _META_PATTERNS = [
     rf"\bwhy\s+(?:was|were|is|are){_NT}\s+(?:this|that|it|they)\s+(?:done|caught|checked|there|in|on|listed|included|then|already)\b",
     r"\bthought\s+(?:(?:this|that|it)\s+)?was\s+fixed\b",
     rf"\byou\s+(?:did|do|have|were|was){_NT}\b[^.?!\n]{{0,80}}\bwhy\s*\?",  # "you didn't X - why?"
-    # Bill had to ask, tell or remind
+    # William had to ask, tell or remind
     r"\bwhy\b[^.?!\n]{0,30}\bI\s+(?:had|have|need(?:ed)?|keep)\s+to\s+(?:ask|tell|say|remind|point|explain)\b",
     r"\bwhy\s+(?:did|do)\s+I\s+(?:even\s+)?(?:have|need|keep)\s+to\b",
     r"\bwhy\s+(?:do\s+you\s+)?keep\s+asking\b|\bwhy\s+(?:are|were)\s+you\s+(?:asking|being)\b",
@@ -55,7 +55,7 @@ _META_PATTERNS = [
     r"\bis\s+(?:all\s+)?(?:this|that|it)\s+the\s+best\b",
     r"\bwhy\s+not\s+(?:from|at|since)\s+the\s+(?:start|get[- ]?go|beginning|outset)\b",
     r"\bfrom\s+the\s+get[- ]?go\b",
-    r"\bwhy\s+not\s+(?:just\s+)?use\b",  # Bill proposing the approach the agent didn't
+    r"\bwhy\s+not\s+(?:just\s+)?use\b",  # William proposing the approach the agent didn't
 ]
 META_RE = re.compile("|".join(_META_PATTERNS), re.I)
 
@@ -217,7 +217,7 @@ def report_line(weeks: dict, now: datetime) -> str:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="Bill's meta-questions counted per session, per ISO week")
+    parser = argparse.ArgumentParser(description="William's meta-questions counted per session, per ISO week")
     parser.add_argument("--files", nargs="+", type=Path)
     parser.add_argument("--now", help="Reference date YYYY-MM-DD (default: now UTC; treated as UTC midnight)")
     parser.add_argument("--weeks", type=int, default=8, help="Number of recent weeks to display in table (default: 8)")

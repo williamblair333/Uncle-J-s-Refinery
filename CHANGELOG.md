@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-22 — the user goes by William
+
+- **Changed (William, via me-35, confirmed in this session):** CLAUDE.md now opens with his name, so every session calls him William. The prose that addresses or describes him says William in 64 files: hooks, scripts, skills, ROADMAP, STANDARDS, PRODUCT and docs (223 replacements, done by a script that only touches the capitalised word).
+- **Left as written on purpose:** CHANGELOG and HANDOFF entries before today, dated design docs, `scout/` and `bench/` data, test fixtures and JSON. They're records. System names keep `bill` (`/home/bill`, the Gitea owner, usernames, URLs), and so do identifiers like `is_from_bill`.
+- **Both names match** where code reads his words in old text: `waiting_sweep.py`'s waiting/waits-on patterns and `workaround_scan.py`'s "waiting on" lookahead accept William and Bill (test added).
+
 ## 2026-11-22 — agy may run read-only hashers
 
 - **Fixed (from mtw2's report):** headless agy was auto-denied `sha256sum`, and in headless mode a denied command ends the whole job (the 10-26 "how agy lost jobs" rule). `sha256sum`, `sha1sum`, `md5sum` and `cksum` are now on agy's allow list and in its rules block. Pipes stay denied, so the call must be bare (`sha256sum file`, not `… | cut`). `tests/test_brief_lint.py` checks the real permissions file (red against the old one).

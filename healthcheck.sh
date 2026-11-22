@@ -1216,7 +1216,7 @@ check_ask_local_config() {
 
 # ----- 9n-2. ask_local backend: Ollama answering, default model present ------
 # Only meaningful when ask_local is registered. A STOPPED container is a choice
-# (Bill stops it to free VRAM for other GPU work) and is reported, not failed —
+# (William stops it to free VRAM for other GPU work) and is reported, not failed —
 # failing it would alert on every deliberate stop. A missing container, or a
 # running one whose API does not answer, is a real fault.
 check_ask_local_backend() {

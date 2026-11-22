@@ -1,4 +1,4 @@
-"""features/prompt-triggers/meta_trigger.py: Bill's "why did I have to catch this" prompts force a real fix."""
+"""features/prompt-triggers/meta_trigger.py: William's "why did I have to catch this" prompts force a real fix."""
 import json
 import subprocess
 import sys
@@ -12,7 +12,7 @@ sys.path.insert(0, str(SCRIPT.parent))
 sys.path.insert(0, str(REPO / "scripts"))
 import meta_trigger as mt  # noqa: E402
 
-# Bill's own words, 2026-11-01 (mtw2 session and this one).
+# William's own words, 2026-11-01 (mtw2 session and this one).
 HITS = [
     "why did i have to request this!! you could have should have seen this possibility",
     "you should have caught that before running it",
@@ -37,7 +37,7 @@ HITS = [
     "OK.  I had this conversation in Klarheit and why didn't the fucking skills fire",
     # mtw2, 2026-11-06: "even" slipped past the pattern
     "My reply is why did I even have to ask of course",
-    # 2026-11-06: Bill's complaint sits BEFORE the paste, and an agent reply follows it
+    # 2026-11-06: William's complaint sits BEFORE the paste, and an agent reply follows it
     "I thought we had skills and hooks to allow you to be forward thinking, clever and always "
     "looking for the best way to do something. but apparently not recap: Getting LLM rulers\n\n"
     "❯ so you can't force a marriage offer..bummer\n\n"
@@ -78,10 +78,10 @@ MISSES = [
     "do it but also how do we make this unverisal for all project / sessions",
     "what's the status of the qa run?",
     "can you make it so a pope doesn't die while you're testing?",
-    # pasted agent text full of "you should have", with nothing from Bill after it
+    # pasted agent text full of "you should have", with nothing from William after it
     "● You should have seen the log. Why didn't you check it? That was my miss.",
     "<task-notification> why didn't you check </task-notification>",
-    # a peer session's message is not Bill's complaint (2026-11-04)
+    # a peer session's message is not William's complaint (2026-11-04)
     '<cross-session-message from="uds:/x.sock">why didn\'t the skills fire? I\'m frustrated'
     "</cross-session-message>",
     "the skills dir has 90 entries",

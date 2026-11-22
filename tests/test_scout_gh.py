@@ -96,7 +96,7 @@ def test_readme_caps_length_and_failure_is_empty():
 
 
 def test_search_drops_microsoft_owned_repos():
-    # Bill 2026-11-13: anything Microsoft posts is the absolute last resort.
+    # William 2026-11-13: anything Microsoft posts is the absolute last resort.
     items = [_repo(id=1), _repo(id=2, full_name="microsoft/LLMLingua"),
              _repo(id=3, full_name="Azure/azure-mcp"), _repo(id=4, full_name="github/x")]
     got = gh.search("compression", run=_runner(0, {"items": items}))

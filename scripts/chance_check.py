@@ -9,16 +9,16 @@ Next idea, untested: run it nightly over the day's turn ends, where neither cost
 
 Written as a Stop hook so it can be wired if a later bench clears the bar. What follows is that design.
 
-mtw2, 2026-11-06. Bill: "WE DON'T WANT TO BE AT THE MERCY OF THE GAME WAITING ON STUFF TO TRIGGER
+mtw2, 2026-11-06. William: "WE DON'T WANT TO BE AT THE MERCY OF THE GAME WAITING ON STUFF TO TRIGGER
 IN ORDER TO TEST." The session had `forced-events` on its STANDARDS list and knew how to kill a
 Pope on demand, and still left a wife offer to a dice roll. slowest-loop-first holds the method,
-but it routes only from Bill's prompts, so it never saw the session write the gap down.
+but it routes only from William's prompts, so it never saw the session write the gap down.
 
 Word matching can't do this: a tight regex missed that turn ("the gap is a wife offer on a fresh
 turn" has no waiting words) and fired on future draws, where waiting is the method. So a local
 model reads the last message and judges it. The verdict's `how_to_force` is only a suggestion.
 
-Limits, from the pre-mortem Bill accepted by name:
+Limits, from the pre-mortem William accepted by name:
   * Latency: thinking off, 10 s timeout, replies under 300 chars skip it, any failure lets the
     stop through. Each call logs its seconds, so the cost is a number.
   * Wrong flags: the block fires once, and the reason offers a one-line way out.
@@ -89,7 +89,7 @@ REASON = (
     "edit, script call, fake input, test double or manual trigger. Turn what works into a repeatable test, and "
     "add the event to the project's forcing list (`just forcing-list`).\n"
     "- A forcer must run the real code path, and never fake the data the test is meant to measure.\n"
-    "- If this flag is wrong or forcing isn't worth it (waiting is the method, only Bill can supply it, or it "
+    "- If this flag is wrong or forcing isn't worth it (waiting is the method, only William can supply it, or it "
     "costs more than it proves), say so in one line with your reason, and stop."
 )
 

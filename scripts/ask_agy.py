@@ -139,7 +139,7 @@ def _is_command_denied(cmd_spec: str, inp: str) -> bool:
 
 def _compute_fix(tool: str | None, inp: str | None) -> str:
     if inp and (_is_outside_opt_proj(inp) or _is_secret_like(inp)):
-        return "ask Bill before allowing: outside /opt/proj or secret-like"
+        return "ask William before allowing: outside /opt/proj or secret-like"
 
     is_command = bool(tool and tool.lower() in ("run_command", "runcommand", "command", "bash", "sh"))
     if is_command and inp:

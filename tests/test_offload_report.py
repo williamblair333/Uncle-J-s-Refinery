@@ -312,9 +312,9 @@ def test_repeat_denials_groups_and_drops_count_1(tmp_path: Path):
         # count 1 for (RunCommand, pytest) -> should be dropped
         {"ts": now - 2000, "project": "p1", "tool": "RunCommand", "input": "pytest", "fix": 'add "command(pytest)" to allow in features/antigravity/permissions.json'},
         # count 3 for (RunCommand, touch /tmp/x)
-        {"ts": now - 5000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask Bill before allowing: outside /opt/proj or secret-like"},
-        {"ts": now - 4000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask Bill before allowing: outside /opt/proj or secret-like"},
-        {"ts": now - 1000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask Bill before allowing: outside /opt/proj or secret-like"},
+        {"ts": now - 5000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask William before allowing: outside /opt/proj or secret-like"},
+        {"ts": now - 4000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask William before allowing: outside /opt/proj or secret-like"},
+        {"ts": now - 1000, "project": "p1", "tool": "RunCommand", "input": "touch /tmp/x", "fix": "ask William before allowing: outside /opt/proj or secret-like"},
     ]
     denials_file.write_text("\n".join(json.dumps(x) for x in lines) + "\n")
 
@@ -333,7 +333,7 @@ def test_repeat_denials_groups_and_drops_count_1(tmp_path: Path):
     # sorted by count desc: count 3 comes first, count 2 second
     assert repeat[0]["input"] == "touch /tmp/x"
     assert repeat[0]["count"] == 3
-    assert repeat[0]["fix"] == "ask Bill before allowing: outside /opt/proj or secret-like"
+    assert repeat[0]["fix"] == "ask William before allowing: outside /opt/proj or secret-like"
     assert "last" in repeat[0]
 
     assert repeat[1]["input"] == "git stash"

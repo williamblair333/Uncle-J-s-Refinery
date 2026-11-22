@@ -118,7 +118,7 @@ changes to any component?
 - **Yes** → invoke `post-audit-memory-capture` to record the design invariants / closed attack
   vectors as durable notes. That skill now writes markdown into the memweave corpus
   (`~/.uncle-j-memory/memory/`), so the notes surface in future `mw_search.py` prior-art checks.
-  (Skill dir name retained for symlink stability; rename is a Bill-keyboard follow-up.)
+  (Skill dir name retained for symlink stability; rename is a William-keyboard follow-up.)
 - **No** → note "No hardening this session — design memory step skipped."
 
 ### Step 6c — Scout state sweep (Refinery only)
@@ -132,7 +132,7 @@ session's docs so they ride the same PR:
 git status --short scout/ && git add scout/answers.json scout/finds/ scout/handoffs/ 2>/dev/null
 ```
 
-Don't edit them by hand. If `scout/inbox.md` or `scout/map.md` changed, Bill edited them —
+Don't edit them by hand. If `scout/inbox.md` or `scout/map.md` changed, William edited them —
 stage those too.
 
 ### Step 7 — Custom checks

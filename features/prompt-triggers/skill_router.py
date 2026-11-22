@@ -4,12 +4,12 @@
 Skills a hook forces (pre-mortem, session-end-checklist) ran in most interactive sessions over
 the 14 days to 2026-11-01. The judgment skills nobody forces (gttp, think-wider, prior-art-check,
 occams-razor, referee) ran in 0-4 of 65. They were listed, but the model didn't pick them up
-mid-task. This hook matches Bill's prompt against each skill's own trigger phrases and names the
+mid-task. This hook matches William's prompt against each skill's own trigger phrases and names the
 matches, so picking them up no longer depends on the model remembering.
 
 The patterns are a fixed table, not a model call: the hook runs on every prompt, and a regex
 costs nothing. `just router-bench` replays real prompts to measure fire rate and samples.
-skill_name_trigger.py already handles skills Bill names; meta_trigger.py handles his
+skill_name_trigger.py already handles skills William names; meta_trigger.py handles his
 complaints. This covers the turn before the complaint. SKILL_ROUTER_OFF=1 turns it off.
 """
 import json
@@ -20,10 +20,10 @@ import sys
 import time
 
 MAX_SKILLS = 3
-MAX_PROMPT = 3000          # longer prompts are pastes (transcripts, docs), not Bill's ask
+MAX_PROMPT = 3000          # longer prompts are pastes (transcripts, docs), not William's ask
 
 # A review of a plan-shaped document. 2026-11-02: "review .../daily-digest-handoff.md" ran with
-# no review skill until Bill asked twice. One pattern feeds three routes so they stay in step;
+# no review skill until William asked twice. One pattern feeds three routes so they stay in step;
 # they sit at the end of ROUTES so the MAX_SKILLS cap never drops an older, narrower route.
 # Either order: "review the plan" and "<path>.md ... please analyze / review" (2026-11-02 miss).
 # Doc-first needs a real file name: a bare "HANDOFF:" or "ROADMAP" in pasted text followed by a
@@ -45,7 +45,7 @@ ROUTES = [
         r"(?:the\s+|my\s+|any\s+|those\s+|these\s+)?(?:\w+\s+)?skills?\b"
         r"|\bskills?\s+(?:\w+\s+){0,3}supposed\s+to\s+(?:kick\s+in|fire|run|trigger|load)\b"
         r"|\bskills?\s+(?:didn['’]?t|never|don['’]?t)\s+(?:fire|kick|trigger|run|load)\b", re.I),
-     "Bill says installed skills didn't fire"),
+     "William says installed skills didn't fire"),
     ("gttp", re.compile(
         r"\bwhat\s+if\s+I\b"
         r"|\bis\s+(?:it|this|that|\w+)\s+a\s+good\s+idea\b"
@@ -158,7 +158,7 @@ ALT_SCAN = re.compile(
     r"|extension|plugin|product|service)s?\b)", re.I | re.S)
 ALT_WHY = "sizing up a tool or product: find what else does the job, maybe worlds better"
 
-# A plan review names the whole review set, past MAX_SKILLS: Bill wants a plan judged by every
+# A plan review names the whole review set, past MAX_SKILLS: William wants a plan judged by every
 # lens that applies, and 2026-11-02 showed three wasn't enough (expert-bar, red-team, referee
 # all applied to the digest handoff and none were named).
 PLAN_SET = [
@@ -190,7 +190,7 @@ DOC_MAX = 200_000
 
 
 def is_from_bill(prompt: str) -> bool:
-    """Harness messages also arrive as prompts; their text is agent output, not Bill's ask."""
+    """Harness messages also arrive as prompts; their text is agent output, not William's ask."""
     head = prompt.lstrip()[:400]
     return not (head.startswith(("<task-notification", "<command-", "<local-command",
                                  "<system-reminder>", "Base directory for this skill",
@@ -201,8 +201,8 @@ def is_from_bill(prompt: str) -> bool:
 
 
 def own_words(prompt: str) -> str:
-    """Bill's text after any pasted terminal exchange. An agent reply starts with "●" and runs
-    to the next blank line; what follows is Bill's."""
+    """William's text after any pasted terminal exchange. An agent reply starts with "●" and runs
+    to the next blank line; what follows is William's."""
     if "●" not in prompt:
         return prompt
     tail = prompt.rsplit("●", 1)[-1]
@@ -291,10 +291,10 @@ def record(session: str, hits: list[tuple[str, str]]) -> None:
 
 # A project with no STANDARDS.md gets expert-bar once per session, gated like any route.
 # Klarheit 2026-11-04: the session-start notice said "no STANDARDS.md, run expert-bar"; the
-# session read it, never ran it, and gave Bill a thin design. A notice is advice; this holds a tool call.
+# session read it, never ran it, and gave William a thin design. A notice is advice; this holds a tool call.
 PROJECT_MARKERS = ("PRODUCT.md", "README.md", "justfile", "pyproject.toml", "package.json")
 EXPERT_BAR_WHY = "this project has no STANDARDS.md; write its expert bar before planning work"
-# Unattended scheduled runs (gambling's scheduled_claude.sh) can't plan with Bill. 2026-11-05/14/15
+# Unattended scheduled runs (gambling's scheduled_claude.sh) can't plan with William. 2026-11-05/14/15
 # each got expert-bar, declined it, and lost a tool call to the gate. Routed hits still apply.
 UNATTENDED = re.compile(r"\s*Scheduled task \(unattended\)")
 

@@ -137,7 +137,7 @@ def test_run_gh_failure_sends_nothing_state_valid(tmp_path):
 
 
 def test_send_drops_microsoft_outside_the_inbox(tmp_path):
-    # Bill 2026-11-13: never surface Microsoft repos unless he asked for one himself.
+    # William 2026-11-13: never surface Microsoft repos unless he asked for one himself.
     paths = setup(tmp_path)
     item = {"rung": 1, "source": "discovered", "judgment": PICK,
             "found_at": "2026-10-17T00:00:00Z"}
@@ -181,7 +181,7 @@ def _snapshot(root):
 
 
 def test_dry_run_leaves_all_state_untouched(tmp_path):
-    # Review I1: a dry run used to consume Bill's taps and keep the pending message,
+    # Review I1: a dry run used to consume William's taps and keep the pending message,
     # so the 48 h expiry later overwrote his "yes" with "maybe".
     paths = setup(tmp_path, reviewed=True, inbox=["o/r1"])
     store.save_answers(paths.answers, {"finds": {"3": {"full_name": "o/r3", "rung": 1,

@@ -62,7 +62,7 @@ if [[ "$installed" != "$VERSION" ]]; then
 fi
 [[ "${1:-}" == --install ]] && exit 0
 
-# FIREFOX_MCP_SHOW=1 opens a real window, so Bill can watch and take over (captcha, 2FA).
+# FIREFOX_MCP_SHOW=1 opens a real window, so William can watch and take over (captcha, 2FA).
 headless=()
 [[ "${FIREFOX_MCP_SHOW:-0}" != 1 ]] && headless=(--headless)
 

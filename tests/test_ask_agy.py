@@ -46,9 +46,9 @@ def test_missing_cwd_is_not_reported_as_missing_agy(tmp_path):
     (".venv/bin/python -m pytest", 'add "command(.venv/bin/python)"'),
     ("sed -n 1p scripts/foo.py", 'add "command(sed)"'),
     ("git stash", 'add "command(git stash)"'),
-    ("cat /etc/passwd", "ask Bill"),
-    ("cat stack.env", "ask Bill"),
-    ("printenv", "ask Bill"),
+    ("cat /etc/passwd", "ask William"),
+    ("cat stack.env", "ask William"),
+    ("printenv", "ask William"),
     ("cat /opt/proj/x/README.md", 'add "command(cat)"'),
     ("git grep x", "command(git grep) is denied on purpose"),
 ])
@@ -229,12 +229,12 @@ def test_path_outside_opt_proj_asks_bill(tmp_path):
     fixes = out["fix_cause"]
     assert len(fixes) == 1
     assert fixes[0]["input"] == "touch /tmp/probe.txt"
-    assert fixes[0]["fix"] == "ask Bill before allowing: outside /opt/proj or secret-like"
+    assert fixes[0]["fix"] == "ask William before allowing: outside /opt/proj or secret-like"
 
     # Secret-like word
     out_sec = ask.fix_cause({"denied": ["RunCommand: cat .env"]})
     assert len(out_sec) == 1
-    assert out_sec[0]["fix"] == "ask Bill before allowing: outside /opt/proj or secret-like"
+    assert out_sec[0]["fix"] == "ask William before allowing: outside /opt/proj or secret-like"
 
 
 def test_ok_with_warning_carries_fix_cause_only_when_deny_matched(tmp_path):
@@ -416,7 +416,7 @@ def test_merge_creates_missing_file(tmp_path):
 
 def test_shipped_rules_have_no_wildcards_and_deny_destructive():
     rules = json.loads((REPO / "features/antigravity/permissions.json").read_text())
-    # read_url(*) is the one catch-all: web research is what agy is for (Bill, 2026-10-25)
+    # read_url(*) is the one catch-all: web research is what agy is for (William, 2026-10-25)
     joined = " ".join(r for r in rules["allow"] if r != "read_url(*)")
     assert "(*)" not in joined and "regex:" not in joined
     for must in ("command(rm)", "command(sudo)", "command(git push)", "command(curl)",

@@ -13,7 +13,7 @@ matching hook exactly as Claude Code would. Reports, per hook:
 
 Replayed events: PreToolUse (every tool call), PostToolUse (every successful tool call, with
 the transcript's toolUseResult as tool_response; only hooks listed in post_tool_replay run),
-UserPromptSubmit (every prompt Bill typed), Stop (each turn's assistant text, passed as
+UserPromptSubmit (every prompt William typed), Stop (each turn's assistant text, passed as
 last_assistant_message). A hook whose exit-0 output the harness would drop is counted as
 'ignored', not as a fire. --export leaves tool responses out unless --with-responses. Hooks run in a
 sandbox: HOME is a temp dir mirroring the real one by symlinks except ~/.claude/state, the hook-blocks log and every

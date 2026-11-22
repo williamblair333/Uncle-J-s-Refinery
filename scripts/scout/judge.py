@@ -27,10 +27,10 @@ SCOUT_SYSTEM = (
     + JSON_RULE
 )
 
-GOALS = ("Bill's four goals, in order: accuracy, token efficiency (cheap in total), "
+GOALS = ("William's four goals, in order: accuracy, token efficiency (cheap in total), "
          "creativity, offline capability. Fit test: it must come in as an MCP server or a "
          "script without taking over the runtime — Uncle J stays the runtime. "
-         "Bill rules out Microsoft software, including GitHub- and LinkedIn-owned projects "
+         "William rules out Microsoft software, including GitHub- and LinkedIn-owned projects "
          "and anything that depends on Microsoft code (e.g. Playwright, markitdown; "
          "TypeScript as a build tool is fine): it fails the fit test. It also fails if it "
          "stops working when a vendor's server goes away: a hosted API, account or licence "
@@ -94,7 +94,7 @@ def pick_prompt(inv: str, category: str, candidates: list, readmes: dict) -> str
     return (
         f"Category: {category}\n\nWhat Uncle J already has:\n{inv}\n\n{GOALS}\n\n"
         f"Candidates:\n{blocks}\n"
-        "Pick the ONE candidate most worth Bill's attention, or null if none fits or Uncle J "
+        "Pick the ONE candidate most worth William's attention, or null if none fits or Uncle J "
         "already has an equivalent. 'gap': the gap it fills (1 sentence). 'take': what it is "
         "and why it matters here (2-3 sentences). 'risk': the main risk (1 sentence). 'fit': "
         "whether it passes the fit test. 'scores': 0-5 per goal.\n"

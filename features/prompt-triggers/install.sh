@@ -3,9 +3,9 @@
 #
 # Registers the UserPromptSubmit hooks in ~/.claude/settings.json, each keyed on a marker so
 # a re-run changes nothing:
-#   skill_name_trigger.py  Bill names a skill -> invoke it
-#   meta_trigger.py        Bill asks why he had to catch something -> expert-bar + a real check
-#   skill_router.py        Bill's prompt matches a judgment skill's triggers -> name it
+#   skill_name_trigger.py  William names a skill -> invoke it
+#   meta_trigger.py        William asks why he had to catch something -> expert-bar + a real check
+#   skill_router.py        William's prompt matches a judgment skill's triggers -> name it
 # and two PreToolUse hooks:
 #   skill_gate.py          (matcher "*", sees Skill calls too) the first other tool call waits once
 #                          until the named skills ran

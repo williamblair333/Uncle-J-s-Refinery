@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # features/focus-check/focus-check.sh — weekly "estate vs. questions" scoreboard to Telegram.
 #
-# Bill's 2026-10-19 test: give immortality or Klarheit as many sessions as Uncle J gets,
+# William's 2026-10-19 test: give immortality or Klarheit as many sessions as Uncle J gets,
 # and see which one he reaches for first. This counts last week's Langfuse traces per
 # project (via session-stats) and sends the score, so the reminder comes to him.
 # The counts come from the 4-column table features/session-stats/stats.sh prints.
@@ -59,7 +59,7 @@ print("\n".join([
 ]))
 ' "$ESTATE" "$QUESTIONS")" || { warn "couldn't build the scoreboard"; exit 1; }
 
-# STANDARDS.md meta-question-rate: Bill's "why didn't you…" questions per session, with a
+# STANDARDS.md meta-question-rate: William's "why didn't you…" questions per session, with a
 # trend. Counts only — no prompt text reaches Telegram. A failure here must not cost the
 # scoreboard, so it degrades to a one-line note.
 META_LINE="$(python3 "$STACK_ROOT/scripts/meta_questions.py" --line 2>/dev/null)" \

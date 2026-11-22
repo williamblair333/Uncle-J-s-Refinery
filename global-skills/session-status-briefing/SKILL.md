@@ -70,31 +70,31 @@ transcript; do not block the briefing.
 
 ### 4b. What's waiting — mandatory, every status
 
-Bill shouldn't have to ask "what else?". The latest HANDOFF entry is only the newest slice;
+William shouldn't have to ask "what else?". The latest HANDOFF entry is only the newest slice;
 older open work lives elsewhere — and so do other projects. Start with the cross-project sweep;
-it reads every `/opt/proj/*/HANDOFF.md` ("Waiting on Bill", "Next session", "Blocked", open
+it reads every `/opt/proj/*/HANDOFF.md` ("Waiting on William", "Next session", "Blocked", open
 questions) and flags unpushed or uncommitted repos:
 
 ```bash
 just waiting          # = python3 scripts/waiting_sweep.py  (--days N, --max-lines N)
 ```
 
-Every project it prints with a "Waiting on Bill" / "Blocked" / open-questions section goes in
-**needs Bill**, by name (e.g. bizengine's Etsy/Cults3D/Slant accounts). Projects with only a
+Every project it prints with a "Waiting on William" / "Blocked" / open-questions section goes in
+**needs William**, by name (e.g. bizengine's Etsy/Cults3D/Slant accounts). Projects with only a
 "Next session" section go in one line each under **other projects**. Then sweep this repo:
 
 | Source | What to pull |
 | --- | --- |
 | `ROADMAP.md` | `## In Progress` and every `## Planned` item (headings and bold `- **` bullets) |
-| `HANDOFF.md`, **all entries** | "Bill to", "awaiting", "next session", "pick up", "verify after", "resume" |
+| `HANDOFF.md`, **all entries** | "William to", "awaiting", "next session", "pick up", "verify after", "resume" |
 | Auto-memory `project_*.md` | Top-priority and parked projects (e.g. anatomy-lab, local models) — then check their live state |
 | Other repos named in memory | `git status` / `git ls-remote` in each (e.g. `/opt/proj/anatomy-lab`) |
 | `scout/inbox.md`, `scout/finds/` | Unanswered entries, untracked finds |
-| `review/*.md` | Verdicts awaiting Bill's go |
+| `review/*.md` | Verdicts awaiting William's go |
 | `state/focus-check.log` | Latest focus-test score (one line) |
 | `git log origin/main..HEAD` + `git status` | Unpushed commits, uncommitted files |
 
-Report it grouped: **in progress**, **needs Bill**, **reviews due**, **Claude can just do**,
+Report it grouped: **in progress**, **needs William**, **reviews due**, **Claude can just do**,
 **other hosts/projects**. One line per item. Never stop at the latest HANDOFF entry.
 
 A sweep line ending `⚠ no plan to force it` waits on something outside our control (a roll, an

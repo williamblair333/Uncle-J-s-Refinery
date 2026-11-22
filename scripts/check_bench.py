@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Self-check bench: how often does "check yourself" find something wrong?
 
-Walks every Claude Code transcript, finds prompts where Bill asked for a re-check
+Walks every Claude Code transcript, finds prompts where William asked for a re-check
 ("check yourself", "double check", "are you sure", "did you miss"...) and pairs each with
 the answer being checked and the answer to the check. A check reply that admits an error
 ("I got X wrong", "I missed", "overstated"...) is a *correction*: the first draft went out
@@ -45,7 +45,7 @@ ADMIT_RE = re.compile(
     r"|\bcorrections?:|\bI'd skipped\b|\bI skipped over\b|\bwent wrong\b|\bI never tested\b",
     re.I,
 )
-# a "check" inside a slash command, a skill body or an interrupt marker is not Bill asking
+# a "check" inside a slash command, a skill body or an interrupt marker is not William asking
 _SKIP_PREFIXES = ("<command-", "<local-command", "Base directory for this skill", "[Request interrupted")
 
 
@@ -54,7 +54,7 @@ def prompt_text(entry: dict) -> str:
 
 
 def turns(path: Path) -> list[tuple[str, str]]:
-    """[(prompt, assistant_text)] for every prompt Bill typed, in order."""
+    """[(prompt, assistant_text)] for every prompt William typed, in order."""
     out = []
     prompt = None
     buf = []

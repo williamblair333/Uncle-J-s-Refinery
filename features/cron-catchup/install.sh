@@ -36,7 +36,7 @@ ok "journal lists boots as JSON"
 step "Installing cron entry"
 # PATH must be explicit in cron — its default is /usr/bin:/bin only, which has no gh.
 # The sleep lets the network, Docker and Ollama come up before the jobs need them;
-# nice/ionice keep the catch-up from slowing the session Bill opens at boot.
+# nice/ionice keep the catch-up from slowing the session William opens at boot.
 CRON_PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
 ENTRY="@reboot sleep 120 && PATH=${CRON_PATH} nice -n 10 ionice -c3 python3 ${PROJ_ROOT}/scripts/cron_catchup.py >> ${PROJ_ROOT}/state/cron-catchup.log 2>&1"
 mkdir -p "$PROJ_ROOT/state"
