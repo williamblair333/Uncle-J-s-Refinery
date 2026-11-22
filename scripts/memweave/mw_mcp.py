@@ -101,8 +101,8 @@ def build_server():
                                             provider=provider)
 
     mcp = FastMCP("memweave", log_level="WARNING", instructions=(
-        "Cross-project memory: past session transcripts plus the Obsidian vault mirror "
-        "(decisions, priorities, project notes). Search it before non-trivial work — "
+        "Cross-project memory: past session transcripts (plus dream-synthesis notes and "
+        "saved audit notes). Search it before non-trivial work — "
         "'have we solved this before?'. Read-only."))
 
     @mcp.tool(name="memory_search")
