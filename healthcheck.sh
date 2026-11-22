@@ -287,6 +287,13 @@ check_langfuse_compose() {
         ok "Langfuse not configured (LANGFUSE_PUBLIC_KEY absent) — skipping; run install-langfuse.sh to enable"
         return
     fi
+    # comfy_job parks langfuse + immich to free RAM; a SIGKILLed run never restarts them
+    # (11-21: down 18 h). Its marker names them; restore when the run that wrote it is gone.
+    if [ -f "$REPO_ROOT/state/comfy-parked.json" ]; then
+        local restored
+        restored="$(timeout 200 python3 "$REPO_ROOT/scripts/comfy_job.py" --restore-parked 2>&1 | tail -1)"
+        ok "comfy_job park marker found: $restored"
+    fi
     local compose="$REPO_ROOT/claude-code-langfuse-template/docker-compose.yml"
     if [ ! -f "$compose" ]; then
         bad "compose file missing: $compose"

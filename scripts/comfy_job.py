@@ -10,11 +10,21 @@ If ComfyUI isn't running it starts it (`scripts/comfy.sh up -d`, through dcup) a
 wait for Klarheit, and stops it again when the job ends, so an idle ComfyUI never holds the
 GPU. --keep-up leaves it running; --no-autostart restores "exit 2 if it isn't up".
 
+Runs queue themselves: hold_lock() makes a second run print "waiting: another comfy_job
+run is using ComfyUI" and block until the first exits. So never wrap it in a `ps | grep`
+or `pgrep -f` wait: the waiting shell matches its own command line and waits forever
+(write-well lost 2 h to that on 11-21). Run jobs back to back, each under `timeout`.
+
+Containers it parks for RAM are named in state/comfy-parked.json until it restarts them.
+A run killed outright (SIGKILL, OOM) can't restart them, so the next run, the healthcheck
+and `comfy_job.py --restore-parked` restart them once that run's pid is gone.
+
 Stdlib only, so it runs with the system python3.
 """
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import random
@@ -36,6 +46,7 @@ DEFAULT_URL = "http://127.0.0.1:8188"
 OUTPUT_ROOT = Path("/opt/outputs/comfyui")
 HERETIC_CONTAINER = "llama-heretic"
 COMFY_SH = Path(__file__).resolve().parent / "comfy.sh"
+PARK_MARKER = Path(__file__).resolve().parent.parent / "state" / "comfy-parked.json"
 
 IMAGE_MODELS = {
     "unet": "z_image_turbo_bf16.safetensors",
@@ -451,11 +462,24 @@ def park_estimate_gib(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> float:
     return sum(_mem_gib(line.split("/")[0]) for line in r.stdout.splitlines() if line.strip())
 
 
-def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> list[str]:
+def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run,
+                    marker: Path = PARK_MARKER) -> list[str]:
     """Stop the running containers of these compose projects; return their names."""
     names = _project_containers(projects, run)
     if not names:
         return []
+    marker = Path(marker)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    tmp = marker.with_name(f".{marker.name}.tmp.{os.getpid()}")
+    try:
+        tmp.write_text(json.dumps({
+            "pid": os.getpid(),
+            "names": names,
+            "at": dt.datetime.now(dt.timezone.utc).isoformat(),
+        }))
+        os.replace(tmp, marker)
+    except OSError as exc:
+        print(f"warning: could not write park marker {marker}: {exc}", file=sys.stderr)
     print(f"stopping {' '.join(names)} for the job; if this run is killed, restart them: "
           f"docker start {' '.join(names)}", file=sys.stderr)
     try:
@@ -466,7 +490,8 @@ def park_containers(projects=RAM_PARK_PROJECTS, run=subprocess.run) -> list[str]
     return names
 
 
-def unpark_containers(names: list[str], run=subprocess.run) -> bool:
+def unpark_containers(names: list[str], run=subprocess.run,
+                      marker: Path = PARK_MARKER) -> bool:
     """Start them again, databases first so the apps find them."""
     if not names:
         return True
@@ -478,9 +503,59 @@ def unpark_containers(names: list[str], run=subprocess.run) -> bool:
         ok = False
     if ok:
         print(f"restarted {' '.join(ordered)}", file=sys.stderr)
+        try:
+            Path(marker).unlink(missing_ok=True)
+        except OSError:
+            pass
     else:
         print(f"could not restart them; run: docker start {' '.join(ordered)}", file=sys.stderr)
     return ok
+
+
+def restore_stale_park(marker: Path = PARK_MARKER, run=subprocess.run,
+                       alive=None) -> list[str]:
+    """If a previous comfy_job was killed while holding containers parked, restart them."""
+    marker = Path(marker)
+    if not marker.exists():
+        return []
+    try:
+        data = json.loads(marker.read_text())
+        if not isinstance(data, dict):
+            raise ValueError("marker content must be a JSON object")
+        pid = data["pid"]
+        names = data["names"]
+        if not isinstance(pid, int) or not isinstance(names, list) or not all(isinstance(n, str) for n in names):
+            raise ValueError("marker missing valid pid or names list")
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        print(f"warning: corrupt or unreadable park marker {marker} ({exc}); deleting it",
+              file=sys.stderr)
+        try:
+            marker.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return []
+
+    if alive is not None:
+        is_alive = alive(pid)
+    else:
+        if pid <= 0:
+            is_alive = False
+        else:
+            try:
+                os.kill(pid, 0)
+                is_alive = True
+            except ProcessLookupError:
+                is_alive = False
+            except PermissionError:
+                is_alive = True
+            except OSError:
+                is_alive = False
+
+    if is_alive:
+        return []
+
+    unpark_containers(names, run=run, marker=marker)
+    return names
 
 
 def free_ram_for(model: str, unload=None, available=None, sleep=time.sleep,
@@ -834,6 +909,15 @@ def _exit_on_signal(signum: int, _frame) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_args = sys.argv[1:] if argv is None else argv
+    if "--restore-parked" in raw_args:
+        restored = restore_stale_park()
+        if restored:
+            print(f"restarted {' '.join(restored)}")
+        else:
+            print("nothing parked")
+        return 0
+
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("kind", choices=["image", "video"])
     ap.add_argument("prompt")
@@ -880,6 +964,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="leave ComfyUI running after the job if this job started it")
     ap.add_argument("--no-autostart", action="store_true",
                     help="exit 2 instead of starting ComfyUI when it isn't running")
+    ap.add_argument("--restore-parked", action="store_true",
+                    help="restart containers left parked by a killed comfy_job run and exit")
     args = ap.parse_args(argv)
 
     seed = args.seed if args.seed is not None else random.randint(0, 2**32 - 1)
@@ -972,6 +1058,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ComfyUI is not answering at {args.url}; start it: just comfy up -d", file=sys.stderr)
         return 2
     lock = hold_lock()  # noqa: F841 — held until this process exits
+    restored = restore_stale_park()
+    if restored:
+        print(f"restarted {' '.join(restored)}", file=sys.stderr)
     if model == "qwen" and args.ignore_klarheit:
         print("note: qwen always waits for Klarheit (its RAM use froze the host on 11-17)",
               file=sys.stderr)

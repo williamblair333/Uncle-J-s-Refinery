@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-22 — stall guard; comfy_job restores containers a killed run left parked
+
+- **Why:** on 11-21 three sessions sat idle for hours on background waits that could hang without telling anyone, and Langfuse + immich stayed down 18 h because a comfy_job run that parked them was killed before its `finally`.
+- **Added:** `hooks/discipline/stall-guard.sh` + `stall_guard.py`, a global PreToolUse Bash hook (wired by `install-reliability.sh`, its own jq key). It always refuses a `pgrep/pkill -f` or `ps | grep` wait whose pattern matches its own command line, and a background wait loop with no clock. A background pipe without `pipefail` and a background command with no `timeout` get one refusal per session as advice (`# no-deadline: <why>` marks servers). Merges write-well's `comfy_guard.py` and mtw2's `preflight_waits.py`. Quoted arguments, comments and heredoc bodies are read as data unless `bash -c`/`ssh` runs them. Bench before wiring, 30 days / 20,177 Bash calls / 199 sessions: 252 refusals (self-match 51, no-clock 97, hidden-exit 49, no-deadline 55); the blocking samples read as real bugs (pkill/kill loops that kill their own shell, `ps | grep` comfy waits). Blocking no-deadline would have hit 781 of 875 background calls, hence advice. agy's review (Gemini argon) found 8 bugs in the first version, among them a fail-closed wrapper when python can't open the script; all fixed, each a test. Tests: `tests/test_stall_guard.py` (53).
+- **Fixed:** `comfy_job.py` writes `state/comfy-parked.json` (pid + names) before parking containers and deletes it after restarting them. The next run, `comfy_job.py --restore-parked` and the healthcheck's Langfuse step restart them once the writing pid is gone. Docstring says runs queue on `hold_lock`, so callers never hand-roll `ps | grep` waits. (Code by agy, reviewed and tested here: `tests/test_comfy.py` 71 pass.)
+- **Hosts:** tc-vmh-03 pulled 105 commits; its memweave index was 70 h stale because the box is off 23:59–03:00 and the 02:30 sync never ran. Installed the boot-time cron catch-up there and ran the sync; healthcheck ok.
+
 ## 2026-11-22 — session end: idle-session audit, touchup started, lock + skill
 
 - **Audit (11-21):** write-well, mtw2 and autark sat idle for hours. Each had a background wait that could only report "finished", never "stuck". Details in HANDOFF. scan-commit's digest block (PR #373) was autark's share.
