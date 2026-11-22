@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-22 — session end
+
+- **Top open gap:** a global stall guard. Every background wait should wake its session on a stall or a deadline, not only on finish. write-well (`tools/hooks/comfy_guard.py`, `just fixes`) and mtw2 (a pgrep gate) each built a local one on 11-21; autark has none. Build it here as one hook and retire the local copies. Also add a line to comfy_job's docs: `hold_lock` already queues runs, so callers never hand-roll `ps | grep` waits (that self-match cost write-well 2 h).
+- **touchup blocked on Gitea:** the API token has `write:repository` but not `write:user`, and push-to-create is off, so no session can create a repo. Bill creates an empty private `touchup` (no init), or adds `write:user`. Then push `root` (the .gitignore-only commit), create `main` from it via the API, PR `start` → main. Its HANDOFF lists the next pieces: place → sheet → queue → web page. write-well is told: book content stays in write_well, read through a per-book `touchup.toml`.
+- **Hosts:** tc-vmh-03 and the Pi need `bash scripts/fix-guardrails-digest.sh` after their next pull.
+- **gitea-win-runner** came up at ~19:59 on 11-21 (cause unseen) and was reaped idle at ~20:22, which held write-well's Qwen jobs below the 20 GiB floor for ~20 min. If it recurs, have comfy_job wait for the VM to go idle.
+
 ## 2026-11-21 — scan-commit digest carve-out; idle sessions
 
 - **Done:** pinned image digests commit again (CHANGELOG 2026-11-21). Live on dma64. **tc-vmh-03 and the Pi need** `bash scripts/fix-guardrails-digest.sh` after their next pull.
@@ -17,6 +24,7 @@
 - **Merged** (PR #370 → `4c3fce4`). A bare `git push` on main is now blocked, and so are `origin`, `HEAD`/`@`, `--all`/`--mirror`/`--branches`, and `cd -`/`popd`/`pushd +N` before a push. The repo is resolved from the payload `cwd`, `cd X &&` and `git -C X`; an unknown dir blocks. Live now (the hook is a symlink into this checkout). Full `just test` rc 0; CI's only failure is `test_comfy` (the runner lacks Pillow), unrelated and still open.
 - No independent review: the `ask_agy` review hit agy's 300 s print timeout with no output after its last model call (log `state/agy-logs/20261120-100925-*`). Design invariants + closed vectors are in `~/.uncle-j-memory/memory/audit-baselines.md` (push-guard implicit targets, 2026-11-20). Open residual: `git push origin "$(git branch --show-current)"` on main.
 - New-repo first push: a session creating a Gitea repo can no longer `git push` its first commit from main. It has to push a branch and open a PR (see ROADMAP "Gitea new-repo bootstrap").
+- **jcodemunch-mcp breaking change**: `get_call_hierarchy` now defaults to one hop (pass `depth=` for transitive chains), compact schemas are on by default (hidden params are still accepted), and `announce_model` is listed only with adaptive tiering on; CLAUDE.md updated (taken from the 26d2fed→a8ac913 commit subjects; source not read because `index_dependency` was permission-denied).
 
 ## 2026-11-20 — DeepSeek diagnosis; ask_agy keep-alive
 

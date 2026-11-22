@@ -207,8 +207,8 @@
       "rung": 1
     },
     "1429971301": {
-      "answer": "yes",
-      "answered_at": "2026-11-13T17:39:53Z",
+      "answer": "maybe",
+      "answered_at": "2026-11-21T09:15:01Z",
       "answered_by": "claude review 2026-11-13 for Bill ('just-do-it' on the open scout finds)",
       "eval": {
         "risks": [
@@ -222,10 +222,11 @@
         "verdict": "trial"
       },
       "evaluated": true,
+      "expired": true,
       "full_name": "Yonagi043/vestigium",
       "note": "PDF reading is a real gap: jdocmunch's PDF path needs the office extra (not installed here) and that pulls markitdown (Microsoft). Vestigium uses Docling instead. 13 stars and self-graded benchmarks, so it needs a trial on Bill's own PDFs. Queued for rung-2 evaluation.",
       "reason": null,
-      "rung": 1
+      "rung": 2
     },
     "663368311": {
       "answer": "no",

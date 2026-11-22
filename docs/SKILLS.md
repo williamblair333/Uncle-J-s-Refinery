@@ -17,7 +17,7 @@ runs when you type `/name`.
 (AskUserQuestion, hooks, ~/.claude paths), so another agent can follow it with those steps
 adapted; `Refinery stack`: also needs this stack's MCP servers. Heuristic, from the text.
 
-Totals: 84 repo, 1 workflows.
+Totals: 85 repo, 1 workflows.
 
 
 ## In this repo (backed up)
@@ -63,6 +63,7 @@ Totals: 84 repo, 1 workflows.
 | `occams-razor` | Use when diagnosing a bug/failure or choosing between competing explanations, hypotheses, or root causes — especially when an exotic, elaborate, or "interestin… | auto | any agent | repo |
 | `orchestrator` | Decompose a PRD or task into a structured JSON task manifest of parallelizable subtasks for multi-agent execution | auto | Refinery stack | repo |
 | `outcomes` | Rubric-aware grader agent — evaluates working agent output against a rubric in a fresh context and produces a structured gap report | auto | any agent | repo |
+| `patch-upstream-hook-durably` | Make a local fix to a hook or script owned by an upstream installer (e.g. | auto | Claude Code | repo |
 | `per-task-review-cycle` | Implement → spec review → quality review → targeted fix → re-review cycle for multi-task subagent development. | auto | Claude Code | repo |
 | `platform-removal-cleanup` | Use when dropping support for a platform (OS, runtime, environment) and need to scrub all artifacts: scripts, binaries, docs, template placeholders, config com… | auto | any agent | repo |
 | `polling-bot-age-filter-fix` | Apply a stale-message age gate to a Python Telegram polling bot to prevent a message backlog from exhausting the hourly rate-limit budget. | auto | Refinery stack | repo |

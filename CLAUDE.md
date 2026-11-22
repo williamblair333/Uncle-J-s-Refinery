@@ -130,6 +130,7 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   compaction), `index_dependency` (the *installed* version's source — prefer over context7
   when the exact API matters), `check_embedding_drift`.
 - `_meta` reaches you here (`meta_fields: null`); a default install (`[]`) strips it.
+- Schemas are compact: a param absent from one (e.g. `format`) still works.
 - **Freshness:** `get_watch_status` `index_freshness`: `fresh`/`stale`/`unknown`/`not_tracked`/
   `incomplete` (holds a small part of the tree — re-index). Gate on `any_stale is False`
   **and** `any_freshness_unknown is False`. `index_stale` is gone (missing reads as fresh).
@@ -165,7 +166,8 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 - "Where is this name used?" → `check_references` (every use: imports + content mentions;
   content hits are capped by `max_content_results`, default 20 — raise it before concluding).
   `find_references` answers only who imports/re-exports it. `find_importers` — which files
-  import a file. `get_call_hierarchy`, `get_impact_preview`, `get_blast_radius`.
+  import a file. `get_call_hierarchy` (one hop unless `depth=`), `get_impact_preview`,
+  `get_blast_radius`.
 - Type resolution, interface dispatch, "all callers across files" → **serena**.
 - An empty `find_importers` / blast radius carrying `dynamic_import_boundary` or
   `dynamic_imports_unfollowed` is **not** evidence nothing loads the file.
@@ -313,8 +315,7 @@ Then serialize: `json.dumps(result, separators=(',',':'))` (no indent; whitespac
 `scripts/refinery-doctor.sh --fix` overwrite `~/.claude/CLAUDE.md` from the repo copy.
 **Edit the repo copy; edits only to `~/.claude/CLAUDE.md` are reverted.***
 
-<!-- Sessions inside this repo do NOT auto-load this file: .claude/settings.json lists it
-     in claudeMdExcludes, so they read only the deployed ~/.claude/CLAUDE.md and the policy
-     isn't paid for twice (~5k tokens). After editing here, run `just doctor --fix` or this
-     repo's own sessions keep the old policy. (HTML comments are stripped from context.) -->
+<!-- This repo's sessions skip this file (claudeMdExcludes in .claude/settings.json) and
+     read only the deployed ~/.claude/CLAUDE.md. After editing here, run
+     `just doctor --fix` or they keep the old policy. -->
 
