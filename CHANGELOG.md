@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-22 — session end: DeepSeek diagnosis, vault archived, name change
+
+- **Session summary:** five PRs (#381 hook-bench log leak, #382 DeepSeek `--window 16` finding, #383 brain vault archived, #384 agy hashers, #385 William). DeepSeek round 2 scheduled for 21:10 (`dsv41-diag2.timer`). write-well asked whether the Steward should be its own repo: the recommendation was to keep it in write-well until it has run on a second work; nothing was sent to write-well. `docs/SKILLS.md` regenerated (formatting only). README and ROADMAP checked, no update needed.
+
 ## 2026-11-22 — the user goes by William
 
 - **Changed (William, via me-35, confirmed in this session):** CLAUDE.md now opens with his name, so every session calls him William. The prose that addresses or describes him says William in 64 files: hooks, scripts, skills, ROADMAP, STANDARDS, PRODUCT and docs (223 replacements, done by a script that only touches the capitalised word).
