@@ -50,6 +50,7 @@ def test_missing_cwd_is_not_reported_as_missing_agy(tmp_path):
     ("cat stack.env", "ask Bill"),
     ("printenv", "ask Bill"),
     ("cat /opt/proj/x/README.md", 'add "command(cat)"'),
+    ("git grep x", "command(git grep) is denied on purpose"),
 ])
 def test_fix_cause_advice(cmd, fix):
     assert ask._compute_fix("RunCommand", cmd).startswith(fix)
@@ -189,6 +190,22 @@ def test_soft_deny_fix_cause_names_allow_rule(tmp_path):
     assert fixes[0]["tool"] == "RunCommand"
     assert fixes[0]["input"] == "git stash"
     assert fixes[0]["fix"] == 'add "command(git stash)" to allow in features/antigravity/permissions.json'
+
+
+def test_soft_deny_fix_cause_denied_command_suggests_alternative(tmp_path):
+    cmd = "git grep x"
+    out, _ = run(tmp_path, [step("ACTIVE", cmd), step("DONE", cmd),
+                            result("", denied=[{"action": "command", "display_name": "RunCommand"}])])
+    assert not out["ok"]
+    assert "fix_cause" in out
+    fixes = out["fix_cause"]
+    assert len(fixes) == 1
+    assert fixes[0]["tool"] == "RunCommand"
+    assert fixes[0]["input"] == "git grep x"
+    fix = fixes[0]["fix"]
+    assert "to allow in" not in fix
+    assert "grep -rn" in fix and "rg" in fix
+    assert "denied on purpose" in fix
 
 
 def test_deny_rule_tool_error_fix_cause(tmp_path):

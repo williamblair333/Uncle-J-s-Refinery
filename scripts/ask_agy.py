@@ -37,6 +37,7 @@ AGY_MAX_USER_TASKS = 8192
 SHIMS = _REPO / "features" / "antigravity" / "shims"
 # Every job starts in an empty root: deny rules don't stop `cat` (features/antigravity/agy-jail)
 JAIL = _REPO / "features" / "antigravity" / "agy-jail"
+PERMISSIONS = _REPO / "features" / "antigravity" / "permissions.json"
 _LOGIN_HINT = "jobs have their own agy login, separate from the keyring one: run `just agy-login`"
 
 # A failed lookup agy then worked around (a guessed path, a wrong MCP argument) does not fail
@@ -111,6 +112,30 @@ def _is_secret_like(inp: str) -> bool:
     return bool(_SECRET_RE.search(inp))
 
 
+_ALLOWED_ALTERNATIVES = {
+    "git grep": "grep -rn or rg",
+}
+
+
+def _is_command_denied(cmd_spec: str, inp: str) -> bool:
+    suggested = f"command({cmd_spec})"
+    cmd_prefix = f"command({cmd_spec} "
+    inp_words = inp.strip().split()
+    try:
+        if PERMISSIONS.is_file():
+            data = json.loads(PERMISSIONS.read_text(encoding="utf-8"))
+            for rule in data.get("deny", []):
+                if rule == suggested or rule.startswith(cmd_prefix):
+                    return True
+                if rule.startswith("command(") and rule.endswith(")"):
+                    denied_words = rule[len("command("):-1].strip().split()
+                    if len(inp_words) >= len(denied_words) and inp_words[:len(denied_words)] == denied_words:
+                        return True
+    except Exception:
+        pass
+    return False
+
+
 def _compute_fix(tool: str | None, inp: str | None) -> str:
     if inp and (_is_outside_opt_proj(inp) or _is_secret_like(inp)):
         return "ask Bill before allowing: outside /opt/proj or secret-like"
@@ -123,6 +148,11 @@ def _compute_fix(tool: str | None, inp: str | None) -> str:
                 cmd_spec = f"{words[0]} {words[1]}"
             else:
                 cmd_spec = words[0]
+            if _is_command_denied(cmd_spec, inp):
+                alt = _ALLOWED_ALTERNATIVES.get(cmd_spec)
+                if alt:
+                    return f"command({cmd_spec}) is denied on purpose; use {alt}"
+                return f"command({cmd_spec}) is denied on purpose"
             return f'add "command({cmd_spec})" to allow in features/antigravity/permissions.json'
 
     return f"agy was refused {tool or 'action'}; check features/antigravity/permissions.json"
