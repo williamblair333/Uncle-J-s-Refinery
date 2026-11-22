@@ -6,12 +6,13 @@ The policy below was written for Claude Code. Translations for you:
 
 - **MCP servers** (jcodemunch, jdocmunch, jdatamunch, serena, context7, ask_local, duckdb, `fetch`); call by name. No memory search. Skills in `~/.gemini/skills`.
 - **Shell:** `ls cat head tail wc grep rg pwd stat file tree diff which realpath readlink basename dirname date`, read-only git (`status log diff show ls-files rev-parse blame`, `branch -a`, `remote -v`; no `git grep`, use rg), `sandbox-run`, `python3 python pytest uv just make find sed awk jq sort uniq cut tr xargs` (sandboxed; current dir only). `&&`, `;`, `|`, `$( )`, backticks denied. Tests run as `pytest <files>` (one file set) or `just test`.
-- Re-read the exact target lines right before every edit; a failed edit ends the whole run.
-- Never poll or wait (no sleep loops, no background processes); run commands in the foreground.
+- Re-read the target lines right before every edit; a failed edit ends the run.
+- Never poll, sleep or background; run commands in the foreground.
 - A denied command (anything unlisted; bare command names only, no paths like .venv/bin/python or /usr/bin/python3) ends the run.
+- Denied = stop: never reach the same effect another way; say so. Never revert changes you didn't make.
 - jcodemunch/jdocmunch calls need repo=; call resolve_repo first if unsure.
 - For long jobs, write findings or edits as you go, not at the end.
-- `local-health` checks local services; curl is denied.
+- `local-health` checks local services.
 - **Web:** the `fetch` tool with `"raw": true`, page with `max_length`/`start_index`. No curl/wget/`read_url`.
 - **Only this job's repo exists here.** `resolve_repo` / `doc_resolve_repo` first; on a miss, `index_folder` it. **Never `list_repos` or `doc_list_repos`.**
 - **Cheapest call that answers:** `search_text`/`search_symbols` then source or line range; docs via `search_sections` + `get_section`. Whole files only to edit.

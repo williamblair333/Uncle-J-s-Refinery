@@ -222,8 +222,77 @@ def split_recovered(errors: list, error_steps: list, steps: dict, cwd: str | Non
     return standing, recovered
 
 
+BACKUPS = _REPO / "state" / "agy-backups"
+SNAPSHOT_MAX_BYTES = 2 * 1024 * 1024
+SNAPSHOT_MAX_FILES = 500
+
+
+def snapshot_uncommitted(cwd: str | None, dest: Path) -> list[tuple[Path, Path]]:
+    """Copy every file with uncommitted changes in cwd's repo to dest, before an edits job.
+
+    11-22: with `git checkout -- HANDOFF.md` denied, agy rewrote the file from HEAD with
+    python and erased the caller's uncommitted edit. Deny rules name commands, not
+    effects, so this checks the effect: what the job did to work it didn't make."""
+    root = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd, capture_output=True,
+                          text=True, timeout=30)
+    if root.returncode != 0:
+        return []
+    top = Path(root.stdout.strip())
+    st = subprocess.run(["git", "status", "--porcelain", "-z", "--untracked-files=all"], cwd=top,
+                        capture_output=True, text=True, timeout=30, check=True)
+    saved = []
+    for rec in st.stdout.split("\0"):
+        if len(rec) < 4 or rec[0] in "RC":  # renames carry a second path record; skip both
+            continue
+        path = top / rec[3:]
+        if not path.is_file() or path.is_symlink() or path.stat().st_size > SNAPSHOT_MAX_BYTES:
+            continue
+        backup = dest / rec[3:]
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, backup)
+        saved.append((path, backup))
+        if len(saved) >= SNAPSHOT_MAX_FILES:  # a huge untracked tree isn't work in progress
+            break
+    return saved
+
+
+def changed_since(saved: list[tuple[Path, Path]]) -> list[dict]:
+    hits = []
+    for path, backup in saved:
+        try:
+            now = path.read_bytes() if path.exists() else None
+        except OSError:
+            now = None
+        if now != backup.read_bytes():
+            hits.append({"path": str(path), "backup": str(backup)})
+    return hits
+
+
 def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         timeout: int = 300, model: str = None) -> dict:
+    if not edits:
+        return _ask(prompt, agy_bin, cwd, edits, timeout, model)
+    dest = BACKUPS / time.strftime("%Y%m%d-%H%M%S")
+    try:
+        saved = snapshot_uncommitted(cwd, dest)
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        out = _ask(prompt, agy_bin, cwd, edits, timeout, model)
+        out["snapshot_error"] = str(exc)[:300]
+        return out
+    out = _ask(prompt, agy_bin, cwd, edits, timeout, model)
+    hits = changed_since(saved)
+    if hits:
+        out["overwrote_uncommitted"] = hits
+        note = (f"agy changed {len(hits)} file(s) that already had uncommitted changes before the job; "
+                "if you didn't ask it to edit them, restore from the backups in overwrote_uncommitted")
+        out["warning"] = f"{out['warning']}; {note}" if out.get("warning") else note
+    else:
+        shutil.rmtree(dest, ignore_errors=True)
+    return out
+
+
+def _ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
+         timeout: int = 300, model: str = None) -> dict:
     if cwd and not os.path.isdir(cwd):  # subprocess would raise FileNotFoundError, which reads as a missing agy
         return {"ok": False, "error": "cwd_missing", "detail": f"no such directory: {cwd}"}
     agy = agy_bin or os.environ.get("AGY_BIN") or "agy"
