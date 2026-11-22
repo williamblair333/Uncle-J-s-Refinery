@@ -667,8 +667,8 @@ wheels = [
 
 [[package]]
 name = "jcodemunch-mcp"
-version = "1.108.471"
-source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#26d2fedea4e54522b1f8eefcf98e8fb21b026560" }
+version = "1.108.482"
+source = { git = "https://github.com/jgravelle/jcodemunch-mcp.git#ada73e5509e74ca0ec09570c240e23d2f3ef9d18" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -699,8 +699,8 @@ openai = [
 
 [[package]]
 name = "jdatamunch-mcp"
-version = "1.33.0"
-source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#d830600d8c5edacfe2e049841e3ff85422856282" }
+version = "1.33.1"
+source = { git = "https://github.com/jgravelle/jdatamunch-mcp.git#8c090de361ef91c41a4572ac07eb921c1a8b50bc" }
 dependencies = [
     { name = "charset-normalizer" },
     { name = "mcp" },
@@ -708,8 +708,8 @@ dependencies = [
 
 [[package]]
 name = "jdocmunch-mcp"
-version = "1.151.2"
-source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#64e9f16811fe0ac59dd2c6d5e3165605ae3a1ed5" }
+version = "1.151.3"
+source = { git = "https://github.com/jgravelle/jdocmunch-mcp.git#bd1f0c1974b6e4efb0eb818f37b30a8a3d665c20" }
 dependencies = [
     { name = "httpx" },
     { name = "mcp" },
@@ -837,7 +837,7 @@ wheels = [
 
 [[package]]
 name = "mcp"
-version = "1.27.0"
+version = "1.30.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -855,9 +855,9 @@ dependencies = [
     { name = "typing-inspection" },
     { name = "uvicorn", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8b/eb/c0cfc62075dc6e1ec1c64d352ae09ac051d9334311ed226f1f425312848a/mcp-1.27.0.tar.gz", hash = "sha256:d3dc35a7eec0d458c1da4976a48f982097ddaab87e278c5511d5a4a56e852b83", size = 607509, upload-time = "2026-04-02T14:48:08.88Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/93/0142dc84a666daf8ad51a34268f34c12fd6fda4f3810c4be2504eecc8212/mcp-1.30.0.tar.gz", hash = "sha256:445414625fce5c295faa505bb11bacece661ab6f4028d57c935db57820b7a3e4", size = 680511, upload-time = "2026-09-07T14:34:15.845Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9c/46/f6b4ad632c67ef35209a66127e4bddc95759649dd595f71f13fba11bdf9a/mcp-1.27.0-py3-none-any.whl", hash = "sha256:5ce1fa81614958e267b21fb2aa34e0aea8e2c6ede60d52aba45fd47246b4d741", size = 215967, upload-time = "2026-04-02T14:48:07.24Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/f4/e58bc33317c92a0203664daaf00bf6f41166cc0149e5d6870a03f7cd004a/mcp-1.30.0-py3-none-any.whl", hash = "sha256:666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0", size = 234581, upload-time = "2026-09-07T14:34:14.266Z" },
 ]
 
 [[package]]

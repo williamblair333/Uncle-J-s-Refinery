@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-22 — session end
+
+- **Top open gap:** a global stall guard. Every background wait should wake its session on a stall or a deadline, not only on finish. write-well (`tools/hooks/comfy_guard.py`, `just fixes`) and mtw2 (a pgrep gate) each built a local one on 11-21; autark has none. Build it here as one hook and retire the local copies. Also add a line to comfy_job's docs: `hold_lock` already queues runs, so callers never hand-roll `ps | grep` waits (that self-match cost write-well 2 h).
+- **touchup blocked on Gitea:** the API token has `write:repository` but not `write:user`, and push-to-create is off, so no session can create a repo. Bill creates an empty private `touchup` (no init), or adds `write:user`. Then push `root` (the .gitignore-only commit), create `main` from it via the API, PR `start` → main. Its HANDOFF lists the next pieces: place → sheet → queue → web page. write-well is told: book content stays in write_well, read through a per-book `touchup.toml`.
+- **Hosts:** tc-vmh-03 and the Pi need `bash scripts/fix-guardrails-digest.sh` after their next pull.
+- **gitea-win-runner** came up at ~19:59 on 11-21 (cause unseen) and was reaped idle at ~20:22, which held write-well's Qwen jobs below the 20 GiB floor for ~20 min. If it recurs, have comfy_job wait for the VM to go idle.
+
 ## 2026-11-21 — scan-commit digest carve-out; idle sessions
 
 - **Done:** pinned image digests commit again (CHANGELOG 2026-11-21). Live on dma64. **tc-vmh-03 and the Pi need** `bash scripts/fix-guardrails-digest.sh` after their next pull.

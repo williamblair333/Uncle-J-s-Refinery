@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-22 — session end: idle-session audit, touchup started, lock + skill
+
+- **Audit (11-21):** write-well, mtw2 and autark sat idle for hours. Each had a background wait that could only report "finished", never "stuck". Details in HANDOFF. scan-commit's digest block (PR #373) was autark's share.
+- **touchup:** a new repo at `/opt/proj/touchup` for write_well's illustration-consistency workflow. `touchup splice` refuses a write if any pixel outside the box changed; `scripts/bootstrap.sh` builds it from nothing. Committed locally only; see HANDOFF.
+- **Added:** `global-skills/patch-upstream-hook-durably/` (generated from the PR #373 work).
+- **Changed:** `uv.lock` at jcodemunch-mcp 1.108.482 and jdatamunch-mcp 1.33.1 (auto-maintain's install, never committed). This PR also carries auto-maintain's unpushed `934889e` (CLAUDE.md post-upgrade sync).
+
 ## 2026-11-21 — scan-commit lets pinned image digests through
 
 - **The problem:** upstream claude-guardrails `scan-commit.sh` flags every 64-hex string as a secret. An `image@sha256:<digest>` pin matches, so an agent could never commit a pinned compose file. autark's Pi-hole and ntfy were both blocked; ntfy sat unmerged from 10:34.

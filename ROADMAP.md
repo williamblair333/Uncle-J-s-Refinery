@@ -14,6 +14,9 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Global stall guard (11-21):** every background wait wakes its session on a stall or a deadline, not only on finish. Replaces write-well's `comfy_guard.py` and mtw2's pgrep gate. Cause: three sessions sat idle for hours on 11-21.
+- **Gitea repo creation for sessions:** the token lacks `write:user` and push-to-create is off, so new repos (touchup) need Bill's click. Pairs with "Gitea new-repo bootstrap".
+
 - **Buddy accounts: Claude acts on websites for Bill** (filed 2026-11-15; Bill's steps are in the
   "Buddy accounts setup" Claude Doc). Done: `just browser-show` (#347), `just mail` (#348, live) and
   `just vault` (#354, live, TOTP read verified 2026-11-16).
