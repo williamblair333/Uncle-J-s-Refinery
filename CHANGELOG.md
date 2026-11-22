@@ -6,6 +6,12 @@
 
 - **Fixed:** GitHub CI had been red on every push since 2026-11-19: `tests/test_comfy.py::test_region_crop_and_paste_leave_outside_pixels_identical` runs under `/usr/bin/python3` and asserts Pillow is there (a real requirement of `just image --region`), but the runner's system python had none. The pytest job now installs `python3-pil`; the assertion stays, so a host missing Pillow still fails loudly.
 
+## 2026-11-22 — session end: Bill's priorities, PR sweep
+
+- **Decided (Bill):** DeepSeek V4.1 is the next work item; Klarheit is dropped for now; write-well adopts Refinery changes in its own time. Recorded in HANDOFF and Claude's project memory.
+- **PR sweep:** autark #45, me #3, deal-finder #2, anatomy-lab #4, faserip-100 #8, aquarius #3 merged; gitea-infra #16/#17 closed (already in trunk). Refinery #375–#378 merged this session.
+- **Changed:** `scout/answers.json` records Bill's yes for ai-job-search (safety-checked read-only).
+
 ## 2026-11-22 — stall guard; comfy_job restores containers a killed run left parked
 
 - **Why:** on 11-21 three sessions sat idle for hours on background waits that could hang without telling anyone, and Langfuse + immich stayed down 18 h because a comfy_job run that parked them was killed before its `finally`.
