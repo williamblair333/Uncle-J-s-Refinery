@@ -1,5 +1,14 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-22 — stall guard, comfy park restore, sweep follow-ups
+
+- **Stall guard is live after merge + `bash install-reliability.sh`** on each host (dma64 and tc-vmh-03 both still need it). Tell write-well and mtw2 to retire `tools/hooks/comfy_guard.py` and the `waits-wake-on-stall` preflight gate once it's live there. If it refuses a good command, add the case to `tests/test_stall_guard.py` and narrow the rule; `just hook-bench --hook stall-guard` shows its fire rate.
+- **Langfuse + immich were down 18 h** (they exited 11-21 ~11:48 while ComfyUI was busy; most likely a comfy_job run was killed while they were parked, not confirmed). Restarted by hand; the park marker + healthcheck restore now covers it.
+- **tc-vmh-03:** pulled to `fb6bbd6`, cron catch-up installed, memweave synced; healthcheck ok. `scripts/fix-guardrails-digest.sh` had nothing to fix (no scan-commit there). **The Pi:** `ha-pi-01` (ssh `ha`) has no Refinery clone and no `claude`, so the "Pi needs fix-guardrails-digest" note has no target; which Pi was meant is unknown.
+- **agy re-sync done:** `sync_mcp.py` run; fetch already had `--ignore-robots-txt`. agy's `git grep` denial is deliberate (`-O` runs a pager; `tests/test_ask_agy.py` pins it), but the wrapper's `fix_cause` still suggests allowing it. Fix that hint next.
+- **Other repos (11-22):** deal-finder untracked its committed venv (deal-finder #2, merged); anatomy-lab bloom-b catalogue gaps closed (anatomy-lab #4, merged; 43/43 tests, 4 audits pass); business back on main; faserip + aquarius `.no-product-gate` committed locally but the GitHub push was refused (no Gitea remote); forks/memweave waits on upstream PR #8; M2TWEOP-library's PR to gitea-ci left to the mtw2 session.
+- **For Bill:** DeepSeek diag (11-20) points at disk streaming: the CPU lane reads experts at ~0.25 GB/s, not the disk's 1 GB/s; the baseline run timed out (900 s) so parking's gain is unmeasured. Cheapest next test: baseline again with an 1800 s timeout, and parked with `--ssd-cache 14`. Klarheit m12: no crash; the wrapper fails on problem notes. Evenings collide with M11's 22:05 run, middays can't clear the backlog in the 20-min resolve budget (since 11-17); timers were stopped 11-21 11:06. Fixes need a prereg addendum (code freeze f07cd4f). The scout's ai-job-search find has waited on Bill's Telegram reply since 10-18.
+
 ## 2026-11-22 — session end
 
 - **Top open gap:** a global stall guard. Every background wait should wake its session on a stall or a deadline, not only on finish. write-well (`tools/hooks/comfy_guard.py`, `just fixes`) and mtw2 (a pgrep gate) each built a local one on 11-21; autark has none. Build it here as one hook and retire the local copies. Also add a line to comfy_job's docs: `hold_lock` already queues runs, so callers never hand-roll `ps | grep` waits (that self-match cost write-well 2 h).

@@ -636,15 +636,121 @@ class _DockerRun:
         return subprocess.CompletedProcess(cmd, 0, out, "")
 
 
-def test_park_stops_both_projects_and_unpark_starts_databases_first():
+def test_park_stops_both_projects_and_unpark_starts_databases_first(tmp_path):
+    marker = tmp_path / "comfy-parked.json"
     run = _DockerRun({"immich": "immich_server\nimmich_postgres\n",
                 "claude-code-langfuse-template": "lf-web-1\nlf-clickhouse-1\n"})
-    names = _real_park(run=run)
+    names = _real_park(run=run, marker=marker)
     assert names == ["immich_server", "immich_postgres", "lf-web-1", "lf-clickhouse-1"]
     assert run.calls[-1] == ["docker", "stop", *names]
-    _real_unpark(names, run=run)
+    _real_unpark(names, run=run, marker=marker)
     assert run.calls[-1] == ["docker", "start", "immich_postgres", "lf-clickhouse-1",
                              "immich_server", "lf-web-1"]
+
+
+def test_park_marker_written_before_stop(tmp_path):
+    marker = tmp_path / "comfy-parked.json"
+    checked = []
+
+    class R(_DockerRun):
+        def __call__(self, cmd, **kw):
+            if cmd[:2] == ["docker", "stop"]:
+                assert marker.exists()
+                import json
+                data = json.loads(marker.read_text())
+                assert data["pid"] == os.getpid()
+                assert data["names"] == ["immich_server"]
+                assert "at" in data
+                checked.append(True)
+            return super().__call__(cmd, **kw)
+
+    run = R({"immich": "immich_server\n"})
+    names = _real_park(run=run, marker=marker)
+    assert names == ["immich_server"]
+    assert checked == [True]
+
+
+def test_unpark_marker_removed_after_good_start_and_kept_after_failure(tmp_path):
+    marker = tmp_path / "comfy-parked.json"
+    names = ["immich_server"]
+
+    # Failed start leaves marker
+    marker.write_text('{"pid": 1, "names": ["immich_server"]}')
+    run_fail = _Run(rc=1)
+    assert not _real_unpark(names, run=run_fail, marker=marker)
+    assert marker.exists()
+
+    # Good start deletes marker
+    run_ok = _Run(rc=0)
+    assert _real_unpark(names, run=run_ok, marker=marker)
+    assert not marker.exists()
+
+
+def test_restore_stale_park_restarts_when_pid_dead(tmp_path, monkeypatch):
+    import json
+    marker = tmp_path / "comfy-parked.json"
+    marker.write_text(json.dumps({"pid": 99999999, "names": ["immich_server", "lf-web-1"], "at": "..."}))
+    run = _Run(rc=0)
+    monkeypatch.setattr(cj, "unpark_containers", _real_unpark)
+    restarted = cj.restore_stale_park(marker=marker, run=run, alive=lambda p: False)
+    assert restarted == ["immich_server", "lf-web-1"]
+    assert run.calls == [["docker", "start", "immich_server", "lf-web-1"]]
+    assert not marker.exists()
+
+
+def test_restore_stale_park_does_nothing_when_pid_alive(tmp_path, monkeypatch):
+    import json
+    marker = tmp_path / "comfy-parked.json"
+    marker.write_text(json.dumps({"pid": os.getpid(), "names": ["immich_server"], "at": "..."}))
+    run = _Run(rc=0)
+    monkeypatch.setattr(cj, "unpark_containers", _real_unpark)
+    restarted = cj.restore_stale_park(marker=marker, run=run, alive=lambda p: True)
+    assert restarted == []
+    assert run.calls == []
+    assert marker.exists()
+
+
+def test_restore_stale_park_does_nothing_when_no_marker(tmp_path, monkeypatch):
+    marker = tmp_path / "nonexistent.json"
+    run = _Run(rc=0)
+    monkeypatch.setattr(cj, "unpark_containers", _real_unpark)
+    assert cj.restore_stale_park(marker=marker, run=run) == []
+    assert run.calls == []
+
+
+def test_restore_stale_park_cleans_corrupt_marker(tmp_path, monkeypatch, capsys):
+    marker = tmp_path / "corrupt.json"
+    marker.write_text("not json {{{")
+    run = _Run(rc=0)
+    monkeypatch.setattr(cj, "unpark_containers", _real_unpark)
+    assert cj.restore_stale_park(marker=marker, run=run) == []
+    assert run.calls == []
+    assert not marker.exists()
+    assert "corrupt or unreadable" in capsys.readouterr().err
+
+
+def test_restore_parked_cli_flag(tmp_path, monkeypatch, capsys):
+    # When no marker exists
+    monkeypatch.setattr(cj, "restore_stale_park", lambda: [])
+    assert cj.main(["--restore-parked"]) == 0
+    assert capsys.readouterr().out.strip() == "nothing parked"
+
+    # When stale marker exists and restarts
+    monkeypatch.setattr(cj, "restore_stale_park", lambda: ["immich_server", "lf-web-1"])
+    assert cj.main(["--restore-parked"]) == 0
+    out = capsys.readouterr().out
+    assert "immich_server" in out and "restarted" in out
+
+
+def test_main_calls_restore_stale_park_before_ram_gate(monkeypatch, capsys):
+    events = []
+    monkeypatch.setattr(cj, "wait_for_klarheit", lambda *a, **k: True)
+    monkeypatch.setattr(cj, "comfy_up", lambda *a, **k: True)
+    monkeypatch.setattr(cj, "restore_stale_park", lambda: events.append("restore") or ["immich_server"])
+    monkeypatch.setattr(cj, "free_ram_for", lambda *a, **k: events.append("ram_gate") or "short")
+    assert cj.main(["image", "x", "--model", "z-image"]) == 1
+    assert events == ["restore", "ram_gate"]
+    assert "restarted immich_server" in capsys.readouterr().err
 
 
 def test_park_with_nothing_running_stops_nothing():

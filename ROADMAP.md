@@ -14,7 +14,7 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
-- **Global stall guard (11-21):** every background wait wakes its session on a stall or a deadline, not only on finish. Replaces write-well's `comfy_guard.py` and mtw2's pgrep gate. Cause: three sessions sat idle for hours on 11-21.
+- **[DONE 2026-11-22] Global stall guard** — `hooks/discipline/stall-guard.sh` (CHANGELOG 2026-11-22). Open: write-well and mtw2 retire their local copies; re-bench with `just hook-bench --hook stall-guard` after a week of live use; a Monitor-style stall wake for waits that do have a deadline but should report sooner.
 - **Gitea repo creation for sessions:** the token lacks `write:user` and push-to-create is off, so new repos (touchup) need Bill's click. Pairs with "Gitea new-repo bootstrap".
 
 - **Buddy accounts: Claude acts on websites for Bill** (filed 2026-11-15; Bill's steps are in the
