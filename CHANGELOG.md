@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-22 — hook bench no longer writes to the live block log
+
+- **Fixed:** `just hook-bench` replays real hooks, and stall-guard and pipe-to-shell-guard log next to the hook (not under `$HOME` or `UNCLE_J_PROJ_ROOT`), so replays landed in the live `state/hook-blocks.log`: 17 of 11-22's stall-guard lines were `bench-` sessions. `make_sandbox` now points `STALL_GUARD_LOG` and `PIPE_GUARD_LOG` into the sandbox, and `test_real_guard_in_sandbox_does_not_touch_block_log` covers both guards (red without the fix, green with it).
+
 ## 2026-11-22 — CI: install Pillow for the region test
 
 - **Fixed:** GitHub CI had been red on every push since 2026-11-19: `tests/test_comfy.py::test_region_crop_and_paste_leave_outside_pixels_identical` runs under `/usr/bin/python3` and asserts Pillow is there (a real requirement of `just image --region`), but the runner's system python had none. The pytest job now installs `python3-pil`; the assertion stays, so a host missing Pillow still fails loudly.
