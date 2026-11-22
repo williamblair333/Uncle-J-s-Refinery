@@ -26,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -227,44 +228,82 @@ SNAPSHOT_MAX_BYTES = 2 * 1024 * 1024
 SNAPSHOT_MAX_FILES = 500
 
 
-def snapshot_uncommitted(cwd: str | None, dest: Path) -> list[tuple[Path, Path]]:
+def _porcelain_entries(raw: bytes):
+    """(status, path) for each `git status --porcelain -z` entry. With -z a rename or copy
+    is two records, the new path then the old one; the old one is not a status line."""
+    recs = raw.split(b"\0")
+    i = 0
+    while i < len(recs):
+        rec = recs[i]
+        i += 1
+        if len(rec) < 4:
+            continue
+        status = rec[:2].decode("ascii", "replace")
+        if status[0] in "RC" or status[1] in "RC":
+            i += 1
+        yield status, os.fsdecode(rec[3:])
+
+
+def snapshot_uncommitted(cwd: str | None, dest: Path,
+                         errors: list | None = None) -> list[tuple[Path, Path | None]]:
     """Copy every file with uncommitted changes in cwd's repo to dest, before an edits job.
 
     11-22: with `git checkout -- HANDOFF.md` denied, agy rewrote the file from HEAD with
     python and erased the caller's uncommitted edit. Deny rules name commands, not
-    effects, so this checks the effect: what the job did to work it didn't make."""
+    effects, so this checks the effect: what the job did to work it didn't make.
+
+    A file the caller deleted is saved as (path, None), so a job that recreates it shows.
+    Tracked files come first; the SNAPSHOT_MAX_FILES cap applies to untracked ones only.
+    One unreadable file is noted in `errors` and skipped, never the whole snapshot."""
     root = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd, capture_output=True,
-                          text=True, timeout=30)
+                          timeout=30)
     if root.returncode != 0:
         return []
-    top = Path(root.stdout.strip())
+    top = Path(os.fsdecode(root.stdout.rstrip(b"\r\n")))
     st = subprocess.run(["git", "status", "--porcelain", "-z", "--untracked-files=all"], cwd=top,
-                        capture_output=True, text=True, timeout=30, check=True)
-    saved = []
-    for rec in st.stdout.split("\0"):
-        if len(rec) < 4 or rec[0] in "RC":  # renames carry a second path record; skip both
+                        capture_output=True, timeout=30, check=True)
+    entries = sorted(_porcelain_entries(st.stdout), key=lambda e: e[0] == "??")
+    saved: list[tuple[Path, Path | None]] = []
+    untracked = 0
+    for status, rel in entries:
+        path = top / rel
+        if not path.resolve().is_relative_to(top.resolve()):
             continue
-        path = top / rec[3:]
-        if not path.is_file() or path.is_symlink() or path.stat().st_size > SNAPSHOT_MAX_BYTES:
-            continue
-        backup = dest / rec[3:]
-        backup.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, backup)
-        saved.append((path, backup))
-        if len(saved) >= SNAPSHOT_MAX_FILES:  # a huge untracked tree isn't work in progress
-            break
+        try:
+            if "D" in status and not path.exists() and not path.is_symlink():
+                saved.append((path, None))
+                continue
+            if not path.is_file() or path.is_symlink() or path.stat().st_size > SNAPSHOT_MAX_BYTES:
+                continue
+            if status == "??":
+                if untracked >= SNAPSHOT_MAX_FILES:
+                    if errors is not None and "untracked cap" not in str(errors):
+                        errors.append(f"untracked cap: only the first {SNAPSHOT_MAX_FILES} untracked files were backed up")
+                    continue
+                untracked += 1
+            backup = dest / rel
+            backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, backup)
+            saved.append((path, backup))
+        except OSError as exc:
+            if errors is not None:
+                errors.append(f"{rel}: {exc}"[:200])
     return saved
 
 
-def changed_since(saved: list[tuple[Path, Path]]) -> list[dict]:
+def changed_since(saved: list[tuple[Path, Path | None]]) -> list[dict]:
     hits = []
     for path, backup in saved:
         try:
+            if backup is None:  # the caller had deleted it
+                if path.exists() or path.is_symlink():
+                    hits.append({"path": str(path), "backup": None, "note": "deleted before the job; now back"})
+                continue
             now = path.read_bytes() if path.exists() else None
-        except OSError:
-            now = None
-        if now != backup.read_bytes():
-            hits.append({"path": str(path), "backup": str(backup)})
+            if now != backup.read_bytes():
+                hits.append({"path": str(path), "backup": str(backup)})
+        except OSError as exc:
+            hits.append({"path": str(path), "backup": str(backup), "note": f"could not compare: {exc}"[:200]})
     return hits
 
 
@@ -272,14 +311,21 @@ def ask(prompt: str, agy_bin: str = None, cwd: str = None, edits: bool = False,
         timeout: int = 300, model: str = None) -> dict:
     if not edits:
         return _ask(prompt, agy_bin, cwd, edits, timeout, model)
-    dest = BACKUPS / time.strftime("%Y%m%d-%H%M%S")
+    errors: list = []
     try:
-        saved = snapshot_uncommitted(cwd, dest)
+        BACKUPS.mkdir(parents=True, exist_ok=True)
+        # one folder per job: two jobs in the same second must not share (or delete) backups
+        dest = Path(tempfile.mkdtemp(prefix=time.strftime("%Y%m%d-%H%M%S-"), dir=BACKUPS))
+        saved = snapshot_uncommitted(cwd, dest, errors)
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        if "dest" in locals():
+            shutil.rmtree(dest, ignore_errors=True)
         out = _ask(prompt, agy_bin, cwd, edits, timeout, model)
         out["snapshot_error"] = str(exc)[:300]
         return out
     out = _ask(prompt, agy_bin, cwd, edits, timeout, model)
+    if errors:
+        out["snapshot_error"] = "; ".join(errors)[:600]
     hits = changed_since(saved)
     if hits:
         out["overwrote_uncommitted"] = hits

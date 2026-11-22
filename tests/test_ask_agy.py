@@ -758,6 +758,55 @@ def test_an_edits_job_that_leaves_uncommitted_work_alone_leaves_no_backup(dirty_
     assert not any((tmp_path / "backups").rglob("*.md"))
 
 
+def test_a_staged_rename_backs_up_the_new_name_and_not_the_old_path(dirty_repo, tmp_path):
+    subprocess.run(["git", "-C", str(dirty_repo), "mv", "other.md", "renamed file.md"], check=True)
+    saved = ask.snapshot_uncommitted(str(dirty_repo), tmp_path / "snap")
+    names = sorted(p.name for p, _ in saved)
+    assert names == ["HANDOFF.md", "new.txt", "renamed file.md"], names
+
+
+def test_a_job_that_restores_a_file_the_caller_deleted_is_reported(dirty_repo, monkeypatch):
+    (dirty_repo / "other.md").unlink()
+    def job(prompt, agy_bin, cwd, edits, timeout, model):
+        (Path(cwd) / "other.md").write_text("committed\n")
+        return {"ok": True, "response": "done"}
+    monkeypatch.setattr(ask, "_ask", job)
+    out = ask.ask("p", cwd=str(dirty_repo), edits=True)
+    assert [Path(h["path"]).name for h in out["overwrote_uncommitted"]] == ["other.md"]
+
+
+def test_one_unreadable_file_does_not_drop_the_rest(dirty_repo, tmp_path, monkeypatch):
+    real = shutil.copy2
+    def copy2(src, dst, **kw):
+        if Path(src).name == "new.txt":
+            raise PermissionError("denied")
+        return real(src, dst, **kw)
+    monkeypatch.setattr(ask.shutil, "copy2", copy2)
+    errors = []
+    saved = ask.snapshot_uncommitted(str(dirty_repo), tmp_path / "snap", errors)
+    assert [p.name for p, _ in saved] == ["HANDOFF.md"] and "new.txt" in errors[0]
+
+
+def test_tracked_work_is_backed_up_before_the_untracked_cap(dirty_repo, tmp_path, monkeypatch):
+    monkeypatch.setattr(ask, "SNAPSHOT_MAX_FILES", 2)
+    (dirty_repo / "aaa").mkdir()
+    for k in range(5):
+        (dirty_repo / "aaa" / f"{k}.txt").write_text("x")
+    errors = []
+    names = [p.name for p, _ in ask.snapshot_uncommitted(str(dirty_repo), tmp_path / "snap", errors)]
+    assert names[0] == "HANDOFF.md" and len(names) == 3 and "untracked cap" in errors[0]
+
+
+def test_two_jobs_get_separate_backup_folders(dirty_repo, monkeypatch):
+    dests = []
+    real = ask.snapshot_uncommitted
+    monkeypatch.setattr(ask, "snapshot_uncommitted", lambda cwd, dest, errors: dests.append(dest) or real(cwd, dest, errors))
+    monkeypatch.setattr(ask, "_ask", lambda *a: {"ok": True, "response": "done"})
+    ask.ask("p", cwd=str(dirty_repo), edits=True)
+    ask.ask("p", cwd=str(dirty_repo), edits=True)
+    assert dests[0] != dests[1] and not dests[0].exists() and not dests[1].exists()
+
+
 def test_a_snapshot_failure_never_fails_the_job(dirty_repo, monkeypatch):
     monkeypatch.setattr(ask, "snapshot_uncommitted", lambda *a: (_ for _ in ()).throw(OSError("disk full")))
     monkeypatch.setattr(ask, "_ask", lambda *a: {"ok": True, "response": "done"})
