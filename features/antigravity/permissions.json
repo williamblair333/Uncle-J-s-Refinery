@@ -27,6 +27,7 @@
     "command(git ls-files)",
     "command(git rev-parse)",
     "command(git blame)",
+    "command(git config --get)",
     "command(git branch -a)",
     "command(git branch --show-current)",
     "command(git remote -v)",

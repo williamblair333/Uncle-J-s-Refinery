@@ -714,3 +714,63 @@ def test_edits_brief_names_the_absolute_folder(tmp_path):
     argv = json.loads(argv_log.read_text())
     prompt = argv[argv.index("-p") + 1]
     assert prompt.startswith(f"Your working folder is {tmp_path}.") and prompt.endswith("write notes.md")
+
+
+# 11-22: with `git checkout -- HANDOFF.md` denied, agy rewrote the file with python and erased
+# the caller's uncommitted edit. ask() now backs up uncommitted files and reports any it changed.
+
+@pytest.fixture
+def dirty_repo(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git = lambda *a: subprocess.run(["git", "-C", str(repo), *a], check=True, capture_output=True)
+    git("init", "-q")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    (repo / "HANDOFF.md").write_text("committed\n")
+    (repo / "other.md").write_text("committed\n")
+    git("add", ".")
+    git("commit", "-qm", "init")
+    (repo / "HANDOFF.md").write_text("committed\ncaller's uncommitted edit\n")
+    (repo / "new.txt").write_text("untracked work\n")
+    monkeypatch.setattr(ask, "BACKUPS", tmp_path / "backups")
+    return repo
+
+
+def test_an_edits_job_that_rewrites_uncommitted_work_is_reported_with_a_backup(dirty_repo, monkeypatch):
+    def job(prompt, agy_bin, cwd, edits, timeout, model):
+        (Path(cwd) / "HANDOFF.md").write_bytes(b"committed\n")  # what agy did on 11-22
+        return {"ok": True, "response": "done"}
+    monkeypatch.setattr(ask, "_ask", job)
+    out = ask.ask("p", cwd=str(dirty_repo), edits=True)
+    assert [Path(h["path"]).name for h in out["overwrote_uncommitted"]] == ["HANDOFF.md"]
+    assert "caller's uncommitted edit" in Path(out["overwrote_uncommitted"][0]["backup"]).read_text()
+    assert "uncommitted" in out["warning"]
+
+
+def test_an_edits_job_that_leaves_uncommitted_work_alone_leaves_no_backup(dirty_repo, monkeypatch, tmp_path):
+    def job(prompt, agy_bin, cwd, edits, timeout, model):
+        (Path(cwd) / "other.md").write_text("agy's own edit\n")  # a clean file: not the caller's work
+        return {"ok": True, "response": "done"}
+    monkeypatch.setattr(ask, "_ask", job)
+    out = ask.ask("p", cwd=str(dirty_repo), edits=True)
+    assert "overwrote_uncommitted" not in out and "warning" not in out
+    assert not any((tmp_path / "backups").rglob("*.md"))
+
+
+def test_a_snapshot_failure_never_fails_the_job(dirty_repo, monkeypatch):
+    monkeypatch.setattr(ask, "snapshot_uncommitted", lambda *a: (_ for _ in ()).throw(OSError("disk full")))
+    monkeypatch.setattr(ask, "_ask", lambda *a: {"ok": True, "response": "done"})
+    out = ask.ask("p", cwd=str(dirty_repo), edits=True)
+    assert out["ok"] and "disk full" in out["snapshot_error"]
+
+
+def test_a_read_only_job_takes_no_snapshot(dirty_repo, monkeypatch):
+    monkeypatch.setattr(ask, "snapshot_uncommitted", lambda *a: pytest.fail("snapshot on a read-only job"))
+    monkeypatch.setattr(ask, "_ask", lambda *a: {"ok": True, "response": "done"})
+    assert ask.ask("p", cwd=str(dirty_repo))["ok"]
+
+
+def test_the_rules_block_says_denied_means_stop():
+    text = (REPO / "features/antigravity/rules-block.md").read_text()
+    assert "never reach the same effect another way" in text and "Never revert changes" in text
