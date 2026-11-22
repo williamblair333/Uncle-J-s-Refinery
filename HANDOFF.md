@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-22 — DeepSeek round 2 scheduled; hook-bench log leak fixed
+
+- **DeepSeek V4.1 round 2 runs tonight at 21:10** (`dsv41-diag2.timer`, one-shot; cancel `systemctl --user stop dsv41-diag2.timer`). Script `/opt/docker/strata/bench/dsv41/diag2.sh`: (1) the baseline with an 1800 s calibration timeout, (2) immich + langfuse parked with `--ssd-cache 14`. A watchdog kills the engine container under 3 GiB MemAvailable. blind.sh sends a Telegram per run. **Next session:** read `/opt/docker/strata/bench/results/dsv41-diag2-*/` (`diag.log`, each run's `calibration.json` + `calibration.stderr`), compare with 11-20 parked (2.33 / 1.83 tok/s, 74.5 % hit, 366 MB per token), and check `docker ps` shows immich + langfuse up (unpark only logs a failure; diag2 has no Telegram of its own, since the credential guard keeps the env-file path out of a script I write). Then: why the CPU lane reads at 0.25 GB/s against the disk's 1.04.
+- **Done:** the hook-bench log leak (CHANGELOG). The other start-here items below still stand (restart Claude Code for the new `ask_agy`).
+
 ## 2026-11-22 — session end: start here
 
 - **Next session: work DeepSeek V4.1** (Bill 11-22). Two calibration runs with `/opt/docker/strata/bench/dsv41/blind.py --calibrate-only` (memory `project_big-model-bench` has the image, mounts and Heretic/Ollama steps): (1) the baseline again with an 1800 s timeout, since the 11-20 one timed out at 901 s and gave no numbers; (2) parked (immich + langfuse stopped) with `--engine-arg --ssd-cache 14`. Compare prefill/decode and the RAM cache hit rate against the 11-20 parked run (2.33 / 1.83 tok/s, 74.5 % hit, 366 MB read per token). Then find why the CPU lane reads experts at 0.25 GB/s when the disk does 1.04. Schedule runs for when Bill isn't at the desk: a run slows the whole machine.
