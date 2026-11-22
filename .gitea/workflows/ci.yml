@@ -11,6 +11,11 @@ on:
     branches: [main]
   pull_request:
 
+# The act-22.04 image's python3 is 3.10; requires-python is >=3.11 and onnxruntime has no
+# wheel for 3.10. uv fetches its own 3.12 (what GitHub's ubuntu-latest had).
+env:
+  UV_PYTHON: "3.12"
+
 jobs:
   # ── 1. Bash syntax + static analysis ───────────────────────────────────────
   lint:
