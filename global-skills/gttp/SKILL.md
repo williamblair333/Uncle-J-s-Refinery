@@ -111,10 +111,10 @@ Tables over prose. No preamble, no closing offer.
 ## Step 6 — User notes (optional; never inside this skill's folder)
 
 The improvisation log and inventory are user data. **Location:**
-`$GTTP_NOTES_DIR` if set; otherwise `<vault>/13 - Resources/`, where `<vault>`
-is `/opt/proj/jaredrhod/vaults/brain` on Linux or
-`/c/opt/proj/jaredrhod/vaults/brain` in Git Bash on Windows. If neither
-exists, skip this step silently.
+`$GTTP_NOTES_DIR` if set; otherwise `~/.local/share/uncle-j/gttp/` (the same
+path in Git Bash on Windows). If neither exists, skip this step silently. (Until
+2026-11-22 the notes lived in the Obsidian brain vault, now archived; the
+copies there are frozen.)
 
 - Improvise path: if `Inventory.md` exists there, read it before Step 3.
 - Log to `Improvisation Log.md` only on the Improvise, Full-analysis, or

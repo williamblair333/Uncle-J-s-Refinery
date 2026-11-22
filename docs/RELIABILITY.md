@@ -131,7 +131,6 @@ not just this project's. (The `uncle-j` name is legacy.) It's kept current by tw
 |--------|----------|-------|
 | `uncle-j-memweave-sync` cron | 02:30 nightly (`nice -19`) | `--all` — full cross-project export+index (every project) |
 | Stop-hook (`# uncle-j-memweave-sync`) | end of every session **whose cwd is this repo** (`async`) | incremental — this repo, `LIMIT 15` most-recent transcripts |
-| Stop-hook (`# uncle-j-memweave-sync-vault`) | end of every session **whose cwd is `/opt/proj/jaredrhod`** (`async`) | incremental — `-opt-proj-jaredrhod`, `LIMIT 15`, **plus the vault mirror** |
 
 Stop-hook reach is narrower than it looks, and the reason is worth understanding before adding a
 third. The hooks are registered per-repo in each project's `.claude/settings.json`, not at user
@@ -140,9 +139,9 @@ scope, so one only fires when that project is the session's cwd. Worse, `sync_me
 ingests `-opt-proj-Uncle-J-s-Refinery` no matter which project the session was working on.
 Measured 2026-08-19: 297 hook runs, all of them that project; 45 nightly `--all` runs.
 
-The vault hook (added 2026-08-19) therefore passes its project **explicitly**. Without that it
-would re-ingest this repo and leave the vault's own transcripts to the cron. Every project except
-these two is still covered by the cron alone, with up to ~24h of lag.
+Every project except this one is covered by the cron alone, with up to ~24h of lag. (A second
+hook for the Obsidian vault at `/opt/proj/jaredrhod` existed from 2026-08-19 until the vault was
+archived on 2026-11-22; its entry in that project's settings is dormant.)
 
 **Known race, deliberately not fixed:** two sessions closing within seconds of each other means
 one hook loses the `mkdir` lock and exits 0 with `sync skipped — another sync holds`. It does not
@@ -150,51 +149,22 @@ queue or retry, so that project's ingest defers to the 02:30 cron. The alternati
 the lock during session teardown — is a worse failure than a deferred ingest. The skip is logged,
 so it is diagnosable after the fact rather than invisible.
 
-Both hooks are asserted by `healthcheck.sh` (`check_vault_hook_registered`), which greps for each
-marker separately. That matters: a hand-edit preserving the checkpoint hook and dropping the sync
-hook would otherwise pass green, and a missing sync hook is invisible by construction — the corpus
-just reverts to 24h staleness, and a stale prior-art miss reads exactly like a genuine
-"no prior work".
-
-Both redirect to `state/memweave-sync.log`; the script logs to stdout/stderr only (callers own
+The hook and the cron redirect to `state/memweave-sync.log`; the script logs to stdout/stderr only (callers own
 the destination). The store is fully reconstructable from the markdown corpus (memweave M2
 crash-recovery: `rm` the index → byte-identical rebuild), so an interrupted sync is recoverable.
 
-### Two corpus sources
+### The corpus
 
-`sync_memory.sh` writes two kinds of markdown into `~/.uncle-j-memory/memory/`, and both are
-**derived** — the store is a cache of them, never the original:
+`sync_memory.sh` writes Claude transcripts (`export_transcripts.py`) into
+`~/.uncle-j-memory/memory/*.md`; they are **derived**, and the store is a cache of them. Two kinds
+of file there are *not* re-exportable: the dream-synthesis notes `dream.sh` copies in and
+`premortem-audit.md`. Anything that deletes inside `memory/` must leave those alone.
 
-| Source | Lands in | Written by | Holds |
-|--------|----------|------------|-------|
-| Claude transcripts | `memory/*.md` | `export_transcripts.py` | what was *said* — the conversations |
-| Obsidian vault | `memory/vault/**` | `mirror_vault.py` | what was *decided* — VAULT-INDEX, Active Priorities, per-project notes, Jobs |
-
-Until 2026-08-19 there was only the first, so prior-art search covered conversations and missed
-decisions entirely. **Never edit `memory/vault/`** — edit `/opt/proj/jaredrhod/vaults/brain` and
-let the next sync carry it; the mirror overwrites and prunes its own directory on every run.
-
-Two invariants in `mirror_vault.py` carry more weight than the copying:
-
-- **The prune cannot escape `memory/vault/`.** Orphans are deleted so a note removed from the
-  vault leaves the index too, and a destination resolved one level too high would delete all
-  ~2,250 transcript docs — re-exportable, except for the dream-synthesis notes `dream.sh` copies
-  in and `premortem-audit.md`, which are not. `_resolve_dest` asserts the target is a strict
-  subpath of `memory/` named exactly `vault` before any unlink, and only `*.md` the mirror wrote
-  is removed. `tests/test_mirror_vault.py` pins the way this actually goes wrong: `VAULT_ROOT`
-  pointed at an empty directory makes *every* destination file read as an orphan via the normal,
-  non-error path.
-- **Folder exclusions fail closed.** `11 - Personal` (health, key people, beliefs — which the
-  vault's own rules keep out of every boot-loaded file) and `12 - Archive` (a plaintext
-  credential) are excluded by *normalized* folder name, so renumbering cannot silently disable an
-  exclusion. An unrecognised top-level folder is **also** excluded and reported with a non-zero
-  exit, because a plain denylist fails open on the next folder somebody adds. A new vault folder
-  therefore breaks the nightly sync loudly until it is classified in `INCLUDED_TOP_LEVEL` or
-  `EXCLUDED_TOP_LEVEL`; that is the intended behaviour, not a bug.
-
-A missing vault (every non-Linux host, any fresh clone) is a clean no-op exit 0, and the call
-site captures the mirror's return code rather than letting `set -e` abort — a mirror failure must
-not keep the transcripts that just exported out of the index.
+From 2026-08-19 to 2026-11-22 a second source mirrored the Obsidian brain vault into
+`memory/vault/` (`mirror_vault.py`). It was removed when the vault went stale: its priorities
+were last edited 2026-08-22, and its notes came back from searches looking like current decisions.
+Decisions now live in each repo's HANDOFF/ROADMAP and Claude's memory notes. The vault is
+archived in place; `mirror_vault.py` and its tests are in git history if it is ever revived.
 
 **Prerequisite:** the py3.12 `.venv-memweave` must exist (memweave requires ≥3.12; it can't live
 in the 3.11 project venv). A missing venv makes `sync_memory.sh` exit 1 with a logged error —

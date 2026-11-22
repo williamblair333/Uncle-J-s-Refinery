@@ -768,21 +768,12 @@ tools can answer structurally.
 - Scope: `~/.uncle-j-memory` is the **cross-project** store — the nightly `--all` export covers
   every project under `~/.claude/projects` (34 as of 2026-08-19), not just this one. Search it for
   prior art regardless of which project you are working in.
-- **Two corpus sources, not one.** Transcripts (`memory/*.md`, what was *said*) and a mirror of the
-  Obsidian vault (`memory/vault/**`, what was *decided* — VAULT-INDEX, Active Priorities, the
-  per-project notes, and the Jobs). Before the mirror, "have we solved this before?" searched past
-  the one store holding the decisions. Both are derived: **never edit `memory/vault/` — edit the
-  vault at `/opt/proj/jaredrhod/vaults/brain`**, or the next sync overwrites you.
-- **The vault syncs at session close**, via a second Stop hook registered in
-  `/opt/proj/jaredrhod/.claude/settings.json` that calls `sync_memory.sh -opt-proj-jaredrhod 15`
-  — so a vault note written this session is searchable at the end of it, not at 02:30. The one
-  gap left: if a jaredrhod session and a stack-repo session close within seconds, one loses the
-  sync lock and defers to the cron (logged as `sync skipped` in `state/memweave-sync.log`).
-- **The mirror excludes `11 - Personal` and `12 - Archive` and fails closed.** Personal Context
-  holds health, key people, and beliefs the vault's own rules keep out of every boot-loaded file;
-  the Archive carries a plaintext credential. Any top-level vault folder that
-  `scripts/memweave/mirror_vault.py` does not recognise is **also** excluded and reported with a
-  non-zero exit — classify a new folder there before expecting to search it.
+- **One corpus source: transcripts** (`memory/*.md`, what was *said*), plus the dream-synthesis
+  and audit notes written into `memory/`. The Obsidian vault mirror (`memory/vault/**`) was
+  removed 2026-11-22: the vault had stopped being kept up (priorities last edited 2026-08-22), and
+  its stale notes came back from searches looking like current decisions. Decisions now live in
+  each repo's HANDOFF/ROADMAP and Claude's memory notes. The vault itself is archived in place at
+  `/opt/proj/jaredrhod/vaults/brain`; its local-only docs-index rule (`jdocmunch-reindex.sh`) stays.
 
 ### 5. Runtime traces (when available)
 - After ingesting OTel/SQL/stack traces via `import_runtime_signal`, use:

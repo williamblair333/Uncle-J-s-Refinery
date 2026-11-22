@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-22 — the Obsidian brain vault is archived; memory search stops mirroring it
+
+- **Why (Bill 11-22: "dump Obsidian" for the Refinery; write-well keeps Obsidian for its own use):** the vault had stopped being kept up (last commit 10-17, `Active Priorities.md` last edited 08-22, no daily notes after September). Its stale priorities came back from memory search looking like current decisions, which works against the "Right" goal. Decisions live in each repo's HANDOFF/ROADMAP and Claude's memory notes.
+- **Removed:** `scripts/memweave/mirror_vault.py` and its tests; the mirror step in `sync_memory.sh`; `healthcheck.sh`'s vault Stop-hook check. The memweave server's description no longer mentions the vault. CLAUDE.md §4, ROUTING-REFERENCE §4 and RELIABILITY updated.
+- **Moved:** gttp's improvisation log and inventory now live in `~/.local/share/uncle-j/gttp/` (copied byte-identical); Step 6 points there.
+- **Kept:** the vault itself, archived in place at `/opt/proj/jaredrhod/vaults/brain`; `jdocmunch-reindex.sh`'s local-only rule for it (it holds a private note and a clear-text credential); the dormant Stop hooks in `/opt/proj/jaredrhod/.claude/settings.json` (they fire only for sessions run there).
+
 ## 2026-11-22 — hook bench no longer writes to the live block log
 
 - **Fixed:** `just hook-bench` replays real hooks, and stall-guard and pipe-to-shell-guard log next to the hook (not under `$HOME` or `UNCLE_J_PROJ_ROOT`), so replays landed in the live `state/hook-blocks.log`: 17 of 11-22's stall-guard lines were `bench-` sessions. `make_sandbox` now points `STALL_GUARD_LOG` and `PIPE_GUARD_LOG` into the sandbox, and `test_real_guard_in_sandbox_does_not_touch_block_log` covers both guards (red without the fix, green with it).

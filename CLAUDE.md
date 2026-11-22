@@ -237,12 +237,11 @@ an audit; it validates every evidence ref against what this session retrieved.
   `--min-score N`). A missing/empty store returns `no_index` (MCP) or exits nonzero (CLI) —
   fall back to the session transcript.
 - The store at `~/.uncle-j-memory` is **cross-project**: transcripts from every project
-  (what was *said*) plus a mirror of the Obsidian vault (what was *decided*). Search it
-  whatever project you're in.
-- **Never edit `memory/vault/` — edit the vault at `/opt/proj/jaredrhod/vaults/brain`.**
-  The mirror excludes `11 - Personal` and `12 - Archive` and fails closed on unknown folders.
-- Freshness: the nightly 02:30 cron covers every project; the session-end Stop hooks cover
-  only the stack repo and the jaredrhod vault. Other projects' work is searchable after 02:30.
+  (what was *said*). Search it whatever project you're in. Decisions live in each repo's
+  HANDOFF/ROADMAP and Claude's memory notes; the Obsidian brain vault is archived (2026-11-22)
+  and no longer mirrored, so don't cite it as current.
+- Freshness: the nightly 02:30 cron covers every project; the session-end Stop hook covers
+  only the stack repo. Other projects' work is searchable after 02:30.
 
 ### 5. Runtime traces (when available)
 - After `import_runtime_signal`: `find_hot_paths`, `find_unused_paths`, `get_runtime_coverage`.
