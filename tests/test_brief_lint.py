@@ -133,3 +133,12 @@ def test_echoed_runs_catches_the_msa_line():
 
 def test_echoed_runs_ignores_short_shared_phrases():
     assert bl.echoed_runs("write a short note about the weekly backup job", "the weekly backup job ran") == []
+
+
+def test_read_only_hashers_are_allowed_by_the_real_rules(tmp_path):
+    # mtw2 11-22: `sha256sum lua/parley_bridge.lua` was auto-denied and the denial ended a 10-min job
+    rules = bl.load_rules(Path(os.environ.get("BRIEF_LINT_PERMISSIONS") or bl.PERMISSIONS))
+    assert rules is not None
+    for cmd in ("sha256sum", "sha1sum", "md5sum", "cksum"):
+        problems = bl.lint(f"Run: {cmd} notes.txt", str(tmp_path), rules)
+        assert "unlisted" not in kinds(problems), (cmd, problems)

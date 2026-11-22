@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-22 — agy may run read-only hashers
+
+- **Fixed (from mtw2's report):** headless agy was auto-denied `sha256sum`, and in headless mode a denied command ends the whole job (the 10-26 "how agy lost jobs" rule). `sha256sum`, `sha1sum`, `md5sum` and `cksum` are now on agy's allow list and in its rules block. Pipes stay denied, so the call must be bare (`sha256sum file`, not `… | cut`). `tests/test_brief_lint.py` checks the real permissions file (red against the old one).
+- **Not changed:** making a denial recoverable. That's agy's own headless behaviour, not our wrapper's.
+
 ## 2026-11-22 — the Obsidian brain vault is archived; memory search stops mirroring it
 
 - **Why (Bill 11-22: "dump Obsidian" for the Refinery; write-well keeps Obsidian for its own use):** the vault had stopped being kept up (last commit 10-17, `Active Priorities.md` last edited 08-22, no daily notes after September). Its stale priorities came back from memory search looking like current decisions, which works against the "Right" goal. Decisions live in each repo's HANDOFF/ROADMAP and Claude's memory notes.
