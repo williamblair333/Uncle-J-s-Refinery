@@ -94,6 +94,9 @@ jobs:
           sudo apt-get install -y bubblewrap
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
+      - name: Pillow for the system python3 (tests/test_comfy.py region test runs `just image --region` under /usr/bin/python3)
+        run: sudo apt-get install -y python3-pil
+
       - name: git identity (tests build real repos and commit)
         run: |
           git config --global user.email ci@example.invalid
