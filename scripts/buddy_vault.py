@@ -6,8 +6,8 @@
     just vault get ITEM [--field F]   # F = username | password | totp | uri | notes (default username)
 
 Config: KEY=VALUE file at $BUDDY_VAULT_ENV (default ~/.config/uncle-j/buddy-vault.env), 0600,
-written by Bill: BUDDY_VAULT_EMAIL, BUDDY_VAULT_PASSWORD (the buddy account's master password,
-never Bill's). Optional BUDDY_VAULT_SERVER (https://vault.home.arpa), BUDDY_VAULT_CA (autark root).
+written by William: BUDDY_VAULT_EMAIL, BUDDY_VAULT_PASSWORD (the buddy account's master password,
+never William's). Optional BUDDY_VAULT_SERVER (https://vault.home.arpa), BUDDY_VAULT_CA (autark root).
 
 Read-only by construction: only `bw status|login|unlock|sync|list items|get` are ever run, and
 there is no add, edit or delete. bw's state lives in ~/.config/uncle-j/bw, apart from any other

@@ -47,7 +47,7 @@ repo, and every claim on it points at evidence.**
 
 A bar on paper is read only when someone remembers to read it. mtw2 had `forced-events` in
 STANDARDS and still ran a turn-playing test into a papal election (2026-11-01), then answered
-Bill's complaint with one more memory note. When the user asks why they had to catch
+William's complaint with one more memory note. When the user asks why they had to catch
 something:
 
 1. Name the step a senior practitioner takes there, and why it didn't happen.

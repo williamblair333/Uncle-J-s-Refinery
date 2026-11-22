@@ -7,22 +7,22 @@ Completed items age out after ~4 weeks.
 
 ## In Progress
 
-- **Live Partikus build demo, with Bill watching** (opened 2026-10-17). live_preview and the
-  `partikus` MCP server shipped, but Bill hasn't seen a part being built: the only session
+- **Live Partikus build demo, with William watching** (opened 2026-10-17). live_preview and the
+  `partikus` MCP server shipped, but William hasn't seen a part being built: the only session
   was a batch published after the fact. Open `partikus_watch` first, give the URL alone,
-  then build step by step. Not done until Bill has watched one grow. HANDOFF has the steps.
+  then build step by step. Not done until William has watched one grow. HANDOFF has the steps.
 
 ## Planned
 
 - **[DONE 2026-11-22] Global stall guard** — `hooks/discipline/stall-guard.sh` (CHANGELOG 2026-11-22). Open: write-well and mtw2 retire their local copies; re-bench with `just hook-bench --hook stall-guard` after a week of live use; a Monitor-style stall wake for waits that do have a deadline but should report sooner.
-- **Gitea repo creation for sessions:** the token lacks `write:user` and push-to-create is off, so new repos (touchup) need Bill's click. Pairs with "Gitea new-repo bootstrap".
+- **Gitea repo creation for sessions:** the token lacks `write:user` and push-to-create is off, so new repos (touchup) need William's click. Pairs with "Gitea new-repo bootstrap".
 
-- **Buddy accounts: Claude acts on websites for Bill** (filed 2026-11-15; Bill's steps are in the
+- **Buddy accounts: Claude acts on websites for William** (filed 2026-11-15; William's steps are in the
   "Buddy accounts setup" Claude Doc). Done: `just browser-show` (#347), `just mail` (#348, live) and
   `just vault` (#354, live, TOTP read verified 2026-11-16).
   Open: (b) a JMP.chat number, then an XMPP reader for SMS codes; (c) a shared Buddy collection;
   (d) move the buddy off Autark's Gmail onto its own account once it
-  has a number (Google refused a new signup on Bill's phone).
+  has a number (Google refused a new signup on William's phone).
 
 - **Build in-house what the scout found only as ideas** (filed 2026-11-13, from the scout review
   that answered 22 open finds in `scout/answers.json`). Each needs no outside project:
@@ -42,7 +42,7 @@ Completed items age out after ~4 weeks.
   merge through `curl` and the API token, done by hand in 17 sessions across 5 projects. It overlaps
   with the Gitea bootstrap item below; build both as one Gitea tool in the gitea repo.
 - **Projects adopt the tools standard** (filed 2026-11-10). Each project's own session tags its
-  recipes `[group('tools')]` as they pass `just tools lint`. Bill decides whether to send each
+  recipes `[group('tools')]` as they pass `just tools lint`. William decides whether to send each
   project a note (`just inbox send`) or let it happen at the next session.
 
 - **Gitea new-repo bootstrap** (filed 2026-11-03 from lanscout; 3rd repeat after dfir and anatomy-lab in
@@ -50,10 +50,10 @@ Completed items age out after ~4 weeks.
   `write:repository`, `POST /user/repos` needs `write:user`, and push-guard blocks the first push to `main` (since 2026-11-20, PR #370, a bare `git push` too).
   Each repo improvised: mint a token via `docker exec -u git gitea gitea admin user generate-access-token
   --scopes write:repository,write:user --raw` → create private with `auto_init` → rebase local history onto
-  the init commit → import by PR. Each run leaves a `write:user` token only Bill can revoke in the UI
+  the init commit → import by PR. Each run leaves a `write:user` token only William can revoke in the UI
   (latest: `lanscout-create-20261103`). Fix: `just gitea-new-repo <name>` script doing those steps and
   verifying privacy (anonymous API request → 404); or one long-lived repo-create token in the credential
-  store so tokens stop piling up. Bill: revoke the leftover create tokens.
+  store so tokens stop piling up. William: revoke the leftover create tokens.
 - **Thinking chain** (agreed 2026-10-31: goal → problem choice → floor → ideas → proof → learning). Done:
   self-check hook (#249), `think-wider` skill with a build step (#251, #252), Refinery `STANDARDS.md` (#251, #253).
   Open: `meta-question-rate` (the outcome metric, ranked #2 in STANDARDS.md); testing the 5 untested ideas in
@@ -61,11 +61,11 @@ Completed items age out after ~4 weeks.
   tied to the life goals.
 - **[DONE 2026-10-30] Workarounds must surface the cause** — built as below (CHANGELOG 2026-10-30); open: RED/GREEN
   test of the skill trigger (3), and tuning the Stop hook from `~/.claude/state/workaround-scan.jsonl` hit counts. Claude routes around blocks to
-  finish today's task and doesn't fix why it was blocked; Bill caught it twice on 10-30 (live campaign as test bed,
+  finish today's task and doesn't fix why it was blocked; William caught it twice on 10-30 (live campaign as test bed,
   hand-feeding agy game data). Skills fire on the same judgment that fails, so add mechanical detectors that turn
   workaround signals into a required "fix the cause or file it" step:
   1. **delegate wrapper:** `tool_errors` with `auto-denied` → result carries `fix_cause` (the denied tool + path,
-     the allow rule to add in `features/antigravity/permissions.json`, ask Bill if outside /opt/proj or secret-like);
+     the allow rule to add in `features/antigravity/permissions.json`, ask William if outside /opt/proj or secret-like);
      log to `state/agy-denials.jsonl`; `just offload` lists repeat denials. The signal already exists
      (`"warning": "… agy worked around them"`) and nothing acts on it.
   2. **Stop hook:** scan the turn for workaround phrases ("worked around", "hand-fed", "waiting on", "pending live",
@@ -107,7 +107,7 @@ Completed items age out after ~4 weeks.
   Ollama **can't retire yet**: Klarheit's hourly trials pin `qwen3.5:9b` (step 6). Decided
   2026-10-23: Ollama and the 9B stay, for Klarheit only, until those pre-registered trials end
   (moving a pinned model mid-trial would void them); granite4.2:8b removed; Heretic stays
-  127.0.0.1-only (Bill: local only for now). Also left: a small
+  127.0.0.1-only (William: local only for now). Also left: a small
   llama-server model for the Pi / tc-vmh-03. Speech is done
   (2026-10-23, both CPU only): whisper.cpp large-v3-turbo (`just whisper up -d`, :8092, a 30 s
   clip in ~31-42 s) and Chatterbox Nano cloned voices (`just tts up -d`, :8093, ~5 s a
@@ -118,19 +118,19 @@ Completed items age out after ~4 weeks.
   culling test). Plan:
   `docs/proposals/2026-10-22-local-model-lineup.md`.
 
-- **n8n ideas, parked for review** (Bill 2026-10-23: not now) (opened 2026-10-21). n8n would run beside Uncle J for
+- **n8n ideas, parked for review** (William 2026-10-23: not now) (opened 2026-10-21). n8n would run beside Uncle J for
   webhooks and OAuth SaaS flows. The full list is ranked by project, with traps and four
-  decisions for Bill: `docs/proposals/2026-10-21-n8n-ideas.md`. The top picks are bizengine,
+  decisions for William: `docs/proposals/2026-10-21-n8n-ideas.md`. The top picks are bizengine,
   multi-host sync and patentengine deadlines. Resume: "set up n8n".
 
-- **Multiplayer-AI viewer** (Bill 2026-10-23: still needs a game and engine named) (opened 2026-10-17). For watching AI players cooperate or compete
+- **Multiplayer-AI viewer** (William 2026-10-23: still needs a game and engine named) (opened 2026-10-17). For watching AI players cooperate or compete
   in a game, in real time. The plan:
   - a game-side bridge (localhost state/action API, fixed screen types; the pattern is from
     CLI-Anything's Slay the Spire II mod);
   - `live_preview` for the board, with the agent's name in each label;
   - Langfuse traces for what each agent saw, said and did.
   - A per-agent lane view needs work in the vendored viewer.
-  - Blocked on Bill naming the game and engine.
+  - Blocked on William naming the game and engine.
 - **[DONE 2026-10-23] Justfiles** — write_well (status, recall; markdown only; write_well #5,
   `af90396`) and deal-finder (setup, run, status, recall; deal-finder #1 into `master`, its real
   trunk, `24fc4ef`). Both were made in a scratch worktree off the remote trunk, so their dirty
@@ -142,9 +142,9 @@ Completed items age out after ~4 weeks.
   plus the five remote-less repos. Recipe names stay shared: setup, test, run, start, stop,
   status, doctor. The five formerly remote-less repos can get theirs now. free-energy's `just test` didn't finish within 10 minutes (it probably collects
   `accel/tests`); worth a look.
-- **Dictation follow-ups** (Bill 2026-10-23: discuss later) (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
+- **Dictation follow-ups** (William 2026-10-23: discuss later) (`/opt/proj/voice-line`, opened 2026-10-16). In order: find what
   turns the cursor into a crosshair on Right Alt; decide on `small.en` or `large-v3-turbo`
-  (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by Bill
+  (`base.en` mishears jargon); then a KDE autostart entry. GPU whisper is deferred by William
   (path in HANDOFF).
 - **Review `state/referee.jsonl`** after a few weeks of use (opened 2026-10-15). How often
   does a referee `fail` find a real defect, and how often does it error? Lines with `"retried": true` count soft denies the retry recovered (or not). If it rarely
@@ -164,13 +164,13 @@ Completed items age out after ~4 weeks.
   no maintainer reply, only two third-party comments: a design review and a native-Windows quoting
   workaround. If they say "PR welcome", the touched modules are listed in #2187. Install Node
   ≥22.19 first, since REA's checks need it.
-- **REA in Docker, two containers** (planned 2026-10-22, **waiting for Bill's "build it"**).
+- **REA in Docker, two containers** (planned 2026-10-22, **waiting for William's "build it"**).
   `docker/rea/` with an Investigator image (REA 6.7.0, Ghidra 12.1.4, Node 24, JDK 21) and a
   Builder image with no Docker socket, pinned in `versions.env`, `just rea-update` /
   `rea-rollback`. Plan: `review/2026-10-22-rea-in-docker.md` (main host).
-- **Large-model splitter for the A1 mini ("bigprint")** (spec 2026-10-22, **waiting for Bill**).
+- **Large-model splitter for the A1 mini ("bigprint")** (spec 2026-10-22, **waiting for William**).
   A full clean-room spec (deterministic grid splits only, to design around US10025882B2) sits in
-  `review/luban-rebuild-handoff.md` (main host). Needs Bill's go, where the new repo lives, and
+  `review/luban-rebuild-handoff.md` (main host). Needs William's go, where the new repo lives, and
   his three open items: filament for gram estimates, connector default, laser outputs.
 - **[DONE 2026-10-22] grep-guard false positive on an unexpanded glob** — globs now expand
   against the session cwd and each match is judged; `-r` on a plain non-source file is
@@ -185,21 +185,21 @@ Completed items age out after ~4 weeks.
   `install-guardrails.sh`) keeps the local copy repaired. Status 2026-10-23: #17 and #20 are both
   open with zero comments. The repo's last push was 2026-09-08 (#18/#19), so the maintainer is
   quiet rather than declining.
-- **Upstream defender bug, not filed** (found 2026-10-31; filing is Bill's call). dwarvesf/claude-guardrails
+- **Upstream defender bug, not filed** (found 2026-10-31; filing is William's call). dwarvesf/claude-guardrails
   `full/prompt-injection-defender.sh` reads `.tool_output` (Claude Code sends `tool_response`) and prints
   `{"message"}`, which the harness ignores, so it never warns. Unchanged at upstream HEAD 590bc5d.
   `scripts/fix-guardrails-defender.sh` keeps the local copy repaired (main host only).
 - **Push access from tc-vmh-03** (opened 2026-10-05). `~/.ssh/github` is rejected by GitHub,
   there's no `gh`, and no Gitea remote, so this host can commit but not push.
 
-- **Jarvis track** (Bill 2026-10-23: later) (opened 2026-10-04). Bill wants Uncle J to grow into a general assistant
+- **Jarvis track** (William 2026-10-23: later) (opened 2026-10-04). William wants Uncle J to grow into a general assistant
   that handles whatever he asks. **Two homes, one Jarvis:** this repo is the engine (MCP
-  servers, crons, every commit), and `/opt/proj/jaredrhod` is where Bill talks to it (the
+  servers, crons, every commit), and `/opt/proj/jaredrhod` is where William talks to it (the
   Jarvis persona in its `CLAUDE.md`, plus the `vaults/brain` vault as long-term memory).
   Build pieces here; don't fork a second persona here or engine code there. Pieces in
   suggested order:
   1. **Daily email triage.** The Gmail and Calendar connectors already exist. Draft replies and
-     flag what matters, but only draft: Bill sends. This is the first job that acts for him on
+     flag what matters, but only draft: William sends. This is the first job that acts for him on
      a schedule rather than when asked.
   2. **Image generation.** Local generation runs (ComfyUI + Z-Image-Turbo, `just image`,
      2026-10-23). Left: wrap it in a small MCP.
@@ -211,7 +211,7 @@ Completed items age out after ~4 weeks.
      takes 8.1 min per 5 s 832×480 clip on the 3060 (`just video`, measured 2026-10-23). Use it
      for background jobs; use a paid API for anything interactive.
 
-- **Stop being the glue: one front door to every project** (Bill 2026-10-23: later) (opened 2026-10-19). Today Bill `cd`s
+- **Stop being the glue: one front door to every project** (William 2026-10-23: later) (opened 2026-10-19). Today William `cd`s
   into a project, starts Claude Code, and syncs the Pi and tc-vmh-03 by hand. The goal is to
   minimize his attention per finished outcome (local-first, portable off Claude). Agreed order:
   1. **Measure startup, then trim.** Every session start runs the startup checks and launches
@@ -264,7 +264,7 @@ Completed items age out after ~4 weeks.
   section in `review/2026-10-19-browser-automation-no-microsoft.md` (main host).
   Original: (opened 2026-10-19). It's Mozilla's, with
   no Google or Microsoft code at runtime. Snapshots measured 10–40× smaller than
-  chrome-devtools-mcp's (~4–23K vs ~186K chars per page); Bill avoids Microsoft, so
+  chrome-devtools-mcp's (~4–23K vs ~186K chars per page); William avoids Microsoft, so
   playwright-mcp is out. Plan: register it for sessions that need it only, set
   `SE_AVOID_STATS=true` (Selenium Manager sends stats to plausible.io; the env name is
   inferred, so verify it), install geckodriver locally so it can run offline, and confirm with
@@ -277,7 +277,7 @@ Completed items age out after ~4 weeks.
   says remove it. Checked 2026-10-22: no data. The log didn't exist until that day's test
   calls, so sessions weren't routing anything through ask_local. Re-check once they do.
 
-- **Codex MCP — GPT through the ChatGPT subscription** (Bill 2026-10-23: later) (opened 2026-10-04). Second of the three
+- **Codex MCP — GPT through the ChatGPT subscription** (William 2026-10-23: later) (opened 2026-10-04). Second of the three
   Hermes-replacement pieces (`ask_local` and the memweave MCP shipped). Codex CLI has an
   MCP-server mode (`codex mcp-server`; confirm the flag at install). Register it so Claude Code
   can get a second opinion or a parallel attempt through OpenAI's own sanctioned client. Needs a
@@ -288,11 +288,11 @@ Completed items age out after ~4 weeks.
   why something is named, built or chosen the way it is. A missed invocation (the BOTvunnix
   case) cost more than an extra skill load on ordinary questions.
 
-- **[CLOSED 2026-10-23] `CampaignGenerator` and `campaign-forge` abandoned** (Bill). No further
+- **[CLOSED 2026-10-23] `CampaignGenerator` and `campaign-forge` abandoned** (William). No further
   product-gate work; `reviewed/CampaignGenerator` carries a `.no-product-gate` marker.
-- **11 non-product repos carry only a local opt-out marker** (Bill 2026-10-23: look later) (opened 2026-09-20). The
+- **11 non-product repos carry only a local opt-out marker** (William 2026-10-23: look later) (opened 2026-09-20). The
   `.no-product-gate` files are untracked in their own repos, so a fresh clone would surface them
-  in the audit again. Commit them where the repo is one Bill controls; the four `jaredrhod` forks
+  in the audit again. Commit them where the repo is one William controls; the four `jaredrhod` forks
   deliberately stay uncommitted to avoid diverging from upstream.
 - **[DONE 2026-10-23] `jscrub` automation** — (b) `check-vendor` was already in CI via
   `audit-repo.sh`; that script now also runs a live-positive canary (a temp file with a ZWSP must
@@ -451,8 +451,8 @@ Completed items age out after ~4 weeks.
 - **Scout:** idempotent Telegram send, run lock, one message a day, `run done` health line,
   library finds routed to `library-backend-adoption-eval`, §10 gh facts logged.
 - **pysqlite3 wheel** rebuilt manylinux2014 (imports on Debian 11 / glibc 2.31).
-- **anatomy-lab** gets a private GitHub push mirror (Bill's call).
-- **Gitea tokens:** 15 one-shot tokens (ids 5–15, 17, 18, 21, 35) revoked after Bill accepted
+- **anatomy-lab** gets a private GitHub push mirror (William's call).
+- **Gitea tokens:** 15 one-shot tokens (ids 5–15, 17, 18, 21, 35) revoked after William accepted
   the 3 MEDIUMs. Backup taken, `integrity_check` ok before and after, backup deleted. Kept:
   1, 2, 4, 27.
 - **Remote-less repos:** larder, patentengine, reciepts, tao-intel and jaredrhod now have
@@ -462,7 +462,7 @@ Completed items age out after ~4 weeks.
 ## Recently completed (2026-10-17 — repo scout and skill library)
 
 - **Repo scout** (PR #135, cron installed 04:15): a capability map plus one Telegram find
-  each morning, and a three-yes ladder from find to trial. The map is awaiting Bill's
+  each morning, and a three-yes ladder from find to trial. The map is awaiting William's
   review. Design: `docs/superpowers/specs/2026-10-17-repo-scout-design.md`.
 - **Skill library** (PR #137): `just skill-lib sync|list|add` keeps whole collections in
   `../skill-library`, loaded by nothing. astropy, markitdown and timesfm-forecasting are
@@ -473,7 +473,7 @@ Completed items age out after ~4 weeks.
 - **live_preview** (#133): a live browser view of any build for any project. Its viewer
   comes from the HKUDS/CLI-Anything review. An independent review found a stored-XSS HIGH,
   fixed before merge.
-- **credential-guard** (#134): no tool touches credential files, reads included. Bill
+- **credential-guard** (#134): no tool touches credential files, reads included. William
   asked for it.
 - **Partikus MCP server** (partikus #39): an agent builds parts through one persistent
   offscreen FreeCAD worker, and every step shows up in live_preview.
@@ -739,7 +739,7 @@ Completed items age out after ~4 weeks.
 - *(obsolete — mempalace gone)* ~~Upstream MemPalace PR #1607~~ / ~~turbovecdb parallel eval~~.
 
 **Only genuinely-remaining deferred item:** purge the staged trash dirs (2.4 G + 55 G, irreversible —
-Bill's call). See HANDOFF + `project_memweave-migration-done`.
+William's call). See HANDOFF + `project_memweave-migration-done`.
 
 ## Planned
 
@@ -755,19 +755,19 @@ Bill's call). See HANDOFF + `project_memweave-migration-done`.
   consumer) and dream synthesis (it writes boot-loaded CLAUDE.md playbooks, too risky for a 9B
   model unreviewed). Tests: `tests/test_local_rail.py`. Original:
   **Phase 3 — Local rail** — Ollama endpoint + hardware-detect model select (Qwen3-Coder 30B / Devstral 24B / Qwen3 8B tiers); batch pipelines local-first (mine compression w/ content-hash caching, dream synthesis, guide compression); dreaming now promotes into the memweave store; pattern-importance scoring as pure script
-- **Phase 4 — Subtraction & absorption** — signed-off deletions (Bill, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. **[2026-10-23] Not removed:** the Phase 2 counter never measured ralph (`benefits.json` lists it under `missing`), so it can't confirm idle. No ralph cron is installed. Added the counter: `ralph-harness.sh` now appends to `state/ralph-runs.log` and `collect_benefits.py` reports it; decide after a few weeks of data. **[DONE 2026-10-23] CLAUDE.md de-dup:** `.claude/settings.json` `claudeMdExcludes` skips the repo copy (and worktree copies) here, so sessions load the policy once from `~/.claude/CLAUDE.md` (~5.1k tokens saved per session). The repo copy stays the deploy source; install.sh/doctor are unchanged, so the global Dreaming Notes tail is preserved. Original: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
+- **Phase 4 — Subtraction & absorption** — signed-off deletions (William, 2026-06-11): ~~D1 stale palace copies (55GB)~~ executed 2026-06-11; ~~**D2** ChromaDB repair apparatus~~ **DONE 2026-06-13** (mempalace fully decommissioned, PRs #50–#55); **D3** ralph — only if Phase 2 usage counter confirms idle. **[2026-10-23] Not removed:** the Phase 2 counter never measured ralph (`benefits.json` lists it under `missing`), so it can't confirm idle. No ralph cron is installed. Added the counter: `ralph-harness.sh` now appends to `state/ralph-runs.log` and `collect_benefits.py` reports it; decide after a few weeks of data. **[DONE 2026-10-23] CLAUDE.md de-dup:** `.claude/settings.json` `claudeMdExcludes` skips the repo copy (and worktree copies) here, so sessions load the policy once from `~/.claude/CLAUDE.md` (~5.1k tokens saved per session). The repo copy stays the deploy source; install.sh/doctor are unchanged, so the global Dreaming Notes tail is preserved. Original: CLAUDE.md de-dup (project stub, ~4k tokens/session); absorption check added to `post-upgrade-mcp-integration` (script-diff Claude Code changelog vs harness-layer manifest)
 
 - **[DONE 2026-10-23] Compressed `jcodemunch_guide`** — benchmark run on an idle host, 20
   routing queries on Heretic: full 738 tokens 18/20, compact 184 tokens 18/20, LLM-compressed
   660 tokens 18/20. The plain cut wins (75% fewer tokens, same accuracy); LLM compression is
-  dropped. Filing the upstream patch is Bill's call (it's a public PR on jgravelle's repo).
+  dropped. Filing the upstream patch is William's call (it's a public PR on jgravelle's repo).
   Earlier note: measured: the guide is now 2,804
   chars (the 4.6–5.1k-token estimate is stale) and nothing here loads it per session. The
   catalogue is 76% of it and duplicates the MCP tool list, so a deterministic `compact` cut
   (680 chars) beats LLM compression. Built `scripts/guide_bench/` (20 routing queries, local
   model as router) and an upstream-ready patch (`docs/proposals/2026-10-23-jcodemunch-guide-compact.patch`).
   **Not done:** the benchmark run (Heretic at ~0.6 tok/s under host load, two timeouts) and the
-  upstream filing (Bill's call). Details: `docs/proposals/2026-10-23-compressed-jcodemunch-guide.md`.
+  upstream filing (William's call). Details: `docs/proposals/2026-10-23-compressed-jcodemunch-guide.md`.
   Original: **Compressed `jcodemunch_guide` return value** — offline compress `_generate_claude_md_snippet()` output via cheap model (Phase 3 local rail candidate); benchmark 20 representative routing queries before/after; ~4,600–5,100 tokens/session savings at full tier; upstream contribution to jcodemunch
 
 - **[DONE 2026-10-23] ralph-harness env-strip** — `ralph-harness.sh` unsets both keys after its

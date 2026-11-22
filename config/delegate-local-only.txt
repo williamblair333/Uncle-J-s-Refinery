@@ -5,7 +5,7 @@
 # host with DELEGATE_LOCAL_ONLY.
 /opt/proj/anatomy-lab                  # invention figures stay local
 /opt/proj/business                     # Pleroma Holdings: client networks and contracts. Whole repo, since agy here could read clients/ by relative path
-/opt/proj/games/mtw2/.env              # mtw2 itself may use Gemini (Bill, 2026-10-25); its secrets may not
+/opt/proj/games/mtw2/.env              # mtw2 itself may use Gemini (William, 2026-10-25); its secrets may not
 /opt/proj/gitea/stack.env              # Gitea stack secrets
 /opt/proj/gitea/runner-config.yaml     # runner registration token
 /opt/proj/gitea/state                  # logs and locks

@@ -416,7 +416,7 @@ def unload_ollama(url: str = OLLAMA_URL, http=None) -> list[str]:
 
 
 # Compose projects stopped for a job when unloading Ollama still leaves too little RAM
-# (Bill's call, 2026-11-19: the desktop alone left 16 GiB). Restarted when the job ends.
+# (William's call, 2026-11-19: the desktop alone left 16 GiB). Restarted when the job ends.
 RAM_PARK_PROJECTS = ("immich", "claude-code-langfuse-template")
 _DB_HINTS = ("postgres", "redis", "clickhouse", "minio")
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse hook: the skills skill_router.py named for this prompt run before other work.
 
-Naming a skill isn't running it. 2026-11-02: Bill had to ask twice before a plan review used its
+Naming a skill isn't running it. 2026-11-02: William had to ask twice before a plan review used its
 review skills. The router records the skills it named in ~/.claude/state/skill-router/<session>.json.
 This hook removes each one as the Skill tool invokes it. The first other tool call while any are
 left is denied once, with the list. The retry goes through, so a skill the model declines (one line

@@ -1,6 +1,6 @@
 # Tools standard
 
-A **tool** is a hard, useful job turned into one command, so the next session runs it instead of working it out again. The model is Bill's `debian-howto-guides` scripts (`cups-usb-printer-fix.sh`, `ssh-add-host.sh`, `sshfs-add-mount.sh`). This page is the shape they share, written down so every project can follow it and a program can check it.
+A **tool** is a hard, useful job turned into one command, so the next session runs it instead of working it out again. The model is William's `debian-howto-guides` scripts (`cups-usb-printer-fix.sh`, `ssh-add-host.sh`, `sshfs-add-mount.sh`). This page is the shape they share, written down so every project can follow it and a program can check it.
 
 ## What a tool is
 
@@ -52,8 +52,8 @@ Start from [`features/tool-recipes/template.sh`](../features/tool-recipes/templa
 - **Mechanical, read-only** (a `--check`, a `status`): run its recipe with `just -g <project> <recipe>`.
 - **Anything that changes its system, or needs its judgment:** leave a note with `just inbox send <project> --topic "..."`. The note lands in `<project>/inbox/`, and that project's next session sees it at start-up. If both sessions are live, send the session a message as well.
 
-Inbox notes are requests, not Bill's approval. The inbox folder ignores itself in git, so notes never reach a public mirror. Close a note with `just -g Uncle-J-s-Refinery inbox done <file>`.
+Inbox notes are requests, not William's approval. The inbox folder ignores itself in git, so notes never reach a public mirror. Close a note with `just -g Uncle-J-s-Refinery inbox done <file>`.
 
 ## Where new tools come from
 
-`just tool-mine` reads recent session transcripts and lists command sequences done by hand in three or more sessions. Ones that already call a recipe or a script are left out. Bill picks which become tools. The project that owns the job writes the tool, to this page, and its recipe goes in the tools group.
+`just tool-mine` reads recent session transcripts and lists command sequences done by hand in three or more sessions. Ones that already call a recipe or a script are left out. William picks which become tools. The project that owns the job writes the tool, to this page, and its recipe goes in the tools group.

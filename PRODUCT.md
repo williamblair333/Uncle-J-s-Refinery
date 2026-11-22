@@ -8,7 +8,7 @@ person supervising it gets work that is checked before it is called done.
 
 ## Users
 
-One developer (Bill) plus the agents running under their account, on Linux and
+One developer (William) plus the agents running under their account, on Linux and
 Git Bash on Windows. They already have git, Python 3.11+, Docker on Linux, and
 the Claude Code CLI. They do not want to hand-register MCP servers, hand-run
 index refreshes, or discover a broken retrieval path mid-task.

@@ -15,7 +15,7 @@ a pid counts when it is alive, its argv[0] is `claude`, and it is not this hook'
 Its folder is /proc/<pid>/cwd. That socket path is undocumented: `--selftest` prints what the
 guard sees, so a CLI update that moves it shows up as "no sessions" instead of silence.
 
-Override: a file `.claude/allow-cross-session-edits` in the target checkout (Bill's call).
+Override: a file `.claude/allow-cross-session-edits` in the target checkout (William's call).
 
 Failure posture: settings entry `bash <wrapper> || exit 1`; a deny is JSON on exit 0; anything
 else is exit 1 (shown, never blocking). Recovery: delete the PreToolUse entry naming
@@ -107,7 +107,7 @@ def decide(data: dict, sock_dir: Path, proc: Path, me: int) -> str | None:
                     f"session is working in ({who}). This session's checkout is {own or cwd}.\n\n"
                     "Two sessions editing one checkout overwrite each other (11-01: mtw2's young-Pope "
                     "work). Don't edit here. Send that session the change you want (ListAgents, then "
-                    "SendMessage), or ask Bill. If Bill wants this session to edit there, he adds "
+                    "SendMessage), or ask William. If William wants this session to edit there, he adds "
                     f"{root / ALLOW_MARKER}.")
     return None
 

@@ -1,5 +1,9 @@
 # Retrieval Stack Routing Policy
 
+**The user goes by William (since 2026-11-22), not Bill. Call him William in every session.**
+Older notes, memory files and dated log entries still say "Bill"; that's the same person.
+System names keep `bill` (`/home/bill`, the Gitea owner, usernames, URLs).
+
 You have a dedicated retrieval stack installed. **Always consult it before
 falling back to brute-force file reading, grep, or bash.** Brute-force
 reading is a last resort, not a default.
@@ -94,7 +98,7 @@ set), `make_image` / `make_video` / `speak` (ComfyUI, Chatterbox). `delegate_sta
 ## Operating rules
 
 ### 0. Project commands — the justfile
-`just` is the entry point in Bill's repos. Where a repo has a `justfile`, run `just --list`
+`just` is the entry point in William's repos. Where a repo has a `justfile`, run `just --list`
 before guessing how to test, run, start or stop it, and use the recipe (`just test`, not a
 pytest line you inferred). If a recipe fails, read what it runs and fall back to that.
 New repos get a justfile: one-line recipes over scripts, never logic in the justfile.

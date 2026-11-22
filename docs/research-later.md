@@ -1,9 +1,9 @@
 # Research later
 
-Topics Bill flagged to look into when there's room. Newest first. When one is researched,
+Topics William flagged to look into when there's room. Newest first. When one is researched,
 move it to the bottom under **Done** with a one-line verdict and a link to the write-up.
 
-- **A chat room for all the LLM sessions** (added 2026-11-19). Bill wants a place where
+- **A chat room for all the LLM sessions** (added 2026-11-19). William wants a place where
   Claude sessions (Uncle J, write-well, the project sessions), agy, Heretic and other models
   can talk together when he asks them to. Today it's one-to-one `SendMessage` between local
   Claude sessions only, so nothing reaches agy or Heretic and there's no shared transcript.

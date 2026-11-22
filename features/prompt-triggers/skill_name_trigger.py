@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""UserPromptSubmit hook: when Bill names a skill, make the model invoke it.
+"""UserPromptSubmit hook: when William names a skill, make the model invoke it.
 
 Skills are model-invoked, so a prompt that says "just-do-it all the things" can be
 acted on without the skill ever loading. This hook reads the prompt, finds skill
@@ -51,7 +51,7 @@ def is_from_bill(prompt):
                 or "[SYSTEM NOTIFICATION" in head or head.startswith("<system-reminder>")
                 or head.startswith("This session is being continued from a previous conversation")
                 # 2026-11-04: a peer session's message quoting "expert-bar, think-wider" was read
-                # as Bill naming those skills, in two sessions.
+                # as William naming those skills, in two sessions.
                 or "<cross-session-message" in head)
 
 
@@ -68,7 +68,7 @@ def main():
     except Exception:
         return 0
     # More than MAX_NAMED names is an inventory (a scripted prompt pasting the skill list,
-    # e.g. the repo scout's judge), not Bill asking for those skills.
+    # e.g. the repo scout's judge), not William asking for those skills.
     if not names or len(names) > MAX_NAMED:
         return 0
     listed = ", ".join(names)

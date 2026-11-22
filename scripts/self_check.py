@@ -3,7 +3,7 @@
 
 Purpose: when a substantive reply is about to end the turn, block the stop once and make
 the model verify its own factual claims before the user sees the turn as final.
-Background: a bench (scripts/check_bench.py) found that when Bill asked "check yourself",
+Background: a bench (scripts/check_bench.py) found that when William asked "check yourself",
 ~10 of 17 second passes found a real error, mostly facts stated without reading the source.
 
 Kill switch: SELF_CHECK=off (e.g. for headless `claude -p` callers). Hits are logged

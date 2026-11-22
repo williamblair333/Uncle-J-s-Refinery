@@ -10,6 +10,15 @@ ws = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ws)
 
 
+def test_both_names_count_as_waiting_on_him():
+    # he went by Bill until 2026-11-22; older HANDOFF entries keep the old name
+    for line in ("- William to create the repo", "- Bill to create the repo", "needs William", "for Bill: pick"):
+        assert ws.WAITING.search(line), line
+    for line in ("waiting on William", "waiting on Bill"):
+        assert not ws.WAITS_ON.search(line), line
+    assert ws.WAITS_ON.search("waiting on upstream")
+
+
 def test_repo_names_includes_repos_in_grouping_dirs(tmp_path):
     (tmp_path / "top" / ".git").mkdir(parents=True)
     (tmp_path / "games" / "mtw2" / ".git").mkdir(parents=True)
@@ -25,7 +34,7 @@ def test_bold_label_counts_as_waiting_heading():
 
 
 def test_bold_labels_in_older_entries_ignored():
-    text = ("# Handoff\n\n## 2026-10-23 — new\nnothing open\n\n## 2026-10-04 — old\n**Needs Bill:**\n"
+    text = ("# Handoff\n\n## 2026-10-23 — new\nnothing open\n\n## 2026-10-04 — old\n**Needs William:**\n"
             "- register the server\n")
     assert ws.waiting_sections(text, 10) == []
 
@@ -36,8 +45,8 @@ def test_awaiting_in_heading_is_not_waiting():
 
 
 def test_heading_sections_unchanged():
-    text = "## Waiting on Bill\n1. Etsy app\n## Done\n- x\n### Next session\n- 3MF export\n"
-    assert [h for h, _ in ws.waiting_sections(text, 10)] == ["Waiting on Bill", "Next session"]
+    text = "## Waiting on William\n1. Etsy app\n## Done\n- x\n### Next session\n- 3MF export\n"
+    assert [h for h, _ in ws.waiting_sections(text, 10)] == ["Waiting on William", "Next session"]
 
 
 def test_roadmap_items_skip_done_and_other_sections():
@@ -87,7 +96,7 @@ def test_main_flags_repo_without_handoff_and_lists_roadmap(tmp_path):
 def test_flag_waits_marks_external_waits_without_a_plan():
     assert ws.flag_waits("- verify the fix: waiting on the next spy roll").endswith(ws.NO_PLAN)
     assert ws.flag_waits("- blocked on llama.cpp #30528").endswith(ws.NO_PLAN)
-    # a plan to force it, or waiting on Bill himself, is not flagged
+    # a plan to force it, or waiting on William himself, is not flagged
     assert ws.flag_waits("- waiting on llama.cpp #30528; watch it, then bump").endswith("bump")
-    assert ws.flag_waits("- waiting on Bill's go") == "- waiting on Bill's go"
+    assert ws.flag_waits("- waiting on William's go") == "- waiting on William's go"
     assert ws.flag_waits("- ship the docs") == "- ship the docs"

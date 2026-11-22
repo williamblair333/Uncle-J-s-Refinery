@@ -5,7 +5,7 @@ engineer and a security engineer. Each would already have these in place for a p
 platform that one person runs unattended across three hosts.
 **Goal** (PRODUCT.md): agents in any repo get structured retrieval instead of brute-force
 reading, and the person supervising them gets work that is checked before it's called done.
-That has to hold offline, at low token cost, without Bill having to notice things.
+That has to hold offline, at low token cost, without William having to notice things.
 Items are ranked by their impact on that goal, highest first. Written 2026-10-31 with
 `expert-bar` + `think-wider`.
 
@@ -15,14 +15,14 @@ Items are ranked by their impact on that goal, highest first. Written 2026-10-31
   be trusted without the owner watching, and they should raise what's missing before he asks.
 - **Aviation FOQA** (routine flight-data monitoring) flags exceedances in normal flights
   before they become incidents. Here: mine every transcript for exceedances on a schedule (meta-questions,
-  workarounds, takeovers). Don't wait for Bill to notice.
+  workarounds, takeovers). Don't wait for William to notice.
 - **Manufacturing SPC** puts control limits on a rate, and a point outside the limits triggers
   action. Here: `just offload`, `workaround-bench` and `check-bench` print numbers, but nothing
   alerts when one drifts.
 - **Financial audit** samples closed transactions at random, and the sampling is done by someone other than the preparer. Here:
   a weekly random sample of "done" claims gets re-checked by a different model.
 - **Medicine M&M:** every case ends in a control, not a lesson. This is partly in place already (bench-not-watch).
-- **First principles:** Bill's attention is the scarce resource, and it only reaches problems
+- **First principles:** William's attention is the scarce resource, and it only reaches problems
   through pushes (Telegram) and session-start notices. Anything that needs him to go and look will be missed.
 - **Outside view:** DORA's 2019 and 2021 State of DevOps reports put elite teams' change-failure rate in the
   0–15% band. Here, 30 of 154 merges in October (19%) were `fix` PRs. That's a loose proxy, since
@@ -39,19 +39,19 @@ standards:
     evidence: .github/workflows/ci.yml (test-suite job runs all of tests/, on the GitHub mirror). Red on main from at least 11-04 until #315 with no alert, because merges happen on Gitea, which shows no CI result; the alert belongs to rate-control-limits
   - id: meta-question-rate
     area: evaluation
-    bar: Bill's meta-questions ("why didn't you…", "why did I have to ask") are counted per session every week from transcripts, with a trend in the Monday report
+    bar: William's meta-questions ("why didn't you…", "why did I have to ask") are counted per session every week from transcripts, with a trend in the Monday report
     why: it's the outcome metric for anticipation; the expert bar and think-wider have no score without it
     status: done
     evidence: scripts/meta_questions.py (just meta-questions; line in features/focus-check/focus-check.sh, Monday 08:00; precision 23/27 measured 10-31; recall estimated at 29/~34)
   - id: no-permission-asks
     area: evaluation
     bar: A turn that ends asking permission for reversible, agreed work is caught by a program at that moment, with its fire rate and refusals benched on real transcripts
-    why: Bill's attention is the scarce resource; about 9% of answered turn ends asked him something, and just-do-it only loads when a prompt triggers it, never when a session writes the question
+    why: William's attention is the scarce resource; about 9% of answered turn ends asked him something, and just-do-it only loads when a prompt triggers it, never when a session writes the question
     status: done
     evidence: scripts/ask_gate.py (Stop hook via install-reliability.sh; just ask-gate-bench; tests/test_ask_gate.py); complaint detection in features/prompt-triggers/meta_trigger.py (tests/test_meta_trigger.py)
   - id: alternatives-before-adoption
     area: evaluation
-    bar: Nothing new is downloaded, cloned or installed (and no tool is judged) until a recorded scan from the last 14 days lists what else does the same job, judged against Bill's goal
+    bar: Nothing new is downloaded, cloned or installed (and no tool is judged) until a recorded scan from the last 14 days lists what else does the same job, judged against William's goal
     why: a technology lead surveys the field before committing a team-day; 2026-11-02 benched Strata for a day while Avalon was one GitHub search away
     status: done
     evidence: features/prompt-triggers/alternatives_gate.py (PreToolUse Bash; tests/test_alternatives_scan.py), alternatives-scan route in features/prompt-triggers/skill_router.py, global-skills/alternatives-scan/SKILL.md
@@ -88,7 +88,7 @@ standards:
   - id: health-daily
     area: operations
     bar: Servers, indexes and crons are checked daily and failures reach Telegram
-    why: Bill shouldn't find a broken retrieval path mid-task
+    why: William shouldn't find a broken retrieval path mid-task
     status: done
     evidence: scripts/healthcheck-notify.sh
   - id: retrieval-recall-bench
@@ -100,7 +100,7 @@ standards:
   - id: host-drift
     area: operations
     bar: Every host (main, pi, tc-vmh-03) reports its Refinery commit, and health warns when one is behind main
-    why: Bill syncs the hosts by hand and dislikes it; work on a host that isn't pushed is invisible
+    why: William syncs the hosts by hand and dislikes it; work on a host that isn't pushed is invisible
     status: open
     evidence: no cross-host check
   - id: deps-locked-and-committed
@@ -112,7 +112,7 @@ standards:
   - id: offline-smoke
     area: operations
     bar: A smoke test with the network off proves search, memory and ask_local still answer
-    why: offline-capable is one of Bill's four goals; nothing proves it today
+    why: offline-capable is one of William's four goals; nothing proves it today
     status: open
     evidence: offline ONNX is the default, but nothing runs it with the network off
   - id: secrets-out-of-tree
@@ -150,13 +150,13 @@ ideas:
     idea: Run the local-model chance check (scripts/chance_check.py) overnight on the day's turn ends and send the flags, instead of blocking each stop; at a Stop hook it failed (about 4 of 12 flags real, 32 of 120 calls timed out with the GPU busy)
     from: aviation FOQA, applied to the failed Stop hook
     test: run it on 14 days of turn ends with the GPU free and read every flag
-    kill: fewer than 1 in 2 flags is a gap Bill would want forced
+    kill: fewer than 1 in 2 flags is a gap William would want forced
     status: untested
   - id: foqa-transcript-sweep
     idea: A nightly sweep scores every transcript for exceedances (meta-questions, workarounds, Claude takeovers of delegated jobs) and sends the top three
     from: aviation FOQA
-    test: run it over the last 14 days and check the top three against what Bill actually complained about
-    kill: fewer than 1 in 3 of the flagged sessions is one Bill would call a problem
+    test: run it over the last 14 days and check the top three against what William actually complained about
+    kill: fewer than 1 in 3 of the flagged sessions is one William would call a problem
     status: untested
   - id: spc-limits
     idea: Treat each weekly rate as a control chart, with a limit at the mean plus 3 sigma over the last 8 weeks
@@ -168,16 +168,16 @@ ideas:
     idea: Each week, five random "done" claims are re-checked by a different model (referee) from the original task alone
     from: financial audit sampling
     test: run it on five PRs merged in October
-    kill: none of the five finds anything Bill would act on
+    kill: none of the five finds anything William would act on
     status: untested
   - id: forecast-next-questions
-    idea: Before ending a long turn, write the three questions Bill is most likely to ask next, and answer them
+    idea: Before ending a long turn, write the three questions William is most likely to ask next, and answer them
     from: first principles (attention is the scarce resource)
-    test: score the forecasts against Bill's actual next messages over 10 sessions
+    test: score the forecasts against William's actual next messages over 10 sessions
     kill: the hit rate is under 1 in 3
     status: untested
   - id: forget-at-will
-    idea: "Forget a topic in memweave: tag transcript segments by topic, encrypt them under a per-topic key only Bill holds, purge every derived note via source IDs, and fail the nightly rebuild if a paraphrase probe still finds it; un-forget = hand the key back"
+    idea: "Forget a topic in memweave: tag transcript segments by topic, encrypt them under a per-topic key only William holds, purge every derived note via source IDs, and fail the nightly rebuild if a paraphrase probe still finds it; un-forget = hand the key back"
     from: intelligence compartments + food-recall lot tracing + court sealing (think-wider build, 10-31)
     test: plant 50 distinctive facts across 10 topics in a copy of the store, forget 2 topics, rebuild, probe with paraphrases; then restore the key and rebuild
     kill: paraphrase probes still find a forgotten topic after purge, or the restore doesn't bring it back identical

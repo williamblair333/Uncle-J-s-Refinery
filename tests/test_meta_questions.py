@@ -1,6 +1,6 @@
-"""Tests for scripts/meta_questions.py: Bill's meta-questions counted per session, per week.
+"""Tests for scripts/meta_questions.py: William's meta-questions counted per session, per week.
 
-A meta-question is Bill asking why the agent didn't anticipate something ("why didn't you…",
+A meta-question is William asking why the agent didn't anticipate something ("why didn't you…",
 "why did I have to ask", "is this the best approach", "why not from the get-go"). It is the
 outcome metric for STANDARDS.md `meta-question-rate`. Transcripts here are synthetic."""
 import importlib.util
@@ -90,7 +90,7 @@ def test_ordinary_questions_do_not_match(prompt):
     "[Request interrupted by user] why didn't you",
     "<task-notification> why didn't you </task-notification>",
     "Stop hook feedback:\nwhy didn't you",
-    "x" * 1600 + " why didn't you",  # a paste, not a question Bill typed
+    "x" * 1600 + " why didn't you",  # a paste, not a question William typed
 ])
 def test_injected_or_pasted_text_is_not_bill_asking(prompt):
     assert not mq.is_meta(prompt)
@@ -144,7 +144,7 @@ def test_weekly_counts_sessions_prompts_and_meta(transcripts):
     weeks = mq.weekly(transcripts)
     assert weeks["2026-W44"] == {"sessions": 2, "prompts": 4, "meta": 2}
     assert weeks["2026-W43"] == {"sessions": 1, "prompts": 1, "meta": 1}
-    assert set(weeks) == {"2026-W43", "2026-W44"}  # a transcript with no Bill prompt adds nothing
+    assert set(weeks) == {"2026-W43", "2026-W44"}  # a transcript with no William prompt adds nothing
 
 
 def test_hits_carry_week_project_and_prompt(transcripts):

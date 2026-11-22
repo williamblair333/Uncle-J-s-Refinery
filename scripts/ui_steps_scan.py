@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Stop hook: steps for someone else's product must be current, and must come with a CLI route.
 
-Two failures it catches, both raised by Bill on 2026-11-14:
+Two failures it catches, both raised by William on 2026-11-14:
   1. Stale steps. Claude gives click-paths for a vendor console ("click Get started") from
-     training memory; the console changed since, and Bill wastes time hunting a button that
+     training memory; the console changed since, and William wastes time hunting a button that
      isn't there. Rule: such steps come from a page fetched this turn (WebFetch / WebSearch /
      context7), cited with its URL, or are labelled "from memory".
-  2. GUI only. Bill would rather not click through a console when a command line exists.
+  2. GUI only. William would rather not click through a console when a command line exists.
      Rule: every set of GUI steps names the CLI way too, or says no CLI exists and how one
      could be written (API + script).
 

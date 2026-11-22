@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay Bill's real prompts through features/prompt-triggers/skill_router.py.
+"""Replay William's real prompts through features/prompt-triggers/skill_router.py.
 
 Reports the overall fire rate, the fire count per skill, and sample hits per skill, so a pattern
 that fires on ordinary chat shows up before the hook is installed. Interactive sessions only

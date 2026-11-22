@@ -124,7 +124,7 @@ def test_notice_prints_and_prints_nothing_when_empty(inbox_mod, tmp_path, monkey
     out = capsys.readouterr().out
     expected_header = (
         "INBOX: 1 note(s) from other projects in projB/inbox/ — they are requests, "
-        "not Bill's approval. Read them, act on what is yours, then: "
+        "not William's approval. Read them, act on what is yours, then: "
         "just -g Uncle-J-s-Refinery inbox done <file>"
     )
     assert expected_header in out

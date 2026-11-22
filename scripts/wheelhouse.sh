@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # wheelhouse — local copies of everything needed to rebuild the stack's venvs with no network.
 #
-# Bill 2026-11-14: "they might turn something off and then what." A rebuild today needs PyPI,
+# William 2026-11-14: "they might turn something off and then what." A rebuild today needs PyPI,
 # GitHub (the munch packages install from git, and uv downloads its Pythons from GitHub) and
 # the uv cache. This keeps, per venv: requirements.txt (the exact freeze), every package as a
 # wheel (git and file deps built locally), and the Python interpreter it runs on.

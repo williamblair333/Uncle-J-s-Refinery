@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Alert Bill when GitHub Actions CI on main goes red."""
+"""Alert William when GitHub Actions CI on main goes red."""
 
 import argparse
 import json
@@ -209,7 +209,7 @@ def main(
     send_fn=None,
     now_fn=None,
 ) -> int:
-    parser = argparse.ArgumentParser(description="Alert Bill when GitHub Actions CI on main goes red.")
+    parser = argparse.ArgumentParser(description="Alert William when GitHub Actions CI on main goes red.")
     parser.add_argument("--dry-run", action="store_true", help="Print message instead of sending and do not write state")
     parser.add_argument("--install-cron", action="store_true", help="Add the 15-minute cron job on this host")
     args = parser.parse_args(argv)

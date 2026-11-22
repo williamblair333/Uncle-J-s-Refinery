@@ -2,11 +2,11 @@
 """Stop hook: a turn that ends asking permission for work it could just do gets one forced retry.
 
 mtw2, 2026-11-06: a session named the work, named the open standard it would move, then ended
-with "Want me to look into it?". Bill: "why did I even have to ask". The just-do-it skill covers
+with "Want me to look into it?". William: "why did I even have to ask". The just-do-it skill covers
 this, but a skill only loads when a prompt triggers it; nothing was watching the moment a session
 writes that question. This hook is that moment.
 
-It blocks once, and the retry can still ask, because some questions really are Bill's. A false hit
+It blocks once, and the retry can still ask, because some questions really are William's. A false hit
 can start work he'd have refused ("Say the word and I'll relocate it" drew "no, leave it alone" in
 the bench), so the reason tells the model to keep the question when it depends on what he wants.
 Questions about merging, pushing, deleting, posting, spending and the like pass untouched: those
@@ -14,7 +14,7 @@ are outward-facing or hard to undo, and asking first is right.
 
 Kill switch: ASK_GATE=off. Hits are logged (cwd and chars, no content) to
 ~/.claude/state/ask-gate.jsonl. Bench: `just ask-gate-bench` replays real transcripts and reports
-the fire rate and what Bill replied.
+the fire rate and what William replied.
 """
 import argparse
 import collections
@@ -51,15 +51,15 @@ BILLS_CALL = re.compile(
     r"|restart|upgrade|install|file\s+(?:an?\s+)?issue|open\s+(?:an?\s+)?(?:upstream\s+)?issue)\b", re.I)
 
 REASON = (
-    "You ended this turn asking permission: \"{ask}\". Bill shouldn't have to answer that when the "
+    "You ended this turn asking permission: \"{ask}\". William shouldn't have to answer that when the "
     "goal is already agreed. Decide now, without another question:\n"
     "- If it's reversible and serves something already in play (this request, the handoff, an "
     "open STANDARDS gap), start it now and say what you're doing in one line.\n"
     "- Before you start, take one look for a better way to get what the question was reaching for; "
     "if there is one, do that instead.\n"
-    "- If Bill asked only for analysis, a draft or a review, don't build anything: state your "
+    "- If William asked only for analysis, a draft or a review, don't build anything: state your "
     "recommended next step as a plain sentence and stop.\n"
-    "- Keep the question only if it's Bill's call: it touches the outside world, spends something "
+    "- Keep the question only if it's William's call: it touches the outside world, spends something "
     "he hasn't agreed to, or depends on what he wants and no file or memory can tell you. Then "
     "say in one clause why it's his, and ask it."
 )
@@ -82,7 +82,7 @@ def _tails(text: str) -> list[str]:
 def final_ask(text: str) -> str | None:
     """The permission question this reply ends on, if any.
 
-    The shape of the ask is read with mentions blanked, so a quoted ask doesn't count. Bill's-call
+    The shape of the ask is read with mentions blanked, so a quoted ask doesn't count. William's-call
     words are read with inline code and quotes kept: "Want me to run `git push`?" is about a push."""
     if not isinstance(text, str) or not text:
         return None
@@ -126,7 +126,7 @@ _NO = re.compile(r"^\W*(?:no|nope|don['’]?t|not now|wait|stop|hold)\b", re.I)
 
 
 def replay(paths) -> dict:
-    """Each turn end Bill answered: did the gate fire, and did the reply accept or refuse the ask?
+    """Each turn end William answered: did the gate fire, and did the reply accept or refuse the ask?
 
     A refused ask is the nearest thing to a false hit a transcript can show."""
     out = {"turn_ends": 0, "fired": 0, "replied_yes": 0, "replied_no": 0, "replied_other": 0, "samples": []}

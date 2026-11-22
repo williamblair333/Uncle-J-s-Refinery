@@ -14,7 +14,7 @@ _clock = time.monotonic
 _sleep = time.sleep
 _last_search = 0.0
 
-# Bill 2026-11-13: anything Microsoft posts is the absolute last resort, so the scout never
+# William 2026-11-13: anything Microsoft posts is the absolute last resort, so the scout never
 # surfaces it unless he asks by hand (inbox). GitHub and LinkedIn are Microsoft-owned.
 # Matched on the owner only, case-insensitive. Dependencies (Playwright, markitdown) are the
 # judge prompt's job: an owner list can't see them.

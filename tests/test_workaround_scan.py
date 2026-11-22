@@ -65,7 +65,7 @@ def test_main_logs_hit_without_content(tmp_path, monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("text", ["Done: tests pass, PR #12 merged.", "I'm waiting on your answer.",
-                                  "Still waiting on Bill to pick one.",
+                                  "Still waiting on William to pick one.",
                                   # 2026-10-30 first live hits: naming the feature or the topic
                                   # is not routing around a block
                                   "I couldn't confirm the workaround-detector Stop hook is actually "

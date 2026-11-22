@@ -182,7 +182,7 @@ def _take_callbacks(paths: Paths) -> list:
 
 
 def apply_callbacks(paths: Paths, answers: dict, pending, now: datetime.datetime):
-    """Apply Bill's taps in order, then expire a stale pending message to 'maybe'.
+    """Apply William's taps in order, then expire a stale pending message to 'maybe'.
 
     The first yes/maybe/no on a find wins; a reason only attaches to a 'no'; a tap on a
     find that expired to 'maybe' replaces it once. Returns (answers, pending)."""
@@ -217,7 +217,7 @@ def apply_callbacks(paths: Paths, answers: dict, pending, now: datetime.datetime
         entry = finds.get(str(pending["repo_id"]))
         answered = bool(entry and entry.get("rung") == pending.get("rung", 1)
                         and entry.get("answer") and not entry.get("rewatch"))
-        if not answered:  # never overwrite an answer Bill already gave
+        if not answered:  # never overwrite an answer William already gave
             record_answer(answers, pending["repo_id"], pending.get("full_name", ""),
                           pending.get("rung", 1), "maybe", None, now)
             finds[str(pending["repo_id"])]["expired"] = True

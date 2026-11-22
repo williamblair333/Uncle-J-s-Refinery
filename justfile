@@ -69,7 +69,7 @@ offload *args:
 workaround-bench *args:
     python3 scripts/workaround_scan.py --replay {{args}}
 
-# ask-gate bench: permission questions at turn end on real transcripts, and what Bill replied (default 30 days)
+# ask-gate bench: permission questions at turn end on real transcripts, and what William replied (default 30 days)
 ask-gate-bench *args:
     python3 scripts/ask_gate.py --replay {{args}}
 
@@ -89,7 +89,7 @@ hook-bench *args:
 hook-bench-export dir="state/hook-bench-export":
     python3 scripts/hook_bench.py --export {{dir}}
 
-# skill router bench: replay Bill's real prompts, fire rate and sample hits per routed skill
+# skill router bench: replay William's real prompts, fire rate and sample hits per routed skill
 router-bench *args:
     python3 scripts/router_bench.py {{args}}
 
@@ -105,7 +105,7 @@ ci-alert *args:
 check-bench *args:
     python3 scripts/check_bench.py {{args}}
 
-# Bill's meta-questions ("why didn't you…") per session per week, with the Monday trend line
+# William's meta-questions ("why didn't you…") per session per week, with the Monday trend line
 meta-questions *args:
     python3 scripts/meta_questions.py {{args}}
 

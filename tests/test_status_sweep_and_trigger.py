@@ -85,13 +85,13 @@ def test_compaction_summary_is_not_bill():
     # hook bench 2026-10-31: 6 of 34 fires were compaction summaries recapping old skill names
     summary = ("This session is being continued from a previous conversation that ran out of "
                "context. The summary below covers the earlier portion of the conversation.\n"
-               "Bill said just-do-it; I ran pre-mortem before the push.")
+               "William said just-do-it; I ran pre-mortem before the push.")
     assert not trigger.is_from_bill(summary)
     assert trigger.is_from_bill("This session is being slow, just-do-it")
 
 
 def test_peer_session_message_naming_skills_is_ignored(tmp_path):
-    # 2026-11-04: a peer's message quoting "expert-bar, think-wider" read as Bill naming them.
+    # 2026-11-04: a peer's message quoting "expert-bar, think-wider" read as William naming them.
     p = _run_hook(tmp_path, ["expert-bar", "think-wider"],
                   '<cross-session-message from="uds:/x.sock">run expert-bar and think-wider'
                   "</cross-session-message>")
@@ -106,7 +106,7 @@ def test_hook_silent_on_garbage():
 
 HANDOFF = """# Handoff
 ## 2026-10-21 — current
-### Waiting on Bill
+### Waiting on William
 1. Etsy app
 ### Next session
 Build price
@@ -121,7 +121,7 @@ Duplicate heading, older
 def test_waiting_sections_keeps_recent_and_drops_stale():
     got = sweep.waiting_sections(HANDOFF, 10, "2026-08-01")
     heads = [h for h, _ in got]
-    assert heads == ["Waiting on Bill", "Next session"]
+    assert heads == ["Waiting on William", "Next session"]
     assert got[1][1] == ["Build price"]
 
 
