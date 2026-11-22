@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-22 — CI moves to the Gitea runner; CI-red alert reads Gitea
+
+- **Why:** William: keep local CI, drop GitHub's. GitHub ran this repo's only CI (Gitea's `WORKFLOW_DIRS=.gitea/workflows` never ran `.github/`).
+- **Changed:** `.gitea/workflows/ci.yml` runs the same five jobs on the self-hosted runner (`apt-get update` first: job containers start with empty apt lists; push runs only on main, PRs via `pull_request`). `.github/workflows/ci.yml` removed and GitHub Actions turned off for the repo once the Gitea run was green.
+- **Changed:** `scripts/ci_red_alert.py` (`just ci-alert`, 15-min cron) reads main's combined commit status on Gitea anonymously instead of `gh run list`. A refused connection (on-demand stack down) is offline: it never starts the 24 h "can't read CI" timer. Tests: `tests/test_ci_red_alert.py` (23).
+
 ## 2026-11-22 — session end: DeepSeek diagnosis, vault archived, name change
 
 - **Session summary:** five PRs (#381 hook-bench log leak, #382 DeepSeek `--window 16` finding, #383 brain vault archived, #384 agy hashers, #385 William). DeepSeek round 2 scheduled for 21:10 (`dsv41-diag2.timer`). write-well asked whether the Steward should be its own repo: the recommendation was to keep it in write-well until it has run on a second work; nothing was sent to write-well. `docs/SKILLS.md` regenerated (formatting only). README and ROADMAP checked, no update needed.

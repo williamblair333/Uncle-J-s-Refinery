@@ -192,56 +192,81 @@ def test_save_state_atomicity(tmp_path):
     assert ci_alert.load_state(state_path) == data
 
 
-def test_fetch_latest_run(monkeypatch):
-    # gh failure
-    class MockProcFail:
-        returncode = 1
-        stdout = ""
-        stderr = "error"
+class _Body:
+    def __init__(self, payload):
+        self._raw = payload if isinstance(payload, bytes) else json.dumps(payload).encode()
 
-    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: MockProcFail())
-    assert ci_alert.fetch_latest_run() is None
+    def read(self):
+        return self._raw
 
-    # gh timeout
-    def mock_timeout(*a, **kw):
-        raise subprocess.TimeoutExpired(cmd="gh", timeout=60)
+    def __enter__(self):
+        return self
 
-    monkeypatch.setattr(subprocess, "run", mock_timeout)
-    assert ci_alert.fetch_latest_run() is None
+    def __exit__(self, *exc):
+        return False
 
-    # bad json
-    class MockProcBadJson:
-        returncode = 0
-        stdout = "not valid json"
-        stderr = ""
 
-    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: MockProcBadJson())
-    assert ci_alert.fetch_latest_run() is None
+def _serve(payload):
+    return lambda url, timeout: _Body(payload)
 
-    # empty list
-    class MockProcEmptyList:
-        returncode = 0
-        stdout = "[]"
-        stderr = ""
 
-    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: MockProcEmptyList())
-    assert ci_alert.fetch_latest_run() is None
+def _raise(err):
+    def opener(url, timeout):
+        raise err
+    return opener
 
-    # success
-    run_item = {
-        "databaseId": 777,
-        "conclusion": "failure",
-        "status": "completed",
-        "displayTitle": "CI run",
-        "url": "https://github.com/...",
-    }
-    class MockProcSuccess:
-        returncode = 0
-        stdout = json.dumps([run_item])
-        stderr = ""
 
-    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: MockProcSuccess())
-    assert ci_alert.fetch_latest_run() == run_item
+SHA = "c1e7576d6f1541c4b34098341c8811cd425fb922"
+
+
+def test_fetch_reads_mains_combined_status_on_gitea():
+    seen = {}
+
+    def opener(url, timeout):
+        seen["url"] = url
+        return _Body({"state": "success", "sha": SHA, "statuses": [
+            {"status": "success", "context": "CI / lint", "target_url": "/bill/x/actions/runs/1/jobs/1"}]})
+
+    run = ci_alert.fetch_latest_run(urlopen=opener)
+    assert seen["url"].endswith("/repos/bill/Uncle-J-s-Refinery/commits/main/status")
+    assert run["status"] == "completed" and run["conclusion"] == "success"
+    assert run["databaseId"] == SHA
+
+
+def test_fetch_red_points_at_the_failing_job():
+    run = ci_alert.fetch_latest_run(urlopen=_serve({"state": "failure", "sha": SHA, "statuses": [
+        {"status": "success", "context": "CI / lint", "target_url": "/bill/x/actions/runs/9/jobs/1"},
+        {"status": "failure", "context": "CI / pytest", "description": "Failing after 2m",
+         "target_url": "/bill/x/actions/runs/9/jobs/2"}]}))
+    assert run["conclusion"] == "failure"
+    assert run["url"] == ci_alert.GITEA_WEB + "/bill/x/actions/runs/9/jobs/2"
+    assert "CI / pytest" in run["displayTitle"] and SHA[:7] in run["displayTitle"]
+
+
+def test_fetch_pending_or_no_statuses_is_in_progress():
+    assert ci_alert.fetch_latest_run(urlopen=_serve(
+        {"state": "pending", "sha": SHA, "statuses": [{"status": "pending"}]}))["status"] == "in_progress"
+    assert ci_alert.fetch_latest_run(urlopen=_serve(
+        {"state": "", "sha": SHA, "statuses": []}))["status"] == "in_progress"
+
+
+def test_fetch_stack_down_is_offline_not_unreadable():
+    import urllib.error
+    run = ci_alert.fetch_latest_run(urlopen=_raise(urllib.error.URLError(ConnectionRefusedError(111, "refused"))))
+    assert run == ci_alert.OFFLINE
+    # offline never starts the 24 h "can't read CI" timer, and keeps red state
+    msg, state = ci_alert.decide(run, {"last_red_id": SHA}, now=1000.0)
+    assert msg is None and "first_unreadable_at" not in state and state["last_red_id"] == SHA
+
+
+def test_fetch_other_failures_are_unreadable():
+    import urllib.error
+    assert ci_alert.fetch_latest_run(urlopen=_raise(TimeoutError("slow"))) is None
+    assert ci_alert.fetch_latest_run(urlopen=_raise(urllib.error.URLError("dns"))) is None
+    assert ci_alert.fetch_latest_run(urlopen=_raise(
+        urllib.error.HTTPError(ci_alert.GITEA_STATUS_URL, 500, "boom", {}, None))) is None
+    assert ci_alert.fetch_latest_run(urlopen=_serve(b"not json")) is None
+    assert ci_alert.fetch_latest_run(urlopen=_serve({"message": "not found"})) is None
 
 
 def test_main_dry_run_prints_message_and_does_not_write_state(tmp_path, capsys):
@@ -349,18 +374,6 @@ def test_missing_credentials_raise(tmp_path, monkeypatch):
         monkeypatch.delenv(key, raising=False)
     with pytest.raises(RuntimeError, match="missing"):
         ci_alert.send_notification(tmp_path, "x", urlopen=lambda r, timeout: _Reply({"ok": True}))
-
-
-def test_gh_runs_in_the_repo_because_cron_starts_in_home(monkeypatch):
-    seen = {}
-
-    def run(*args, **kwargs):
-        seen.update(kwargs)
-        raise subprocess.TimeoutExpired(cmd="gh", timeout=60)
-
-    monkeypatch.setattr(subprocess, "run", run)
-    ci_alert.fetch_latest_run()
-    assert Path(seen["cwd"]) == REPO
 
 
 def test_cron_line_is_added_once_and_keeps_existing_jobs():
