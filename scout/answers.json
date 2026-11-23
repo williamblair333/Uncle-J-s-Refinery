@@ -106,6 +106,18 @@
       "answer": "yes",
       "answered_at": "2026-11-22T12:11:58Z",
       "answered_by": "Bill, 2026-11-22 ('approve ai-job-search if it's safe'), safety-checked by Claude",
+      "eval": {
+        "risks": [
+          "Takes over the runtime: fork-and-own Claude Code project with its own commands, not an MCP server or script",
+          "Depends on Microsoft-owned and hosted services: gh CLI, LinkedIn portal, Gmail and Notion sync",
+          "Not offline: scraping relies on live job boards or WebSearch",
+          "Wrong method fit: an application workflow, not a replacement for any Uncle J backend, so there are no benchmarks or concurrency story to judge"
+        ],
+        "summary": "Run against the six-section adoption method, this isn't a backend that could replace anything in Uncle J. It's a fork-and-own job-search workflow: its own Claude Code slash commands (/setup, /scrape, /apply, /interview) plus Python tools, LaTeX and Bun portal CLIs. It fails the fit test because it's meant to be the project you run Claude Code inside, not an MCP server or script Uncle J calls. It's also tied to services William rules out: the gh CLI for setup, a LinkedIn portal, and Gmail and Notion sync. Scraping needs live job boards or WebSearch, so offline capability is weak by design. The one useful idea is the deterministic posting integrity gate, which checks fetched text for hidden text, invisible characters, instruction-shaped lines and hidden links. That's worth rebuilding clean-room as a small standalone script.",
+        "trial_sketch": "Don't trial the framework. Instead write a throwaway clean-room script, from the README's description only, that runs the same integrity checks on untrusted fetched text: hidden text, invisible or zero-width characters, instruction-shaped lines and hidden links. Run it fully offline on a small corpus of planted-injection and clean samples, such as scout README excerpts and saved web pages. Measure detection accuracy and false-positive rate, and count the Claude tokens saved when flagged content is stripped before it reaches the model.",
+        "verdict": "reject"
+      },
+      "evaluated": true,
       "full_name": "ai-job-search-dev/ai-job-search",
       "note": "Approved as a fork-and-own job-search project for Bill, not a Uncle J capability. Safety read 11-22 via gh api, nothing cloned: MIT, now ai-job-search-dev/ai-job-search; its .claude/settings.json has no hooks and no MCP servers, and denies secret-file reads, curl uploads and remote shells; tools/install_portal_clis.py runs bun install only and skips any manifest with lifecycle scripts. Skip the LinkedIn CLI (Microsoft).",
       "reason": null,

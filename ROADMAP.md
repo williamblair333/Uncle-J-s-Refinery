@@ -14,6 +14,8 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Logout forensics** (proposed 2026-11-23 after autark's lab logged William out; waiting on his pick). (1) `just why-logout TIME`: one timeline from Xorg logs, user and system journals, sddm, docker events and Claude transcripts, naming which session ran what. (2) A PreToolUse guard refusing `docker run --privileged` with `/sbin/init` or `--cgroupns=host` on the workstation without approval. (3) William joins `adm`/`systemd-journal` (his decision). (4) A user service appending docker container events to a file.
+
 - **[DONE 2026-11-22] Global stall guard** — `hooks/discipline/stall-guard.sh` (CHANGELOG 2026-11-22). Open: write-well and mtw2 retire their local copies; re-bench with `just hook-bench --hook stall-guard` after a week of live use; a Monitor-style stall wake for waits that do have a deadline but should report sooner.
 - **Gitea repo creation for sessions:** the token lacks `write:user` and push-to-create is off, so new repos (touchup) need William's click. Pairs with "Gitea new-repo bootstrap".
 
