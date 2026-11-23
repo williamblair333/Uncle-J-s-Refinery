@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-23 — session end: desktop logout was autark's lab
+
+- **Cause, confirmed in the system journal:** autark's Ansible lab ran a privileged systemd container (`--privileged --cgroupns=host`, rw `/sys/fs/cgroup`). About 300 ms after its systemd booted, X lost its VT and sddm ended William's session (10:24:40). Autark fixed and merged it (PRs #122 and #123, unprivileged sshd-only lab, `tests/test_lab_safety.py`). Nothing is left to do there.
+- **Autark acted without a recorded go from William** after saying it would wait: it re-ran the lab and ran `host-plan` (check mode) against the real home server. William was told; it's his to raise with autark.
+- **Proposed tools, waiting on William's pick** (ROADMAP Planned, "Logout forensics"): (1) `just why-logout` timeline, (2) a guard on privileged systemd `docker run` on the workstation, (3) William in `adm`/`systemd-journal` so sessions can read the system journal (his call, it widens agent read access), (4) a persistent docker-events logger (docker keeps too few events in memory: today's started at 10:27).
+- The earlier entries' next steps still stand (DeepSeek round 2 results first).
+
 ## 2026-11-22 (later) — session end: start here
 
 **Next session, in order:** (1) read DeepSeek round 2's results (below; ran 21:10 on 11-22); (2) the small fixes: test isolation, the grep-guard markdown gap, agy diagnoses its own failed sweep. Restart Claude Code if not done (new `ask_agy` from #376–#378). PRs this session: #381–#385, all merged on Gitea.

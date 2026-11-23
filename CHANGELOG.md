@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-23 — desktop logout traced to autark's Ansible lab
+
+- **Diagnosed (no Refinery code changed):** William's KDE session ended at 10:24:40. The system journal shows the cause. Autark's `scripts/lab-ansible.sh` started a `--privileged --cgroupns=host` Debian container running systemd at 10:24:40.664. The container's systemd booted, writing into the host journal, and about 300 ms later X lost its VT (`VT_GETSTATE` I/O errors). Xorg ended with "terminated successfully", sddm closed session 5 and started a new X. Ruled out: package upgrades, an Xorg crash, an sddm restart.
+- **Fixed in autark, by its own session** (PRs #122 and #123, merged): the lab now runs sshd only, unprivileged, with `--cap-drop ALL`. `tests/test_lab_safety.py` refuses `--privileged`, host cgroupns/pid, `/dev` and `/sys/fs/cgroup` mounts, `/sbin/init` and `SYS_ADMIN`.
+- README and ROADMAP checked. README needs no update. ROADMAP gets the four proposed tools under Planned.
+
 ## 2026-11-22 — vault mirror copies deleted
 
 - **Changed:** William deleted the brain-vault mirror copies at `~/.uncle-j-memory/memory/vault/` (39 files; the store went from 3,322 to 3,283). `premortem-audit.md` and the dream notes are untouched. A session's `rm -rf` there is denied by the permission rules, so William ran it with `!`. README and ROADMAP checked, no update needed.
