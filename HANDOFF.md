@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-24 — session end: remote comms, nothing built
+
+- **William's ask (11-24):** a way to keep up with projects and steer sessions when he's away, very securely; email is one idea, means undecided. Recommended: Remote Control for steering, a daily digest by Telegram for updates. Waiting on William to try `/remote-control`; nothing built.
+- **autark's mailbox is not the channel** (autark's own advice): it lives on the home server, so it's down when that is. If mail ever steers a session: allowlisted From + DKIM pass from Authentication-Results + per-message HMAC/signed body + replay window + confirm before acting.
+- **Check next:** the inbound Telegram gateway (PR #68, `state/telegram-gateway.log`); its cron path was never confirmed. It may already be most of a remote channel.
+- **Still open:** one buddy-mail account question for William, details in `review/2026-11-24-buddy-mail-shared-account.md`.
+
 ## 2026-11-23 — session end: desktop logout was autark's lab
 
 - **Cause, confirmed in the system journal:** autark's Ansible lab ran a privileged systemd container (`--privileged --cgroupns=host`, rw `/sys/fs/cgroup`). About 300 ms after its systemd booted, X lost its VT and sddm ended William's session (10:24:40). Autark fixed and merged it (PRs #122 and #123, unprivileged sshd-only lab, `tests/test_lab_safety.py`). Nothing is left to do there.

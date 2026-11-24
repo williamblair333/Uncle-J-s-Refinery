@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-24 — remote comms: asked autark about its mailbox
+
+- **No code changed.** William wants a secure way to follow projects and steer sessions when away from the computer. Asked autark how its new mailbox works (read-only reply). Its mail is pulled to the home server, nothing acts on incoming mail, and autark advises against steering through it: it goes dark when the home server is down, and mail is easy to spoof without DKIM plus per-message signature checks. Recommendation given: Remote Control (`/remote-control`) for steering, Telegram (or mail) for a daily digest. README checked, no update needed. ROADMAP gets a Planned item.
+
 ## 2026-11-23 — desktop logout traced to autark's Ansible lab
 
 - **Diagnosed (no Refinery code changed):** William's KDE session ended at 10:24:40. The system journal shows the cause. Autark's `scripts/lab-ansible.sh` started a `--privileged --cgroupns=host` Debian container running systemd at 10:24:40.664. The container's systemd booted, writing into the host journal, and about 300 ms later X lost its VT (`VT_GETSTATE` I/O errors). Xorg ended with "terminated successfully", sddm closed session 5 and started a new X. Ruled out: package upgrades, an Xorg crash, an sddm restart.
