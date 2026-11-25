@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-25 (later) — session end
+
+- README checked, no update needed: discipline hooks aren't listed one by one there. ROADMAP marks the RAM gate done. The ram-gate audit baseline went into `~/.uncle-j-memory/memory/audit-baselines.md`.
+
 ## 2026-11-25 — shared RAM gate
 
 - **Added:** `scripts/ram_gate.py` (`just ram-gate`; tests: `tests/test_ram_gate.py`). It's one lease store per host (`~/.claude/state/ram-gate/`, under flock). `acquire --gib N --label X` grants only if MemAvailable minus the live leases minus N leaves at least 6 GiB (`RAM_GATE_FLOOR_GIB`). A lease covers a start-up window (`--ttl`, default 600 s) and shrinks linearly to 0 over it, because a started VM's memory shows up in MemAvailable. Asking again with the same label replaces that label's lease, so a retried start doesn't stack. The lock gives up after 10 s. A refusal lists the leases and the five biggest processes, with qemu guests named. Commands: `release ID`, `status`.
