@@ -2,7 +2,7 @@
 
 ## 2026-11-25 (late) — CI on Gitea: start here
 
-- **Done:** the CI port (CHANGELOG 11-25 late). gitea-c1 has been told the PR is up, and it watches the first run. If the first run is red, read the job log before changing anything: the bwrap tests should show as skipped with "Creating new namespace failed".
+- **PR #403, not merged:** the first run (826) was red, with 17 failures, all from differences between the runner and GitHub's. The two bwrap tests and the root-only test are fixed on the branch. The rest needs a 24.04 image, because act-22.04's `/usr/bin/python3` is 3.10 with no yaml or tomllib, and its apt Pillow lacks `getbbox(alpha_only=)`. gitea-c1 proposes a runner label `ubuntu-24.04` → `catthehacker/ubuntu:act-24.04` and is checking with William. Once it's added, switch every job in ci.yml to `runs-on: ubuntu-24.04`, re-run, and merge only on green.
 - **Next:** the Heretic `RssFile` reservation in `scripts/ram_gate.py` (entry below), then the surface-write-guard heredoc gap.
 
 ## 2026-11-25 (night) — CLAUDE.md trimmed: start here

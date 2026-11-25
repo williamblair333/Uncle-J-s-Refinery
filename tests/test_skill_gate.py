@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parent.parent
 GATE = REPO / "features" / "prompt-triggers" / "skill_gate.py"
 
@@ -68,6 +70,8 @@ def test_fails_open(tmp_path):
         assert r.returncode == 0 and r.stdout == "" and r.stderr == ""
 
 
+@pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0,
+                    reason="root ignores chmod 0o500, so state can't be made unwritable (CI job containers run as root)")
 def test_unwritable_state_allows_rather_than_denying_forever(tmp_path):
     pending(tmp_path, ["red-team"])
     os.chmod(tmp_path, 0o500)
