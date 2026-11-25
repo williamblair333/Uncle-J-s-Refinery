@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-25 — shared RAM gate
+
+- **Added:** `scripts/ram_gate.py` (`just ram-gate`; tests: `tests/test_ram_gate.py`). It's one lease store per host (`~/.claude/state/ram-gate/`, under flock). `acquire --gib N --label X` grants only if MemAvailable minus the live leases minus N leaves at least 6 GiB (`RAM_GATE_FLOOR_GIB`). A lease covers a start-up window (`--ttl`, default 600 s) and shrinks linearly to 0 over it, because a started VM's memory shows up in MemAvailable. Asking again with the same label replaces that label's lease, so a retried start doesn't stack. The lock gives up after 10 s. A refusal lists the leases and the five biggest processes, with qemu guests named. Commands: `release ID`, `status`.
+- **Added:** `hooks/discipline/ram-gate.sh`, a PreToolUse Bash hook wired by `install-reliability.sh`. Every session's local `virsh start|create`, `virt-install` or `qemu-system-*` goes through the gate. The VM's size comes from `--memory`/`-m`, its XML or `virsh dominfo`, and is assumed to be 8 GiB otherwise. A granted start keeps its lease, so another session's model load sees that memory as taken. Only a program in command position counts (after sudo, env, VAR=, timeout, xargs, or do/then). These pass: `ssh host virsh start`, `grep virt-install`, heredoc bodies, commit messages, remote libvirt URIs, `--help`/`--dry-run`/`--print-xml`, and starting a domain that's already running. Starts inside `bash -c`, scripts or just recipes aren't seen; those call `acquire`. `# ram-gate: ok <reason>` skips the check. The hook fails open, like stall-guard.
+- **Verified live (dma64):** `virsh start win10` and `virsh start rocky9` (16 GiB each, read from dominfo) were refused at 17.3 GiB available. The refusal named gitea-win-runner (6.2 GiB) and parley-fresh (5.6 GiB) as the biggest users.
+- `hook_bench.py`'s sandbox now redirects `RAM_GATE_LOG`.
+- **Reviewed:** by the code-reviewer agent (agy's review tier was out of quota). All 9 findings were fixed, with a test for each: the heredoc and remote-URI false positives, misses on `sudo -n`, `do`/`then` and `virsh -d N`, a mid-word `#`, a lease on an already-running domain, stacking retries, double counting, and the lock with no timeout.
+
 ## 2026-11-25 — session end
 
 - README's healthcheck table gets `gpu-container-off-gpu`. ROADMAP Planned gets the shared RAM gate.

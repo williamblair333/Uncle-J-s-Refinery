@@ -488,9 +488,11 @@ def make_sandbox(bundle: Path | None = None, home: Path | None = None) -> tuple[
     (box / "proj").mkdir()  # exists but empty: hook-blocks.log appends fail harmlessly
     env = {**os.environ, "HOME": str(box), "UNCLE_J_PROJ_ROOT": str(box / "proj"),
            "SURFACE_GUARD_LOG": str(box / "surface.log"),
-           # these two log beside the hook (not under HOME/UNCLE_J_PROJ_ROOT), so they need their own redirect
+           # these log beside the hook (not under HOME/UNCLE_J_PROJ_ROOT), so they need their own redirect
+           # (ram-gate's lease store follows HOME, so replays never hold a real lease)
            "STALL_GUARD_LOG": str(box / "stall-guard.log"),
            "PIPE_GUARD_LOG": str(box / "pipe-guard.log"),
+           "RAM_GATE_LOG": str(box / "ram-gate.log"),
            "SELF_CHECK_LOG": str(box / "self-check.jsonl"),
            "WORKAROUND_SCAN_LOG": str(box / "workaround.jsonl"),
            "SELF_WORK_DIR": str(claude / "state" / "self-work"),
