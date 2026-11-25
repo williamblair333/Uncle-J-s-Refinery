@@ -81,6 +81,10 @@ chance-bench *args:
 forcing-list *args:
     cd "{{invocation_directory()}}" && python3 "{{source_directory()}}/scripts/forcing_list.py" {{args}}
 
+# shared RAM gate: just ram-gate status | acquire --gib N --label X [--ttl S] | release ID (exit 1 = refused)
+ram-gate *args:
+    python3 scripts/ram_gate.py {{args}}
+
 # hook bench: replay real transcripts through every behaviour-changing hook — fire rate, errors, false hits
 hook-bench *args:
     python3 scripts/hook_bench.py {{args}}

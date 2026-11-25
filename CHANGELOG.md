@@ -2,11 +2,73 @@
 
 ---
 
-## 2026-11-22 — CI moves to the Gitea runner; CI-red alert reads Gitea
+## 2026-11-25 (night) — CLAUDE.md back under agy's cap
 
-- **Why:** William: keep local CI, drop GitHub's. GitHub ran this repo's only CI (Gitea's `WORKFLOW_DIRS=.gitea/workflows` never ran `.github/`).
-- **Changed:** `.gitea/workflows/ci.yml` runs the same five jobs on the self-hosted runner (`apt-get update` first: job containers start with empty apt lists; push runs only on main, PRs via `pull_request`). `.github/workflows/ci.yml` removed and GitHub Actions turned off for the repo once the Gitea run was green.
-- **Changed:** `scripts/ci_red_alert.py` (`just ci-alert`, 15-min cron) reads main's combined commit status on Gitea anonymously instead of `gh run list`. A refused connection (on-demand stack down) is offline: it never starts the 24 h "can't read CI" timer. Tests: `tests/test_ci_red_alert.py` (23).
+- **Fixed:** `test_shipped_rules_block_includes_claude_md_and_fits` failed on main. CLAUDE.md (22,229 bytes) plus agy's rules block (1,970) was over agy's 24,000-byte per-file cap. The "MCP tool responses (for MCP server authors)" block came out, since `docs/ROUTING-REFERENCE.md` already has it word for word, and a one-line pointer replaces it. A stale TODO went too. CLAUDE.md is now about 21,620 bytes, roughly 400 under the cap.
+
+## 2026-11-25 (evening) — session end
+
+- mtw2 was told once about the global ram-gate hook. ROADMAP's RAM-gate line was updated. README checked, no update needed: it doesn't list ask_local's settings or the gate.
+
+## 2026-11-25 (evening) — model loads take RAM-gate leases
+
+- **Added:** `ram_gate.lease(gib, label, ttl)`, a context manager for Python callers. It raises `Refused` before the load and releases afterwards, however the load ends. It fails open: with gib 0, with `RAM_GATE_OFF=1`, or when the gate can't run (no `fcntl` on Windows, an unwritable store), the load runs ungated. A busy lock counts as a refusal.
+- **Wired, only when a load is actually coming:**
+  - comfy_job Qwen jobs take 12 GiB once `free_ram_for` passes and hold it for the job (TTL 420 s). Other ComfyUI models aren't measured, so they take no lease.
+  - ask_local takes a lease in two cases. On Ollama, a model missing from `/api/ps` leases its `/api/tags` size, which is its whole footprint if it lands on CPU. On llama-server, `/props` `is_sleeping` leases `ASK_LOCAL_WAKE_GIB` (2.5).
+  - local_chat's `ask_heretic` takes 2.5 GiB on the same `/props` check. That also covers delegate's `ask_heretic`.
+  - Refusals come back as errors: `ram_gate_refused` (ask_local, logged), "ram gate refused Heretic's wake", or comfy_job exit 1.
+  - Leases are labelled per model (`heretic wake`, `ollama <model>`), so two callers waking the same model share one lease.
+- **Not wired:** `ollama-up.sh` only starts the API. Models load at the first request, which ask_local now gates. Klarheit's direct Ollama calls are ungated (Klarheit is parked).
+- **Measured 11-25 (dma64):**
+  - A Heretic wake cost 2.1 GiB of MemAvailable (21.77 → 19.65). The container grew to 6.9 GiB, mostly mmap'd weights held as page cache.
+  - That first wake took 107 s, because its weights had been evicted from the page cache. A later wake took 28 s. The compose file's "~3 s" holds only with a warm cache.
+  - The Ollama 9B on GPU took 2.17 GiB (5.05 of its 6.26 GiB went to VRAM) and loaded in 29 s.
+- **Verified live:** a sleeping Heretic woke through `ask_heretic` holding a `heretic wake` 2.5 GiB lease, which was released when the call returned. Tests: 280 pass across the touched files plus delegate. The suite's one failure (`test_shipped_rules_block_includes_claude_md_and_fits`: CLAUDE.md plus the agy block is 24,199 bytes against a 24,000 cap) was already there without this change.
+- **Reviewed:** self-review only. agy's review tier was exhausted until 14:55 UTC.
+
+## 2026-11-25 (later) — session end
+
+- README checked, no update needed: discipline hooks aren't listed one by one there. ROADMAP marks the RAM gate done. The ram-gate audit baseline went into `~/.uncle-j-memory/memory/audit-baselines.md`.
+
+## 2026-11-25 — shared RAM gate
+
+- **Added:** `scripts/ram_gate.py` (`just ram-gate`; tests: `tests/test_ram_gate.py`). It's one lease store per host (`~/.claude/state/ram-gate/`, under flock). `acquire --gib N --label X` grants only if MemAvailable minus the live leases minus N leaves at least 6 GiB (`RAM_GATE_FLOOR_GIB`). A lease covers a start-up window (`--ttl`, default 600 s) and shrinks linearly to 0 over it, because a started VM's memory shows up in MemAvailable. Asking again with the same label replaces that label's lease, so a retried start doesn't stack. The lock gives up after 10 s. A refusal lists the leases and the five biggest processes, with qemu guests named. Commands: `release ID`, `status`.
+- **Added:** `hooks/discipline/ram-gate.sh`, a PreToolUse Bash hook wired by `install-reliability.sh`. Every session's local `virsh start|create`, `virt-install` or `qemu-system-*` goes through the gate. The VM's size comes from `--memory`/`-m`, its XML or `virsh dominfo`, and is assumed to be 8 GiB otherwise. A granted start keeps its lease, so another session's model load sees that memory as taken. Only a program in command position counts (after sudo, env, VAR=, timeout, xargs, or do/then). These pass: `ssh host virsh start`, `grep virt-install`, heredoc bodies, commit messages, remote libvirt URIs, `--help`/`--dry-run`/`--print-xml`, and starting a domain that's already running. Starts inside `bash -c`, scripts or just recipes aren't seen; those call `acquire`. `# ram-gate: ok <reason>` skips the check. The hook fails open, like stall-guard.
+- **Verified live (dma64):** `virsh start win10` and `virsh start rocky9` (16 GiB each, read from dominfo) were refused at 17.3 GiB available. The refusal named gitea-win-runner (6.2 GiB) and parley-fresh (5.6 GiB) as the biggest users.
+- `hook_bench.py`'s sandbox now redirects `RAM_GATE_LOG`.
+- **Fixed (#396):** `ram-gate.sh` was committed as 644. `install-reliability.sh` sets it to 755, so every host showed a dirty tree.
+- **Reviewed:** by the code-reviewer agent (agy's review tier was out of quota). All 9 findings were fixed, with a test for each: the heredoc and remote-URI false positives, misses on `sudo -n`, `do`/`then` and `virsh -d N`, a mid-word `#`, a lease on an already-running domain, stacking retries, double counting, and the lock with no timeout.
+
+## 2026-11-25 — session end
+
+- README's healthcheck table gets `gpu-container-off-gpu`. ROADMAP Planned gets the shared RAM gate.
+
+## 2026-11-25 — gpu-watch: alert when a model leaves the GPU
+
+- **Added:** `scripts/gpu_watch.py` (tests: `tests/test_gpu_watch.py`, 14). For each running GPU container it checks `nvidia-smi -L` inside the container, and for Ollama it checks `ollama ps` for CPU. `--cron` (every 5 min, `install.sh` entry `uncle-j-gpu-watch`, under `flock`) sends Telegram only when the problem set changes, plus once on recovery. It also notes old-style `driver: nvidia` containers. The healthcheck step `check_gpu_containers` reports the same (`gpu-container-off-gpu`). Installed and run on dma64: ok.
+
+## 2026-11-25 — dma64 froze: GPU containers move to CDI
+
+- **Diagnosed:** dma64 froze 11-24 13:50 and was hard-reset ~14:05. mtw2's game-test VM sent its ruler calls to the host Ollama, which had lost the GPU (`failed to initialize CUDA: no CUDA-capable device is detected`) and ran qwen3.5:9b on CPU beside Heretic's ~20 GB and the 8 GB VM. Swap was already full (Ollama logged 192 KiB free). The journal stopped 13:50:42; X logged "system too slow" until ~14:00. Cause of the GPU loss: NVIDIA's documented toolkit bug, where `systemctl daemon-reload` cuts `driver: nvidia` containers off the GPU on Docker's systemd cgroup driver. Seen again 11-25 07:08 when `apt install earlyoom` ran a daemon-reload.
+- **Changed:** Heretic (`docker/llama-heretic/compose.yaml`) and ComfyUI (`docker/comfyui/compose.yaml`) request the GPU through CDI (`driver: cdi`, `nvidia.com/gpu=all`). New `docker/ollama/compose.cdi.yaml`; `scripts/ollama-up.sh` uses it when `/etc/cdi/nvidia.yaml` exists and Docker has CDI on, else the old overlay. Compose 2.26 rejects a service-level `devices: [nvidia.com/gpu=all]` (read as a host path); the `deploy` form works.
+- **Host (dma64, by William):** earlyoom installed (prefers qemu/llama-server/ollama, avoids Xorg/plasmashell/kwin/sddm/claude); `/etc/cdi/nvidia.yaml` generated; `"features": {"cdi": true}` in `/etc/docker/daemon.json`. The live `/opt/docker/ollama/compose.yaml` was switched to CDI as well, and the port registry got an `ollama:open-webui:11434` exception (open-webui's howto compose bundles its own Ollama).
+- **Verified:** after `sudo systemctl daemon-reload` both containers still see the GPU and a fresh 9B load is 100% GPU.
+- README checked, no update needed.
+
+## 2026-11-24 — remote comms: asked autark about its mailbox
+
+- **No code changed.** William wants a secure way to follow projects and steer sessions when away from the computer. Asked autark how its new mailbox works (read-only reply). Its mail is pulled to the home server, nothing acts on incoming mail, and autark advises against steering through it: it goes dark when the home server is down, and mail is easy to spoof without DKIM plus per-message signature checks. Recommendation given: Remote Control (`/remote-control`) for steering, Telegram (or mail) for a daily digest. README checked, no update needed. ROADMAP gets a Planned item.
+
+## 2026-11-23 — desktop logout traced to autark's Ansible lab
+
+- **Diagnosed (no Refinery code changed):** William's KDE session ended at 10:24:40. The system journal shows the cause. Autark's `scripts/lab-ansible.sh` started a `--privileged --cgroupns=host` Debian container running systemd at 10:24:40.664. The container's systemd booted, writing into the host journal, and about 300 ms later X lost its VT (`VT_GETSTATE` I/O errors). Xorg ended with "terminated successfully", sddm closed session 5 and started a new X. Ruled out: package upgrades, an Xorg crash, an sddm restart.
+- **Fixed in autark, by its own session** (PRs #122 and #123, merged): the lab now runs sshd only, unprivileged, with `--cap-drop ALL`. `tests/test_lab_safety.py` refuses `--privileged`, host cgroupns/pid, `/dev` and `/sys/fs/cgroup` mounts, `/sbin/init` and `SYS_ADMIN`.
+- README and ROADMAP checked. README needs no update. ROADMAP gets the four proposed tools under Planned.
+
+## 2026-11-22 — vault mirror copies deleted
+
+- **Changed:** William deleted the brain-vault mirror copies at `~/.uncle-j-memory/memory/vault/` (39 files; the store went from 3,322 to 3,283). `premortem-audit.md` and the dream notes are untouched. A session's `rm -rf` there is denied by the permission rules, so William ran it with `!`. README and ROADMAP checked, no update needed.
 
 ## 2026-11-22 — session end: DeepSeek diagnosis, vault archived, name change
 

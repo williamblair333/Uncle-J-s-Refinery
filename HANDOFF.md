@@ -1,14 +1,74 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-25 (night) — CLAUDE.md trimmed: start here
+
+- **Done:** CLAUDE.md is back under agy's cap (CHANGELOG 11-25 night), and the agy test passes. It has only about 400 bytes of headroom, so anything new for CLAUDE.md should go in `docs/ROUTING-REFERENCE.md` with a pointer.
+- **Guard gap found:** a `python3 - <<EOF` heredoc that wrote CLAUDE.md got past surface-write-guard, while a later heredoc containing `Path("CHANGELOG.md")` was blocked. Find out why the first one wasn't caught, then add the case to its tests.
+- **Next:** the open Heretic question in the entry below, then the older start-here items.
+- **Heretic question, decided (William said "do it if worth it"):** reserve only an *awake* model server's resident file pages. Measured 11-25: Heretic asleep has `RssFile` 70 MB; awake it has 8.4 GiB (the CPU-side experts; the GPU layers are unmapped), and waking it lowered MemAvailable by only 0.7 GiB. So the gate counts those 8.4 GiB as free. Reserving for a sleeping Heretic (about 20 GB of loose cache, a 107 s wake) isn't worth the refused VMs. Build: in `scripts/ram_gate.py`, subtract the summed `RssFile` of `llama-server`/`ollama` processes from `available_bytes()`, put a test hook on the /proc root, and name it in the refusal text. Not started; paused for the slowdown below.
+- **CI port to Gitea (agreed with gitea-c1 11-25):** GitHub Actions is off for Refinery, so there's **no CI anywhere**. Port `.github/workflows/ci.yml` to `.gitea/workflows/ci.yml` and keep the GitHub file. lint needs shellcheck without sudo. The `test_agy_jail` tests should skip themselves when bwrap can't create a user namespace. Our reply is in `review/2026-11-25-reply-to-gitea-ci-port.md`. gitea's answer: act_runner is one container on dma64 (gitea-runner, capacity 6, shared with foc and the rest, so **don't lower it**). `ubuntu-latest` maps to `ghcr.io/catthehacker/ubuntu:act-22.04`, which runs as root and ships sudo. gitea checked it 11-25: `sudo apt-get install` works there, but the image has **no jq, shellcheck or bwrap**. So add `jq` to an apt-get step, since the guard-hook tests need it (ci.yml's "jq ships on ubuntu-latest" is true only on GitHub). The workflow must have (a) a top-level `concurrency: {group: ci-${{ github.ref }}, cancel-in-progress: true}`, (b) the test step under `nice -n 10`, and (c) no `pytest -n auto`. Ping gitea-c1 when the PR is up; it will watch the first run.
+- **Slowdown 11-25 10:22:** `klarheit-dashboard.timer` (:02/:12/:22/:42/:52) ran `git blame` over Klarheit's whole ledger, at about 130 MB/s of reads. Its service and timer were stopped, not disabled; they come back at reboot. The other Klarheit timers (m12, rv, cycle) are still on, so ask William. Swap is full at 7.2/7.2 GB with about 27 GB of RAM free, and `sudo swapoff -a && sudo swapon -a` is William's to run.
+
+## 2026-11-25 (evening) — model loads gated: start here
+
+- **Done:** comfy_job's Qwen jobs, ask_local and `ask_heretic` take RAM-gate leases, but only when a load is coming (CHANGELOG 11-25 evening). `ollama-up.sh` needed nothing, because it never loads a model. Restart Claude Code so the ask_local and delegate servers load the new code.
+- **mtw2 told** (11-25, one message to mtw2-12): the global hook exists, `ram_gate.py acquire` covers starts inside scripts, and it retires `scripts/preflight_vm_headroom.py` in its own time. No follow-up needed.
+- **Next session:** trim CLAUDE.md under agy's cap (below), then the open Heretic question. The older start-here items still stand: DeepSeek round 2 results, logout-forensics pick, remote comms.
+- **Not ours, left alone:** the uncommitted `config/preflight-trusted.txt` and `uv.lock` in the main checkout.
+- **Fix waiting:** `tests/test_ask_agy.py::test_shipped_rules_block_includes_claude_md_and_fits` fails on main. CLAUDE.md (22,229 bytes) plus the agy rules block (1,970) is over agy's 24,000-byte per-file cap, so CLAUDE.md needs trimming by about 200 bytes.
+- **Open question:** MemAvailable counts Heretic's mmap'd weights (about 20 GB of page cache) as free. A VM can be granted that memory, and Heretic then re-reads it from disk: the 107 s wake measured today. That's slowness, not a freeze. Decide whether the gate should reserve Heretic's working set.
+
+## 2026-11-25 (later) — session end: start here
+
+- **Next session:** wire `ram_gate.py acquire`/`release` into the model loaders (Heretic wake, `ollama-up.sh`, comfy_job), so model loads and VM starts share one budget. Then tell mtw2 once that the global hook exists.
+- **Restart Claude Code** so the new ram-gate hook loads in every session. Settings are wired, but running sessions keep their old hook list.
+- **Not ours, left alone:** the uncommitted `config/preflight-trusted.txt` (+`/opt/proj/autark`) and `uv.lock` in the main checkout.
+- agy's review tier was out of quota at about 09:00 on 11-25.
+
+## 2026-11-25 — shared RAM gate built
+
+- **Live:** `scripts/ram_gate.py` and the global `ram-gate` PreToolUse hook (CHANGELOG 2026-11-25). Every session's local VM start now has to leave at least 6 GiB after its size. `just ram-gate status` shows the leases. Installed on dma64. Other hosts pick it up at their next pull, through the post-merge hook.
+- **Next:** wire `acquire` into the model loaders: Heretic's wake, `ollama-up.sh`, and comfy_job, which already has its own 20 GiB floor. Each should take a lease sized to its model and `release` it once loaded. Tell mtw2 once that the global hook exists, so it can retire `scripts/preflight_vm_headroom.py` in its own time.
+- **Right now (11-25):** gitea-win-runner (6.2 GiB) and parley-fresh (5.6 GiB) are running. With 17 GiB available, win10 and rocky9 (16 GiB each) are refused.
+- **Still William's:** `sudo swapoff -a && sudo swapon -a` when it's quiet.
+
+## 2026-11-25 — session end: start here
+
+- **Next session: the shared RAM gate** (ROADMAP Planned). One `scripts/ram_gate.py acquire --gib N --label X` that every session calls before a VM start or model load; leases reserve RAM only for a startup window (after that the RAM is already out of MemAvailable), 6 GiB floor, names top users on refusal; then a guard on `virsh start`/`virt-install` like dcup's. mtw2 already has its own 14 GiB gate (mtw2 #723).
+- **Done today:** freeze cause found; CDI for Ollama/Heretic/ComfyUI (#391, proven across a daemon-reload); earlyoom with prefer/avoid; gpu-watch cron + healthcheck (#392). Heretic is running again.
+- **William's:** `sudo swapoff -a && sudo swapon -a` when quiet (swap 7.1/7.2 GB full); tc-vmh-03 turn data (75 + 26 GB) is between him and mtw2.
+
+## 2026-11-25 — dma64 freeze: cause found, GPU containers on CDI
+
+- **Cause** (CHANGELOG 11-25): host Ollama lost the GPU (toolkit + daemon-reload bug), ran the 9B on CPU beside Heretic and mtw2's VM, swap already full, no OOM killer. Fixed: earlyoom installed, Ollama/Heretic/ComfyUI on CDI; Ollama and Heretic recreated and verified 100% GPU.
+- **Proved 11-25:** after `sudo systemctl daemon-reload`, `nvidia-smi -L` still lists the GPU in ollama and llama-heretic, and a fresh 9B load is 100% GPU (before CDI, the same reload gave NVML Unknown Error). If it ever recurs, fall back to `native.cgroupdriver=cgroupfs`.
+- **Built 11-25 (gpu-watch):** `scripts/gpu_watch.py` runs every 5 min from cron (`# uncle-j-gpu-watch`, log `state/gpu-watch.log`) and in `healthcheck.sh` (`gpu-container-off-gpu`). It sends one Telegram message when a GPU container can't see the GPU or `ollama ps` shows CPU, and one on recovery. It never restarts anything itself. `ollama ps` is read by the header's column offsets, so a change to Ollama's table layout shows up as missed CPU rows, not a crash. Review fixes before merge: the alert text is HTML-escaped (notify.sh sends parse_mode HTML; a `<model>` got the message rejected), state is saved only after a send succeeds (retries next run), a failing host `nvidia-smi` or `ollama ps` is "unknown", not clean. Real send tested 11-25.
+- **Not built yet:** a shared RAM gate + lock every session calls before a VM or model load (mtw2's own preflight gate, mtw2 #723, refuses `virsh start` under 14 GiB). Swap (7 GB) stays full; `swapoff -a && swapon -a` when calm, or add zram.
+- **After a driver upgrade:** re-run `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`, or GPU containers fail to start.
+- **William deals with mtw2 directly** about its own domain (turn data on tc-vmh-03: 75 GB `parley_turns` + 26 GB scratch; tc-vmh-03 `/opt` has 147 GB free for a VM).
+
+## 2026-11-24 — session end: remote comms, nothing built
+
+- **William's ask (11-24):** a way to keep up with projects and steer sessions when he's away, very securely; email is one idea, means undecided. Recommended: Remote Control for steering, a daily digest by Telegram for updates. Waiting on William to try `/remote-control`; nothing built.
+- **autark's mailbox is not the channel** (autark's own advice): it lives on the home server, so it's down when that is. If mail ever steers a session: allowlisted From + DKIM pass from Authentication-Results + per-message HMAC/signed body + replay window + confirm before acting.
+- **Check next:** the inbound Telegram gateway (PR #68, `state/telegram-gateway.log`); its cron path was never confirmed. It may already be most of a remote channel.
+- **Still open:** one buddy-mail account question for William, details in `review/2026-11-24-buddy-mail-shared-account.md`.
+
+## 2026-11-23 — session end: desktop logout was autark's lab
+
+- **Cause, confirmed in the system journal:** autark's Ansible lab ran a privileged systemd container (`--privileged --cgroupns=host`, rw `/sys/fs/cgroup`). About 300 ms after its systemd booted, X lost its VT and sddm ended William's session (10:24:40). Autark fixed and merged it (PRs #122 and #123, unprivileged sshd-only lab, `tests/test_lab_safety.py`). Nothing is left to do there.
+- **Autark acted without a recorded go from William** after saying it would wait: it re-ran the lab and ran `host-plan` (check mode) against the real home server. William was told; it's his to raise with autark.
+- **Proposed tools, waiting on William's pick** (ROADMAP Planned, "Logout forensics"): (1) `just why-logout` timeline, (2) a guard on privileged systemd `docker run` on the workstation, (3) William in `adm`/`systemd-journal` so sessions can read the system journal (his call, it widens agent read access), (4) a persistent docker-events logger (docker keeps too few events in memory: today's started at 10:27).
+- The earlier entries' next steps still stand (DeepSeek round 2 results first).
+
 ## 2026-11-22 (later) — session end: start here
 
-**Next session, in order:** (1) read DeepSeek round 2's results (below; ran 21:10 on 11-22); (2) check William ran the vault-mirror delete; (3) the small fixes: test isolation, the grep-guard markdown gap, agy diagnoses its own failed sweep. Restart Claude Code if not done (new `ask_agy` from #376–#378). PRs this session: #381–#385, all merged on Gitea.
+**Next session, in order:** (1) read DeepSeek round 2's results (below; ran 21:10 on 11-22); (2) the small fixes: test isolation, the grep-guard markdown gap, agy diagnoses its own failed sweep. Restart Claude Code if not done (new `ask_agy` from #376–#378). PRs this session: #381–#385, all merged on Gitea.
 
-- **CI runs on Gitea now, not GitHub** (William 11-22; CHANGELOG). `.gitea/workflows/ci.yml`; GitHub Actions is off for this repo. CI only runs while the on-demand Gitea stack is up, and `just ci-alert` reads Gitea's status (stack down = quiet, not an alert).
 - **The user goes by William now** (11-22; PR #385, CHANGELOG). Entries below this line still say Bill; same person. New entries say William.
 - **DeepSeek V4.1: the slow prefill is most likely our runner's `--window 16`** (found 11-22, tested tonight). `blind.py` copied it from Strata's `tools/dsv41/smoke.py` (fine there: a few-token prompt). With it, `ds4_main.cpp:1472` feeds the prompt 16 tokens at a time; each feed is under the chunked pass's 96-token floor (`pick_flow_min`), so 11-20's 1820 tokens went through 114 windows, each re-reading the CPU lane's experts from disk (782 s, 2.33 tok/s). The engine's default feeds the whole prompt at once, through the chunked pass, which reads each picked expert once. Its source calls that the default, at equal quality (KL 0.1685 vs 0.1686), 6x faster on an 8K prompt. The "0.25 GB/s from the disk" line is only a load-time probe: decode read 366 MB per token in a 251 ms wait (~1.46 GB/s, disk-bound at full speed). `blind.py` now leaves `--window` out (`--engine-arg=--window --engine-arg=16` puts it back).
 - **Round 2 runs tonight at 21:10** (`dsv41-diag2.timer`, one-shot; cancel `systemctl --user stop dsv41-diag2.timer`), script `/opt/docker/strata/bench/dsv41/diag2.sh`, all without `--window`: 1-baseline, 2-parked (same setup as 11-20's, so the fix alone shows), 3-parked + `--ssd-cache 14`. A watchdog kills the engine container under 3 GiB MemAvailable; blind.sh sends a Telegram per run. **Prediction:** 2-parked's `prompt:` line says `windows of 16384` and prefill is several times 2.33 tok/s (one pass over ≤131 GB of experts at ~1 GB/s is ≤~130 s, so ≥~14 tok/s); decode stays near 1.83. Still ~2 tok/s means the window theory is wrong. **Next session:** read `/opt/docker/strata/bench/results/dsv41-diag2-*/` and check `docker ps` shows immich + langfuse up (diag2 only logs an unpark failure; it has no Telegram of its own). Then re-size the blind test's jobs from the new calibration.
-- **Obsidian brain vault archived** (Bill 11-22; PR #383, CHANGELOG). Done: the vault's leftover edits committed locally (`df3bcf6`; it has no remote), CLAUDE.md deployed with `refinery-doctor.sh --fix`. **Still open, needs William:** the mirrored copies at `~/.uncle-j-memory/memory/vault/` are still there and still searchable. My `rm` was permission-denied, so William runs it (`rm -rf -- ~/.uncle-j-memory/memory/vault` once no sync holds `/tmp/memweave-sync.lock.d`; check only that path goes); the next sync then drops them from the index. write-well keeps Obsidian for its own repo; nothing was sent to it.
+- **Obsidian brain vault archived** (Bill 11-22; PR #383, CHANGELOG). Done: the vault's leftover edits committed locally (`df3bcf6`; it has no remote), CLAUDE.md deployed with `refinery-doctor.sh --fix`. **Mirror deleted:** William ran the guarded delete of `~/.uncle-j-memory/memory/vault/` (39 of 3,322 files; 3,283 left; premortem-audit.md and the 134 dream notes untouched). The 02:30 re-index drops them from search. write-well keeps Obsidian for its own repo; nothing was sent to it.
 - **agy may run read-only hashers** (from mtw2's report; CHANGELOG). Applied live (`apply_permissions.py`, `install_rules.py`). A recoverable denial isn't ours to build: headless agy ends the run on any denied command. Pipes stay denied, so mtw2 runs `sha256sum file` bare.
 - **agy wandered on a read-only grep sweep** (11-22, log `state/agy-logs/20261122-082557-*`): 27 commands, then a read of a scratch path that doesn't exist in its jail, then the 300 s timeout. Per the agy-diagnoses-agy rule, hand it that log next session.
 - **Test isolation bug:** `tests/test_agy_packet.py` reads the live `state/agy-quota.json`. While agy's code tier is spent (as at 11-22 ~09:00), 8 of its 40 tests fail in the main checkout ("all models in tier code exhausted") and pass in a clean worktree. Point the tests at a temp quota file.

@@ -24,9 +24,12 @@ if [[ -f "$HOST_COMPOSE" ]]; then
     files=(-f "$HOST_COMPOSE")
 else
     files=(-f "$PROJ_ROOT/docker/ollama/compose.yaml")
-    if docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -q '"nvidia"'; then
+    if [[ -f /etc/cdi/nvidia.yaml ]] && docker info --format '{{json .CDISpecDirs}}' 2>/dev/null | grep -q '/etc/cdi'; then
+        files+=(-f "$PROJ_ROOT/docker/ollama/compose.cdi.yaml")
+        echo "ollama-up: NVIDIA CDI spec found — GPU overlay (CDI) applied"
+    elif docker info --format '{{json .Runtimes}}' 2>/dev/null | grep -q '"nvidia"'; then
         files+=(-f "$PROJ_ROOT/docker/ollama/compose.gpu.yaml")
-        echo "ollama-up: nvidia runtime found — GPU overlay applied"
+        echo "ollama-up: nvidia runtime found — GPU overlay applied (a daemon-reload can drop it; CDI is safer)"
     else
         echo "ollama-up: no nvidia runtime — running on CPU (expect ~60 s+ per call)"
     fi
