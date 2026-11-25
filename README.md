@@ -765,6 +765,7 @@ The banner's `fix:` line says what to run. Common causes:
 | `cron-missing(...)` | Rerun `./install.sh`; it registers the cron jobs in step 6d |
 | `stack-not-at-head` | `uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp --upgrade-package jdocmunch-mcp && uv sync --inexact` |
 | `post-merge-hook-missing` | `ln -sfn "$STACK_ROOT/scripts/post-merge-hook.sh" "$STACK_ROOT/.git/hooks/post-merge"` |
+| `gpu-container-off-gpu` | `docker restart <container>` for the one named, then `python3 scripts/gpu_watch.py`. If it recurs, check the container uses CDI (`driver: cdi`) and `/etc/cdi/nvidia.yaml` exists |
 | `secrets` | Look at the matches it found; add the files to `.gitignore` or remove the secrets |
 | `hook-no-fire` / `trace-api` (full mode) | `tail -5 ~/.claude/state/langfuse_hook.log`, then check that `from langfuse import Langfuse` works in the stack venv |
 

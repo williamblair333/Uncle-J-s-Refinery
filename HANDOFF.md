@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-25 — session end: start here
+
+- **Next session: the shared RAM gate** (ROADMAP Planned). One `scripts/ram_gate.py acquire --gib N --label X` that every session calls before a VM start or model load; leases reserve RAM only for a startup window (after that the RAM is already out of MemAvailable), 6 GiB floor, names top users on refusal; then a guard on `virsh start`/`virt-install` like dcup's. mtw2 already has its own 14 GiB gate (mtw2 #723).
+- **Done today:** freeze cause found; CDI for Ollama/Heretic/ComfyUI (#391, proven across a daemon-reload); earlyoom with prefer/avoid; gpu-watch cron + healthcheck (#392). Heretic is running again.
+- **William's:** `sudo swapoff -a && sudo swapon -a` when quiet (swap 7.1/7.2 GB full); tc-vmh-03 turn data (75 + 26 GB) is between him and mtw2.
+
 ## 2026-11-25 — dma64 freeze: cause found, GPU containers on CDI
 
 - **Cause** (CHANGELOG 11-25): host Ollama lost the GPU (toolkit + daemon-reload bug), ran the 9B on CPU beside Heretic and mtw2's VM, swap already full, no OOM killer. Fixed: earlyoom installed, Ollama/Heretic/ComfyUI on CDI; Ollama and Heretic recreated and verified 100% GPU.
