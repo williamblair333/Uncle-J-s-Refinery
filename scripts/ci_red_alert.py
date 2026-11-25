@@ -50,7 +50,12 @@ def fetch_latest_run(timeout: int = 60, urlopen=urllib.request.urlopen) -> dict 
     sha = str(data["sha"])
     state = data.get("state") or ""
     statuses = [s for s in (data.get("statuses") or []) if isinstance(s, dict)]
-    if not statuses or state == "pending":
+    # No statuses at all means no CI ran for main's head (runner down, workflow not
+    # registered). That counts toward "can't read CI", so a dead runner alerts after 24 h
+    # instead of reading as a run forever in progress.
+    if not statuses:
+        return None
+    if state == "pending":
         return {"status": "in_progress", "databaseId": sha}
 
     bad = [s for s in statuses if s.get("status") != "success"]

@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-25 (late) — CI on Gitea: start here
+
+- **Done:** the CI port (CHANGELOG 11-25 late). gitea-c1 has been told the PR is up, and it watches the first run. If the first run is red, read the job log before changing anything: the bwrap tests should show as skipped with "Creating new namespace failed".
+- **Next:** the Heretic `RssFile` reservation in `scripts/ram_gate.py` (entry below), then the surface-write-guard heredoc gap.
+
 ## 2026-11-25 (night) — CLAUDE.md trimmed: start here
 
 - **Done:** CLAUDE.md is back under agy's cap (CHANGELOG 11-25 night), and the agy test passes. It has only about 400 bytes of headroom, so anything new for CLAUDE.md should go in `docs/ROUTING-REFERENCE.md` with a pointer.

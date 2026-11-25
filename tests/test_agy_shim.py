@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests._bwrap import bwrap_unusable_reason
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import ask_agy  # noqa: E402
 
@@ -93,7 +95,7 @@ def test_a_crafted_depth_value_is_not_executed(shim_dir, tmp_path):
     assert out.returncode == 0 and not marker.exists()
 
 
-@pytest.mark.skipif(shutil.which("bwrap") is None, reason="bubblewrap not installed")
+@pytest.mark.skipif(bwrap_unusable_reason() is not None, reason=str(bwrap_unusable_reason()))
 def test_real_sandbox_run_with_its_helpers_shimmed(shim_dir, tmp_path):
     assert not unprotected_calls(SANDBOX_RUN), "sandbox-run calls a shim: refusing to start it"
     (tmp_path / "bin" / "sandbox-run").unlink()

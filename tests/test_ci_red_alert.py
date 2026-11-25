@@ -243,11 +243,14 @@ def test_fetch_red_points_at_the_failing_job():
     assert "CI / pytest" in run["displayTitle"] and SHA[:7] in run["displayTitle"]
 
 
-def test_fetch_pending_or_no_statuses_is_in_progress():
+def test_fetch_pending_is_in_progress():
     assert ci_alert.fetch_latest_run(urlopen=_serve(
         {"state": "pending", "sha": SHA, "statuses": [{"status": "pending"}]}))["status"] == "in_progress"
-    assert ci_alert.fetch_latest_run(urlopen=_serve(
-        {"state": "", "sha": SHA, "statuses": []}))["status"] == "in_progress"
+
+
+def test_fetch_no_statuses_counts_as_unreadable():
+    # No CI ran for main's head: must start the 24 h "can't read CI" timer, not stay quiet.
+    assert ci_alert.fetch_latest_run(urlopen=_serve({"state": "", "sha": SHA, "statuses": []})) is None
 
 
 def test_fetch_stack_down_is_offline_not_unreadable():

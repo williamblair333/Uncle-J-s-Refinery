@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pytest
 
+from tests._bwrap import bwrap_unusable_reason
+
 SCRIPT = Path(__file__).resolve().parent.parent / "features" / "antigravity" / "sandbox-run"
-pytestmark = pytest.mark.skipif(shutil.which("bwrap") is None, reason="bubblewrap not installed")
+pytestmark = pytest.mark.skipif(bwrap_unusable_reason() is not None, reason=str(bwrap_unusable_reason()))
 
 
 def run(cwd, *cmd):

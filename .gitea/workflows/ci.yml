@@ -16,6 +16,12 @@ on:
 env:
   UV_PYTHON: "3.12"
 
+# The runner (one act_runner on dma64, capacity 6) is shared with other repos and William's
+# desktop: a newer push to the same ref cancels the older run instead of queueing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── 1. Bash syntax + static analysis ───────────────────────────────────────
   lint:
@@ -116,8 +122,10 @@ jobs:
       - name: uv sync
         run: uv sync --inexact
 
+      # nice: the runner shares dma64 with the desktop. Serial on purpose (no -n auto):
+      # gitea asked for it, so one suite can't take every core on the host.
       - name: pytest tests/
-        run: .venv/bin/python -m pytest -q tests -rfs
+        run: nice -n 10 .venv/bin/python -m pytest -q tests -rfs
 
   # ── 5. jscrub: unit tests + read-only repo audit ─────────────────────────
   # audit-repo.sh runs check-vendor, then a live-positive canary (a temp file
