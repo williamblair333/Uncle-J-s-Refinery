@@ -2,7 +2,7 @@
 
 ## 2026-11-25 — shared RAM gate built
 
-- **Live:** `scripts/ram_gate.py` and the global `ram-gate` PreToolUse hook (CHANGELOG 2026-11-25). Every session's local VM start now has to leave at least 6 GiB after its size. `just ram-gate status` shows the leases.
+- **Live:** `scripts/ram_gate.py` and the global `ram-gate` PreToolUse hook (CHANGELOG 2026-11-25). Every session's local VM start now has to leave at least 6 GiB after its size. `just ram-gate status` shows the leases. Installed on dma64. Other hosts pick it up at their next pull, through the post-merge hook.
 - **Next:** wire `acquire` into the model loaders: Heretic's wake, `ollama-up.sh`, and comfy_job, which already has its own 20 GiB floor. Each should take a lease sized to its model and `release` it once loaded. Tell mtw2 once that the global hook exists, so it can retire `scripts/preflight_vm_headroom.py` in its own time.
 - **Right now (11-25):** gitea-win-runner (6.2 GiB) and parley-fresh (5.6 GiB) are running. With 17 GiB available, win10 and rocky9 (16 GiB each) are refused.
 - **Still William's:** `sudo swapoff -a && sudo swapon -a` when it's quiet.
