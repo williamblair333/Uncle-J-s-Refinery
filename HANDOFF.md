@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-25 (night) — CLAUDE.md trimmed: start here
+
+- **Done:** CLAUDE.md is back under agy's cap (CHANGELOG 11-25 night), and the agy test passes. It has only about 400 bytes of headroom, so anything new for CLAUDE.md should go in `docs/ROUTING-REFERENCE.md` with a pointer.
+- **Guard gap found:** a `python3 - <<EOF` heredoc that wrote CLAUDE.md got past surface-write-guard, while a later heredoc containing `Path("CHANGELOG.md")` was blocked. Find out why the first one wasn't caught, then add the case to its tests.
+- **Next:** the open Heretic question in the entry below, then the older start-here items.
+
 ## 2026-11-25 (evening) — model loads gated: start here
 
 - **Done:** comfy_job's Qwen jobs, ask_local and `ask_heretic` take RAM-gate leases, but only when a load is coming (CHANGELOG 11-25 evening). `ollama-up.sh` needed nothing, because it never loads a model. Restart Claude Code so the ask_local and delegate servers load the new code.
