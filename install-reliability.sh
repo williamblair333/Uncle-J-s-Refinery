@@ -259,6 +259,24 @@ else
             ok "stall-guard PreToolUse hook already wired in settings.json"
         fi
 
+        # Wire ram-gate (Bash) on its own key, same shape as stall-guard: it blocks with exit 2
+        # and fails open itself. 15 s: it may ask `virsh dominfo` (5 s cap) for a domain's size.
+        _ramgate_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("ram-gate"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_ramgate_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/ram-gate.sh","timeout":15}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "ram-gate PreToolUse hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "ram-gate PreToolUse hook already wired in settings.json"
+        fi
+
         # Wire self-work-budget on its own key, for the same reason as credential-guard.
         # `|| exit 1` keeps a broken script (bash exit 2 = block) from denying every tool.
         _budget_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("self-work-budget"))) | length' "$_settings" 2>/dev/null || echo 0)
