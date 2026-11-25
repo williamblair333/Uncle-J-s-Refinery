@@ -527,6 +527,7 @@ for entry in \
     "uncle-j-auto-maintain|0 3 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin CLAUDE_BIN=/home/bill/.local/bin/claude bash $STACK_ROOT/scripts/auto-maintain.sh >> $STACK_ROOT/state/auto-maintain.log 2>&1" \
     "uncle-j-jdocmunch-reindex|30 1 * * * PATH=/home/bill/.local/bin:/usr/local/bin:/usr/bin:/bin bash $STACK_ROOT/scripts/jdocmunch-reindex.sh >> $STACK_ROOT/state/jdocmunch-reindex.log 2>&1" \
     "uncle-j-healthcheck-notify|0 7 * * * bash $STACK_ROOT/scripts/healthcheck-notify.sh >> $STACK_ROOT/state/healthcheck-notify.log 2>&1" \
+    "uncle-j-gpu-watch|*/5 * * * * PATH=/usr/local/bin:/usr/bin:/bin flock -n $STACK_ROOT/state/gpu-watch.lock python3 $STACK_ROOT/scripts/gpu_watch.py --cron >> $STACK_ROOT/state/gpu-watch.log 2>&1" \
     "uncle-j-memweave-sync|30 2 * * * nice -n 19 bash $STACK_ROOT/scripts/memweave/sync_memory.sh --all >> $STACK_ROOT/state/memweave-sync.log 2>&1"
 do
     tag="${entry%%|*}"

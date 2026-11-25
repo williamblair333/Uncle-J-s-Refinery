@@ -1299,6 +1299,36 @@ check_llama_heretic_backend() {
     fi
 }
 
+# A GPU container that lost the GPU, or Ollama running a model on CPU, puts the model in
+# host RAM: on 2026-11-24 that froze dma64. scripts/gpu_watch.py does the probing (and runs
+# from cron every 5 min); here it only reports. No GPU on the host is not applicable.
+check_gpu_containers() {
+    step "GPU containers — on the GPU, not CPU"
+    local out rc=0
+    out="$(python3 "$REPO_ROOT/scripts/gpu_watch.py" --check 2>&1)" || rc=$?
+    case "$rc" in
+        0)
+            if grep -q 'no NVIDIA GPU' <<<"$out"; then na "no NVIDIA GPU on this host"
+            else ok "GPU containers see the GPU; no model on CPU"; fi
+            while read -r _ note; do warn "$note"; done < <(grep '^NOTE ' <<<"$out")
+            ;;
+        1)
+            if ! grep -q '^PROBLEM ' <<<"$out"; then
+                # Exit 1 with no PROBLEM line is a crash (Python exits 1 on a traceback).
+                warn "GPU check crashed: $(tail -1 <<<"$out" | cut -c1-120)"
+                return
+            fi
+            while read -r _ p; do bad "$p"; done < <(grep '^PROBLEM ' <<<"$out")
+            # Plain text, not "run:": the fix names a container, and gpu-watch never restarts.
+            hint "docker restart the container named above, then re-check: python3 $REPO_ROOT/scripts/gpu_watch.py"
+            record_fail "gpu-container-off-gpu"
+            ;;
+        *)
+            warn "GPU check couldn't run (docker down?): ${out:0:120}"
+            ;;
+    esac
+}
+
 # ----- 9o2. wheelhouse: offline copies of the venvs (>10 days = cron failing) ----
 check_wheelhouse() {
     step "wheelhouse — offline copies of the venvs"
@@ -1478,6 +1508,7 @@ check_memweave_fresh
 check_ask_local_config
 check_ask_local_backend
 check_llama_heretic_backend
+check_gpu_containers
 check_dreaming_runtime
 check_wheelhouse
 check_auto_maintain_runtime
