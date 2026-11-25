@@ -1,6 +1,8 @@
 name: CI
 
-# Runs on the self-hosted Gitea runner (catthehacker/ubuntu:act-22.04 job containers).
+# Runs on the self-hosted Gitea runner, label ubuntu-24.04 = catthehacker/ubuntu:act-24.04
+# job containers. Not ubuntu-latest (act-22.04 there): tests run /usr/bin/python3 directly
+# and need 3.11+ (tomllib), PyYAML and a Pillow with getbbox(alpha_only=), like GitHub's 24.04.
 # Moved here from .github/workflows on 2026-11-22; GitHub Actions is off for this repo.
 # The Gitea stack is on-demand: CI runs while it is up, and PRs are opened on Gitea,
 # so a PR gets its run when it is opened. scripts/ci_red_alert.py reads main's status here.
@@ -11,8 +13,8 @@ on:
     branches: [main]
   pull_request:
 
-# The act-22.04 image's python3 is 3.10; requires-python is >=3.11 and onnxruntime has no
-# wheel for 3.10. uv fetches its own 3.12 (what GitHub's ubuntu-latest had).
+# Pins uv's venv to 3.12 (the image's own python3 is 3.12.3 too), so a future image with a
+# different system Python doesn't change the venv the suite runs in.
 env:
   UV_PYTHON: "3.12"
 
@@ -26,7 +28,7 @@ jobs:
   # ── 1. Bash syntax + static analysis ───────────────────────────────────────
   lint:
     name: Lint shell scripts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +46,7 @@ jobs:
   # ── 2. Python package installation on a fresh Debian/Ubuntu image ──────────
   install-smoke:
     name: Package install smoke test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -66,7 +68,7 @@ jobs:
   # ── 3. Auxiliary installer syntax (reliability, guardrails, langfuse) ──────
   aux-syntax:
     name: Auxiliary installer syntax
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +85,7 @@ jobs:
   # Needs uv (full sync: httpx, mcp, the munch packages), git and jq.
   test-suite:
     name: pytest (full suite)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -110,7 +112,7 @@ jobs:
       - name: apt packages (bubblewrap, jq, Pillow)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y bubblewrap jq python3-pil
+          sudo apt-get install -y bubblewrap jq python3-pil python3-yaml
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
       - name: git identity (tests build real repos and commit)
@@ -135,7 +137,7 @@ jobs:
   # gate tests run in test-suite above.
   jscrub-audit:
     name: jscrub unit tests + audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
