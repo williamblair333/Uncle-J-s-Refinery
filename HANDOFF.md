@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-25 (later) — session end: start here
+
+- **Next session:** wire `ram_gate.py acquire`/`release` into the model loaders (Heretic wake, `ollama-up.sh`, comfy_job), so model loads and VM starts share one budget. Then tell mtw2 once that the global hook exists.
+- **Restart Claude Code** so the new ram-gate hook loads in every session. Settings are wired, but running sessions keep their old hook list.
+- **Not ours, left alone:** the uncommitted `config/preflight-trusted.txt` (+`/opt/proj/autark`) and `uv.lock` in the main checkout.
+- agy's review tier was out of quota at about 09:00 on 11-25.
+
 ## 2026-11-25 — shared RAM gate built
 
 - **Live:** `scripts/ram_gate.py` and the global `ram-gate` PreToolUse hook (CHANGELOG 2026-11-25). Every session's local VM start now has to leave at least 6 GiB after its size. `just ram-gate status` shows the leases. Installed on dma64. Other hosts pick it up at their next pull, through the post-merge hook.
