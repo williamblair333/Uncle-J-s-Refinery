@@ -14,6 +14,7 @@ Completed items age out after ~4 weeks.
 
 ## Planned
 
+- **Shared RAM gate** (2026-11-25, after the 11-24 freeze): `scripts/ram_gate.py` leases + a `virsh start`/`virt-install` guard, so two sessions can't start heavy work at once. Design in HANDOFF 2026-11-25.
 - **Remote comms** (William 11-24): follow projects and steer sessions away from the desk, securely. Candidates: Remote Control for steering; a daily per-project digest by Telegram or mail; the PR #68 Telegram gateway for inbound. No mail-driven actions without the checks in HANDOFF 2026-11-24.
 - **Logout forensics** (proposed 2026-11-23 after autark's lab logged William out; waiting on his pick). (1) `just why-logout TIME`: one timeline from Xorg logs, user and system journals, sddm, docker events and Claude transcripts, naming which session ran what. (2) A PreToolUse guard refusing `docker run --privileged` with `/sbin/init` or `--cgroupns=host` on the workstation without approval. (3) William joins `adm`/`systemd-journal` (his decision). (4) A user service appending docker container events to a file.
 

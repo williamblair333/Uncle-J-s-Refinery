@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-25 — session end
+
+- README's healthcheck table gets `gpu-container-off-gpu`. ROADMAP Planned gets the shared RAM gate.
+
 ## 2026-11-25 — gpu-watch: alert when a model leaves the GPU
 
 - **Added:** `scripts/gpu_watch.py` (tests: `tests/test_gpu_watch.py`, 14). For each running GPU container it checks `nvidia-smi -L` inside the container, and for Ollama it checks `ollama ps` for CPU. `--cron` (every 5 min, `install.sh` entry `uncle-j-gpu-watch`, under `flock`) sends Telegram only when the problem set changes, plus once on recovery. It also notes old-style `driver: nvidia` containers. The healthcheck step `check_gpu_containers` reports the same (`gpu-container-off-gpu`). Installed and run on dma64: ok.
