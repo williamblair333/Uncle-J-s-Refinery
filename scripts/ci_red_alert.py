@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Alert William when GitHub Actions CI on main goes red."""
+"""Alert William when CI on main (Gitea Actions) goes red."""
 
 import argparse
 import json
@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -15,41 +16,60 @@ UNREADABLE_THRESHOLD_SECONDS = 24 * 3600
 CRON_TAG = "uncle-j-ci-red-alert"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+# CI moved from GitHub Actions to Gitea on 2026-11-22. The repo is public, so main's
+# combined commit status reads without a token.
+GITEA_WEB = "http://10.0.0.100:3000"
+GITEA_REPO = "bill/Uncle-J-s-Refinery"
+GITEA_STATUS_URL = f"{GITEA_WEB}/api/v1/repos/{GITEA_REPO}/commits/main/status"
+# The Gitea stack is on-demand: while it is down no CI runs, so a refused connection is
+# "offline", not "unreadable". decide() treats it like a run still in progress.
+OFFLINE = {"status": "offline"}
 
-def fetch_latest_run(timeout: int = 60) -> dict | None:
-    """Fetch latest CI workflow run on main from GitHub using gh CLI."""
-    cmd = [
-        "gh",
-        "run",
-        "list",
-        "--branch",
-        "main",
-        "--workflow",
-        "CI",
-        "--limit",
-        "1",
-        "--json",
-        "databaseId,conclusion,status,displayTitle,url",
-    ]
+
+def _refused(err: BaseException) -> bool:
+    reason = getattr(err, "reason", err)
+    return isinstance(reason, ConnectionRefusedError)
+
+
+def fetch_latest_run(timeout: int = 60, urlopen=urllib.request.urlopen) -> dict | None:
+    """Read main's combined CI status on Gitea, shaped like a run for decide().
+
+    Returns OFFLINE when Gitea refuses the connection (stack down), and None on any
+    other failure (HTTP error, timeout, bad JSON), which counts toward "can't read CI".
+    """
     try:
-        proc = subprocess.run(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout,
-            shell=False,
-            check=False,
-            cwd=REPO_ROOT,  # cron starts in $HOME, where gh has no repo to read
-        )
-        if proc.returncode != 0:
-            return None
-        data = json.loads(proc.stdout)
-        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
-            return data[0]
+        with urlopen(GITEA_STATUS_URL, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError:
         return None
-    except Exception:
+    except Exception as e:
+        return dict(OFFLINE) if _refused(e) else None
+
+    if not isinstance(data, dict) or not data.get("sha"):
         return None
+    sha = str(data["sha"])
+    state = data.get("state") or ""
+    statuses = [s for s in (data.get("statuses") or []) if isinstance(s, dict)]
+    # No statuses at all means no CI ran for main's head (runner down, workflow not
+    # registered). That counts toward "can't read CI", so a dead runner alerts after 24 h
+    # instead of reading as a run forever in progress.
+    if not statuses:
+        return None
+    if state == "pending":
+        return {"status": "in_progress", "databaseId": sha}
+
+    bad = [s for s in statuses if s.get("status") != "success"]
+    pick = bad[0] if bad else statuses[0]
+    target = str(pick.get("target_url") or "")
+    if target.startswith("/"):
+        target = GITEA_WEB + target
+    return {
+        "databaseId": sha,
+        "status": "completed",
+        "conclusion": "success" if state == "success" else (state or "failure"),
+        "displayTitle": f"main {sha[:7]}: {pick.get('context') or ''} {pick.get('description') or ''}".strip(),
+        "url": target or f"{GITEA_WEB}/{GITEA_REPO}/commit/{sha}",
+    }
 
 
 def format_run_message(run: dict) -> str:
@@ -209,7 +229,7 @@ def main(
     send_fn=None,
     now_fn=None,
 ) -> int:
-    parser = argparse.ArgumentParser(description="Alert William when GitHub Actions CI on main goes red.")
+    parser = argparse.ArgumentParser(description="Alert William when CI on main (Gitea Actions) goes red.")
     parser.add_argument("--dry-run", action="store_true", help="Print message instead of sending and do not write state")
     parser.add_argument("--install-cron", action="store_true", help="Add the 15-minute cron job on this host")
     args = parser.parse_args(argv)

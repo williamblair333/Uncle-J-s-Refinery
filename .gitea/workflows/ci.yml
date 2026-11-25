@@ -1,0 +1,153 @@
+name: CI
+
+# Runs on the self-hosted Gitea runner, label ubuntu-24.04 = catthehacker/ubuntu:act-24.04
+# job containers. Not ubuntu-latest (act-22.04 there): tests run /usr/bin/python3 directly
+# and need 3.11+ (tomllib), PyYAML and a Pillow with getbbox(alpha_only=), like GitHub's 24.04.
+# Moved here from .github/workflows on 2026-11-22; GitHub Actions is off for this repo.
+# The Gitea stack is on-demand: CI runs while it is up, and PRs are opened on Gitea,
+# so a PR gets its run when it is opened. scripts/ci_red_alert.py reads main's status here.
+on:
+  # pull_request covers branch work; push to main is the post-merge run that the CI-red
+  # alert reads. `branches: ['**']` would run every PR twice (branch ref + PR ref).
+  push:
+    branches: [main]
+  pull_request:
+
+# Pins uv's venv to 3.12 (the image's own python3 is 3.12.3 too), so a future image with a
+# different system Python doesn't change the venv the suite runs in.
+env:
+  UV_PYTHON: "3.12"
+
+# The runner (one act_runner on dma64, capacity 6) is shared with other repos and William's
+# desktop: a newer push to the same ref cancels the older run instead of queueing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. Bash syntax + static analysis ───────────────────────────────────────
+  lint:
+    name: Lint shell scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n (syntax check)
+        run: find . -name '*.sh' ! -path './.venv/*' -exec bash -n {} \;
+
+      # Job containers start with empty apt lists, hence the update.
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          find . -name '*.sh' ! -path './.venv/*' ! -path './_review/*' \
+            | xargs shellcheck --severity=error --exclude=SC1091
+
+  # ── 2. Python package installation on a fresh Debian/Ubuntu image ──────────
+  install-smoke:
+    name: Package install smoke test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Add ~/.local/bin to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: uv sync (create venv + install all packages)
+        run: uv sync --inexact
+
+      - name: Smoke-test MCP binary versions
+        run: |
+          .venv/bin/jcodemunch-mcp  --version
+          .venv/bin/jdatamunch-mcp  --help   > /dev/null
+          .venv/bin/jdocmunch-mcp   --help   > /dev/null
+
+  # ── 3. Auxiliary installer syntax (reliability, guardrails, langfuse) ──────
+  aux-syntax:
+    name: Auxiliary installer syntax
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n on auxiliary installers
+        run: |
+          for f in install-reliability.sh install-guardrails.sh install-langfuse.sh; do
+            [ -f "$f" ] && bash -n "$f" && echo "OK  $f" || echo "FAIL  $f"
+          done
+
+  # ── 4. The whole pytest suite — the same run as `just test` ──────────────
+  # Every file under tests/ runs here; there is no per-file list to forget to
+  # extend. Host-only cases (live Ollama, the memweave ONNX model, .venv-memweave)
+  # self-skip on this runner; -rfs prints every skip and failure by name.
+  # Needs uv (full sync: httpx, mcp, the munch packages), git and jq.
+  test-suite:
+    name: pytest (full suite)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      # tests/test_tools.py runs real `just` (modules, groups, --dump json); Ubuntu's
+      # apt package is too old for groups. Pinned to the version tested on the host;
+      # the hash matches the release's SHA256SUMS (checked 2026-11-10).
+      - name: just 1.40.0
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          f=just-1.40.0-x86_64-unknown-linux-musl.tar.gz
+          curl -fsSLo "/tmp/$f" "https://github.com/casey/just/releases/download/1.40.0/$f"
+          echo "181b91d0ceebe8a57723fb648ed2ce1a44d849438ce2e658339df4f8db5f1263  /tmp/$f" | sha256sum -c -
+          tar -xzf "/tmp/$f" -C "$HOME/.local/bin" just
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/just" --version
+
+      # bubblewrap: tests/test_agy_jail.py runs the jail for real.
+      # Pillow: the tests/test_comfy.py region test runs `just image --region` under /usr/bin/python3.
+      - name: apt packages (bubblewrap, jq, Pillow)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap jq python3-pil python3-yaml
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+
+      - name: git identity (tests build real repos and commit)
+        run: |
+          git config --global user.email ci@example.invalid
+          git config --global user.name ci
+          git config --global init.defaultBranch main
+
+      - name: uv sync
+        run: uv sync --inexact
+
+      # nice: the runner shares dma64 with the desktop. Serial on purpose (no -n auto):
+      # gitea asked for it, so one suite can't take every core on the host.
+      - name: pytest tests/
+        run: nice -n 10 .venv/bin/python -m pytest -q tests -rfs
+
+  # ── 5. jscrub: unit tests + read-only repo audit ─────────────────────────
+  # audit-repo.sh runs check-vendor, then a live-positive canary (a temp file
+  # with a zero-width space must be detected, else exit 3), then the sweep.
+  # Exit 1 (hits) and 2 (unscannable file) both fail the job. Read-only: clean /
+  # --in-place / --follow-symlinks are deliberately not wired here. Its pytest
+  # gate tests run in test-suite above.
+  jscrub-audit:
+    name: jscrub unit tests + audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: jscrub unit tests
+        run: python scripts/jscrub/test_cli.py
+
+      - name: jscrub check-vendor + canary + audit
+        run: ./scripts/jscrub/audit-repo.sh

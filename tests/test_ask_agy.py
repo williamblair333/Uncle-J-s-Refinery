@@ -13,6 +13,8 @@ from pathlib import Path
 
 import pytest
 
+from tests._bwrap import bwrap_unusable_reason
+
 REPO = Path(__file__).parent.parent
 
 
@@ -531,8 +533,8 @@ def test_sync_mcp_always_gives_agy_a_pinned_fetch_server(tmp_path):
 # ── shims: sandboxed habitual commands ──────────────────────────────────────
 
 def test_shimmed_pytest_resolves_to_local_venv(tmp_path):
-    if shutil.which("bwrap") is None:
-        pytest.skip("bubblewrap not installed")
+    if bwrap_unusable_reason() is not None:
+        pytest.skip(bwrap_unusable_reason())
     venv_bin = tmp_path / ".venv" / "bin"
     venv_bin.mkdir(parents=True)
     fake_pytest = venv_bin / "pytest"
@@ -564,8 +566,8 @@ def test_shimmed_pytest_resolves_to_local_venv(tmp_path):
 
 
 def test_shimmed_command_never_reenters_shim(tmp_path):
-    if shutil.which("bwrap") is None:
-        pytest.skip("bubblewrap not installed")
+    if bwrap_unusable_reason() is not None:
+        pytest.skip(bwrap_unusable_reason())
     sandbox_script = REPO / "features" / "antigravity" / "sandbox-run"
     shims_dir = REPO / "features" / "antigravity" / "shims"
 

@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-25 (late) — CI runs on the Gitea runner
+
+- **Why:** GitHub Actions is off for this repo, so Refinery had no CI at all. Built on the 11-22 draft branch `ci/move-to-gitea`, which never merged.
+- **Added:** `.gitea/workflows/ci.yml`, the same five jobs as `.github/workflows/ci.yml` (kept as is). For the shared runner on dma64 (capacity 6) it has a top-level `concurrency` group per ref with `cancel-in-progress`, pytest under `nice -n 10`, and no `-n auto`. It installs `jq` with apt (the act-22.04 image lacks it) and uses `UV_PYTHON=3.12` (the image ships 3.10).
+- **Fixed:** `test_skill_gate`'s unwritable-state test skips when it runs as root (job containers do, and root ignores `chmod 0o500`).
+- **Fixed:** the bubblewrap tests (`test_agy_jail`, `test_sandbox_run`, one in `test_agy_shim`, two in `test_ask_agy`) skipped only when bwrap was missing. In a job container bwrap is installed but can't create a namespace, so they'd fail. `tests/_bwrap.py` now tries a real sandbox start, and the tests skip with bwrap's own error. Checked in the act-22.04 image: "Creating new namespace failed: Operation not permitted".
+- **Changed:** `scripts/ci_red_alert.py` (`just ci-alert`) reads main's combined status on Gitea instead of `gh run list`. A refused connection (stack down) is offline, not an alert. When main's head has **no** statuses (no CI ran), that now counts toward the 24 h "can't read CI" alert, not "in progress" forever, which is how CI was off for days with nothing said.
+
 ## 2026-11-25 (night) — CLAUDE.md back under agy's cap
 
 - **Fixed:** `test_shipped_rules_block_includes_claude_md_and_fits` failed on main. CLAUDE.md (22,229 bytes) plus agy's rules block (1,970) was over agy's 24,000-byte per-file cap. The "MCP tool responses (for MCP server authors)" block came out, since `docs/ROUTING-REFERENCE.md` already has it word for word, and a one-line pointer replaces it. A stale TODO went too. CLAUDE.md is now about 21,620 bytes, roughly 400 under the cap.

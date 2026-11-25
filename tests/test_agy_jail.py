@@ -9,14 +9,16 @@ from pathlib import Path
 
 import pytest
 
+from tests._bwrap import bwrap_unusable_reason
+
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 import ask_agy  # noqa: E402
 
 JAIL = REPO / "features" / "antigravity" / "agy-jail"
 
-pytestmark = pytest.mark.skipif(shutil.which("bwrap") is None or os.name != "posix",
-                                reason="needs bubblewrap")
+pytestmark = pytest.mark.skipif(os.name != "posix" or bwrap_unusable_reason() is not None,
+                                reason=f"needs a working bubblewrap: {bwrap_unusable_reason()}")
 
 
 @pytest.fixture
