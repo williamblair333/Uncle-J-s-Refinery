@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-25 — gpu-watch: alert when a model leaves the GPU
+
+- **Added:** `scripts/gpu_watch.py` (tests: `tests/test_gpu_watch.py`, 14). For each running GPU container it checks `nvidia-smi -L` inside the container, and for Ollama it checks `ollama ps` for CPU. `--cron` (every 5 min, `install.sh` entry `uncle-j-gpu-watch`, under `flock`) sends Telegram only when the problem set changes, plus once on recovery. It also notes old-style `driver: nvidia` containers. The healthcheck step `check_gpu_containers` reports the same (`gpu-container-off-gpu`). Installed and run on dma64: ok.
+
 ## 2026-11-25 — dma64 froze: GPU containers move to CDI
 
 - **Diagnosed:** dma64 froze 11-24 13:50 and was hard-reset ~14:05. mtw2's game-test VM sent its ruler calls to the host Ollama, which had lost the GPU (`failed to initialize CUDA: no CUDA-capable device is detected`) and ran qwen3.5:9b on CPU beside Heretic's ~20 GB and the 8 GB VM. Swap was already full (Ollama logged 192 KiB free). The journal stopped 13:50:42; X logged "system too slow" until ~14:00. Cause of the GPU loss: NVIDIA's documented toolkit bug, where `systemctl daemon-reload` cuts `driver: nvidia` containers off the GPU on Docker's systemd cgroup driver. Seen again 11-25 07:08 when `apt install earlyoom` ran a daemon-reload.
