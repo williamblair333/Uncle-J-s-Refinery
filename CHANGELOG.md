@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-25 (evening) — session end
+
+- mtw2 was told once about the global ram-gate hook. ROADMAP's RAM-gate line was updated. README checked, no update needed: it doesn't list ask_local's settings or the gate.
+
 ## 2026-11-25 (evening) — model loads take RAM-gate leases
 
 - **Added:** `ram_gate.lease(gib, label, ttl)`, a context manager for Python callers. It raises `Refused` before the load and releases afterwards, however the load ends. It fails open: with gib 0, with `RAM_GATE_OFF=1`, or when the gate can't run (no `fcntl` on Windows, an unwritable store), the load runs ungated. A busy lock counts as a refusal.
