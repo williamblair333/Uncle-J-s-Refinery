@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-11-25 (night) — CLAUDE.md back under agy's cap
+
+- **Fixed:** `test_shipped_rules_block_includes_claude_md_and_fits` failed on main. CLAUDE.md (22,229 bytes) plus agy's rules block (1,970) was over agy's 24,000-byte per-file cap. The "MCP tool responses (for MCP server authors)" block came out, since `docs/ROUTING-REFERENCE.md` already has it word for word, and a one-line pointer replaces it. A stale TODO went too. CLAUDE.md is now about 21,620 bytes, roughly 400 under the cap.
+
 ## 2026-11-25 (evening) — session end
 
 - mtw2 was told once about the global ram-gate hook. ROADMAP's RAM-gate line was updated. README checked, no update needed: it doesn't list ask_local's settings or the gate.
