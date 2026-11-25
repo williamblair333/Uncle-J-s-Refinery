@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-25 — dma64 froze: GPU containers move to CDI
+
+- **Diagnosed:** dma64 froze 11-24 13:50 and was hard-reset ~14:05. mtw2's game-test VM sent its ruler calls to the host Ollama, which had lost the GPU (`failed to initialize CUDA: no CUDA-capable device is detected`) and ran qwen3.5:9b on CPU beside Heretic's ~20 GB and the 8 GB VM. Swap was already full (Ollama logged 192 KiB free). The journal stopped 13:50:42; X logged "system too slow" until ~14:00. Cause of the GPU loss: NVIDIA's documented toolkit bug, where `systemctl daemon-reload` cuts `driver: nvidia` containers off the GPU on Docker's systemd cgroup driver. Seen again 11-25 07:08 when `apt install earlyoom` ran a daemon-reload.
+- **Changed:** Heretic (`docker/llama-heretic/compose.yaml`) and ComfyUI (`docker/comfyui/compose.yaml`) request the GPU through CDI (`driver: cdi`, `nvidia.com/gpu=all`). New `docker/ollama/compose.cdi.yaml`; `scripts/ollama-up.sh` uses it when `/etc/cdi/nvidia.yaml` exists and Docker has CDI on, else the old overlay. Compose 2.26 rejects a service-level `devices: [nvidia.com/gpu=all]` (read as a host path); the `deploy` form works.
+- **Host (dma64, by William):** earlyoom installed (prefers qemu/llama-server/ollama, avoids Xorg/plasmashell/kwin/sddm/claude); `/etc/cdi/nvidia.yaml` generated; `"features": {"cdi": true}` in `/etc/docker/daemon.json`. The live `/opt/docker/ollama/compose.yaml` was switched to CDI as well, and the port registry got an `ollama:open-webui:11434` exception (open-webui's howto compose bundles its own Ollama).
+- **Verified:** after `sudo systemctl daemon-reload` both containers still see the GPU and a fresh 9B load is 100% GPU.
+- README checked, no update needed.
+
 ## 2026-11-24 — remote comms: asked autark about its mailbox
 
 - **No code changed.** William wants a secure way to follow projects and steer sessions when away from the computer. Asked autark how its new mailbox works (read-only reply). Its mail is pulled to the home server, nothing acts on incoming mail, and autark advises against steering through it: it goes dark when the home server is down, and mail is easy to spoof without DKIM plus per-message signature checks. Recommendation given: Remote Control (`/remote-control`) for steering, Telegram (or mail) for a daily digest. README checked, no update needed. ROADMAP gets a Planned item.

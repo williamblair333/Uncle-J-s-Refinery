@@ -59,6 +59,10 @@ services:
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              count: all
+            # CDI, not driver: nvidia: a systemctl daemon-reload silently drops the GPU from
+            # containers started the old way (2026-11-24 freeze). Needs /etc/cdi/nvidia.yaml
+            # (`sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`, again after a
+            # driver upgrade) and "features": {"cdi": true} in /etc/docker/daemon.json.
+            - driver: cdi
+              device_ids: [nvidia.com/gpu=all]
               capabilities: [gpu]
