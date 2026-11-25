@@ -23,6 +23,14 @@ cj.unpark_containers = lambda names, **k: True
 _real_estimate = cj.park_estimate_gib
 cj.park_estimate_gib = lambda *a, **k: 100.0
 
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _no_live_ram_gate(monkeypatch):
+    """Never take a lease in the live store (~/.claude/state/ram-gate) from the tests."""
+    monkeypatch.setenv("RAM_GATE_OFF", "1")
+
 
 # ── comfy.sh ──────────────────────────────────────────────────────────────
 def _run_comfy(tmp_path, args, dcup=True):
@@ -790,6 +798,34 @@ def test_park_estimate_sums_docker_stats():
     est = _real_estimate(run=R({"immich": "a\nb\n", "claude-code-langfuse-template": "c\n"}))
     assert abs(est - (446.2 / 1024 + 1.5)) < 1e-6
     assert cj._mem_gib("junk") == 0.0
+
+
+def _gate_env(tmp_path, monkeypatch, avail_gib):
+    monkeypatch.delenv("RAM_GATE_OFF", raising=False)
+    monkeypatch.setenv("RAM_GATE_DIR", str(tmp_path / "store"))
+    mem = tmp_path / "meminfo"
+    mem.write_text(f"MemAvailable: {int(avail_gib * 1024 * 1024)} kB\n")
+    monkeypatch.setenv("RAM_GATE_MEMINFO", str(mem))
+    monkeypatch.setattr(cj, "wait_for_klarheit", lambda *a, **k: True)
+    monkeypatch.setattr(cj, "free_ram_for", lambda *a, **k: None)
+    monkeypatch.setattr(cj, "RAM_LEASE_GIB", {"z-image": 12})
+
+
+def test_main_holds_a_ram_gate_lease_while_the_job_runs(tmp_path, monkeypatch):
+    _gate_env(tmp_path, monkeypatch, 25)
+    seen = []
+    monkeypatch.setattr(cj, "_start_and_run",
+                        lambda *a: seen.append(cj.ram_gate.status()["leases"]) or 0)
+    assert cj.main(["image", "x", "--model", "z-image"]) == 0
+    assert [x["label"] for x in seen[0]] == ["comfy_job z-image"] and seen[0][0]["gib"] == 12
+    assert cj.ram_gate.status()["leases"] == []              # released at the end
+
+
+def test_main_refused_by_the_ram_gate_does_not_start(tmp_path, monkeypatch, capsys):
+    _gate_env(tmp_path, monkeypatch, 15)                    # 15 - 12 < 6
+    monkeypatch.setattr(cj, "_start_and_run", lambda *a: pytest.fail("must not start"))
+    assert cj.main(["image", "x", "--model", "z-image"]) == 1
+    assert "ram gate refused the z-image job" in capsys.readouterr().err
 
 
 def test_main_restarts_parked_containers_even_when_the_gate_still_fails(monkeypatch):

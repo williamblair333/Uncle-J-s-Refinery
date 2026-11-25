@@ -30,6 +30,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("RAM_GATE_DIR", str(tmp_path / "store"))
     monkeypatch.setenv("RAM_GATE_MEMINFO", str(mem))
     monkeypatch.delenv("RAM_GATE_FLOOR_GIB", raising=False)
+    monkeypatch.delenv("RAM_GATE_OFF", raising=False)
     return set_avail
 
 
@@ -59,6 +60,53 @@ def test_expired_lease_ignored(env):
     rg.acquire(10, "old", 60, now=1000.0)
     assert rg.acquire(10, "new", 60, now=2000.0)[0]
     assert rg.acquire(10, "also", 60, now=1010.0)[0] is False   # "old" still holds ~8.3
+
+
+def test_lease_context_holds_then_releases(env):
+    with rg.lease(8, "load", 600) as lid:
+        assert [x["id"] for x in rg.status()["leases"]] == [lid]
+    assert rg.status()["leases"] == []
+
+
+def test_lease_context_releases_when_the_body_raises(env):
+    with pytest.raises(RuntimeError):
+        with rg.lease(8, "load", 600):
+            raise RuntimeError("load failed")
+    assert rg.status()["leases"] == []
+
+
+def test_lease_context_refuses_before_the_body(env):
+    env(10)
+    with pytest.raises(rg.Refused, match="under the 6 GiB floor"):
+        with rg.lease(8, "load", 600):
+            pytest.fail("body must not run")
+
+
+def test_lease_context_off_or_zero_skips(env, monkeypatch):
+    env(1)
+    with rg.lease(0, "nothing coming") as lid:
+        assert lid is None
+    monkeypatch.setenv("RAM_GATE_OFF", "1")
+    with rg.lease(8, "off") as lid:
+        assert lid is None
+    assert rg.status()["leases"] == []
+
+
+def test_lease_context_fails_open_when_the_gate_breaks(env, monkeypatch):
+    def broken(*a, **k):
+        raise ImportError("No module named 'fcntl'")   # what Windows does
+    monkeypatch.setattr(rg, "acquire", broken)
+    with rg.lease(8, "win") as lid:
+        assert lid.startswith("unmeasured")
+
+
+def test_lease_context_busy_lock_is_a_refusal(env, monkeypatch):
+    def busy(*a, **k):
+        raise TimeoutError("ram-gate lock busy for 10 s")
+    monkeypatch.setattr(rg, "acquire", busy)
+    with pytest.raises(rg.Refused, match="busy"):
+        with rg.lease(8, "x"):
+            pass
 
 
 def test_lease_shrinks_over_ttl(env):

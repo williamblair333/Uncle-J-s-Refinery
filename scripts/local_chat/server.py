@@ -50,6 +50,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
 import ask_agy  # noqa: E402
+import ram_gate  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 CHATS = ROOT / "state" / "local_chat"
@@ -77,6 +78,9 @@ ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")  # compose logs keep line-erase cod
 TIMEOUT = 600
 HERETIC_WAKE_WAIT = 240   # max seconds to wait for Heretic reload after idle sleep (llama.cpp #30528)
 HERETIC_WAKE_POLL = 2     # seconds between /health polls
+# RAM a wake from sleep takes. Measured 2026-11-25: MemAvailable 21.77 → 19.65 GiB over a
+# 107 s wake (KV cache and buffers; the weights are mmap'd page cache, which stays "available").
+HERETIC_WAKE_GIB = 2.5
 _sleep = time.sleep
 _clock = time.time
 # Each send is a fresh Claude Code session: without this, your SessionStart/Stop hooks
@@ -249,7 +253,28 @@ def _wait_for_health(sleep, clock):
         sleep(HERETIC_WAKE_POLL)
 
 
+def heretic_sleeping() -> bool:
+    """True only when llama-server says it's asleep (so this request will reload it). Any
+    other answer, or none, is False: the probe must never stop a request."""
+    try:
+        with urllib.request.urlopen(f"{LLAMA_URL}/props", timeout=3) as resp:
+            return json.load(resp).get("is_sleeping") is True
+    except (urllib.error.URLError, OSError, http.client.HTTPException, ValueError, AttributeError):
+        return False
+
+
 def ask_heretic(messages, think=False, sleep=None, clock=None):
+    """One chat turn with Heretic. A wake from idle sleep first takes a RAM-gate lease, so it
+    can't land on top of another session's VM start or model load."""
+    gib = HERETIC_WAKE_GIB if ram_gate.enabled() and heretic_sleeping() else 0
+    try:
+        with ram_gate.lease(gib, "heretic wake", HERETIC_WAKE_WAIT):
+            return _ask_heretic(messages, think, sleep, clock)
+    except ram_gate.Refused as e:
+        return {"ok": False, "error": f"ram gate refused Heretic's wake: {e}"}
+
+
+def _ask_heretic(messages, think=False, sleep=None, clock=None):
     # Thinking off by default: beside Klarheit's 9B Heretic runs ~11 tok/s, and its hidden
     # reasoning (1.6k–2.9k tokens measured) turned a two-sentence answer into 4–6 minutes.
     if sleep is None:

@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-11-25 (evening) — model loads take RAM-gate leases
+
+- **Added:** `ram_gate.lease(gib, label, ttl)`, a context manager for Python callers. It raises `Refused` before the load and releases afterwards, however the load ends. It fails open: with gib 0, with `RAM_GATE_OFF=1`, or when the gate can't run (no `fcntl` on Windows, an unwritable store), the load runs ungated. A busy lock counts as a refusal.
+- **Wired, only when a load is actually coming:**
+  - comfy_job Qwen jobs take 12 GiB once `free_ram_for` passes and hold it for the job (TTL 420 s). Other ComfyUI models aren't measured, so they take no lease.
+  - ask_local takes a lease in two cases. On Ollama, a model missing from `/api/ps` leases its `/api/tags` size, which is its whole footprint if it lands on CPU. On llama-server, `/props` `is_sleeping` leases `ASK_LOCAL_WAKE_GIB` (2.5).
+  - local_chat's `ask_heretic` takes 2.5 GiB on the same `/props` check. That also covers delegate's `ask_heretic`.
+  - Refusals come back as errors: `ram_gate_refused` (ask_local, logged), "ram gate refused Heretic's wake", or comfy_job exit 1.
+  - Leases are labelled per model (`heretic wake`, `ollama <model>`), so two callers waking the same model share one lease.
+- **Not wired:** `ollama-up.sh` only starts the API. Models load at the first request, which ask_local now gates. Klarheit's direct Ollama calls are ungated (Klarheit is parked).
+- **Measured 11-25 (dma64):**
+  - A Heretic wake cost 2.1 GiB of MemAvailable (21.77 → 19.65). The container grew to 6.9 GiB, mostly mmap'd weights held as page cache.
+  - That first wake took 107 s, because its weights had been evicted from the page cache. A later wake took 28 s. The compose file's "~3 s" holds only with a warm cache.
+  - The Ollama 9B on GPU took 2.17 GiB (5.05 of its 6.26 GiB went to VRAM) and loaded in 29 s.
+- **Verified live:** a sleeping Heretic woke through `ask_heretic` holding a `heretic wake` 2.5 GiB lease, which was released when the call returned. Tests: 280 pass across the touched files plus delegate. The suite's one failure (`test_shipped_rules_block_includes_claude_md_and_fits`: CLAUDE.md plus the agy block is 24,199 bytes against a 24,000 cap) was already there without this change.
+- **Reviewed:** self-review only. agy's review tier was exhausted until 14:55 UTC.
+
 ## 2026-11-25 (later) — session end
 
 - README checked, no update needed: discipline hooks aren't listed one by one there. ROADMAP marks the RAM gate done. The ram-gate audit baseline went into `~/.uncle-j-memory/memory/audit-baselines.md`.

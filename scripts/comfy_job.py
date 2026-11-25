@@ -76,6 +76,29 @@ QWEN_REF_MEGAPIXELS = 0.6
 # --ignore-klarheit beside Klarheit's Ollama 9B filled the 46 GB host and its swap (load 69,
 # desktop froze). So Qwen also always waits for Klarheit, --ignore-klarheit or not.
 MIN_FREE_RAM_GIB = {"qwen": 20}
+# Shared RAM-gate lease (scripts/ram_gate.py) a job holds while it runs, so another session's
+# VM start or model load can't take the same free RAM. Qwen: ~12 GB of offloaded weights
+# (above), ~10-11 GiB drawn when measured (RAM guard note below). Other models: not measured,
+# no lease. The window covers a ~3 min job; release comes at the end either way.
+RAM_LEASE_GIB = {"qwen": 12}
+RAM_LEASE_TTL_S = 420
+
+
+def _load_ram_gate():
+    """scripts/ram_gate.py by path (tests load this file by path, without scripts/ on
+    sys.path); None if it can't load, and then jobs run ungated as before."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "ram_gate", Path(__file__).resolve().parent / "ram_gate.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception:  # noqa: BLE001
+        return None
+
+
+ram_gate = _load_ram_gate()
 VIDEO_MODELS = {
     "high": "Wan2.2-T2V-A14B-HighNoise-Q4_K_M.gguf",
     "low": "Wan2.2-T2V-A14B-LowNoise-Q4_K_M.gguf",
@@ -1078,7 +1101,15 @@ def main(argv: list[str] | None = None) -> int:
         if low_ram:
             print(f"error: {low_ram}", file=sys.stderr)
             return 1
-        return _start_and_run(args, build, seed, region)
+        gib = RAM_LEASE_GIB.get(model, 0)
+        if ram_gate is None or not gib:
+            return _start_and_run(args, build, seed, region)
+        try:
+            with ram_gate.lease(gib, f"comfy_job {model}", RAM_LEASE_TTL_S):
+                return _start_and_run(args, build, seed, region)
+        except ram_gate.Refused as e:
+            print(f"error: ram gate refused the {model} job: {e}", file=sys.stderr)
+            return 1
     finally:
         unpark_containers(parked)
 

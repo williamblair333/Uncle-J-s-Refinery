@@ -1,5 +1,12 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-25 (evening) — model loads gated: start here
+
+- **Done:** comfy_job's Qwen jobs, ask_local and `ask_heretic` take RAM-gate leases, but only when a load is coming (CHANGELOG 11-25 evening). `ollama-up.sh` needed nothing, because it never loads a model. Restart Claude Code so the ask_local and delegate servers load the new code.
+- **Next:** tell mtw2 once that the global ram-gate hook exists, so it can retire `scripts/preflight_vm_headroom.py` in its own time.
+- **Fix waiting:** `tests/test_ask_agy.py::test_shipped_rules_block_includes_claude_md_and_fits` fails on main. CLAUDE.md (22,229 bytes) plus the agy rules block (1,970) is over agy's 24,000-byte per-file cap, so CLAUDE.md needs trimming by about 200 bytes.
+- **Open question:** MemAvailable counts Heretic's mmap'd weights (about 20 GB of page cache) as free. A VM can be granted that memory, and Heretic then re-reads it from disk: the 107 s wake measured today. That's slowness, not a freeze. Decide whether the gate should reserve Heretic's working set.
+
 ## 2026-11-25 (later) — session end: start here
 
 - **Next session:** wire `ram_gate.py acquire`/`release` into the model loaders (Heretic wake, `ollama-up.sh`, comfy_job), so model loads and VM starts share one budget. Then tell mtw2 once that the global hook exists.

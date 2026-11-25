@@ -10,7 +10,9 @@ pays for itself can be measured rather than assumed.
 
 Settings: ASK_LOCAL_BACKEND (ollama | openai, default ollama), ASK_LOCAL_URL
 (default http://127.0.0.1:11434), ASK_LOCAL_MODEL (default qwen3.5:9b),
-ASK_LOCAL_TIMEOUT seconds (default 300), ASK_LOCAL_LOG (default
+ASK_LOCAL_TIMEOUT seconds (default 300), ASK_LOCAL_WAKE_GIB (RAM-gate lease for a
+llama-server wake, default 2.5; a call that would load a model leases RAM through
+scripts/ram_gate.py first, RAM_GATE_OFF=1 skips it), ASK_LOCAL_LOG (default
 <repo>/state/ask_local.jsonl; empty string disables).
 
 Each is read from the process env first, then from the host-local file
@@ -28,6 +30,8 @@ opts in with config/ask_local.env:
 """
 from __future__ import annotations
 
+import contextlib
+import importlib.util
 import json
 import os
 import time
@@ -37,6 +41,22 @@ from pathlib import Path
 import httpx
 
 _REPO = Path(__file__).resolve().parents[2]
+
+
+def _load_ram_gate():
+    """scripts/ram_gate.py, loaded by path (this dir's server.py would shadow a sys.path
+    import); None if it can't load, and then calls run ungated."""
+    try:
+        spec = importlib.util.spec_from_file_location("ram_gate", _REPO / "scripts" / "ram_gate.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception:  # noqa: BLE001
+        return None
+
+
+ram_gate = _load_ram_gate()
+_Refused = getattr(ram_gate, "Refused", ())
 
 
 def read_host_config(path: Path | None) -> dict[str, str]:
@@ -70,6 +90,10 @@ BACKENDS = ("ollama", "openai")
 OLLAMA_URL = _setting("ASK_LOCAL_URL", "http://127.0.0.1:11434").rstrip("/")
 DEFAULT_MODEL = _setting("ASK_LOCAL_MODEL", "qwen3.5:9b")
 TIMEOUT_S = float(_setting("ASK_LOCAL_TIMEOUT", "300"))
+# RAM-gate lease for a llama-server wake from sleep. Measured 2026-11-25 on Heretic: 2.1 GiB
+# over a 107 s wake. Lease windows: Ollama loaded the 9B in 29 s; Heretic woke in 107 s.
+WAKE_GIB = float(_setting("ASK_LOCAL_WAKE_GIB", "2.5"))
+LOAD_TTL_S = {"ollama": 120, "openai": 240}
 _log_env = _setting("ASK_LOCAL_LOG")
 LOG_PATH = None if _log_env == "" else Path(_log_env or _REPO / "state" / "ask_local.jsonl")
 _DEFAULT_LOG = object()
@@ -138,8 +162,18 @@ class LocalClient:
                 body["format"] = fmt
 
         start = time.monotonic()
-        result = (self._post_openai(body, model) if self.backend == "openai"
-                  else self._post_chat(body, model))
+        gib = self._load_gib(model) if ram_gate and ram_gate.enabled() else 0.0
+        # One label per model, shared with local_chat ("heretic wake"), so two callers waking
+        # the same model replace one lease instead of stacking two.
+        label = f"{model} wake" if self.backend == "openai" else f"ollama {model}"
+        gate = (ram_gate.lease(gib, label, LOAD_TTL_S[self.backend])
+                if ram_gate else contextlib.nullcontext())
+        try:
+            with gate:
+                result = (self._post_openai(body, model) if self.backend == "openai"
+                          else self._post_chat(body, model))
+        except _Refused as e:
+            result = {"error": "ram_gate_refused", "detail": str(e)}
         seconds = round(time.monotonic() - start, 2)
         result.update(seconds=seconds, input_chars=input_chars)
         self._log({"tool": tool, "model": model, "ok": "error" not in result,
@@ -147,6 +181,29 @@ class LocalClient:
                    "tokens_out": result.get("tokens_out"), "input_chars": input_chars,
                    "seconds": seconds})
         return _clean(result)
+
+    def _load_gib(self, model: str) -> float:
+        """RAM (GiB) this call would load: 0 when the model is already loaded, or when the
+        backend can't say (the probe must never stop a call). Ollama: the model's file size,
+        its whole footprint if it lands on CPU (the 11-24 freeze); on GPU a 9B took 2.2 GiB
+        (11-25). llama-server: WAKE_GIB when /props says it's asleep."""
+        try:
+            if self.backend == "openai":
+                r = self.http.get("/props", timeout=3)
+                asleep = r.status_code == 200 and r.json().get("is_sleeping") is True
+                return WAKE_GIB if asleep else 0.0
+            r = self.http.get("/api/ps", timeout=3)
+            loaded = r.json().get("models") if r.status_code == 200 else None
+            if not isinstance(loaded, list) or any(
+                    model in (m.get("name"), m.get("model")) for m in loaded):
+                return 0.0
+            r = self.http.get("/api/tags", timeout=3)
+            for m in r.json().get("models") or []:
+                if model in (m.get("name"), m.get("model")):
+                    return round(float(m["size"]) / 2**30, 2)
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError):
+            pass
+        return 0.0
 
     def _post_chat(self, body: dict, model: str) -> dict:
         try:

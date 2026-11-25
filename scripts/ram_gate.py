@@ -26,17 +26,21 @@ program must be in command position (after sudo/env/VAR=/timeout/nice or a do/th
 `ssh host virsh start`, `grep virt-install`, heredoc bodies and commit messages pass, as do a
 remote libvirt URI (`-c qemu+ssh://host/…`, LIBVIRT_DEFAULT_URI), --help/--version/--dry-run/
 --print-xml, and `virsh start` of a domain that is already running. Not seen: starts inside
-`bash -c "…"`, a script or a just recipe; those call `acquire` themselves, as model loads do.
+`bash -c "…"`, a script or a just recipe; those call `acquire` themselves, as model loads do
+(Python callers use `lease()`: comfy_job's Qwen jobs, ask_local's model loads and
+local_chat's Heretic wakes, each only when a load is actually coming).
 It sizes the VM from `--memory`/`-m`, the domain's XML or `virsh dominfo`, and assumes 8 GiB when
 it can't tell. A command holding `# ram-gate: ok <reason>` skips the check (say why).
 
 Env (tests and other hosts): RAM_GATE_DIR (lease store, default ~/.claude/state/ram-gate),
-RAM_GATE_MEMINFO (default /proc/meminfo), RAM_GATE_FLOOR_GIB (default 6).
+RAM_GATE_MEMINFO (default /proc/meminfo), RAM_GATE_FLOOR_GIB (default 6), RAM_GATE_OFF=1
+(Python callers skip leasing; the hook and the CLI ignore it).
 Exit: 0 granted, 1 refused (or the lock stayed busy 10 s), 2 usage error or hook block.
 """
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -199,6 +203,42 @@ def release(lease_id: str) -> bool:
         kept = [x for x in leases if x.get("id") != lease_id]
         save_leases(kept)
         return len(kept) != len(leases)
+
+
+class Refused(Exception):
+    """The gate said no (or its lock stayed busy); str() is the reason, naming what to stop."""
+
+
+def enabled() -> bool:
+    """RAM_GATE_OFF=1 turns the Python callers' leasing (and their load probes) off."""
+    return os.environ.get("RAM_GATE_OFF") != "1"
+
+
+@contextlib.contextmanager
+def lease(gib: float, label: str, ttl: int = DEFAULT_TTL):
+    """Hold a lease around a model load or job, for Python callers (comfy_job, ask_local,
+    local_chat). Raises Refused before the body runs; releases on the way out, however the
+    body ends. Fails open: gib <= 0 or RAM_GATE_OFF=1 skips it, and a gate that can't run
+    (no fcntl on Windows, an unwritable store) lets the body run ungated."""
+    if gib <= 0 or not enabled():
+        yield None
+        return
+    try:
+        ok, msg = acquire(gib, label, ttl)
+    except TimeoutError as e:
+        raise Refused(str(e)) from e
+    except Exception:                       # noqa: BLE001 — a broken gate must not stop loads
+        ok, msg = True, "unmeasured: ram gate unavailable"
+    if not ok:
+        raise Refused(msg)
+    try:
+        yield msg
+    finally:
+        if not msg.startswith("unmeasured"):
+            try:
+                release(msg)
+            except Exception:               # noqa: BLE001 — it expires on its own
+                pass
 
 
 def status() -> dict:
