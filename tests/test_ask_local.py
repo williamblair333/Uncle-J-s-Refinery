@@ -29,6 +29,89 @@ def isolate_ask_local_log(tmp_path, monkeypatch):
     return test_log
 
 
+@pytest.fixture(autouse=True)
+def _no_live_ram_gate(monkeypatch):
+    """No load probe and no lease in the live store unless a test turns the gate on."""
+    monkeypatch.setenv("RAM_GATE_OFF", "1")
+
+
+@pytest.fixture
+def gate(tmp_path, monkeypatch):
+    def on(avail_gib):
+        monkeypatch.delenv("RAM_GATE_OFF")
+        monkeypatch.setenv("RAM_GATE_DIR", str(tmp_path / "store"))
+        mem = tmp_path / "meminfo"
+        mem.write_text(f"MemAvailable: {int(avail_gib * 1024 * 1024)} kB\n")
+        monkeypatch.setenv("RAM_GATE_MEMINFO", str(mem))
+    return on
+
+
+def _ollama(loaded, seen, size=6.14 * 2**30):
+    def handler(request):
+        p = request.url.path
+        if p == "/api/ps":
+            return httpx.Response(200, json={"models": [{"name": n} for n in loaded]})
+        if p == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "qwen3.5:9b", "size": size}]})
+        seen.append(server.ram_gate.status()["leases"])
+        return httpx.Response(200, json=_chat_reply("ok"))
+    return handler
+
+
+def test_ollama_load_holds_a_lease_of_the_model_size(tmp_path, gate):
+    gate(20)
+    seen = []
+    out = server.ask(_client(_ollama([], seen), tmp_path), "hi")
+    assert out["text"] == "ok"
+    assert [(x["label"], x["gib"]) for x in seen[0]] == [("ollama qwen3.5:9b", 6.14)]
+    assert server.ram_gate.status()["leases"] == []
+
+
+def test_ollama_model_already_loaded_takes_no_lease(tmp_path, gate):
+    gate(1)                                     # would refuse any lease
+    seen = []
+    assert server.ask(_client(_ollama(["qwen3.5:9b"], seen), tmp_path), "hi")["text"] == "ok"
+    assert seen == [[]]
+
+
+def test_ollama_load_refused_returns_error_and_is_logged(tmp_path, gate):
+    gate(10)                                    # 10 - 6.14 < 6
+    seen = []
+    out = server.ask(_client(_ollama([], seen), tmp_path), "hi")
+    assert out["error"] == "ram_gate_refused" and "under the 6 GiB floor" in out["detail"]
+    assert seen == []
+    assert _log_lines(tmp_path)[-1]["error"] == "ram_gate_refused"
+
+
+def test_llama_server_wake_leases_only_when_asleep(tmp_path, gate):
+    gate(20)
+    for asleep, want in ((True, [("heretic wake", server.WAKE_GIB)]), (False, [])):
+        seen = []
+
+        def handler(request):
+            if request.url.path == "/props":
+                return httpx.Response(200, json={"is_sleeping": asleep})
+            seen.append([(x["label"], x["gib"]) for x in server.ram_gate.status()["leases"]])
+            return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+        http = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://llama.test")
+        c = server.LocalClient(http=http, model="heretic", log_path=None, backend="openai")
+        assert server.ask(c, "hi")["text"] == "ok"
+        assert seen == [want]
+
+
+def test_load_probe_failure_takes_no_lease(tmp_path, gate):
+    gate(1)
+    seen = []
+
+    def handler(request):
+        if request.url.path == "/api/ps":
+            raise httpx.ConnectError("down")
+        seen.append(1)
+        return httpx.Response(200, json=_chat_reply("ok"))
+    assert server.ask(_client(handler, tmp_path), "hi")["text"] == "ok"
+    assert seen == [1]
+
+
 def _chat_reply(content, prompt_tokens=40, out_tokens=12):
     return {
         "model": "qwen3.5:9b",

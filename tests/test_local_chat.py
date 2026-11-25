@@ -190,6 +190,66 @@ HERETIC_ANSWER = {"choices": [{"message": {"content": "pong"}, "finish_reason": 
                   "usage": {"total_tokens": 10}}
 
 
+@pytest.fixture(autouse=True)
+def _no_live_ram_gate(monkeypatch):
+    """No /props probe and no lease in the live store unless a test turns the gate on."""
+    monkeypatch.setenv("RAM_GATE_OFF", "1")
+
+
+@pytest.fixture
+def gate(tmp_path, monkeypatch):
+    def on(avail_gib):
+        monkeypatch.delenv("RAM_GATE_OFF")
+        monkeypatch.setenv("RAM_GATE_DIR", str(tmp_path / "store"))
+        mem = tmp_path / "meminfo"
+        mem.write_text(f"MemAvailable: {int(avail_gib * 1024 * 1024)} kB\n")
+        monkeypatch.setenv("RAM_GATE_MEMINFO", str(mem))
+    return on
+
+
+def _heretic(monkeypatch, sleeping, seen):
+    def fake_urlopen(req, timeout=None):
+        url = req.full_url if hasattr(req, "full_url") else str(req)
+        if url.endswith("/props"):
+            return _Resp({"is_sleeping": sleeping})
+        seen.append(lc.ram_gate.status()["leases"])
+        return _Resp(HERETIC_ANSWER)
+    monkeypatch.setattr(lc.urllib.request, "urlopen", fake_urlopen)
+
+
+def test_ask_heretic_leases_ram_for_a_wake_and_releases_it(monkeypatch, gate):
+    gate(20)
+    seen = []
+    _heretic(monkeypatch, True, seen)
+    assert lc.ask_heretic([{"role": "user", "content": "ping"}])["ok"] is True
+    assert [(x["label"], x["gib"]) for x in seen[0]] == [("heretic wake", lc.HERETIC_WAKE_GIB)]
+    assert lc.ram_gate.status()["leases"] == []
+
+
+def test_ask_heretic_awake_takes_no_lease(monkeypatch, gate):
+    gate(1)                                    # would refuse any lease
+    seen = []
+    _heretic(monkeypatch, False, seen)
+    assert lc.ask_heretic([{"role": "user", "content": "ping"}])["ok"] is True
+    assert seen == [[]]
+
+
+def test_ask_heretic_wake_refused_does_not_post(monkeypatch, gate):
+    gate(7)                                    # 7 - 2.5 < 6
+    seen = []
+    _heretic(monkeypatch, True, seen)
+    r = lc.ask_heretic([{"role": "user", "content": "ping"}])
+    assert r["ok"] is False and "ram gate refused Heretic's wake" in r["error"]
+    assert seen == []
+
+
+def test_heretic_sleeping_is_false_when_props_fails(monkeypatch):
+    def boom(*a, **k):
+        raise urllib.error.URLError("down")
+    monkeypatch.setattr(lc.urllib.request, "urlopen", boom)
+    assert lc.heretic_sleeping() is False
+
+
 def test_ask_heretic_503_then_success(monkeypatch):
     posts = []
     health_polls = []
