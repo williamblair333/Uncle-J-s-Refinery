@@ -29,8 +29,9 @@ services:
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              count: all
+            # CDI (see docker/llama-heretic/compose.yaml for why and the host prerequisites).
+            - driver: cdi
+              device_ids: [nvidia.com/gpu=all]
               capabilities: [gpu]
 
 volumes:

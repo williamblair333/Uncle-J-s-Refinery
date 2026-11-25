@@ -1,0 +1,13 @@
+# GPU overlay for compose.yaml through CDI. scripts/ollama-up.sh picks this one when the
+# host has an NVIDIA CDI spec and Docker has CDI turned on, else compose.gpu.yaml.
+# Why: with driver: nvidia, a systemctl daemon-reload silently drops the GPU from a running
+# container and models fall back to CPU and host RAM (dma64 froze 2026-11-24).
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: cdi
+              device_ids: [nvidia.com/gpu=all]
+              capabilities: [gpu]

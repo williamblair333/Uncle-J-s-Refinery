@@ -1,5 +1,13 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-25 — dma64 freeze: cause found, GPU containers on CDI
+
+- **Cause** (CHANGELOG 11-25): host Ollama lost the GPU (toolkit + daemon-reload bug), ran the 9B on CPU beside Heretic and mtw2's VM, swap already full, no OOM killer. Fixed: earlyoom installed, Ollama/Heretic/ComfyUI on CDI; Ollama and Heretic recreated and verified 100% GPU.
+- **Proved 11-25:** after `sudo systemctl daemon-reload`, `nvidia-smi -L` still lists the GPU in ollama and llama-heretic, and a fresh 9B load is 100% GPU (before CDI, the same reload gave NVML Unknown Error). If it ever recurs, fall back to `native.cgroupdriver=cgroupfs`.
+- **Not built yet:** (1) a healthcheck that fails when a GPU container can't see the GPU or `ollama ps` says CPU; (2) a shared RAM gate + lock every session calls before a VM or model load (mtw2's own preflight gate, mtw2 #723, refuses `virsh start` under 14 GiB). Swap (7 GB) stays full; `swapoff -a && swapon -a` when calm, or add zram.
+- **After a driver upgrade:** re-run `sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`, or GPU containers fail to start.
+- **William deals with mtw2 directly** about its own domain (turn data on tc-vmh-03: 75 GB `parley_turns` + 26 GB scratch; tc-vmh-03 `/opt` has 147 GB free for a VM).
+
 ## 2026-11-24 — session end: remote comms, nothing built
 
 - **William's ask (11-24):** a way to keep up with projects and steer sessions when he's away, very securely; email is one idea, means undecided. Recommended: Remote Control for steering, a daily digest by Telegram for updates. Waiting on William to try `/remote-control`; nothing built.
