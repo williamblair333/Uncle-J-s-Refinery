@@ -4,6 +4,7 @@
 
 - **PR #403, not merged:** the first run (826) was red, with 17 failures, all from differences between the runner and GitHub's. The two bwrap tests and the root-only test are fixed on the branch. The rest needs a 24.04 image, because act-22.04's `/usr/bin/python3` is 3.10 with no yaml or tomllib, and its apt Pillow lacks `getbbox(alpha_only=)`. gitea added the runner label `ubuntu-24.04` → `catthehacker/ubuntu:act-24.04` (11-25 16:51Z), and every job now uses it, with `python3-yaml` added to apt (that image's Pillow 10.2.0 has `alpha_only`). Merge only on a green run. Gitea ignores `cancel-in-progress` for pull_request runs (go-gitea #35933, per gitea-c1).
 - **Next:** the Heretic `RssFile` reservation in `scripts/ram_gate.py` (entry below), then the surface-write-guard heredoc gap.
+- **jcodemunch-mcp breaking change**: `check_delete_safe` has a new verdict `file_import_only` (1.108.491, L-348) — a delete blocked only by a file import, which moves nothing toward safe — so anything switching on `safe_to_delete` must treat it as a refusal (CLAUDE.md updated; read from the commit log because `index_dependency` was denied permission).
 
 ## 2026-11-25 (night) — CLAUDE.md trimmed: start here
 
