@@ -208,6 +208,7 @@ an audit; it validates every evidence ref against what this session retrieved.
 - CSV/TSV: `describe_dataset` → `get_rows` → `aggregate`; never dump the file.
   Rows are arrays (`row_format="objects"` = dicts); profiles: `detail="full"`.
   `plan_query`+`run_sql` for one-dataset SQL; `get_dataset_health` before deep work.
+  Over-budget rows may end in `...` (cut strings): check `_meta.truncation`.
 - Parquet, JSON, remote data, or joins across sources → **duckdb**.
 - `describe_column`/`search_data` follow the absence contract; `channels.index: "stale"`
   = out-of-date profile, re-index. `check_column_drop_safe` before dropping a column;
