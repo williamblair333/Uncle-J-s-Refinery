@@ -5,31 +5,33 @@
 [![Requires Claude Code](https://img.shields.io/badge/Requires-Claude%20Code-blueviolet.svg)](https://claude.ai/code)
 [![Stack: Self-healing](https://img.shields.io/badge/Stack-Self--healing-brightgreen.svg)](docs/RELIABILITY.md)
 
-**Uncle J's Refinery is a set of tools and rules that you install once on a Linux machine. After that, every Claude Code session on the machine gets cheaper, more accurate, and better informed than the one before.**
+**Uncle J's Refinery is a set of tools and rules you install once on a Linux machine. Each Claude Code session costs less, gets more right, and starts from what earlier sessions learned.**
 
-Claude Code forgets everything when you close the terminal. The Refinery keeps a searchable record of past sessions, so the next session starts from what earlier ones learned.
+Claude Code forgets everything when you close the terminal. The Refinery keeps a searchable record of past sessions, so each new session starts from what earlier ones learned. If you ask "what did we decide about auth?" Claude can find the earlier discussion.
 
 ## Mission
 
 The project has four goals. When two goals conflict, the one higher on the list wins.
 
-1. **Right.** A correct answer matters more than any saving. Answers must rest on evidence you can check. A wrong or made-up answer is the most expensive thing the stack can produce, because someone may act on it.
-2. **Cheap, in total.** Keep the cost of each correct answer low. Cost means tokens, money, *and your attention*. A part that saves tokens but needs hours of upkeep has not paid for itself.
+1. **Right.** Getting the answer right matters more than any saving. Base every answer on evidence the reader can check. A wrong or made-up answer is the most expensive thing the stack can produce, because someone may act on it.
+2. **Cheap, in total.** Keep the total cost of each correct answer low. Count tokens, money, and your attention. Tokens are the chunks of text Claude processes or writes. A part that saves tokens but takes hours to maintain hasn't paid for itself.
 3. **Inventive.** Look at other approaches before settling on one. Support creative work as well as code. Let the stack improve itself overnight.
-4. **Local.** Run parts on your own machine when that costs nothing in accuracy or price. Local parts are cheaper, private, and keep working when an outside service fails.
+4. **Local.** Run tools on your machine when you can keep the same accuracy and cost. Local tools cost less, keep data private, and work when an outside service goes down.
 
-Memory is a means, not a goal. Each session builds on the last because the stack remembers.
+Memory isn't a goal in itself. It's how each session builds on the last.
 
-**The standing test:** every part must show, with a measurement, that it helps at least one of these goals. A part that can't is removed.
+**The standing test**
+
+Every part must show, with a measurement, that it helps at least one goal. Remove any part that can't.
 
 ## What this looks like in practice
 
-One install sets up ten MCP servers (an MCP server is a small program that gives Claude extra tools), an offline memory store shared by all your projects, and a set of hooks (scripts Claude Code runs before or after an action). It applies to every Claude Code project on the machine. Each piece serves one of the goals:
+One install sets up ten MCP servers, an offline memory store shared by all your projects, and a set of hooks. The whole install applies to every Claude Code project on the machine. An MCP server gives an assistant tools it can call, such as a code search. A hook is a script Claude Code runs at a set moment, such as before it runs a shell command. Each piece serves one of the goals.
 
-- **Right.** Four guard layers block destructive commands, leaked credentials, and prompt injection (text in a file or web page that tries to give Claude orders) before they take effect. A daily health check catches broken search indexes before they quietly make answers worse.
-- **Cheap.** A symbol index lets Claude look up one function instead of reading a whole file. That cuts tokens by about 80% on real coding tasks. Output rules cut reply length by 25–40%. Telegram alerts and approval buttons mean you spend less time watching a terminal.
-- **Inventive.** Each night a job replays the day's sessions, finds repeated mistakes and methods that worked, and adds them to Claude's instructions. Another hook drafts new skills from workflows you showed it.
-- **Local.** The memory store, its embedding model, and the Langfuse session tracer all run on your machine. A question like "what did we decide about auth?" finds sessions from months ago, and the question never leaves the machine.
+- **Right.** Four layers of checks block destructive commands and credential leaks before they happen. The checks also flag prompt injection. A prompt injection is text in a file or web page that tries to give Claude orders. A daily check spots broken search indexes before they quietly make answers worse.
+- **Cheap.** A symbol index is a lookup table for named pieces of code, such as functions. Claude can read the function it needs in place of the whole file. That cuts token use by about 80% on real coding tasks. Output rules cut reply length by 25–40%. Telegram alerts and approval buttons let you step away from the terminal.
+- **Inventive.** A nightly job reviews the day's sessions for recurring mistakes and approaches that worked. It adds the working methods to Claude's instructions. A separate hook drafts skills from workflows you showed Claude. A skill is a set of instructions Claude can reuse for a particular task.
+- **Local.** The memory store runs on your machine. So does its embedding model, which helps it find text with similar meaning. Langfuse runs locally too and records what happens in a session. The memory store can find a discussion from months ago without sending your question off the machine.
 
 **Platform:** Linux (Debian/Ubuntu), built and tested on Debian with `apt`. Windows has a separate path; see [Prerequisites](#prerequisites).
 
@@ -42,6 +44,7 @@ One install sets up ten MCP servers (an MCP server is a small program that gives
 - [What you get](#what-you-get)
 - [The namesake](#the-namesake)
 - [What's in the box](#whats-in-the-box)
+- [Skills you can take with you](#skills-you-can-take-with-you)
 - [End-to-end workflow](#end-to-end-workflow)
 - [Commercial use — read before you ship](#commercial-use--read-before-you-ship)
 - [Prerequisites](#prerequisites)
@@ -86,8 +89,8 @@ One install sets up ten MCP servers (an MCP server is a small program that gives
 
 | Problem | What the Refinery does | Measured result |
 |---|---|---|
-| Claude reads a whole file to find one function | jCodeMunch parses your repo with Tree-sitter into an index of functions and classes. Claude asks the index instead of reading files. | About 80% fewer tokens on real code tasks; up to about 95% when looking up one symbol in a large file |
-| Large data files get pasted into Claude's context | jDataMunch profiles and slices CSV/TSV files. DuckDB runs SQL over Parquet and joins across files. | About 25,000× less data on the LAPD 1-million-row benchmark |
+| Claude reads a whole file to find one function | jCodeMunch uses Tree-sitter, a tool that recognizes the structure of code, to index functions and classes. Claude can ask for the one it needs. | About 80% fewer tokens on real code tasks. Up to about 95% fewer when looking up one symbol in a large file. |
+| Large data files get pasted into Claude's context | jDataMunch summarizes tables in CSV/TSV files and pulls out the rows or columns you ask for. DuckDB runs SQL queries on Parquet files, which store table data by column, and can combine data from several files. | About 25,000× less data on the LAPD 1-million-row benchmark |
 | Claude forgets everything between sessions | memweave saves past sessions and decisions as Markdown files and searches them offline | "What did we decide about auth?" finds sessions from months ago |
 | Replies are padded with preamble and summaries | jOutputMunch rules in Claude's instructions remove the padding | 25–40% fewer output tokens |
 | Destructive commands run without a check | Four guard layers: secret scanner, prompt-injection warning, shell-command rules, code-reviewer subagent | `rm -rf`, piping a download into a shell, and direct pushes to main are blocked before they run |
@@ -152,7 +155,35 @@ Everything else here (memweave, Serena, Context7, DuckDB, Superpowers, Ralph, th
 | | Ralph cron | Runs the checked Ralph loop on a schedule, one cron job per PRD |
 | | memweave sync | A session-end hook plus a nightly job (`uncle-j-memweave-sync`, 02:30) keep the memory store current |
 
-`install.sh --auto-register` registers ten MCP servers at **user scope**, so they work in every Claude Code project on the machine. `--skip-optional` leaves out two of them: DuckDB, and `ask_local` (which only helps if you run a local model through Ollama, or llama-server via `config/ask_local.env`).
+`install.sh --auto-register` registers ten MCP servers at **user scope**, so they work in every Claude Code project on the machine. An MCP scope is a registration setting that controls which sessions see a server in their tool list. `--skip-optional` leaves out two of them: DuckDB, and `ask_local` (which only helps if you run a local model through Ollama, or llama-server via `config/ask_local.env`).
+
+---
+
+## Skills you can take with you
+
+A skill is a folder holding one `SKILL.md` file: written instructions an AI agent loads when a
+task matches. Think of it as a checklist a senior colleague hands you at the right moment.
+The repo keeps them in `global-skills/`, in the open agentskills.io format, so Claude Code,
+Codex, Copilot CLI and Antigravity can all read them.
+
+Most of them were written here, out of real failures. `judge` gets a second reviewer to check
+an edit before it lands. `pre-mortem` asks "when will this break, and will we know?" before
+anything runs unattended. `verifiable-task` makes you write the check before you hand work to
+another model. `occams-razor` stops a tempting but exotic diagnosis from beating a boring
+correct one.
+
+A few are copied in from other authors, with their license kept beside them. The **Source**
+column in [docs/SKILLS.md](docs/SKILLS.md) says which is which: `repo` means written here,
+`vendored: owner/repo` names the original author.
+
+The skills written here are listed on
+[Skills Directory](https://www.skillsdirectory.com/authors/williamblair333), which scans each
+one for malware, prompt injection and credential theft and grades the result. You can install
+any single skill without the rest of the stack:
+
+```bash
+npx -y skills add williamblair333/Uncle-J-s-Refinery --skill pre-mortem --agent claude-code
+```
 
 ---
 
@@ -245,7 +276,7 @@ Run every command from the repo root.
 
 ### 1. OS-level prerequisites
 
-Installs git, Node.js LTS and the Claude Code CLI with your package manager. It skips anything already installed.
+The script uses your package manager to install Git, the long-term support release of Node.js, and the Claude Code command-line tool. It skips anything you already have.
 
 ```bash
 ./prerequisites.sh
@@ -259,16 +290,16 @@ It supports **Debian/Ubuntu** (`apt-get`). On other distros, install the prerequ
 ./install.sh --auto-register
 ```
 
-The script does these steps in order:
+The script runs these setup steps in order.
 
 1. Installs `uv` (a fast Python package manager) if it's missing.
-2. Creates `.venv/` with `uv venv --python 3.11`.
+2. Creates an isolated Python environment in `.venv/` with `uv venv --python 3.11`.
 3. Runs `uv sync`, which installs jcodemunch-mcp, jdatamunch-mcp and jdocmunch-mcp from their GitHub repos. `uv.lock` pins each to an exact commit.
-4. Downloads Serena and DuckDB MCP ahead of time with `uvx`, so the first launch is faster.
+4. Downloads Serena and DuckDB MCP ahead of time with `uvx`, a command that fetches and runs Python tools, so the first launch is faster.
 5. Runs `jcodemunch-mcp init --yes --hooks --audit`. This adds the enforcement hooks to `~/.claude/settings.json` and appends the routing rules to `~/.claude/CLAUDE.md`.
 6. With `--auto-register`, runs `claude mcp add -s user ...` for each MCP server.
 7. Sets `MCP_TIMEOUT=60000` in Claude Code's settings. The default of 30 s is too short for Serena and MotherDuck to start the first time.
-8. Registers the cron jobs for scheduled upkeep.
+8. Sets up cron jobs, which run upkeep tasks on a schedule.
 
 ### 3. Verify
 
@@ -292,9 +323,9 @@ Each Refinery server should show `✓ Connected`. The three Google services (Dri
 cp CLAUDE.md.merged ~/.claude/CLAUDE.md
 ```
 
-This file is Claude's standing instructions. It tells Claude which tool to try first: the symbol index before reading a file, and memory before a web search. It also holds the jOutputMunch rules that remove preamble and filler from replies.
+This file gives Claude standing instructions for every project. It tells Claude to check the code index before reading a file and search past sessions before looking on the web. The jOutputMunch rules tell Claude to cut filler from replies.
 
-**Why it matters:** without these rules, Claude reads whole files, which costs many tokens. With them, Claude asks the index first and reads a file only when it must.
+Without these rules, Claude reads whole files, which costs more tokens. The rules make Claude ask the index first and open a file only when it must.
 
 ### 6. Reliability layer
 
@@ -305,7 +336,7 @@ This file is Claude's standing instructions. It tells Claude which tool to try f
 This installs two custom skills:
 
 - `~/.claude/skills/prior-art-check/SKILL.md` searches memweave (`mw_search.py`) at the start of each non-trivial task, to answer "have we solved this before?"
-- `~/.claude/skills/judge/SKILL.md` asks a code-reviewer subagent, armed with index data, to check each Edit or Write before it lands.
+- `~/.claude/skills/judge/SKILL.md` sends each Edit or Write to a separate review agent before the change lands. The reviewer uses the code index to check the edit.
 
 It also installs two Anthropic marketplace plugins at user scope, so they work in every project:
 
@@ -346,7 +377,7 @@ It also adds five `PreToolUse` shell-command rules. They block:
 ./install-langfuse.sh
 ```
 
-Langfuse records what an AI app does. Here it records each Claude turn: tool calls, timings, token counts, and the full prompt and reply. You read the records in a local web page.
+Open the local Langfuse page to see what Claude did on a turn. A turn has a prompt, a reply, and any tool calls in between. Langfuse records all of them, along with timings and token counts.
 
 **If Docker isn't installed (Linux):**
 
@@ -372,7 +403,7 @@ Login: `admin@localhost.local`. The password is `LANGFUSE_INIT_USER_PASSWORD` in
 
 `install.sh` already gives MCP servers 60 seconds to start (`MCP_TIMEOUT=60000`). The default 30 s is too short for Serena and MotherDuck on first launch.
 
-To make later starts faster (from 14–24 s down to 7–18 s), install Serena, MotherDuck and Context7 as real programs. Then Claude Code doesn't fetch them through `uvx` or `npx` on every launch:
+Install Serena, MotherDuck, and Context7 as shown below. Claude Code then starts them directly instead of fetching them through `uvx` or `npx` (which runs JavaScript packages) on every launch. This cuts later startup times from 14–24 s to 7–18 s.
 
 ```bash
 uv tool install --from git+https://github.com/oraios/serena serena-agent
@@ -433,7 +464,7 @@ uv lock --upgrade-package jcodemunch-mcp --upgrade-package jdatamunch-mcp \
 
 ### 11. GitHub webhook server (optional)
 
-Lets GitHub tell this machine about events as they happen, so nothing has to poll.
+A webhook is a message GitHub sends to your machine when an event happens. Your machine can act on the message as soon as it arrives, without repeatedly asking GitHub for updates.
 
 | Event | Action |
 |---|---|
@@ -446,13 +477,13 @@ GitHub needs a public URL that reaches this machine, such as [ngrok](https://ngr
 bash features/github-webhook/install.sh
 ```
 
-The installer checks dependencies, asks for your public URL, makes a webhook secret, installs a systemd user service, and registers the webhook on GitHub.
+The installer checks what it needs, asks for your public URL, and makes a secret to verify messages from GitHub. It sets up a background service for your Linux user and registers the webhook on GitHub.
 
 Full guide: [`features/github-webhook/README.md`](features/github-webhook/README.md)
 
 ### 12. Bootstrap memweave (optional)
 
-memweave is the offline memory store shared by all your projects. `install.sh` creates its own venv, `.venv-memweave` (Python 3.12). After a fresh install the store at `~/.uncle-j-memory` is empty. To fill it:
+memweave lets you search past sessions across projects, even offline. `install.sh` gives it a separate Python environment, `.venv-memweave` (Python 3.12). On a fresh install, the store at `~/.uncle-j-memory` is empty. Run this to fill it.
 
 ```bash
 bash scripts/memweave/sync_memory.sh --all
@@ -467,7 +498,7 @@ Search the store at any time. Searching never changes it:
 # --json for machine-readable output
 ```
 
-**It stays current on its own.** The nightly `uncle-j-memweave-sync` job (02:30) and a session-end hook keep the store up to date, so you don't need to rerun `sync_memory.sh`. The index can always be rebuilt from the Markdown files in `~/.uncle-j-memory`. If the index is lost, one `sync_memory.sh --all` run restores it, so no separate backup is needed.
+The nightly `uncle-j-memweave-sync` job (02:30) and a session-end hook keep the store current, so you don't need to rerun `sync_memory.sh`. The Markdown files in `~/.uncle-j-memory` are enough to rebuild the index. If you lose the index, run `sync_memory.sh --all` to restore it. You can skip a separate backup of the index.
 
 ### 13. Telegram gateway — approvals and alerts (optional)
 
@@ -511,7 +542,7 @@ It needs `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env` (section 10 sets 
 
 ### 15. Dreaming — nightly lessons from your sessions (optional)
 
-Reads the past day's Langfuse traces and, with the `dream-synthesizer` skill, finds repeated mistakes and methods that worked. It writes a dated report to `~/.claude/dreaming-output/`, adds the report to memweave, and appends the working methods to `~/.claude/CLAUDE.md`. Running it twice doesn't add duplicates.
+The nightly job uses the `dream-synthesizer` skill to review the past day's Langfuse records. It looks for recurring mistakes and approaches that worked. It saves a dated report in `~/.claude/dreaming-output/` and adds it to memweave so later sessions can find it. It adds the working methods to `~/.claude/CLAUDE.md` so Claude can use them. You can run it twice without adding duplicate entries.
 
 ```bash
 bash features/dreaming/install.sh
@@ -524,7 +555,7 @@ It runs daily at 2 AM by default (`DREAMING_CRON_SCHEDULE` in `state/dreaming.en
 
 ### 16. Session stats — weekly efficiency report (optional)
 
-Reads the past 7 days of sessions from Langfuse and writes a Markdown table: date, project, traces, tool calls, tokens. It flags sessions over 40k tokens. Dreaming reads the report on its next run.
+The weekly report shows which sessions used the most tokens. It reads the past 7 days of Langfuse records and writes a Markdown table with the date, project, traces, tool calls, and token count. It flags sessions over 40k tokens. Dreaming reads the report on its next run.
 
 ```bash
 bash features/session-stats/install.sh
@@ -536,7 +567,7 @@ It runs every Sunday at 8 AM by default. See `features/session-stats/README.md`.
 
 ### 17. Auto-skill — automatic skill drafts (optional)
 
-A Stop hook that reads the session transcript and asks Claude whether the session showed a workflow worth reusing. If so, it writes a draft `SKILL.md` to `state/skill-drafts/<id>-skill-draft.md`. You get a Telegram message with a 300-character preview and the command to install it:
+At the end of a session, a hook asks Claude whether the transcript shows a workflow worth reusing. If so, it saves a draft `SKILL.md` to `state/skill-drafts/<id>-skill-draft.md`. You get a Telegram message with a 300-character preview and the command to install it.
 
 ```
 promote <id> global
@@ -553,7 +584,7 @@ bash features/auto-skill/install.sh
 
 ### 18. Skill manager — global and per-project skills (optional)
 
-At install time, links every skill in `global-skills/` into `~/.claude/skills/`. It also installs session-start and session-end hooks that add and remove a project's own `skills/` folder. So a project's skills are available only while you work in that project.
+The installer links the shared skills in `global-skills/` into `~/.claude/skills/`. When you open a session, a hook adds the skills from that project's `skills/` folder. Another hook removes them when the session ends. This keeps each project's skills available only while you work in it.
 
 ```bash
 bash features/skill-manager/install.sh
@@ -562,7 +593,7 @@ bash features/skill-manager/install.sh
 
 ### 19. Ralph cron — scheduled Ralph runs (optional)
 
-Installs a cron job that runs the checked Ralph loop against a PRD file. The installer asks you for the schedule.
+This schedules the Ralph loop that verifies each item before moving on. Choose a schedule and give Ralph a PRD, a document that describes the work and how to tell when it's done.
 
 ```bash
 bash features/ralph-cron/install.sh
@@ -572,7 +603,7 @@ bash features/ralph-cron/install.sh --uninstall MARKER
 
 ### 20. Product quality — briefs, first-run gate, UI audit (optional)
 
-Prevents "works on my machine" failures. Each project writes down its core job, its users, its first-run steps and how success is measured, in a `PRODUCT.md`. The first-run gate then tests those claims on a clean machine: a throwaway container, using only the documented steps. An exit code of 0 is not enough to pass. A tool that catches an error, prints a friendly message and exits 0 fails the gate. That's the point.
+Can a new user get the project running by following the docs? Start by writing down what the project does, who it's for, how to run it, and how success is measured in a `PRODUCT.md`. The first-run gate tests the claims in that file in a fresh, throwaway container, using only the documented steps. The gate checks the actual result even when the exit code is 0. For example, a tool that catches an error, prints a friendly message, and exits 0 still fails.
 
 ```bash
 bash features/product-quality/install.sh
@@ -600,7 +631,7 @@ Skills installed: `product-brief` (write the brief), `first-run-gate` (read a ga
 
 For writing original software that does what an existing app does, without copying it. The `clean-room-rebuild` global skill walks through the authorization check, the levels of investigation, cleaning the spec, and the release checklist. It also covers how the Investigator (and only the Investigator) uses [REA](https://github.com/morluto/rea).
 
-A clean-room rebuild needs a wall between the agent that studies the existing app and the agent that writes the new code. The operating system has to enforce that wall: put the Investigator on another machine, or the Implementer in a sandbox. Claude profiles and MCP scopes only change what a session can find; they don't stop it. The stack adds some hygiene on top:
+In a clean-room rebuild, one agent studies the existing app and another writes the new code. The operating system must keep them apart. Put the Investigator on another machine or put the Implementer in a sandbox, an environment that restricts what it can access. Claude profiles and MCP scopes only change what a session can find. The session can still reach resources the operating system lets it access. The stack's checks are extra precautions. The operating system provides the isolation.
 
 ```bash
 scripts/clean-room-investigator.sh --init   # mark the investigator workspace once
@@ -661,7 +692,7 @@ bash features/prompt-triggers/install.sh --uninstall
 
 ### 25. Wheelhouse — rebuild the venvs with no network (optional)
 
-A rebuild normally needs PyPI, GitHub and the uv cache. `scripts/wheelhouse.sh` keeps local copies so it doesn't: for `.venv` and `.venv-memweave` it saves the exact freeze, every package as a wheel (git deps built locally) and the Python interpreter. Copies live in `state/wheelhouse/` (gitignored); the previous build stays as `<venv>.old`.
+A wheelhouse keeps the files you need to rebuild a Python environment offline. A rebuild normally needs PyPI, GitHub, and the uv cache. For `.venv` and `.venv-memweave`, `scripts/wheelhouse.sh` saves the exact package versions, the Python interpreter, and a wheel for each package. A wheel is a ready-to-install Python package file. The script builds wheels for Git dependencies locally. It saves the copies in `state/wheelhouse/` (ignored by Git) and keeps the previous build as `<venv>.old`.
 
 ```bash
 just wheelhouse build                   # refresh the copies
@@ -721,7 +752,7 @@ Ralph's usual failure is declaring victory on a broken change. This harness stop
 
 ### Runtime health check
 
-`verify.sh` checks that the programs exist. `healthcheck.sh` checks that the stack is actually connected and answering. Use it to catch failures that install-time checks miss, such as an MCP server registered at the wrong scope or a Langfuse container that died overnight.
+`verify.sh` checks that the programs are installed. `healthcheck.sh` checks whether they can connect and respond. It can catch a tool registered in the wrong place or a Langfuse container that stopped overnight.
 
 ```bash
 ./healthcheck.sh            # --quick (default, ~6s)
@@ -736,7 +767,7 @@ It runs automatically:
 
 ### Config drift check
 
-The stack's settings format changes over time. `refinery-doctor.sh` finds settings that haven't caught up: renamed env keys, MCP servers at an old scope, a missing jcodemunch hook that restores context after compaction (`hook-sessionstart`), a `~/.claude/CLAUDE.md` out of sync with the repo, template values never filled in, and a missing Alt+V image-paste key. `healthcheck.sh` asks "is it running?"; the doctor asks "is it up to date?"
+`healthcheck.sh` asks "is it running?" The doctor asks "are the settings up to date?" `refinery-doctor.sh` looks for renamed settings, MCP servers registered at an old scope, and template values that still need filling in. It also checks whether `~/.claude/CLAUDE.md` matches the repo and whether Alt+V is set up for image paste. It looks for `hook-sessionstart`, the jcodemunch hook that restores context after Claude condenses a long conversation.
 
 ```bash
 bash scripts/refinery-doctor.sh            # dry-run: report only
@@ -744,7 +775,7 @@ bash scripts/refinery-doctor.sh --fix      # apply auto-fixable migrations
 bash scripts/refinery-doctor.sh --check embed-model  # single check
 ```
 
-The last line of output is meant for scripts: `DOCTOR: ok` or `DOCTOR: N migration(s) available`. `--fix` writes each file safely: it keeps a `.env.bak`, writes `.env.tmp`, then renames it into place. Exit code 0 means nothing to do; 1 means changes are pending.
+Scripts can read the last line, which says `DOCTOR: ok` or `DOCTOR: N migration(s) available`. With `--fix`, the doctor keeps a backup in `.env.bak`. It writes the new contents to `.env.tmp` and then renames that file into place. Exit code 0 means the settings are current. Exit code 1 means changes are pending.
 
 ---
 

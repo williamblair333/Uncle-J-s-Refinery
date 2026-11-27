@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-27 — Docs plain-language pass
+
+- **Branch `docs/feynman-pass`:** 21 reader-facing docs rewritten, the SKILLS.md credit fix, and the README skills section (CHANGELOG 11-27). 16 generator tests pass.
+- **Lesson:** delegated prose rewrites pass a fact check yet still change meaning about 6 times per file. Run a separate meaning review by a model that didn't write the text, and budget a second round.
+- **Open:** research-later.md still doesn't define "Pi" and "(context)" in the 125B entry. The source notes are outside the repo. PORTING section 10 runs `sync_memory.sh` with `python`, and it probably needs `bash` (that was already there before this pass).
+
 ## 2026-11-27 — ask_codex: start here
 
 - **Branch `feat/ask-codex`:** `ask_codex` delegate tool plus the jail's Codex mounts (CHANGELOG 11-27). 171 tests pass. The branch also carries main's two unpushed post-upgrade syncs (879b9fe, dc065ee).

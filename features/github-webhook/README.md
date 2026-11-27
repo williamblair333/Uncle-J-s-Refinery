@@ -1,11 +1,11 @@
 # GitHub Webhook Feature
 
-Runs a persistent HTTP server that receives GitHub events and acts on them automatically:
+GitHub sends a webhook, an automatic message over HTTP, when something happens in your repo. This server stays running so it can receive the message and act on it.
 
 | Event | Action |
 |---|---|
 | `push` to any branch | Runs `verify.sh` (health check), sends result to Telegram |
-| `pull_request` opened/updated | Fetches the diff, runs Claude auto-review, posts result as a GitHub comment |
+| `pull_request` opened/updated | Fetches the code changes, asks Claude to review them, and posts the review as a GitHub comment |
 | `ping` | Confirms webhook is connected, sends Telegram notification |
 
 ## Prerequisites
@@ -32,7 +32,7 @@ The installer will:
 2. Prompt for your public URL, port (default 9000), and GitHub repo
 3. Generate a webhook secret (or reuse an existing one from `.env`)
 4. Write config to `.env`
-5. Install and start a **systemd user service** (`uncle-j-webhook`)
+5. Install and start a **systemd user service** (`uncle-j-webhook`), which runs the server in the background
 6. Register the webhook on GitHub automatically via `gh api`
 7. Send a Telegram confirmation
 
@@ -42,7 +42,7 @@ The installer will:
 bash features/github-webhook/install.sh --uninstall
 ```
 
-Stops and removes the systemd service, deletes the webhook from GitHub.
+This stops and removes the systemd service and deletes the webhook from GitHub.
 
 ## Status & logs
 
@@ -59,7 +59,7 @@ tail -f state/github-webhook.log
 
 ## Manual test (after install)
 
-Send a test payload with correct HMAC signature:
+Send a test message with a valid HMAC signature. The signature uses a shared secret so the server can check that the message came from someone who knows it.
 
 ```bash
 SECRET=$(grep GITHUB_WEBHOOK_SECRET .env | cut -d= -f2)
@@ -72,7 +72,7 @@ curl -X POST http://localhost:9000/webhook \
   -d "$PAYLOAD"
 ```
 
-Expected: `OK` response, `ping received` in logs, Telegram message delivered.
+Look for an `OK` response, `ping received` in the logs, and a message in Telegram.
 
 ## Config (.env keys)
 
@@ -85,11 +85,11 @@ Expected: `OK` response, `ping received` in logs, Telegram message delivered.
 
 ## Architecture
 
-The server is `scripts/github-webhook-server.py` — pure Python stdlib, no pip dependencies. It uses `ThreadingHTTPServer` so concurrent events don't block each other. Each event is dispatched to a background thread so GitHub's 10-second delivery timeout is never hit.
+`scripts/github-webhook-server.py` uses only Python's standard library. `ThreadingHTTPServer` lets it handle several requests at once. Each event's work runs in its own background thread, so the server always replies before GitHub's 10-second timeout.
 
-**PR review pre-injection**: before calling Claude, the server fetches the full diff with `gh pr diff`. Claude sees the actual changed code, not just metadata — the same "script pre-injection" pattern from Hermes Agent applied to webhook context.
+The server fetches the full set of code changes with `gh pr diff` before asking Claude for a pull request review. This gives Claude the changed code itself, not just the pull request's details. It borrows Hermes Agent's "script pre-injection" pattern: a script gathers the context before the model is called.
 
-**Signature verification**: every request is verified against `GITHUB_WEBHOOK_SECRET` using HMAC-SHA256 (`X-Hub-Signature-256`). Requests with missing or incorrect signatures are rejected with HTTP 403.
+For every request, the server uses `GITHUB_WEBHOOK_SECRET` to compute an HMAC-SHA256 signature and checks it against `X-Hub-Signature-256`. It returns HTTP 403 if the signature is missing or wrong.
 
 ## Extending
 

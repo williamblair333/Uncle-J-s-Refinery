@@ -1,15 +1,13 @@
 # Session Stats
 
-Weekly efficiency reporter for Uncle J's Refinery. Queries Langfuse for the
-past 7 days of Claude Code sessions and renders a markdown table grouped by
-date and project.
+Session Stats shows how much work Claude Code did across projects in the past 7 days. It reads session records from Langfuse and puts the totals in a Markdown table grouped by date and project.
 
 ## What it does
 
-1. Reads Langfuse credentials from `~/.claude/settings.json` env block
+1. Reads Langfuse credentials from the environment settings in `~/.claude/settings.json`.
 2. Queries `/api/public/traces?limit=500&fromTimestamp=<7-days-ago>`
-3. Groups traces by date + project; tallies traces, tool calls, and tokens
-4. Flags any session exceeding 40k tokens as `⚠ high`
+3. Groups traces, or records of activity, by date and project. It counts traces, tool calls, and tokens, the chunks of text a model processes.
+4. Marks sessions that use more than 40k tokens as `⚠ high`.
 5. In `--cron` mode, writes output to:
    - `~/.claude/dreaming-output/stats-YYYY-MM-DD.md` (picked up by dreaming on next run)
    - `state/stats-weekly.md` (human reference)
@@ -25,7 +23,7 @@ date and project.
 bash features/session-stats/install.sh
 ```
 
-Installs the `/stats` slash command and registers a Sunday 8 AM cron job.
+The installer adds the `/stats` command and schedules an automatic run for Sunday at 8 AM.
 
 ## Manual trigger
 
@@ -53,7 +51,7 @@ bash features/session-stats/stats.sh --dry-run
 | `STATS_CRON_SCHEDULE` | `0 8 * * 0` | Cron schedule (every Sunday 8 AM) |
 | `DREAMING_OUTPUT_DIR` | `~/.claude/dreaming-output` | Where cron writes the dated report |
 
-Set in `state/session-stats.env` (written by install.sh, gitignored).
+Set these values in `state/session-stats.env`. install.sh creates the file, and Git ignores it.
 
 ## Uninstall
 
@@ -61,7 +59,7 @@ Set in `state/session-stats.env` (written by install.sh, gitignored).
 bash features/session-stats/install.sh --uninstall
 ```
 
-Removes the cron entry. The `/stats` command stays installed. To fully remove:
+This removes the scheduled run. The `/stats` command stays installed. Use the following command to remove it too.
 
 ```bash
 rm ~/.claude/commands/stats.md

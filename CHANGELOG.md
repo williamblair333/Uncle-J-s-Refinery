@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-11-27 — Plain-language pass over the docs people read; skill credit fixed
+
+- **Why:** William asked for every reader-facing doc to be clear, fun to read and written for an intelligent reader who knows a little about software and AI. A Gemini résumé suggestion also listed a vendored skill (ux-heuristics) as his, which showed `docs/SKILLS.md` crediting it wrongly.
+- **Fixed:** `scripts/gen-skills-reference.py` now reads a vendored skill's source from `ATTRIBUTION.md` as well as `UPSTREAM`. `ux-heuristics` showed as `repo`; it now shows `vendored: wondelai/skills`. Test added (fails on the old code).
+- **Changed:** 21 docs rewritten for plain language: README, PORTING, SECURITY, PRODUCT, CONTRIBUTING, docs/STACK, RELIABILITY, WINDOWS-PORT, TOOLS-STANDARD, SESSION-END, skill-frontmatter-standard, research-later, and the READMEs under `features/` and `scripts/`. Agent-facing files (CLAUDE, AGENTS, GEMINI, ROUTING-REFERENCE, skills), logs (this file, HANDOFF), dated plans and specs, and files scripts parse (STANDARDS, ROADMAP) were left alone. Codex wrote the drafts because agy was out of quota.
+- **Added:** README section "Skills you can take with you": what a skill is, which ones were written here, the Skills Directory author page, and the one-skill install command.
+- **Checked:** a script confirmed every fenced block, code span, link and number survived in all 21 files. Four independent Claude reviewers then found about 140 changes of meaning that the script can't see (rule words softened, "only" and reasons dropped, two factual errors). All were fixed and re-verified in a second round. `first_run_gate.py --check` still passes and PRODUCT.md's parsed lines are unchanged.
+
 ## 2026-11-27 — Codex joins the delegate server (`ask_codex`)
 
 - **Why:** William has a one-month ChatGPT subscription; Codex is a third off-Claude worker next to agy and the local models.

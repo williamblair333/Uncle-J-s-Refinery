@@ -1,22 +1,24 @@
 # Hermes Migration Handoff
 
-*You are Claude running inside Hermes. This document is your complete
-brief. Read it end-to-end before touching anything, then execute each
-section in order. Commit as you go. Ask the user only when a decision
-materially changes cost, scope, or data residency.*
+*You are Claude running inside Hermes. This guide is your complete brief.
+Read it from start to finish before changing anything. Then work through
+the sections in order and commit as you go.
+Ask the user only if a decision would significantly change the cost,
+the work involved, or where the data is stored.*
 
 ---
 
 ## What this is
 
-Uncle J's Refinery was an enhancement layer bolted onto Claude Code. It
-worked. But Claude Code is Claude-only, has no messaging gateway, no
-self-improving skills, and no way to run unattended. Hermes fixes all of
-that. This migration carries every valuable idea from the Refinery into
-Hermes — and leaves everything Windows and Claude-Code-specific behind.
+This guide moves the Refinery's tools and working rules from Claude Code
+to Hermes. It leaves behind everything that works only on Windows or
+only in Claude Code. Claude Code runs only Claude. Hermes supports other models, can
+send updates to a messaging app, and can run while you're away. It can
+also turn lessons from a session into skills, which are instructions it
+can reuse later.
 
-**Platform:** Debian 13 / Ubuntu 24.04. Nothing else. If a step only
-works on macOS or Windows, skip it and note it.
+Use only Debian 13 or Ubuntu 24.04. Skip any step that requires macOS or
+Windows and make a note of it.
 
 ---
 
@@ -24,25 +26,31 @@ works on macOS or Windows, skip it and note it.
 
 ### Keeping — port these
 
+MCP stands for Model Context Protocol. It gives an assistant a standard
+way to call an external tool. An MCP server makes that tool available.
+For example, jCodeMunch can return the function the assistant asked for,
+so the assistant can read it without opening the whole file. SOUL.md is
+the file Hermes reads for standing instructions on every turn.
+
 | Component | What it does | Port strategy |
 |---|---|---|
-| jCodeMunch MCP | Tree-sitter symbol index; ~95% token reduction on code reading | Wire as MCP server |
-| jDataMunch MCP | CSV/TSV structural retrieval | Wire as MCP server |
-| jDocMunch MCP | Section-precise project doc retrieval | Wire as MCP server |
-| memweave | Offline semantic + BM25 memory over a markdown corpus (NO MCP server — a Bash CLI + store) | Copy the store + `.venv-memweave`; call `mw_search.py` as a CLI |
-| Serena MCP | LSP-backed code intelligence (Python/TS/Rust/Go/C#) | Wire as MCP server |
-| Context7 MCP | Third-party library docs, version-pinned | Wire as MCP server |
-| DuckDB MCP | SQL over Parquet/JSON/CSV/S3 | Wire as MCP server |
-| Retrieval routing policy | Which tool to call for which request shape | Paste into SOUL.md |
-| jOutputMunch rules | Output token discipline (-25–40%) | Paste into SOUL.md |
-| prior-art-check skill | Force a memweave lookup before non-trivial work | Port to Hermes skill |
-| judge skill | Independent code-reviewer subagent before Edit/Write | Port to Hermes skill |
-| Superpowers skills | brainstorm, TDD, debugging, verification, etc. | Port each to Hermes skill |
-| Langfuse observability | Per-turn tracing, token counts, tool call logs | Write Hermes plugin |
+| jCodeMunch MCP | Uses Tree-sitter, a tool that reads the structure of code, and index named parts, such as functions. Cuts tokens (chunks of text the model reads) by ~95% when reading code | Connect as an MCP server |
+| jDataMunch MCP | Finds rows in files with comma- or tab-separated values (CSV/TSV) | Connect as an MCP server |
+| jDocMunch MCP | Finds a specific section in the project docs | Connect as an MCP server |
+| memweave | A command-line tool and a store of Markdown notes, with no MCP server. Searches the notes offline by meaning and by keyword (BM25) | Copy the notes and `.venv-memweave`. Run `mw_search.py` from the command line (CLI) |
+| Serena MCP | Uses the Language Server Protocol (LSP) to answer questions about code, such as what type a variable has (Python/TS/Rust/Go/C#) | Connect as an MCP server |
+| Context7 MCP | Finds docs for a specific version of a third-party library | Connect as an MCP server |
+| DuckDB MCP | Runs SQL on Parquet (a file format that stores table data by column), JSON, CSV, and data in S3 (Amazon's object storage service) | Connect as an MCP server |
+| Retrieval routing policy | Rules that tell the assistant which tool to use for each kind of request | Paste into SOUL.md |
+| jOutputMunch rules | Cuts tokens in replies (-25–40%) | Paste into SOUL.md |
+| prior-art-check skill | Requires the assistant to search memweave for past work before starting a substantial task | Port to Hermes skill |
+| judge skill | Asks a separate assistant to review code before Edit/Write | Port to Hermes skill |
+| Superpowers skills | Brainstorming, TDD (test-driven development, where you write a test before writing the code to pass it), debugging, verification, and more | Port each to Hermes skill |
+| Langfuse observability | Records what happened in each turn, including token counts and tool calls | Write Hermes plugin |
 | Guardrails — secret scanner | Block secrets in user prompts | Write Hermes tool/hook |
-| Guardrails — injection defender | Block prompt injection in tool results | Write Hermes tool/hook |
+| Guardrails — injection defender | Blocks tool results that try to give the assistant new instructions (prompt injection) | Write Hermes tool/hook |
 | Bash-matcher blocklist | Block `rm -rf`, pipe-to-shell, push to main | Configure Hermes tool approval |
-| Ralph autonomous loop | PRD-driven unattended iteration with verification gates | Port to Hermes cron |
+| Ralph autonomous loop | Works through a product requirements document (PRD) unattended and checks each result | Schedule it with cron, Hermes' job scheduler |
 
 ### Dropping — do not port
 
@@ -61,7 +69,7 @@ works on macOS or Windows, skip it and note it.
 
 ## Section 1 — Prerequisites (Debian 13)
 
-Run as your normal user. `sudo` where marked.
+Use your regular account. Commands that need administrator rights already start with `sudo`.
 
 ```bash
 # System packages
@@ -116,7 +124,7 @@ When it asks for a provider, choose **anthropic** and enter your
 `ANTHROPIC_API_KEY`. You can add other providers later. The wizard
 creates `~/.hermes/.env` and `~/.hermes/cli-config.yaml`.
 
-First smoke test:
+Check that Hermes can answer a simple prompt.
 ```bash
 hermes -p "say hello"
 ```
@@ -125,7 +133,7 @@ hermes -p "say hello"
 
 ## Section 3 — cli-config.yaml
 
-Edit `~/.hermes/cli-config.yaml`. Replace or merge with:
+Edit `~/.hermes/cli-config.yaml`. Use these settings to replace the file or merge them into your existing configuration.
 
 ```yaml
 model:
@@ -151,8 +159,10 @@ to `~/.hermes/.env`. Claude is available on OpenRouter as
 
 ## Section 4 — Wire the MCP Retrieval Stack
 
-The j\*Munch servers and friends are already installed in the Refinery
-venv at `/opt/proj/Uncle-J-s-Refinery/.venv`. Hermes speaks MCP natively.
+The Refinery already has the j\*Munch servers installed in
+`/opt/proj/Uncle-J-s-Refinery/.venv`. A venv is a Python environment that
+keeps a project's packages separate. Hermes can connect to the servers
+directly through MCP.
 
 ### 4.1 Find the venv binary paths
 
@@ -161,13 +171,14 @@ VENV=/opt/proj/Uncle-J-s-Refinery/.venv
 ls $VENV/bin/ | grep -E "jcode|jdata|jdoc|serena|mcp"
 ```
 
-Note the actual binary names. Typical output:
+Write down the executable names you see. Here are the usual names.
 - `jcodemunch-mcp`
 - `jdatamunch-mcp`
 - `jdocmunch-mcp`
 
-(memweave is **not** in this venv — it lives in the separate `.venv-memweave` (Python 3.12) and
-is invoked as a CLI, not an MCP server. See the memweave block in Section 4.3.)
+memweave is a command-line tool and a store. It has no MCP server and
+isn't installed in the shared venv above. It uses its own environment,
+`.venv-memweave` (Python 3.12). See the memweave instructions in Section 4.3.
 
 ### 4.2 Discover Hermes MCP config format
 
@@ -213,8 +224,9 @@ hermes mcp add jdocmunch \
 ```
 
 **memweave (NOT an MCP server — a CLI + store):**
-memweave ships no MCP server, so there is nothing to `hermes mcp add`. Port it by copying three
-things and invoking the search CLI directly (or wrapping it in a Hermes skill that shells out):
+Copy the Python environment, the scripts, and the notes. Then run the
+search command directly or call it from a Hermes skill. The
+`hermes mcp add` command only applies to MCP servers.
 ```bash
 # 1. The Python 3.12 venv (memweave requires >=3.12; can't share the 3.11 stack venv)
 cp -r /opt/proj/Uncle-J-s-Refinery/.venv-memweave ~/.hermes/.venv-memweave
@@ -223,15 +235,16 @@ cp -r /opt/proj/Uncle-J-s-Refinery/scripts/memweave ~/.hermes/scripts/memweave
 # 3. The markdown corpus (the source of truth — the sqlite index rebuilds from it)
 cp -r ~/.uncle-j-memory ~/.hermes/uncle-j-memory
 ```
-Then query it as a plain command (no MCP):
+Run a search from the command line.
 ```bash
 ~/.hermes/.venv-memweave/bin/python ~/.hermes/scripts/memweave/mw_search.py "<query>" --k 5
 ```
-The corpus is the source of truth: delete the sqlite index and `sync_memory.sh` rebuilds it
-byte-identically. Point the Hermes prior-art skill at this CLI.
+The Markdown notes are the source of truth. If you delete the SQLite
+search index, `sync_memory.sh` rebuilds it byte for byte. Point the Hermes
+prior-art skill at the search command.
 
 **Serena (LSP-backed code intelligence):**
-Serena runs via `uvx`. It's not in the Refinery venv.
+Use `uvx` to run Serena outside the Refinery's Python environment.
 ```bash
 hermes mcp add serena \
   --command "uvx" \
@@ -260,18 +273,19 @@ hermes mcp list
 # All 7 should show as connected.
 ```
 
-If any fail, check `hermes doctor` and examine the error. Common fixes:
-- Binary not found: use absolute path
-- Missing env var: add to `~/.hermes/.env`
-- uvx cold start timeout: increase `hermes mcp timeout` if the option exists
+If a server fails to connect, run `hermes doctor` and read the error.
+
+- If Hermes can't find the executable, give it the full path.
+- If a setting is missing from the environment, add it to `~/.hermes/.env`.
+- If uvx takes too long to start, increase `hermes mcp timeout` if that option is available.
 
 ---
 
 ## Section 5 — SOUL.md (Routing Policy + Output Rules)
 
-`~/.hermes/SOUL.md` is loaded as the agent's system-level instruction on
-every turn. This is where the Refinery's CLAUDE.md routing policy and
-jOutputMunch rules live in Hermes.
+Hermes reads `~/.hermes/SOUL.md` as a set of standing instructions on
+every turn. Put the Refinery's tool-routing rules and its jOutputMunch
+reply rules from CLAUDE.md here.
 
 Create or replace `~/.hermes/SOUL.md`:
 
@@ -377,8 +391,8 @@ Apply these to every response. No exceptions.
 
 ## Section 6 — Port the Skills
 
-Hermes skills live in `~/.hermes/skills/`. Each skill is a markdown file
-named `<skill-name>.md`. Invoke with `/<skill-name>` in a conversation.
+Save each skill as a Markdown file named `<skill-name>.md` in
+`~/.hermes/skills/`. To use it, type `/<skill-name>` in a conversation.
 
 ### 6.1 Create the skills directory
 
@@ -698,10 +712,10 @@ Use when you have requirements for a multi-step task, before touching code.
 
 ## Section 7 — Langfuse Observability
 
-Langfuse gives you per-turn tracing, token counts, tool call logs, and a
-searchable audit trail. Hermes doesn't have this built in — we add it via
-a Python wrapper script that proxies the Hermes process and ships events
-to a local Langfuse instance.
+Use Langfuse to see what happened in a turn. A trace records the tools
+Hermes called and how many tokens it used. You can search these records
+later. Hermes doesn't record this information by default, so add a
+Python wrapper to pass events from Hermes to a local Langfuse instance.
 
 ### 7.1 Spin up Langfuse (self-hosted Docker)
 
@@ -712,14 +726,12 @@ cd /opt/proj/Uncle-J-s-Refinery/claude-code-langfuse-template
 docker compose up -d
 ```
 
-Wait for all containers healthy:
+Check the status and wait for every container to report that it's healthy.
 ```bash
 docker compose ps
 ```
 
-Langfuse UI: http://localhost:3050
-
-Get your keys from the Langfuse UI (Settings → API Keys):
+Open Langfuse at http://localhost:3050 and go to Settings → API Keys to get your keys.
 ```
 LANGFUSE_SECRET_KEY=sk-lf-...
 LANGFUSE_PUBLIC_KEY=pk-lf-...
@@ -855,8 +867,9 @@ Run `hermes tools` to see which security tools are enabled.
 
 ### 8.2 Secret scanner (UserPromptSubmit equivalent)
 
-The Refinery's secret scanner fired on every user message. Port it as a
-Hermes pre-turn hook or tool guard.
+The Refinery checked each user message for secrets such as API keys.
+In Hermes, run the same check before the message reaches the model.
+Use a pre-turn hook (code that runs before a turn starts) or a tool guard.
 
 Write `~/.hermes/plugins/secret_scanner.py`:
 
@@ -899,15 +912,15 @@ def on_user_message(context: dict, message: str) -> str | None:
 
 ### 8.3 Bash-matcher blocklist (destructive command guard)
 
-Hermes' tool approval system can be configured to require confirmation
-for dangerous commands. Check:
+Use Hermes' tool approval settings to require confirmation before
+dangerous commands run.
 ```bash
 hermes tools config --help
 hermes config set tool_approval strict
 ```
 
-Add explicit blocklist rules via Hermes tool approval config (exact
-syntax: check `hermes tools --help`). Patterns to block:
+Check `hermes tools --help` for the exact syntax. Add these patterns to
+the list of commands Hermes should block.
 
 ```
 rm -rf /
@@ -927,7 +940,11 @@ sudo rm
 
 ### 8.4 Prompt injection defender (PostToolUse equivalent)
 
-Write `~/.hermes/plugins/injection_defender.py`:
+A tool result can contain text that tells the assistant to ignore its
+instructions. This check looks for that kind of text before Hermes
+passes the result to the model.
+
+Write `~/.hermes/plugins/injection_defender.py`.
 
 ```python
 """
@@ -971,8 +988,10 @@ def on_tool_result(context: dict, tool_name: str, result: str) -> str:
 
 ## Section 9 — Ralph Equivalent (Autonomous Loop)
 
-Ralph was a PRD-driven loop: read the PRD, do a unit of work, verify,
-commit, repeat. Hermes does this natively with cron + a soul file.
+Ralph works through a product requirements document (PRD) one item at a
+time. It checks the result, commits the change, and repeats. In Hermes,
+cron runs the work on a schedule and the soul file supplies standing
+instructions.
 
 ### 9.1 One-shot Ralph invocation
 
@@ -996,8 +1015,9 @@ hermes cron create "0 */4 * * *" \
   --deliver local
 ```
 
-Adjust the cron expression to your cadence. `local` delivery saves
-output to a log file without requiring a messaging platform.
+Change the schedule by editing the cron expression, the text that tells
+Hermes when to run. With `local` delivery, Hermes saves the result to a
+log file and you don't need a messaging platform.
 
 To deliver results to Telegram (recommended for unattended work):
 ```bash
@@ -1009,9 +1029,9 @@ hermes cron create "0 */4 * * *" \
 
 ### 9.3 Verification gate inside Ralph
 
-The PRD should always include acceptance criteria that Ralph can test.
-The pattern from the Refinery works directly — the criteria list is the
-verification gate. Tell the agent in the cron prompt:
+Give every item in the PRD a testable condition for calling it done.
+For example, require a named test to pass before Ralph marks the item
+complete. Include this instruction in the cron prompt.
 
 > "Do not mark an item complete until you have run the verification
 > command for it and pasted the output. If the command fails, report
@@ -1021,9 +1041,8 @@ verification gate. Tell the agent in the cron prompt:
 
 ## Section 10 — memweave Memory Migration
 
-If you have memories in the Refinery's memweave corpus that you want in
-Hermes, copy the markdown corpus (the source of truth — the sqlite index
-rebuilds from it):
+To bring your saved notes into Hermes, copy the Markdown files and
+rebuild the SQLite search index from them.
 
 ```bash
 # The Refinery's memweave corpus
@@ -1036,26 +1055,27 @@ cp -r ~/.uncle-j-memory/ ~/.hermes/uncle-j-memory/
 ~/.hermes/.venv-memweave/bin/python ~/.hermes/scripts/memweave/sync_memory.sh
 ```
 
-After copying, verify search returns the data (it's a CLI, not an MCP server):
+Use the search command to check that Hermes can find the notes you copied.
 ```bash
 ~/.hermes/.venv-memweave/bin/python ~/.hermes/scripts/memweave/mw_search.py "Uncle J" --k 5
 ```
 
-You should see existing memories surface.
+The results should include memories saved in the Refinery. If they
+don't, the copy didn't work.
 
 ---
 
 ## Section 11 — Self-Improving Skills
 
-This is the feature the Refinery never had. After completing a complex
-task, Hermes can write a new skill capturing what it learned.
+Hermes can turn a solution from a complex task into a skill it can reuse
+in later sessions.
 
 Enable it:
 ```bash
 hermes config set auto_skill_creation true
 ```
 
-After any session where you solved a non-trivial problem, prompt:
+After a session where you solved a substantial problem, ask Hermes to draft a skill.
 ```
 /skills new
 Name: <skill-name>
@@ -1063,8 +1083,8 @@ Description: <what this skill does>
 Trigger: <when to invoke it>
 ```
 
-Hermes will draft the skill from the conversation history. Review it,
-edit if needed, then:
+Hermes uses the conversation history to draft the skill. Read the draft,
+make any edits, and save it.
 ```bash
 hermes skills save <skill-name>
 ```
@@ -1138,8 +1158,7 @@ For a durable standalone note, append this summary to `~/.hermes/uncle-j-memory/
 
 ## What you should NOT port
 
-To be explicit: these things from the Refinery have no place in Hermes.
-Do not attempt to port them.
+Skip these Windows and Claude Code components when you move to Hermes.
 
 - Any `.ps1` file
 - `install.ps1`, `prerequisites.ps1`, `verify.ps1`, `finish-install.ps1`
@@ -1158,15 +1177,13 @@ Do not attempt to port them.
 
 ## Author's note
 
-The Refinery was built to solve a real problem: Claude Code needed
-structural retrieval, output discipline, and observability that it
-didn't ship with. Hermes solves the other half of the problem — running
-unattended, reaching you on your phone, supporting any model.
+The Refinery gave Claude Code tools to find a function or a section
+of a document, keep its replies short, and record what it did. Hermes
+adds scheduled runs, phone updates, and a choice of models. Together
+they work better than either does alone.
 
-The combination is legitimately better than either alone. The j*Munch
-MCP servers give Hermes structural code/data/doc retrieval that no other
-agent has out of the box. Hermes gives those tools a runtime that can
-run on a $5 VPS, report to Telegram, and improve itself over time.
-
-Good luck. The whole point of the memweave corpus is that nothing gets lost.
-Use it.
+With the j*Munch servers connected, Hermes can look up code, data, and
+docs. It can run on a $5 virtual private server (VPS), send a report to
+Telegram, and save a lesson from the work as a skill. The memweave
+corpus keeps past sessions and decisions so nothing gets lost. Search
+it when you pick up a project again.
