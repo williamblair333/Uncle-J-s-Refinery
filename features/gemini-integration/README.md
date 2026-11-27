@@ -1,15 +1,15 @@
 # Gemini CLI Integration (Passive Observer)
 
-This package enables native, automatic support for **Gemini CLI** within Uncle J's Refinery. It allows Gemini to leverage the Refinery's structural retrieval, long-term memory, and dreaming playbooks with functional parity to Claude Code.
+Gemini CLI can use the same Refinery resources as Claude Code. It can look up code by structure, search memory from past sessions, and read playbooks that capture steps that worked before.
 
 ## Philosophy: Passive Observer
-To ensure absolute stability, this integration follows a "Passive Observer" pattern. Gemini CLI reads the Refinery's state and playbooks but **never** modifies Claude Code's internal configuration (`settings.json`) or hook state. All Gemini-specific logic is stored in the project's `GEMINI.md` file.
+Gemini CLI reads the Refinery's state and playbooks but **never** changes Claude Code's settings (`settings.json`) or the state its hooks use. Hooks are scripts that run automatically at set points in a session. Everything Gemini-specific lives in the project's `GEMINI.md`.
 
 ## Features
-- **Structural Parity**: Gemini is mandated to use `jcodemunch-mcp` and `memweave` (`mw_search.py`) for all repository tasks.
-- **Context Sync**: A `startup-probe.sh` script allows Gemini to "catch up" on what Claude Code has learned or changed since the last session.
-- **Output Discipline**: Enforces the `jOutputMunch` high-signal response style.
-- **Zero Interference**: Safe to run alongside Claude Code in the same workspace.
+- Gemini is instructed to use `jcodemunch-mcp` to look up code and `memweave` (`mw_search.py`) to search memory for every repository task.
+- The `startup-probe.sh` script helps Gemini catch up on what Claude Code learned or changed since the last session.
+- Gemini follows the `jOutputMunch` response style to keep answers focused.
+- It's safe to run Gemini alongside Claude Code in the same workspace; neither gets in the other's way.
 
 ## Installation
 The main Refinery installer will prompt you to enable this integration. To install manually:
@@ -26,4 +26,4 @@ bash features/gemini-integration/install.sh --uninstall
 ```
 
 ## How it Works
-The installer injects a block of operational mandates into the project's `GEMINI.md`. Gemini CLI reads this file at the start of every session and adjusts its internal behavior to match the Refinery's methodology.
+The installer adds the Refinery's instructions to the project's `GEMINI.md`. Gemini CLI reads the file at the start of each session and uses those instructions to decide how to work in the project.

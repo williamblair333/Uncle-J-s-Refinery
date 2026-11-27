@@ -1,8 +1,6 @@
 # live_preview
 
-A live browser view of anything being built, for any project. Each step is one or more
-images plus a label. The page shows the newest images, the full step history, and what
-caused each step. It refreshes about once a second.
+Watch a project take shape in your browser. Each step has a label and one or more images, such as a render of a part so far. The page shows the latest images, the history, and what caused each step. It refreshes about once a second.
 
 ```
 project renders a picture ──> preview_publish / `just preview publish`
@@ -15,7 +13,7 @@ project renders a picture ──> preview_publish / `just preview publish`
 
 ## Use
 
-From an agent, use the `live_preview` MCP server:
+An agent can use the `live_preview` MCP server, which gives it the tools below.
 
 | Tool | Does |
 |---|---|
@@ -38,16 +36,14 @@ The `live-preview` global skill tells agents in every project when and how to us
 
 - **Concurrent publishers are safe.** Each session has a lock, so several agents can
   publish into one session without losing steps.
-- **Writes are atomic.** The viewer never reads half a file.
-- **Inputs are checked.** Only real images are accepted: png/jpg/gif/webp, matched on
-  file content, no symlinks, at most 20 MB each.
-- **Names are restricted.** Project and session names are slugs and can't escape
-  `LIVE_PREVIEW_HOME`.
-- **Localhost only.** The page is served on 127.0.0.1 only.
+- **Writes are atomic.** A file becomes visible to the viewer only when the whole write is ready.
+- **Inputs are checked.** Each image must be at most 20 MB. The tool checks the file contents for png/jpg/gif/webp and rejects symlinks, which are shortcuts to other files.
+- **Names are restricted.** Project and session names use a format that keeps their files inside `LIVE_PREVIEW_HOME`.
+- **Localhost only.** The server listens on 127.0.0.1, so the page is available on the machine running it.
 - **Bounded disk use.** Only the newest 300 bundles keep their images (`--keep`). Older
   steps stay in the history as text.
 
 ## Provenance
 
 `viewer.py` and `bundle.py` come from [CLI-Anything](https://github.com/HKUDS/CLI-Anything)
-(Apache-2.0). `NOTICE` lists what changed. Tests: `just test tests/test_live_preview.py`.
+(Apache-2.0). `NOTICE` lists what changed. Run the tests with `just test tests/test_live_preview.py`.

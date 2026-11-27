@@ -100,7 +100,7 @@ Totals: 85 repo, 1 workflows.
 | `timesfm-forecasting` | Performs zero-shot time-series forecasting with Google's TimesFM, including regular-grid CSV preparation, quantile forecasts, XReg covariates, and held-out eva… | auto | any agent | vendored: K-Dense-AI/scientific-agent-skills |
 | `to-questionnaire` | Turn a decision you can't fully answer into a questionnaire for someone else to fill in. | you | any agent | vendored: mattpocock/skills |
 | `token-economy-prompt-authoring` | Craft a minimal, effective system prompt to constrain Claude verbosity in plain web sessions (no harness tooling). | auto | Refinery stack | repo |
-| `ux-heuristics` | Evaluate and improve interface usability using heuristic analysis. | auto | Claude Code | repo |
+| `ux-heuristics` | Evaluate and improve interface usability using heuristic analysis. | auto | Claude Code | vendored: wondelai/skills |
 | `validate-external-audit` | Use when responding to an external critique, audit, or code review of a codebase before accepting or rejecting any finding. | auto | any agent | repo |
 | `verifiable-task` | Use when about to delegate work to another agent or model — a subagent, agy (ask_agy), the local model (ask_local), Codex, a background job — or when about to… | auto | Refinery stack | repo |
 | `verify-handoff-claims` | Before repeating any "outstanding" or "not yet done" item from a handoff doc, cross-check it against the actual source. | auto | Refinery stack | repo |

@@ -1,21 +1,21 @@
 # Reliability layer reference
 
-The core stack (jMunch trio + Serena + Context7 + DuckDB MCP servers, plus the
-offline memweave memory CLI) gives Claude the *right tools*. The reliability layer
-makes sure Claude *actually uses them correctly*. Four components:
+The core stack gives Claude the right tools. The reliability layer makes sure Claude actually uses them correctly: it catches mistakes and checks the work before Claude calls it done.
+
+The jMunch trio, Serena, Context7, and DuckDB run as MCP servers. These programs give an assistant tools it can call to do work outside the chat. The stack also includes memweave, an offline tool Claude runs from the command line to search past work.
 
 | Component                     | What it does                                                      | When to turn off            |
 | ----------------------------- | ----------------------------------------------------------------- | --------------------------- |
-| prior-art-check skill         | memweave (mw_search.py) lookup BEFORE the first real tool call every session | never; it's just a lookup   |
-| judge skill                   | Gathers blast radius + PR risk, then delegates to specialist agents | for throwaway prototyping  |
-| referee skill + `scripts/referee.py` | Gemini (via agy) judges Claude's work; JSON verdict, fails closed | when quota is short or the work is private |
-| verifiable-task skill         | Write the check before delegating; run it yourself; report what it measured | never; it's a habit, not a tool |
-| Specialist agent (1)          | Code review incl. silent failures and shell/subprocess security (five ECC agents dropped 2026-10-23) | per logic-changing edit |
-| Ralph harness                 | while-true loop that only stops when risk is low + PRD is DONE    | only in live runs           |
-| dwarvesf claude-guardrails    | Block pasted secrets, scan tool output for prompt-injection       | never (low cost, high value)|
+| prior-art-check skill         | Searches past work with memweave (mw_search.py) before the first real tool call of each session | Never. It only reads.   |
+| judge skill                   | Checks what a change could affect and how risky the pull request is, then calls in specialist reviewers | for throwaway prototyping  |
+| referee skill + `scripts/referee.py` | Asks Gemini through agy to review Claude's work. Returns a JSON verdict. If the review fails to run, approval is withheld. | when quota is short or the work is private |
+| verifiable-task skill         | Write a check before handing off work. Run it yourself and report what it measured. | Never. It is a way of working. |
+| Specialist agent (1)          | Reviews code for problems such as failures that go unreported and unsafe shell commands or child processes (five ECC agents dropped 2026-10-23) | per logic-changing edit |
+| Ralph harness                 | Repeats the task until risk is low and the project requirements document (PRD) says the work is done    | only in live runs           |
+| dwarvesf claude-guardrails    | Blocks pasted credentials and scans tool results for text that tries to give Claude instructions       | never (low cost, high value)|
 | Superpowers plugin            | 20+ skills: brainstorm, systematic-debug, TDD, verify-before-done | if total skill count > 25   |
 | Ralph Wiggum plugin           | /ralph slash command (Anthropic official version)                 | --                          |
-| outcomes skill (--rubric)     | Rubric-aware grader in fresh context after each Ralph iteration   | when not using --rubric flag |
+| outcomes skill (--rubric)     | Grades each Ralph iteration against written criteria, starting with a fresh conversation   | when not using --rubric flag |
 | refinery-doctor.sh            | Config drift detection: env key renames, stale MCP scopes, CLAUDE.md sync, placeholder values; `--fix` applies atomic migrations | after fresh install confirms all green |
 | commit doc gate (`scripts/commit-doc-guard.sh`) | PreToolUse(Bash): blocks a real `git commit` in this repo (or a linked worktree) until `.session-end.yml` mandatory docs are staged; ignores read-only git calls and nested independent clones | never; fails open on bad input |
 | Telegram multi-agent routing  | `/work <msg>` → project-context Claude (proj_root cwd, CLAUDE.md loaded); unqualified → restricted default (cwd=/tmp, disclosure ban); config in `config/telegram-agents.toml`; hardcoded fallback if TOML missing | never; missing TOML = safe restricted-only mode |
@@ -82,175 +82,176 @@ Stop hooks (in order)
    └── skill-suggest.sh + skill-link unlink
 ```
 
-All gates can fire in under 15 seconds for a typical coding turn.
-Ralph runs the per-message loop on every iteration.
+On a typical coding turn, all the checks can run in under 15 seconds.
+Ralph repeats the per-message loop on every iteration.
 
 ## Deploying the routing policy to `~/.claude/CLAUDE.md`
 
-The installed copy is **not** a mirror of the repo copy. `features/dreaming/dream.sh` appends a
-`## Dreaming Notes (auto-generated)` section to `~/.claude/CLAUDE.md` and never to the repo copy,
-so the playbooks under it exist in no other file. Any wholesale `cp repo → installed` deletes them.
+Keep the Dreaming Notes when you update the installed routing policy.
+`features/dreaming/dream.sh` appends a `## Dreaming Notes (auto-generated)`
+section to `~/.claude/CLAUDE.md`. The playbooks in that section live only
+in the installed file. A wholesale `cp repo → installed` deletes them.
 
-That is how the global-only "Docker Port Registry" section was lost: `scripts/audit/
-components.json` still lists it as a routing-policy heading, and it now appears zero times in
-either file.
+The same kind of overwrite erased the global-only "Docker Port Registry" section.
+`scripts/audit/components.json` still lists "Docker Port Registry" as a routing-policy heading. That heading now appears zero times in either policy file.
 
 | Writer | Behaviour |
 |--------|-----------|
-| `refinery-doctor.sh --fix` | Rebuilds as repo policy prefix + the installed copy's Dreaming Notes tail. Backs up to `${installed}.bak`. Compares only the policy prefix, so an appended tail is not reported as permanent drift. |
+| `refinery-doctor.sh --fix` | Rebuilds the file as the repo policy (the prefix) followed by the installed copy's Dreaming Notes (the tail). Backs up to `${installed}.bak`. Compares only the policy prefix, so an appended tail is not reported as permanent drift. |
 | `install.sh` §6b | Delegates to the above. Its one remaining `cp` is the create-when-absent branch. With no doctor present it leaves an existing file alone rather than copying over it. |
 | post-merge git hook | Notifies only — `CLAUDE.md updated — copy to ~/.claude/CLAUDE.md if you use global routing`. Nothing auto-deploys. |
 
-Two things to preserve when editing either writer:
+When you edit either writer, keep these two things intact:
 
-- **The marker string lives in exactly two files** (`dream.sh`, `refinery-doctor.sh`) and they are
-  not linked. `install.sh` deliberately holds no third copy. A mismatch silently restores
-  whole-file comparison, which reports drift forever and rewrites the file on every run.
-- **`refinery-doctor.sh` exits 1 when it applied a migration**, including under `--fix` where that
-  is the success path, and `install.sh` runs `set -euo pipefail`. The call site captures the status
-  into `_doctor_rc` and dispatches on it (0 = in sync, 1 = applied, other = real failure).
-  Unguarded, the installer aborts at §6b on a working fix and silently skips every later section.
-  A bare `|| true` is not an acceptable substitute — it swallows genuine crashes.
+- **Keep the marker strings identical.** Exactly two files define the marker
+  (`dream.sh` and `refinery-doctor.sh`). They are independent copies.
+  `install.sh` delegates to the doctor and holds no third copy. If the strings differ, the doctor silently falls back to comparing the whole file. It then reports drift forever and rewrites the file on every run.
+- **Treat exit status 1 as an applied migration.** `refinery-doctor.sh` exits 1 when it applied a migration. That includes `--fix`, where exit 1 is the normal success result. `install.sh`
+  runs `set -euo pipefail`, so it captures the status in `_doctor_rc`
+  (0 = in sync, 1 = applied, other = real failure). Otherwise, a successful fix
+  stops the installer at §6b and skips every later section. Don't replace this with a bare `|| true`. That hides real crashes.
 
-`tests/test_claude_md_deploy.py` pins all of this. CI never executes `install.sh`, which is why the
-original defect shipped unnoticed, so §6b's shape is additionally asserted at source level.
+`tests/test_claude_md_deploy.py` checks this behavior. The original bug shipped
+because CI never runs `install.sh`. The test also checks the source of §6b directly.
 
 ## memweave memory freshness
 
-Project memory routing (`CLAUDE.md` §4) resolves "have we solved this before?" to
-`scripts/memweave/mw_search.py` (offline ONNX semantic+BM25, read-only) over the store below.
+Claude searches past work to answer "Have we solved this before?"
+`CLAUDE.md` §4 routes that search to `scripts/memweave/mw_search.py`.
+It runs offline and reads the store without changing it. It combines semantic search, which looks for similar meaning using a local ONNX model (a portable model file format), with BM25, which ranks
+matches based on the words they share.
 
-The offline memweave store at `~/.uncle-j-memory` is the **cross-project** memory store — it
-holds every project's transcripts under `~/.claude/projects` (markdown corpus + sqlite index),
-not just this project's. (The `uncle-j` name is legacy.) It's kept current by two callers of
-`scripts/memweave/sync_memory.sh`, which serialises on an atomic `mkdir "$LOCK.d"`
-(`/tmp/memweave-sync.lock.d`) so the two can never race the single sqlite writer. It is **not**
-`flock`-guarded — MSYS/Git Bash ships no `flock`, which is why the mkdir form was chosen:
+The store at `~/.uncle-j-memory` covers every project under `~/.claude/projects`.
+It keeps transcripts as Markdown files and uses a SQLite index to search them.
+The `uncle-j` name is left over from an earlier setup.
+
+Two callers run `scripts/memweave/sync_memory.sh`. To keep them from writing
+to SQLite at the same time, the script claims a lock with an atomic
+`mkdir "$LOCK.d"` (`/tmp/memweave-sync.lock.d`). Only one process can create
+that directory. It doesn't use `flock`, because MSYS/Git Bash ships without it. That's why the script uses a `mkdir` lock.
 
 | Caller | Schedule | Scope |
 |--------|----------|-------|
 | `uncle-j-memweave-sync` cron | 02:30 nightly (`nice -19`) | `--all` — full cross-project export+index (every project) |
 | Stop-hook (`# uncle-j-memweave-sync`) | end of every session **whose cwd is this repo** (`async`) | incremental — this repo, `LIMIT 15` most-recent transcripts |
 
-Stop-hook reach is narrower than it looks, and the reason is worth understanding before adding a
-third. The hooks are registered per-repo in each project's `.claude/settings.json`, not at user
-scope, so one only fires when that project is the session's cwd. Worse, `sync_memory.sh` with an
-*empty* `PROJECT` argument derives the slug from its own location — so the first hook always
-ingests `-opt-proj-Uncle-J-s-Refinery` no matter which project the session was working on.
-Measured 2026-08-19: 297 hook runs, all of them that project; 45 nightly `--all` runs.
+The Stop hook refreshes only this repo's memory. Understand why before adding a third caller. Each project registers its
+hooks in its own `.claude/settings.json`. A hook runs only when the project
+is the session's current working directory. With an empty `PROJECT` argument,
+`sync_memory.sh` takes the project name from the script's location. The first hook therefore always imports `-opt-proj-Uncle-J-s-Refinery`, whichever project the session was working on. On 2026-08-19,
+the count was 297 hook runs, all for that project, and 45 nightly `--all` runs.
 
-Every project except this one is covered by the cron alone, with up to ~24h of lag. (A second
-hook for the Obsidian vault at `/opt/proj/jaredrhod` existed from 2026-08-19 until the vault was
-archived on 2026-11-22; its entry in that project's settings is dormant.)
+Other projects rely on the nightly cron job, a scheduled task. Their memory
+can lag by up to ~24h. The Obsidian vault at `/opt/proj/jaredrhod` had its own
+hook from 2026-08-19 until the vault was archived on 2026-11-22. Its settings
+entry is dormant.
 
-**Known race, deliberately not fixed:** two sessions closing within seconds of each other means
-one hook loses the `mkdir` lock and exits 0 with `sync skipped — another sync holds`. It does not
-queue or retry, so that project's ingest defers to the 02:30 cron. The alternative — blocking on
-the lock during session teardown — is a worse failure than a deferred ingest. The skip is logged,
-so it is diagnosable after the fact rather than invisible.
+This race is left unfixed on purpose. If two sessions close seconds apart, one hook can miss the `mkdir` lock.
+It exits 0 and logs `sync skipped — another sync holds`. The 02:30 cron run
+picks up the deferred work. The hook doesn't queue or retry. Waiting for the lock while the session closes would be worse than syncing a few hours later. The log records what happened.
 
-The hook and the cron redirect to `state/memweave-sync.log`; the script logs to stdout/stderr only (callers own
-the destination). The store is fully reconstructable from the markdown corpus (memweave M2
-crash-recovery: `rm` the index → byte-identical rebuild), so an interrupted sync is recoverable.
+The hook and cron job both send output to `state/memweave-sync.log`. The script
+writes to standard output and standard error, so each caller chooses where
+those messages go. If a sync is interrupted, the Markdown files are enough
+to rebuild the index (memweave M2 crash recovery). Remove the index with
+`rm` and the rebuild produces the same bytes.
 
 ### The corpus
 
-`sync_memory.sh` writes Claude transcripts (`export_transcripts.py`) into
-`~/.uncle-j-memory/memory/*.md`; they are **derived**, and the store is a cache of them. Two kinds
-of file there are *not* re-exportable: the dream-synthesis notes `dream.sh` copies in and
-`premortem-audit.md`. Anything that deletes inside `memory/` must leave those alone.
+Most files in `~/.uncle-j-memory/memory/*.md` are copies of Claude transcripts.
+`sync_memory.sh` uses `export_transcripts.py` to recreate them. Keep the
+dream-synthesis notes that `dream.sh` copies in and `premortem-audit.md`
+when cleaning up `memory/`. A transcript export cannot restore either.
 
-From 2026-08-19 to 2026-11-22 a second source mirrored the Obsidian brain vault into
-`memory/vault/` (`mirror_vault.py`). It was removed when the vault went stale: its priorities
-were last edited 2026-08-22, and its notes came back from searches looking like current decisions.
-Decisions now live in each repo's HANDOFF/ROADMAP and Claude's memory notes. The vault is
-archived in place; `mirror_vault.py` and its tests are in git history if it is ever revived.
+From 2026-08-19 to 2026-11-22, `mirror_vault.py` also copied the Obsidian
+vault into `memory/vault/`. The mirror was removed because searches made old
+notes look like current decisions. The vault's priorities were last edited
+on 2026-08-22. Decisions now live in each repo's HANDOFF and ROADMAP files
+and in Claude's memory notes. The vault is archived in place. Git history
+holds `mirror_vault.py` and its tests.
 
-**Prerequisite:** the py3.12 `.venv-memweave` must exist (memweave requires ≥3.12; it can't live
-in the 3.11 project venv). A missing venv makes `sync_memory.sh` exit 1 with a logged error —
-`install.sh` registers the cron but does **not** yet build this venv, so a fresh provision needs
-it created by hand until venv bootstrap is folded in (Phase 3/4).
+Set up the py3.12 environment `.venv-memweave` on a fresh install.
+Memweave requires ≥3.12, and the project environment uses 3.11.
+Without its own environment, `sync_memory.sh` logs an error and exits 1.
+`install.sh` registers the cron job. Create the environment by hand until
+the installer can do it (Phase 3/4).
 
-**Follow-up (open):** no freshness alarm yet — failures land in the log but aren't alerted, and a
-hung export holds the flock so later runs cleanly skip while the store ages. Add a memweave
-freshness probe to `healthcheck.sh` (assert index mtime < 48h).
+There is no freshness alarm yet. Failures go to the log. A hung export holds
+the lock, so later runs skip while the store grows stale. The open follow-up
+is to have `healthcheck.sh` check that the index's modification time is less
+than 48h old.
 
 ## retrieval index freshness
 
-`CLAUDE.md` routes code reads to jcodemunch and doc reads to jdocmunch before any
-`Read`/`Grep` fallback. A stale index therefore doesn't fail loudly — it answers from
-outdated content, which is harder to notice than an error. Both indexes are refreshed on
-cron and gated in `healthcheck.sh`:
+A stale index can give Claude an old answer that looks current.
+`CLAUDE.md` sends code searches to jcodemunch and document searches to
+jdocmunch before falling back to `Read` or `Grep`. Scheduled jobs refresh
+both indexes, and `healthcheck.sh` checks their freshness.
 
 | Index | Refresh | Gate | Failure key |
 |-------|---------|------|-------------|
 | jcodemunch (`~/.code-index`) | `uncle-j-jcodemunch-reindex` 01:00 + `jcodemunch-watch.service` | `state/jcodemunch-last-indexed.sha` vs git HEAD | `jcodemunch-index-stale` |
 | jdocmunch (`~/.doc-index`) | `uncle-j-jdocmunch-reindex` 01:30 + `post-merge-hook.sh` (this repo only, on `*.md` change) | per-repo manifest `head_sha` vs source root HEAD | `jdocmunch-index-stale` |
 
-`scripts/jdocmunch-reindex.sh` differs from its jcodemunch counterpart because jdocmunch
-indexes many source roots (9 currently), most outside this repo. It enumerates
-`~/.doc-index/local/<name>.json` manifests instead of taking a path, and reindexes only
-what drifted — git roots by HEAD-vs-`head_sha`, non-git roots by newest file mtime vs
-`indexed_at` — so steady-state nightly cost is near zero. It is `flock`-guarded, skips
-repos whose jdocmunch `.json.lock` is held, skips (rather than aborts on) a vanished
-source root, and exits 2 if the manifest `index_version` is not the version it knows how
-to read.
+`scripts/jdocmunch-reindex.sh` reads the list of source folders from
+`~/.doc-index/local/<name>.json`. It checks several folders (9 currently),
+most outside this repo. For a Git folder, it compares the latest commit
+(HEAD) with the saved `head_sha`. For other folders, it compares the newest
+file modification time with `indexed_at`. It rebuilds only stale indexes,
+so there is almost no nightly work when nothing changes.
 
-The doc gate hard-fails only on this repo's own index; the other eight warn without
-failing the run.
+The script uses `flock` to keep runs from overlapping. It skips a repo when
+jdocmunch holds its `.json.lock`, and it continues if a source folder has
+disappeared. It exits 2 if the manifest's `index_version` is a version it doesn't know how to read.
+The health check fails only for this repo's index. The other eight produce
+warnings.
 
-**Historical note (2026-07-18):** the jdocmunch check previously ran
-`ls ~/.doc-index | wc -l` and reported "N repo(s)". That directory holds exactly two
-entries (`local/` and `_savings.json`) regardless of index contents, so it reported a
-steady `OK 2 repo(s)` and would have done so with the index completely empty. It never
-read a date. A check that cannot fail is worse than no check — it converts an unknown
-into false confidence, and in this case a false OK was read as evidence and propagated
-into a wrong diagnosis. Prefer gates that assert a property over gates that count things.
+On 2026-07-18, the old check was still running `ls ~/.doc-index | wc -l`
+to report "N repo(s)." The directory always had two entries (`local/` and
+`_savings.json`), even if the index was empty. The check kept reporting
+`OK 2 repo(s)`. It never read a date, so it could never fail. A check that can't fail is worse than no check: it turns "unknown" into false confidence. Here the false OK was taken as evidence and led to a wrong diagnosis. Prefer checks that test a property over checks that count things.
 
-**What already existed:** `scripts/post-merge-hook.sh` re-indexes jdocmunch whenever a
-merge touches `*.md`. It is narrow — `--path "$PROJ_ROOT"`, so it covers this repo and
-none of the other eight, and it only fires on merge, not on edit or on external-repo
-churn. That is why the Refinery's own index tracked HEAD while the rest drifted for
-weeks, and why the gap read as "no automation at all" on first inspection. The cron
-generalises it; the hook is not redundant with it.
+`scripts/post-merge-hook.sh` refreshes jdocmunch when a merge changes
+`*.md` files. It uses `--path "$PROJ_ROOT"`, so it covers this repo. It covers none of the other eight, and it runs only on merges, not on edits.
+That kept this repo's index current through merges while the other eight
+fell weeks behind. The nightly job extends this to the other sources. Keep both: the hook isn't redundant.
 
-**Follow-up (open):** `jdocmunch-mcp hook-posttooluse` ships an auto-reindex hook (the
-doc-side equivalent of the jCodemunch PostToolUse reindex above) and is not wired up.
-It would close the remaining in-session gap for edits that never reach a merge.
+The open follow-up is to wire up `jdocmunch-mcp hook-posttooluse`. Like the
+jCodemunch PostToolUse hook, it would refresh the index after edits, even
+when they never reach a merge.
 
 ## What each component buys you
 
 ### prior-art-check
 
-Answers the question "does the agent ask itself 'have we solved this
-before' before working?" with **yes, now it does**. Without this skill,
-memweave is a CLI the agent *could* run but usually won't. With it,
-the agent checks prior work on every non-trivial prompt via `mw_search.py`.
-Zero cost on an empty store; 1-2 second overhead on a warm one.
+Before working on a non-trivial prompt, Claude uses `mw_search.py` to
+check whether someone has already solved the problem. The lookup has zero
+cost with an empty store and adds 1-2 seconds when the store is warm.
 
-Step 3b (staleness filter): any memweave hit containing `pending`,
-`awaiting`, `needs`, `consider`, `not yet`, `TODO`, or `FIXME` must be
-verified against current source before being reported as fact. Prevents
-the failure mode where a memory entry says "PR awaiting review" long after
-the PR has merged and the fix is running. Complements the healthcheck
-staleness advisory scan which surfaces the same entries at session start
-(warning-only, not a failure).
+In step 3b, Claude checks any search result containing `pending`, `awaiting`,
+`needs`, `consider`, `not yet`, `TODO`, or `FIXME` against the current
+source before treating it as fact. For example, a memory entry might say
+"PR awaiting review" long after the pull request has merged and the fix is
+running. The startup health check flags the same entries as warnings.
 
 ### judge
 
-Always fires before any non-trivial Edit or Write. Two responsibilities:
+Judge runs before any non-trivial Edit or Write. It checks what the change
+could affect and sends the work for specialist review.
 
-1. **Gather structural evidence** — `get_blast_radius`, `get_changed_symbols`, `get_untested_symbols`, `get_pr_risk_profile` from jCodemunch
-2. **Delegate to specialist agents** based on that evidence (see trigger matrix below)
+1. Gather evidence from jCodemunch with `get_blast_radius`, `get_changed_symbols`, `get_untested_symbols`, and `get_pr_risk_profile`.
+2. Choose reviewers based on that evidence. The table below lists what triggers a review.
 
-Catches the four classic hallucination patterns:
+It catches four common mistakes.
 
-1. Invented functions (call `foo.bar()` where `bar` doesn't exist)
-2. Invented imports (import a module that isn't a dep)
-3. Wrong signature (skip required parameter)
-4. Missed callers (rename symbol, forget to update all sites)
+1. Calling an invented function, such as `foo.bar()` when `bar` is missing.
+2. Importing a module the project does not depend on.
+3. Leaving out a required argument.
+4. Renaming something and missing a place that calls it.
 
-**Skip conditions:** typos, whitespace/formatting-only, comment-only edits, single-variable renames with no logic change, changes already reviewed in the same turn.
+Skip Judge for typos, formatting, comments, or a single variable rename
+with no logic change. Also skip it if the change has already been reviewed
+in the same turn.
 
 ### Specialist agent trigger matrix
 
@@ -271,79 +272,64 @@ One agent in `global-agents/`, symlinked to `~/.claude/agents/`. Six ECC agents 
 
 ### Ralph harness (our version vs. the plugin)
 
-Anthropic's Ralph plugin (`/ralph`) is the standard Huntley pattern:
-loop the agent on a prompt file until it says done.
+Anthropic's Ralph plugin (`/ralph`) follows the Huntley pattern. It gives
+the agent the same prompt file until the agent says the work is done.
 
-Our harness (`ralph-harness.sh`) adds structural done-gates:
+`ralph-harness.sh` checks the change before accepting that answer.
 
-- `get_changed_symbols` — confirms something actually moved
-- `get_untested_symbols(changed_only=true)` — blocks if new code has
-  no tests
-- `get_pr_risk_profile` — blocks if composite risk exceeds threshold
+- `get_changed_symbols` confirms that the code changed.
+- `get_untested_symbols(changed_only=true)` blocks completion if new code has no tests.
+- `get_pr_risk_profile` blocks completion if the combined risk score exceeds the limit.
 
-So the loop only exits when BOTH the model says "done" AND the stack's
-structural view agrees. Solves the classic Ralph failure mode where
-the model confidently declares victory on a broken change.
-
-Pick the plugin for exploratory runs; pick the harness for anything
-you plan to commit.
+The harness stops only when the agent says "done" and the checks agree.
+Use the plugin to explore an idea. Use the harness for changes you plan to
+commit.
 
 ### Outcomes grader
 
-The `outcomes` skill runs in a **fresh context window** — it has not seen
-the working agent's accumulated reasoning. This is the point: a long thread
-develops blind spots; a fresh context catches them.
+The `outcomes` skill reviews the work in a fresh context window. It starts
+without the working agent's conversation history, so it can catch details
+the agent has come to take for granted.
 
-Invoked automatically when `ralph-harness.sh --rubric <path>` is used.
-After each iteration:
+`ralph-harness.sh --rubric <path>` runs the grader after each iteration.
 
-1. Reads the rubric file (criteria with pass/fail conditions and weights)
-2. Evaluates each criterion against the PRD Progress section and repo state
-3. Returns a JSON verdict: `pass` or `fail` with specific remediation steps
-4. If `fail`, injects the gap report as context for the next iteration
+1. Read the rubric, which lists what counts as a pass for each criterion and how much it matters.
+2. Check each criterion against the PRD Progress section and the repo. The PRD describes the work the project calls for.
+3. Return a JSON verdict, `pass` or `fail`, with specific fixes when needed.
+4. On `fail`, pass the report to the next iteration.
 
-Loop exits only when BOTH the structural done-gate (risk + untested) AND
-the rubric grader agree the work is complete. Cap: `OUTCOMES_MAX_ITERATIONS`
-(default 5). Set in `~/.claude/settings.json`'s `env` block — written
-automatically by `install-reliability.sh` on fresh installs. Override per
-run with `export OUTCOMES_MAX_ITERATIONS=N` before calling the harness.
+Completion requires the grader and the harness checks for risk and test
+coverage to agree. `OUTCOMES_MAX_ITERATIONS` caps the run at 5 iterations
+by default. On fresh installs, `install-reliability.sh` sets it in the
+`env` block of `~/.claude/settings.json`. For a single run, use
+`export OUTCOMES_MAX_ITERATIONS=N` before starting the harness.
 
-The rubric format lives at `global-skills/outcomes/RUBRIC.md.template`.
-Project rubrics go at `.claude/outcomes/rubric.md` within the project repo.
+The rubric template lives at `global-skills/outcomes/RUBRIC.md.template`.
+Put a project rubric at `.claude/outcomes/rubric.md` in that repo.
 
 ### Superpowers
 
-The single biggest agent-reliability upgrade available in 2026.
-20+ skills enforcing real-engineering discipline:
+Superpowers is the single biggest agent-reliability upgrade available in 2026. Its 20+ skills enforce the steps an agent might otherwise skip, from clarifying the request to proving the fix works.
 
-- `brainstorming` — forces requirements clarification before code
-- `systematic-debugging` — 4-phase root-cause process, no speculative
-  fixes until evidence is gathered
-- `test-driven-development` — RED-GREEN-REFACTOR on new code
-- `verification-before-completion` — agent must prove the fix works
-  before claiming success
-- `requesting-code-review` — well-composed hand-off to reviewer
-  subagents (pairs with our judge skill)
+- `brainstorming` forces Claude to clarify requirements before coding.
+- `systematic-debugging` uses a 4-phase process to gather evidence and find the cause before trying a fix.
+- `test-driven-development` starts with a failing test, adds code to make it pass, then tidies the code.
+- `verification-before-completion` requires the agent to prove the fix works before claiming success.
+- `requesting-code-review` helps the agent hand off a change to a reviewer. It pairs with Judge.
 
-Caveat from the Claude Code community: total active skill count matters
-for context budget. Best practice is 20-25 active skills max; more than
-that causes skill-selection bias. Superpowers adds 20+ on its own, so
-after installing it, remove skills you don't actually use.
+The Claude Code community suggests keeping at most 20-25 skills active.
+Every active skill uses up context, and going past 25 makes Claude pick skills badly. Superpowers adds 20+ on
+its own, so remove skills you do not use after installing it.
 
 ### dwarvesf/claude-guardrails
 
-Security layer, hooks-based:
+Guardrails run as hooks, actions that Claude Code triggers at set points.
 
-- **UserPromptSubmit secret scanner** — before your prompt reaches the
-  model, scans it for live AWS keys, GitHub/Anthropic/OpenAI tokens,
-  PEM blocks, BIP39 phrases. Blocks and warns. Prevents both model
-  exposure and session-log leakage.
-- **PostToolUse injection scanner** — scans Read / WebFetch / Bash
-  output for known prompt-injection patterns. Warns (doesn't block)
-  so legitimate security content still works.
+- **UserPromptSubmit** checks your prompt for credentials before it reaches the model. It blocks live AWS keys, GitHub, Anthropic, and OpenAI tokens, PEM blocks, and BIP39 recovery phrases. Blocking them keeps them out of the model's input and the session log.
+- **PostToolUse** checks Read, WebFetch, and Bash output for known prompt-injection patterns. Prompt injection is text that tries to give the assistant instructions from inside a file, page, or tool result. The scanner warns but doesn't block, so people can still work with legitimate security material.
 
-Based on Trail of Bits + Lasso research + Anthropic's official security
-docs. Low overhead. Worth keeping on always.
+The checks draw on research from Trail of Bits and Lasso and on Anthropic's
+security documentation. They add little overhead. Always keep them on.
 
 ## Tier 2 — mentioned, not installed
 
@@ -374,37 +360,38 @@ the watcher unit isn't installed. A drop-in that already sets the flag is never 
 
 ### Guards that fail *open* (found during the 2026-07-30 Windows port)
 
-A reliability layer is only as good as its failure direction. Five scripts used
-this shape:
+Five scripts could skip all their work and still report success. They used
+this pattern to avoid running twice at the same time.
 
 ```bash
 exec 9>"$LOCK"
 flock -n 9 || { log "Already running — skipping."; exit 0; }
 ```
 
-MSYS/Git Bash ships no `flock`. The missing binary returns non-zero, which is
-indistinguishable from "lock held", so **every run took the skip branch and
-exited 0** — and callers reported success. `jcodemunch-reindex.sh` logged
-`reindex: OK` while indexing nothing; `telegram-gateway-poll.sh` exited on every
-invocation, so the gateway never polled at all. Nothing looked broken.
+MSYS/Git Bash ships without `flock`. The missing command and a held lock
+both sent the script down the skip branch. Every run exited 0, so callers
+reported success. `jcodemunch-reindex.sh` logged `reindex: OK` without
+indexing anything. `telegram-gateway-poll.sh` exited every time, so the
+gateway never polled.
 
-All five now use an atomic `mkdir` lock directory with an `EXIT` trap, which needs
-no external binary and behaves identically on Linux:
+All five scripts now claim an atomic `mkdir` lock directory. An `EXIT`
+trap removes it when the script ends. The same pattern works on Linux.
 
 ```bash
 if ! mkdir "$LOCK.d" 2>/dev/null; then log "Already running — skipping."; exit 0; fi
 trap 'rmdir "$LOCK.d" 2>/dev/null || true' EXIT
 ```
 
-**Generalisable rule:** a guard that conflates "the tool is missing" with "the
-condition is satisfied" will silently disable the work it guards. When a check
-short-circuits to success, verify the check itself ran. Two other latent bugs
-surfaced the same way and were *not* Windows-specific — the PostToolUse checkpoint
-hook compared `git rev-parse --show-toplevel` to a hardcoded path and so never
-fired on any platform, and `healthcheck.sh` asserted an exact SQLite version so a
-*newer, safer* SQLite failed the check.
+Check that the guard itself ran before accepting its result. If a missing
+tool looks like a successful check, the guarded work can disappear without
+an error.
 
-Platform specifics: `docs/WINDOWS-PORT.md`.
+The port also turned up two hidden bugs that affected every platform, not just Windows. The PostToolUse
+checkpoint hook compared `git rev-parse --show-toplevel` with a hardcoded
+path and never ran. `healthcheck.sh` required an exact SQLite version, so
+a newer, safer version failed the check.
+
+See `docs/WINDOWS-PORT.md` for platform details.
 
 ---
 
@@ -481,49 +468,33 @@ This is a known open gap, tracked in ROADMAP — not a regression.
 
 ## A cron job that never succeeds looks like one that has nothing to say
 
-`features/session-stats/stats.sh` (Sunday 08:00) exited 22 every week from install until
-2026-10-18 and no one noticed. It asked Langfuse for `limit=500` (the API max is 100),
-and `curl -sf` turned the HTTP 400 into a bare exit code, so `state/stats.log` held only
-"Querying Langfuse". A weekly report that never arrives is indistinguishable from a quiet
-week. It surfaced only because the cron catch-up run (`scripts/cron_catchup.py`) reports
-each job's exit code at boot.
+The Sunday 08:00 stats job failed every week from install until 2026-10-18, and no one noticed.
+`features/session-stats/stats.sh` asked Langfuse for `limit=500` when the
+API allows at most 100. The server returned HTTP 400, and `curl -sf` hid
+the error message. The script exited 22 and left only "Querying Langfuse"
+in `state/stats.log`. A weekly report that never arrives looks just like a quiet week. The failure surfaced only because `scripts/cron_catchup.py` prints each job's exit code at boot.
 
-Practical rules:
-
-- **Never `curl -sf` against an API whose error body matters.** Capture the HTTP code and
-  print the response body on failure; `stats.sh` now does.
-- **Respect documented page limits and page explicitly.** `stats.sh` reads
-  `/api/public/traces` 100 at a time, capped at 50 pages, and says so when truncated.
-- **Don't pass bulk data through environment variables.** Linux caps a single env string
-  at 128 KB; a week of traces (~400 KB) broke the old hand-off. Use a temp file
-  (`mktemp -d` + `trap … EXIT`).
-- **Drop a column that can only ever be zero.** The Claude Code Langfuse hook records no
-  token usage, so the Tokens column was removed rather than left reporting 0.
+- **Keep the server's error message.** Never use `curl -sf` against an API whose error message matters. `stats.sh` saves the HTTP status and prints the response body on failure.
+- **Stay within the API's documented page limit, and page explicitly.** `stats.sh` reads `/api/public/traces` 100 records at a time. It stops after 50 pages and says when it has cut the results short.
+- **Use a temporary file for bulk data.** Linux caps a single environment string at 128 KB. A week of traces (~400 KB) broke the old hand-off. `mktemp -d` creates a temporary directory and `trap … EXIT` cleans it up.
+- **Remove columns that can only ever be 0.** The Claude Code Langfuse hook records no token usage, so the report dropped the Tokens column.
 
 ---
 
 ## A standing red check is worse than no check
 
-`Skill frontmatter regression` failed on every PR for long enough that ROADMAP recorded
-its cause as "not readable without a token". While it stayed red, CI provided **zero**
-signal: a genuine regression on any later PR would have rendered identically to the
-standing failure, and the honest review question — "is this PR's CI clean?" — had no
-answer. It was one skill declaring a category absent from `VALID_CATEGORIES`.
+`Skill frontmatter regression` failed on every pull request for so long
+that ROADMAP listed the cause as "not readable without a token." The actual
+cause was one skill with a category missing from `VALID_CATEGORIES`.
 
-The reliability property is not "CI passes". It is **CI's output distinguishes good from
-bad**. A check that is always red has the same information content as a check that is
-always green.
+A check should help you tell whether a change broke something. While the
+check stayed red, a new regression looked exactly like the standing
+failure. Reviewers could not tell whether a pull request passed CI, the
+automated checks that run on changes.
 
-Practical rules:
-
-- **Fix or delete a persistently failing check.** Leaving it red while merging around it
-  trains everyone, human and agent, to merge past red.
-- **When merging with a red check, prove it is unrelated rather than assuming it.** The
-  cheap proof is running the same test against the base commit in a detached worktree —
-  identical failures there means pre-existing. Record that you did.
-- **"Fails for a reason not readable" is a finding, not a status.** The job log is
-  reachable via `gh api repos/<owner>/<repo>/actions/jobs/<id>/logs`; note that
-  `gh run view --log-failed` returned empty here while the API returned the assertion.
+- **Fix or remove a check that fails every time.** Merging around it teaches people and agents to merge past any red check.
+- **Before merging with a failed check, prove the failure is unrelated. Don't assume it.** The cheap proof: run the same test in a detached worktree, a separate checkout at the base commit. If it fails the same way there, the failure already existed. Record that you checked.
+- **Read the job log before deciding why the check failed.** Here, `gh run view --log-failed` returned nothing. `gh api repos/<owner>/<repo>/actions/jobs/<id>/logs` returned the failed assertion.
 
 ---
 

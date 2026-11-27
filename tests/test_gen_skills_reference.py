@@ -56,6 +56,14 @@ def test_vendored_skill_shows_upstream(tmp_path):
     assert "mattpocock/skills" in row_for(md, "teach")
 
 
+def test_vendored_skill_shows_attribution_source(tmp_path):
+    # ux-heuristics records its source in ATTRIBUTION.md, not UPSTREAM; it was listed as "repo".
+    repo, home = make_env(tmp_path)
+    d = skill(repo / "global-skills", "ux-heuristics", "Evaluate usability.")
+    (d / "ATTRIBUTION.md").write_text("- **Source:** https://github.com/wondelai/skills (`x/SKILL.md`)\n")
+    assert "vendored: wondelai/skills" in row_for(render(repo, home), "ux-heuristics")
+
+
 def test_user_only_invocation(tmp_path):
     repo, home = make_env(tmp_path)
     skill(repo / "global-skills", "retro", "Run a retro.", extra="disable-model-invocation: true\n")

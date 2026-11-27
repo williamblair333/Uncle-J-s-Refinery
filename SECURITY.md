@@ -17,17 +17,17 @@ on severity. We'll coordinate a disclosure timeline with you before publishing.
 
 ## Scope
 
-This project runs as a personal AI assistant stack on a private machine.
-Security-relevant components:
+This project runs a personal AI assistant on a private machine. The following
+components handle messages, credentials, or other security-sensitive work.
 
-- `scripts/telegram-gateway-poll.sh` — Telegram bot polling and message handling
-- `scripts/lib/tg_security.py` — Input sanitisation, rate limiting, injection detection
-- `install.sh` / `install-reliability.sh` — System-level installation scripts
-- `.env` — Credential storage (never committed; covered by `.gitignore`)
-- `hooks/discipline/edit-surface-guard.sh` — PreToolUse guard enforcing pre-mortem before surface file edits
-- `hooks/discipline/credential-guard.sh` — PreToolUse guard on every tool (matcher `*`): denies any call touching credential or system secret files, read-only included. Wired as `… || exit 1`, so a broken guard fails open, never locks tools out. Text matching, so obfuscated paths get through; not a sandbox
+- `scripts/telegram-gateway-poll.sh` — Checks Telegram for new messages and handles them
+- `scripts/lib/tg_security.py` — Cleans up input, limits how often a chat can send messages, and looks for attempts to slip instructions into input
+- `install.sh` / `install-reliability.sh` — Install components system-wide on the machine
+- `.env` — Stores credentials. Never commit it; `.gitignore` excludes it.
+- `hooks/discipline/edit-surface-guard.sh` — Runs before tool calls and requires a pre-mortem (a review of what could go wrong) before edits to surface files (scripts, config files, systemd units, the justfile, `CLAUDE.md`, and anything under `hooks/`, `scripts/` or `features/`; test modules under `tests/` are exempt)
+- `hooks/discipline/credential-guard.sh` — PreToolUse guard (runs before every tool call; matcher `*`): denies any call touching credential or system secret files, read-only included. Wired as `… || exit 1`, so a broken guard fails open, never locks tools out. Text matching, so obfuscated paths get through; not a sandbox
 - `scripts/live_preview/` — serves build images on 127.0.0.1 only. Host-header check (DNS rebinding), image-only inputs copied through one `O_NOFOLLOW` fd, generated stored filenames (the vendored page doesn't escape them), `~/.live-preview` at 0700
-- `~/.claude/hooks/pre-mortem-guard/` — Token-based enforcement layer: `token-guard.sh`, `surface-write-guard.sh`, `write-clearance-token.sh`
+- `~/.claude/hooks/pre-mortem-guard/` — Enforces the pre-mortem with a clearance-token file (a marker the pre-mortem skill writes when it passes), through `token-guard.sh`, `surface-write-guard.sh`, and `write-clearance-token.sh`
 - `scripts/jdocmunch-reindex.sh` — `LOCAL_ONLY_REPOS` allowlist forcing summaries/embeddings off for personal-context doc corpora
 - `~/.config/systemd/user/jdocmunch-watch.service.d/override.conf` — drop-in pinning the doc watcher's indexing posture (survives `watch-install`)
 
@@ -40,30 +40,34 @@ Security-relevant components:
 
 ### Rate-limit locking is best-effort on Windows (2026-07-30)
 
-`check_rate_limit` serialises reads/writes of its JSON state file with an
-exclusive file lock. `fcntl.flock` is POSIX-only, so the Windows port selects
-`msvcrt.locking` instead. Two behavioural differences matter:
+`check_rate_limit` uses an exclusive lock so only one worker at a time can
+read and update the JSON state file. On POSIX systems such as Linux, it uses
+`fcntl.flock`. On Windows, it uses `msvcrt.locking`. The Windows lock can time
+out, which affects how strictly the gateway can limit messages.
 
-- `msvcrt.locking` **gives up after ~10 s**, where `flock` blocks indefinitely.
-- On failure the helper returns `False` and the caller **proceeds without the
-  lock** rather than raising — deliberate, matching the surrounding fail-open
-  design (a lock we cannot take must not block a legitimate message).
+- `msvcrt.locking` **gives up after ~10 s**. `flock` waits indefinitely.
+- If the helper cannot get the lock, it returns `False`. The caller **proceeds
+  without the lock** instead of raising an error. This is deliberate: like the
+  rest of the gateway, it fails open, so a lock it cannot take never blocks a
+  legitimate message.
 
-Consequence: under heavy concurrent delivery on Windows, two workers could
-interleave a read-modify-write and undercount, letting a chat exceed 20
-messages/hour. The chat_id gate and input sanitisation are unaffected — this
-weakens throttling only, not authorisation. The gateway is single-consumer per
-token (`getUpdates`), so concurrency here should be rare in practice.
+If two Windows workers read the same count and write their updates at the same
+time, one update could overwrite the other. A chat could then exceed 20
+messages/hour. The chat ID check and input cleaning still apply. This weakens
+only the message limit, not the check on who may send. The gateway uses one
+`getUpdates` consumer per token, so two workers updating the counter at once
+should be rare in practice.
 
 If strict throttling on Windows is ever required, move the counter to a SQLite
 table with a transaction rather than a JSON file plus an advisory lock.
 
 ### Default (restricted) Telegram agent — no host access
 
-The default agent (any message without the `/work` prefix) runs with **no host access** as
-defense-in-depth behind the chat_id gate — the disclosure system prompt is no longer the only
-barrier. Enforced in `build_claude_argv()` (`tg_security.py`) via three independent default-deny
-layers:
+The default agent handles messages without the `/work` prefix. It runs with **no
+host access**. This adds a layer of protection behind the chat ID check, so the
+prompt that tells the agent what it may disclose is no longer the only barrier.
+Three independent controls in `build_claude_argv()` (`tg_security.py`) deny
+access by default; each holds even if the others fail.
 
 - **no `--dangerously-skip-permissions`** — headless `--print` cannot approve a permission prompt,
   so any tool (incl. ones added by future Claude Code versions) is denied
@@ -78,8 +82,10 @@ restricted path fails the suite). The `/work` agent is intentionally exempt — 
 
 ### Skill promotion (`promote`) hardening
 
-Promoting a Telegram skill draft installs it into `~/.claude/skills` (global, all sessions), so the
-`promote` path is a supply-chain surface. Controls (`tg_security.py`):
+A skill gives Claude reusable instructions. Promoting a Telegram skill draft
+installs it in `~/.claude/skills`, where Claude can use it in any session.
+Because a draft can affect future sessions, `promote` applies the following
+checks in `tg_security.py`.
 
 - **Whole-file injection scan** — `scan_skill_body` scans the entire draft, **frontmatter included**.
   A skill's `description:` is loaded by Claude in future sessions, so an injection hidden there is a
@@ -97,20 +103,25 @@ real protection is the restricted agent's removed action channel (above). Prose-
 
 ### getUpdates single-consumer (reliability invariant)
 
-The gateway is the **sole** `getUpdates` consumer (Telegram is single-consumer-per-token). A second
-no-offset consumer corrupted the shared offset for 22 days, freezing the bot and re-skipping a stale
-backlog (the message-flood incident). Stack-alert approvals route through the gateway via a state
-file, not a second `getUpdates` call. Re-introducing a second consumer is a regression.
+Only the gateway calls `getUpdates` to fetch messages for its Telegram token.
+Telegram allows only one reader per bot token. An offset tells Telegram where to
+resume. A second reader that omitted the offset corrupted the shared position
+for 22 days. The bot froze and repeatedly skipped old messages. This was the
+message-flood incident. Stack-alert approvals go through the gateway's state
+file, not a second `getUpdates` call. Adding a second reader is a regression.
 
 ### Local-only doc corpora — no remote egress from indexing (2026-08-15)
 
-Some indexed doc corpora are personal-context and must never reach a remote summarizer or an
-embeddings endpoint — notably a deliberately remote-less Obsidian vault holding personal notes
-and a frozen archive of migrated memory.
+Keep personal document collections on the machine when indexing them for search.
+Their contents must never go to a remote service for summarising or making
+embeddings (numeric representations used to find related text). For example: the
+Obsidian vault of personal notes, which deliberately has no git remote, and the
+frozen archive of migrated memory.
 
-`jdocmunch`'s `index_local` defaults are `use_ai_summaries=True` and `use_embeddings="auto"`, and
-both reach for whatever provider the environment exposes with **no log line and no prompt**. The
-posture is therefore forced explicitly, at three independent call sites:
+`jdocmunch` defaults to `use_ai_summaries=True` and `use_embeddings="auto"` when
+it runs `index_local`. Both will use whatever provider the environment offers,
+with **no log line and no prompt**. Because of that, the project forces
+local-only settings explicitly in three independent places:
 
 - **Cron path** — `LOCAL_ONLY_REPOS` in `scripts/jdocmunch-reindex.sh` is an allowlist (deliberately
   not a global default — flipping it would silently change behaviour for every other doc repo). A
@@ -127,16 +138,17 @@ posture is therefore forced explicitly, at three independent call sites:
   here, because the watcher's internal retry loop reports `active/running` with `NRestarts=0` while
   failing every rediscover cycle.
 
-Two properties worth knowing before changing any of it:
+Two things to know before changing any of this:
 
 - **File exclusions persist; the summarizer flag does not.** `extra_ignore_patterns` are stored in
   the manifest as `corpus_shape_patterns` and inherited by any later refresh that omits them — which
   is what makes the watcher (it passes no patterns) safe. `use_ai_summaries` has no such
   persistence, which is exactly why it must be re-asserted at every call site above.
-- **Indexing duplicates bytes.** `index_local` copies file contents into a raw mirror under
-  `~/.doc-index/local/<repo>/`, so indexing a secret-bearing corpus copies the secret into a store
-  outside that corpus's own repo. Exclude before the first index, or delete the index and rebuild —
-  editing the source afterwards does not reach the mirror.
+- **Indexing copies file contents.** `index_local` writes a copy under
+  `~/.doc-index/local/<repo>/`. If a file contains a secret, the copy puts that
+  secret outside the original repo. Exclude sensitive files before the first
+  run. If they are already indexed, delete the index and rebuild it with those
+  files excluded. Editing the source leaves the indexed copy in place.
 
 **Residual — narrower than first written; corrected 2026-08-16 against upstream source.**
 `jdocmunch-mcp watch` exposes no embeddings flag (unlike `index-local`, which gained
@@ -166,16 +178,16 @@ nothing logs that it happened.
 
 ## Telegram `/work` Agent — Elevated Access
 
-Messages prefixed `/work` route to a project-context Claude instance (cwd=PROJ_ROOT,
-project `CLAUDE.md` loaded). This agent can read the full codebase including `.env`
-and other sensitive files.
+Messages that start with `/work` go to a Claude agent running in the project root
+(cwd=PROJ_ROOT). It loads the project's `CLAUDE.md` and can read the entire
+codebase, including `.env` and other sensitive files.
 
-**Security boundary:** The `TELEGRAM_CHAT_ID` authorisation check is the sole access
-control gate. A compromised Telegram account grants full project-context Claude access.
-Every `/work` dispatch is logged with `ELEVATED:` prefix in `state/telegram-gateway.log`.
+The `TELEGRAM_CHAT_ID` check is the only access control. Anyone who takes over
+the authorised Telegram account gains the same project access as this agent.
+The gateway logs every `/work` request with the prefix `ELEVATED:` in
+`state/telegram-gateway.log`.
 
-Treat your Telegram account security (2FA, app passwords) as equivalent to SSH key
-access to this machine.
+Guard your Telegram account's security (2FA, app passwords) as carefully as an SSH key to this machine.
 
 ## Dependency Security Fixes
 

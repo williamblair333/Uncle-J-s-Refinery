@@ -90,11 +90,13 @@ def read_skill(skill_md: Path, name: str = None, origin: str = "") -> dict:
 
 
 def upstream_origin(skill_dir: Path) -> str:
-    up = skill_dir / "UPSTREAM"
-    if up.is_file():
-        m = re.search(r"github\.com/([\w.-]+/[\w.-]+)", read(up))
-        if m:
-            return f"vendored: {m.group(1)}"
+    # A vendored skill names its source in UPSTREAM or, in older imports, ATTRIBUTION.md.
+    for name in ("UPSTREAM", "ATTRIBUTION.md"):
+        up = skill_dir / name
+        if up.is_file():
+            m = re.search(r"github\.com/([\w.-]+/[\w.-]+)", read(up))
+            if m:
+                return f"vendored: {m.group(1)}"
     return "repo"
 
 

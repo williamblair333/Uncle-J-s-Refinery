@@ -1,7 +1,6 @@
 # Antigravity CLI (agy): headless use from scripts and other agents
 
-Gemini CLI stopped serving personal Google accounts (AI Pro, Ultra, free) on 2026-06-18.
-`agy` is the replacement and runs on the Google AI Pro subscription.
+Use `agy` to run Gemini from a script or another assistant without opening an interactive session. It runs on a Google AI Pro subscription. Gemini CLI stopped serving personal Google accounts (AI Pro, Ultra, and free) on 2026-06-18. `agy` replaces it.
 
 ## Install
 
@@ -16,10 +15,10 @@ just agy-login                           # one more sign-in, for jobs: see "The 
 
 | File | What it does |
 |---|---|
-| `install.sh` | Runs the five steps below; every step merges and keeps a `.bak`. |
+| `install.sh` | Runs the five steps below. Each step merges changes and saves a `.bak` backup. |
 | `agy-jail` | The empty root every `ask_agy` job starts in. See "The jail" below. |
-| `sandbox-run` | The one way agy runs code: bubblewrap with no network, an empty home (only uv bound in) and the current directory the only writable path. agy's own `--sandbox` keeps the network and the user (probed 2026-10-26). Linked to `~/.local/bin`. |
-| `permissions.json` | Read-only shell allow list, MCP allow list (read-oriented servers, Serena read tools only, no DuckDB), deny list for destructive commands and index-deleting tools. |
+| `sandbox-run` | The only way agy runs code. It uses bubblewrap, a tool that limits what a process can see and use. It cuts off network access and gives the process an empty home with only uv mounted inside. Only the current directory is writable. agy's own `--sandbox` keeps network access and the user account (probed 2026-10-26). Find the wrapper in `~/.local/bin`. |
+| `permissions.json` | Lists which shell commands and MCP tools agy may use. MCP servers give an assistant access to tools. The list allows read-only shell commands and servers built for reading, including only Serena's read tools. It excludes DuckDB and blocks destructive commands and tools that delete indexes. |
 | `apply_permissions.py` | Merges those rules into `~/.gemini/antigravity-cli/settings.json` (keeps agy's own keys). |
 | `sync_mcp.py` | Copies Claude's user-scope MCP servers (`~/.claude.json`) into `~/.gemini/config/mcp_config.json` (mode 0600; agy-only servers kept). Always adds the agy-only `fetch` server (pinned `mcp-server-fetch`): agy's own `read_url` is not registered in headless mode. Re-run when registrations change. |
 | `install_rules.py` + `rules-block.md` | Marker-delimited block in `~/.gemini/GEMINI.md` that includes `CLAUDE.md` via `@[...](path)` plus the Claude→agy translations. The rest of the file is left alone. |
@@ -38,9 +37,8 @@ transcripts from local-only projects. Put what agy needs from past sessions in t
 
 ## The jail
 
-`ask_agy` starts every job through `agy-jail`, an empty-root bubblewrap namespace. Deny rules aren't
-a wall: on 2026-11-07 a `read_file` deny on a canary refused `read_file` while `cat` returned the
-contents. A job sees only its repo (writable), agy's own state, the tools and MCP servers' code
+`ask_agy` starts every job through `agy-jail`, which uses bubblewrap to start the job with an empty view of the filesystem.
+Deny rules alone don't keep files private. In a test on 2026-11-07, a rule stopped `read_file` from opening a test file, but `cat` still printed it. The rule applied only to `read_file`. The jail hides files from every tool, not just the ones a rule names. A job sees only its repo (writable), agy's own state, the tools and MCP servers' code
 (read-only) and `config/agy-jail-extra.txt`. It refuses to start in a `config/delegate-local-only.txt`
 path, or in your home, and masks those paths and secret-named files inside the repo. Its MCP servers
 are agy's children, so they're inside too. Indexes and package caches live in
@@ -64,17 +62,15 @@ Verified 2026-11-07 with real agy jobs: `cat`, `read_file`, jcodemunch `index_fo
 
 ## Why the wrapper exists
 
-In print mode agy exits 0 with `status: SUCCESS` even when the work did not happen:
+In print mode, which runs a prompt without the interactive interface, agy exits 0 with `status: SUCCESS` even when the work did not happen:
 
 - **Deny rule hit:** the tool step ends in `ERROR`, `denied_actions` stays empty, and the
   model often answers "DONE" anyway.
-- **Command on no list:** it is soft-denied (`denied_actions` set) and the response is empty.
+- **Command on neither list.** agy sets `denied_actions` and returns an empty response. This is a soft deny.
 
-`ask_agy.py` reads the stream-json events and fails on either, naming the command.
+`ask_agy.py` reads the events agy emits as it works. If it detects either kind of denial, it fails and names the command.
 
-A soft deny also ends the turn, so a prompt that invites "check it yourself" gets an empty
-answer the moment the model reaches for `python` or `pytest`. `referee.py` names the
-allowed commands in its prompt, read from `permissions.json`.
+A soft deny also ends the turn. So if a prompt says "check it yourself" and the model runs `python` or `pytest`, which aren't allowed, the answer comes back empty. `referee.py` reads the allowed commands from `permissions.json` and names them in its prompt.
 
 ## Models
 

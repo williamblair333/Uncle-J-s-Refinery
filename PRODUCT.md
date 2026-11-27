@@ -2,21 +2,25 @@
 
 ## Core job
 
-An agent working in any repo on this machine gets structured retrieval — symbols,
-sections, rows, prior decisions — instead of brute-force file reading, and the
-person supervising it gets work that is checked before it is called done.
+An agent can look up the piece it needs in any repo on this machine. It can find
+a function or other named piece of code, a section in a document, a row in a
+table, or a past decision without reading whole files. The person supervising
+the agent gets work that is checked before anyone calls it done.
 
 ## Users
 
-One developer (William) plus the agents running under their account, on Linux and
-Git Bash on Windows. They already have git, Python 3.11+, Docker on Linux, and
-the Claude Code CLI. They do not want to hand-register MCP servers, hand-run
-index refreshes, or discover a broken retrieval path mid-task.
+William and the agents that run under William's account use the toolkit on
+Linux and in Git Bash on Windows. They already have git, Python 3.11+, Docker on
+Linux, and the Claude Code CLI (its command-line interface). An MCP server gives
+an assistant access to tools such as code search. Setup should register those
+servers for William. The toolkit should keep its search indexes up to date and
+catch broken lookups before they interrupt a task.
 
 ## Success
 
-- Retrieval routes through the stack rather than `grep`: measured by
-  `get_session_stats` token savings, not by intention.
+- Agents use the toolkit for lookups they would otherwise do with `grep`.
+  Success is the token savings `get_session_stats` measures (tokens are chunks
+  of text the model processes), not the intention to use the toolkit.
 - `healthcheck.sh` reports all servers reachable and the index fresh.
 - A new capability shipped here installs on a clean machine from the documented
   steps alone.
@@ -30,47 +34,53 @@ index refreshes, or discover a broken retrieval path mid-task.
 3. `./install.sh`
 4. `./healthcheck.sh`
 
-Every command above appears in `README.md`; the gate fails on drift between the
-two.
+Every command above also appears in `README.md`. The first-run gate fails if the two differ.
 
 ## Non-goals
 
-- Hosting anything. This is a local-first toolkit, not a service.
-- Replacing Claude Code's own memory. The local stores are canonical; native
-  memory mirrors them.
+- Hosting anything. The toolkit runs on your machine. It isn't a service.
+- Replacing Claude Code's own memory. The local stores are the source of truth.
+  Claude Code's memory mirrors them.
 - Multi-user support. One account, one machine, plus the Windows port.
-- Cloud embedding providers on the default path. Offline ONNX stays the default.
+- Using a cloud provider by default to make embeddings, which are numeric
+  representations that help find related text. The toolkit uses an offline ONNX
+  model by default.
 
 ## UI principles
 
-- Terminal output is the interface. Default output is short; detail is opt-in.
-- A failure names the thing that failed, the reason, and the next command to run.
-- No raw tracebacks to the user; the traceback goes to a log and the message
-  stays readable.
-- Anything that blocks (pre-mortem, the first-run gate) names its override in
-  the same message, so the way forward is never a guess.
-- Silence means success. Scripts that succeed do not narrate.
+- The terminal is the interface. Show short messages by default and give users
+  a way to ask for detail.
+- Say what failed, why it failed, and which command to run next.
+- Never show a raw traceback (the record of where an error occurred) to the
+  user. Put it in the log and keep the terminal message readable.
+- If a check stops the task, tell the user how to override it in the same
+  message. This applies to the pre-mortem (a check for what could go wrong) and
+  the first-run gate.
+- When a script succeeds, it stays quiet.
 
 ## Verification scope — read this before trusting the block below
 
-The `verify:` block covers the **product-quality subsystem** — the piece a
-clean machine can exercise without the Claude Code CLI. It does **not** yet
-prove the full `install.sh` path, because that registers MCP servers into a
-Claude Code installation that does not exist inside a container, and pulls the
-three jMunch packages plus the ONNX encoder from git.
+The `verify:` block checks the **product-quality subsystem**, which can run on a
+clean machine without Claude Code. It leaves the full `install.sh` path
+unverified. The installer needs Claude Code to register MCP servers. It also
+pulls the three jMunch packages and the ONNX encoder from git.
 
-That gap is a known limitation, not a pass, for the block below. The full path
-has its own gate since 2026-10-22: `just install-gate` runs the real
-`./install.sh --non-interactive --skip-optional` in a fresh `debian:bookworm-slim`
-container with a `claude` shim that records every `mcp add`, and a host-mounted uv
-cache as the wheel set (`scripts/clean-install-gate.sh`). It needs Docker and
-network, takes minutes, and doesn't prove the servers connect (no real Claude
-Code) or that plugins install; `healthcheck.sh` on the host still owns that.
+Treat that gap as a known limitation of the block below, not a pass.
 
-The core task below is not a `--help` call: it validates a real brief end to end
-— parsing, expectation adequacy, and README drift — and writes its verdict to a
-file. That is the gate's own job minus the container step, which it cannot run
-inside a container.
+Since 2026-10-22, `just install-gate` has checked the full installer separately.
+It runs `./install.sh --non-interactive --skip-optional` in a fresh
+`debian:bookworm-slim` container. A stand-in for `claude` records each `mcp add`
+command. The container uses prebuilt Python packages from the host's uv cache
+(`scripts/clean-install-gate.sh`). This check needs Docker and network access
+and takes minutes. The container run can't check that the servers connect or
+that plugins install, because it has no real Claude Code. Run `healthcheck.sh`
+on the host for that.
+
+The check below isn't a quick `--help` call. It runs the gate's own job on a
+real brief from start to finish: it reads the brief, checks whether its
+expectations are sufficient, and looks for differences between the brief and the
+README. It writes its verdict to a file. The only part it skips is the container
+step, which can't run from inside a container.
 
 ```yaml
 verify:

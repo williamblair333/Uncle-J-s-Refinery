@@ -1,8 +1,6 @@
 # jscrub
 
-Invisible-Unicode hygiene for text files: find and remove the zero-width
-characters, bidi controls, tag characters, private-use codepoints,
-noncharacters and space homoglyphs that break diffs, `grep`, and copy-paste.
+Find and remove Unicode characters that are hard to see but can break diffs, `grep`, and copy-paste. A lookalike space, for example, can make a search miss text that looks like a match. The tool checks for zero-width characters, bidi controls that affect reading order, tag characters, private-use codepoints, noncharacters, and lookalike spaces.
 
 ```bash
 ./scripts/jscrub/jscrub --help
@@ -11,16 +9,16 @@ noncharacters and space homoglyphs that break diffs, `grep`, and copy-paste.
 ./scripts/jscrub/jscrub audit . --include '*.py' --quiet
 ```
 
-Stdlib-only, Python 3.10+. No venv, no service, no network.
+Runs on Python 3.10+ using only its standard library. It needs no virtual environment, background service, or network access.
 
 ## Commands
 
 | Command | Writes? | Use |
 |---|---|---|
 | `inspect PATH…` | never | What invisible characters are in here, and where |
-| `clean PATH…` | stdout by default; `-i` to rewrite | Remove them |
-| `audit PATH…` | never | Tree sweep with a CI-shaped exit code |
-| `check-vendor UPSTREAM` | never | Has the vendored engine drifted? |
+| `clean PATH…` | Prints by default. Use `-i` to rewrite | Remove them |
+| `audit PATH…` | never | Scans a directory and exits with a code that CI can act on |
+| `check-vendor UPSTREAM` | never | Does the bundled engine still match its source? |
 
 Directories are walked by every command. `.git`, `node_modules`, `__pycache__`,
 `.venv`, `dist`, `build` and friends are skipped.
@@ -33,23 +31,20 @@ Directories are walked by every command. `.git`, `node_modules`, `__pycache__`,
 2  at least one target could not be scanned
 ```
 
-The three-way split is the whole point of the `audit` command. A tool that
-collapses "scanned it, it's clean" into "never managed to scan it" reports a
-green tree it never looked at. **Treat `2` as a failure in CI**, not a pass:
+An `audit` run reports whether it found a problem, found clean files, or could not finish checking. A skipped file might still contain bad characters. **Treat `2` as a failure in CI**, not a pass:
 
 ```bash
 jscrub audit . --include '*.md' || exit 1
 ```
 
-When a run produces both findings and skips, the exit code is `2` — an
-unchecked file is an unknown, and an unknown outranks a known finding.
+If the tool finds problems and also skips files, it exits `2`, not `1`. A file it couldn't check is an unknown, and an unknown counts for more than a problem it found.
 
 (argparse also exits `2` on a usage error; those are distinguishable by the
 `usage:` banner on stderr.)
 
 ## Safety properties
 
-These are not incidental — each one has a named test in `test_cli.py`.
+Each guarantee has a named test in `test_cli.py`.
 
 - **Byte-faithful I/O.** Files are read and written as bytes. CRLF line endings
   survive, a leading UTF-8 BOM is preserved, and a missing trailing newline is
@@ -87,8 +82,7 @@ them visibly changes the text. `--strip-emoji-glue` opts into removing them.
 
 ## Vendored engine
 
-`text_unicode.py` is vendored, **not** first-party. Do not edit it — changes
-are destroyed on the next re-vendor.
+`text_unicode.py` is vendored: this repo keeps a copy of a file from another project. **Don't edit it.** The next time someone copies it in again from upstream, local edits are lost.
 
 | | |
 |---|---|
@@ -99,8 +93,7 @@ are destroyed on the next re-vendor.
 | License | MIT — Copyright (c) 2026 Guillaume Meyer and contributors |
 | Vendored | 2026-09-01 |
 
-It is taken unmodified. The only local addition is a 12-line provenance
-comment block above the module docstring, so:
+The only local addition is a 12-line comment above the module docstring (the description at the top of the file) that records where it came from. So:
 
 ```bash
 tail -n +13 scripts/jscrub/text_unicode.py   # == the upstream file, byte for byte
@@ -121,22 +114,16 @@ jscrub check-vendor
 #   unmodified since vendoring  (sha256 ed86ed9715f40e30…)
 ```
 
-The first check compares against `UPSTREAM_BODY_SHA256` in `cli.py`, so it runs
-anywhere, CI included. The upstream checkout now lives in the main checkout at
-`reviewed/watermarks-remover` (gitignored), so pass that path for the second.
+The first check compares a fingerprint of the file with `UPSTREAM_BODY_SHA256` in `cli.py`. It runs anywhere, including CI. For the second check, pass the upstream copy at `reviewed/watermarks-remover` in the main checkout (not in a worktree). Git ignores that directory.
 
 `just audit` (`scripts/jscrub/audit-repo.sh`) runs `check-vendor` plus `audit`
 over git-tracked text files, and CI job `test-jscrub` runs the unit tests and
 then the same script. Both are read-only. `clean`, `--in-place` and
 `--follow-symlinks` are deliberately not wired into any automation.
 
-The pinned digest was recorded while a byte comparison against the real
-upstream checkout passed, so it is anchored to upstream's bytes rather than
-merely to our own copy.
+The maintainers recorded the fingerprint after checking that the file matched the upstream copy byte for byte.
 
-**It is a drift check, not a tamper seal.** The pin lives in the same repo and
-the same commit as the file it certifies, so anyone who can edit one can edit
-the other. Git history covers the adversarial case; this covers accidents.
+**This catches accidents; it can't prove nobody tampered with the file.** Someone with write access can change both the file and the fingerprint in the same commit. Check Git history when investigating deliberate changes.
 
 To re-vendor: copy the upstream file in, re-apply the 12-line header, bump the
 commit and date above, run `jscrub check-vendor` and paste the computed digest
@@ -158,9 +145,7 @@ use upstream directly; it has a Docker service and a much wider format matrix.
 
 Options live in one table at the top of `cli.py` — `ENGINE_OPTS`, `IO_OPTS`,
 `WRITE_OPTS`. Each row carries its flags, its help text, and the engine keyword
-it maps to. Adding a knob is one row: the argparse wiring, the `--help` output
-and the kwargs handed to the engine all derive from it, so they cannot drift
-apart. `TestOptionTableIsSingleSource` asserts every declared dest exists on the
+it maps to. Adding an option takes one row: the argparse wiring, the `--help` output and the kwargs handed to the engine all derive from it, so they cannot drift apart. `TestOptionTableIsSingleSource` asserts every declared dest exists on the
 parsed namespace and that the derived kwargs match the engine signatures.
 
 ## Tests

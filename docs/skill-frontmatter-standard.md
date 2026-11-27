@@ -1,7 +1,9 @@
 # Skill Frontmatter Standard
 
-Adapted from the hermes-agent SKILL.md convention (NousResearch).
-All Refinery skills should conform to this spec.
+Use this format for every Refinery skill. Frontmatter is the block at the
+top of a skill file that tells the assistant what the skill does and what
+it needs. The format comes from the hermes-agent SKILL.md convention
+(NousResearch).
 
 ## Full template
 
@@ -26,20 +28,20 @@ related_skills: [blue-team, outcomes]  # loosely related (not hard deps); omit i
 | Field | Notes |
 |---|---|
 | `name` | Must match the directory name exactly |
-| `description` | One sentence; no period; shown in `/skills` listing |
-| `version` | Semver; bump minor on behavior changes, patch on wording |
+| `description` | Write one sentence with no period. It appears in the `/skills` listing. |
+| `version` | Use semantic versioning. Increase the middle number for behavior changes. Increase the last number for wording changes. |
 
 ## Optional fields
 
 | Field | Notes |
 |---|---|
-| `platforms` | Omit = universal. Use `[linux]` for cron/systemd/hook skills |
+| `platforms` | Leave this out if the skill works everywhere. Use `[linux]` for skills that rely on cron, systemd, or hooks. Cron schedules jobs. Systemd manages services. Hooks run when an event happens. |
 | `category` | Omit only for uncategorized experiments |
-| `tags` | At least 2–4; include the most likely search terms |
-| `prerequisites.commands` | Tools that must be on PATH (git, gh, uv, jcodemunch) |
-| `prerequisites.env_vars` | Env vars the skill reads; omit the `[]` if empty |
+| `tags` | At least 2–4 tags. Choose words someone would search for. |
+| `prerequisites.commands` | List required command-line tools (git, gh, uv, jcodemunch). They must be on PATH, the list of directories your shell searches for commands. |
+| `prerequisites.env_vars` | List the environment variables the skill reads. These are settings it gets from the process that runs it. Leave out the `[]` if the list is empty. |
 | `prerequisites.skills` | Other skills that must run first in the same session |
-| `related_skills` | Navigation hints; not enforced |
+| `related_skills` | Hints that point readers to related skills. Nothing enforces them. |
 
 ## Category list
 
@@ -55,12 +57,13 @@ related_skills: [blue-team, outcomes]  # loosely related (not hard deps); omit i
 
 ## Migration priority
 
-Skills that fire every session (pre-mortem, smart-review, session-end-checklist, prior-art-check)
-were migrated first as the pilot. Remaining 45+ skills: migrate opportunistically when editing.
+The first skills to switch were the ones that run every session
+(pre-mortem, smart-review, session-end-checklist, prior-art-check).
+Switch the remaining 45+ skills as you edit them.
 
 ## Differences from hermes
 
-- No `metadata.hermes.*` nesting — all fields are top-level
-- No `author` or `license` (all Refinery-internal)
-- Added `prerequisites.skills` — explicit skill dependency graph
-- Categories are Refinery-specific (not hermes category names)
+- Put all fields at the top level without a `metadata.hermes.*` wrapper.
+- Leave out `author` and `license` because these skills are internal to Refinery.
+- Use `prerequisites.skills` to name the skills that must run before this one.
+- Use Refinery's category names.

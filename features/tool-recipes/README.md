@@ -1,15 +1,15 @@
 # tool-recipes
 
-Hard, useful jobs become one-command tools that any session, on any host, can find and run instead of working them out again. The rules a tool meets are in [docs/TOOLS-STANDARD.md](../../docs/TOOLS-STANDARD.md).
+Hard, useful jobs become one-command tools. Any session, on any host, can find and run them instead of working them out again. The rules every tool must meet are in [docs/TOOLS-STANDARD.md](../../docs/TOOLS-STANDARD.md).
 
 | Piece | What it does |
 |---|---|
-| `scripts/tools.py` | `list` searches every project's recipes, `lint` checks a repo's tools against the standard, `sync` writes the global justfile. |
+| `scripts/tools.py` | `list` searches every project's recipes. `lint` checks a repo's tools against the standard. `sync` writes the global justfile, the shared list of recipes that the command runner loads. |
 | `scripts/inbox.py` | Notes between projects: `send`, `list`, `done`, and the session-start `notice`. |
-| `scripts/tool_miner.py` | Reads recent transcripts and lists jobs done by hand in 3+ sessions, as candidates for tools. |
+| `scripts/tool_miner.py` | Reads recent session transcripts and lists jobs done by hand in 3+ sessions as candidates to turn into tools. |
 | `hooks/session-start.sh` | Shows unread inbox notes. Re-syncs the global justfile in the background when a project's justfile is newer. Always exits 0. |
-| `template.sh` | Starting point for a new tool. Passes every lint rule except the test. |
-| `install.sh` | Registers the hook in `~/.claude/settings.json` (marker-keyed, backup, atomic) and runs the first sync. `--check`, `--dry-run`, `--uninstall`. |
+| `template.sh` | Start here when writing a tool. The template meets every lint rule apart from the test requirement. |
+| `install.sh` | Registers the hook in `~/.claude/settings.json` and runs the first sync. The hook entry carries a marker, so a rerun replaces it instead of adding a second copy. It saves a backup first and writes the new file in one step, so a crash can't leave it half-written. `--check`, `--dry-run`, `--uninstall`. |
 
 ## Everyday use
 

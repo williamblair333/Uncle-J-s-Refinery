@@ -1,18 +1,16 @@
 # Stack reference
 
-One-page-per-tool reference. See `../CLAUDE.md` for the routing policy
-and `../README.md` for install/uninstall.
+Use this reference to see what each tool does and when to reach for it. See `../CLAUDE.md` for the rules Claude follows when choosing tools and `../README.md` for setup and removal.
 
 ---
 
 ## MCP registration (and the Windows variant)
 
-On Linux the servers are registered through `install.sh` / `claude mcp add`
-(user scope). On the Windows host they are registered by a **machine-local,
-gitignored** project-scoped `.mcp.json` at the repo root — one-time setup
-`cp scripts/win/mcp.json .mcp.json` — pinned to the venv binaries. The file
-must never be committed: project scope shadows user scope per server name, so
-a shared copy with `C:\...` paths kills all five stack servers on Linux.
+An MCP server gives an assistant tools it can call, such as a tool that fetches a function from your code. MCP stands for Model Context Protocol. It defines how the assistant and server talk to each other.
+
+On Linux, `install.sh` uses `claude mcp add` to register the servers for your user account. On Windows, run `cp scripts/win/mcp.json .mcp.json` once from the repo root. The resulting `.mcp.json` points to the executables in the project's virtual environment, which keeps the tool versions tied to this setup.
+
+**Keep that file local and out of Git.** This repo already ignores it. Claude Code uses the project's settings when the same server name appears in both places. If you commit the Windows file, Linux tries to launch all five stack servers from `C:\...` paths, and all five fail to start.
 
 | Server | Invocation | Note |
 | ------ | ---------- | ---- |
@@ -20,65 +18,42 @@ a shared copy with `C:\...` paths kills all five stack servers on Linux.
 | jdatamunch | *(no arguments)* | bare invocation **is** the stdio server |
 | jdocmunch  | `serve` | has the subcommand, **no** `--transport` flag |
 
-**The three CLIs are not uniform.** Passing `--transport stdio` to jdatamunch or
-jdocmunch makes them exit immediately; the only symptom is
-`MCP error -32000: Connection closed`. Verify with `claude mcp list`, which prints
-the resolved command — `claude mcp get <name>` no longer does.
+Each command-line tool has its own launch syntax. If you pass `--transport stdio` to jdatamunch or jdocmunch, it exits immediately. All you see is `MCP error -32000: Connection closed`. Use `claude mcp list` to see the command Claude Code will run. `claude mcp get <name>` no longer shows it.
 
-Project scope means the servers are live only when Claude Code runs from this
-repo, and that first run would normally raise a trust prompt; the three names are
-pre-approved under `projects[<repo>].enabledMcpjsonServers` in `~/.claude.json`.
+Project scope means these servers run only when Claude Code opens this repo. The first run would usually ask you to trust them. This host already approves the three names under `projects[<repo>].enabledMcpjsonServers` in `~/.claude.json`.
 
-**Do not run `jcodemunch-mcp init` / `install claude-code` on this host.** It
-registers via floating `uvx` (unpinning the stack), appends the Code Exploration
-Policy to *global* `~/.claude/CLAUDE.md`, writes hooks into *global*
-`~/.claude/settings.json`, and resolves "project" against the current working
-directory rather than this repo.
+**Do not run `jcodemunch-mcp init` / `install claude-code` on this host.** Those commands register an unpinned version through `uvx`. They also add the Code Exploration Policy to the global `~/.claude/CLAUDE.md` and write hooks to the global `~/.claude/settings.json`. Hooks are commands that run when an event occurs. The setup treats your current directory as the project, wherever you happen to run it.
 
-`scripts/win/mcp.json` deliberately names `.venv\Scripts\*.exe` explicitly rather
-than the `.venv/bin` compat symlink: Claude Code launches MCP servers via
-`CreateProcess`, not through bash, so neither MSYS `.exe` suffixing nor the
-directory symlink can be relied on there. Full detail in `WINDOWS-PORT.md`.
+`scripts/win/mcp.json` spells out the `.venv\Scripts\*.exe` paths. Claude Code launches servers with Windows' `CreateProcess`, not through Bash. So neither the MSYS `.exe` suffix nor the `.venv/bin` compatibility symlink can be relied on. See `WINDOWS-PORT.md` for details.
 
 ---
 
 ## jMunch Console (optional browser GUI)
 
-**What it does.** Local browser control panel for the jMunch MCP suite.
-Surfaces indexed repos, live token-savings counter, Claude Code sessions
-browser (with resume), MCP process control, jcm config editor, and
-log/diagnostic tails — all at `http://127.0.0.1:8765`.
+Open `http://127.0.0.1:8765` to see what jMunch has indexed, resume a Claude Code session, or check running servers and their recent logs.
 
-**How to start.** `bash scripts/jmunch-console.sh` (passes `JMUNCH_MCP_BIN`
-to the venv binary; optional port arg). Stop with Ctrl-C.
+Start the console with `bash scripts/jmunch-console.sh` and press Ctrl-C to stop it. The script passes `JMUNCH_MCP_BIN` to the virtual environment's executable. You can also pass a port.
 
-**Update.** `git -C review/jmunch-console pull`
-Surfaced automatically by `scripts/check-stack-freshness.sh`.
+Update with `git -C review/jmunch-console pull`. `scripts/check-stack-freshness.sh` tells you automatically when an update is available.
 
-**Key panels.**
-- *Index & Watcher* — repo cards: symbol/file counts, freshness, watcher state.
-- *Savings* — live lifetime counter (polls `~/.code-index/_savings.json` every 4s) + 30d receipt breakdown.
-- *Sessions* — browse/resume past Claude Code sessions by repo.
-- *Processes* — live jcm server PIDs; kill/observe without hunting `ps`.
-- *Config* — typed GUI editor for `config.jsonc` (all keys, grouped, save/reset).
-- *Diagnostics* — tails `jcw_*.log` watcher logs + `_session_live.json` heartbeat.
+- *Index & Watcher* shows how many files and symbols each repo has indexed, how fresh the index is, and whether the file watcher is running.
+- *Savings* reads `~/.code-index/_savings.json` every 4s. It shows total token savings and a 30d breakdown. Tokens are the pieces of text a model reads or writes.
+- *Sessions* lets you find and resume past Claude Code sessions by repo.
+- *Processes* lists running jCodeMunch servers and their process IDs. You can inspect or stop them without looking them up in `ps`.
+- *Config* groups the settings in `config.jsonc` and lets you edit, save, or reset them.
+- *Diagnostics* shows the latest lines of the `jcw_*.log` watcher logs and the live status signal from `_session_live.json`.
 
-**Phase 1 (current).** GET-only, `127.0.0.1`-only (hardcoded), no auth required by
-default. Mutations (config write, launch, session resume) behind `ALLOW_LAUNCH`
-which requires `JMUNCH_CONSOLE_READ_ONLY` to be unset — off by default.
+**Phase 1 (current).** The console listens only on `127.0.0.1`, and that is fixed in the code, so only this machine can reach it. By default it accepts only GET requests, which read information, and requires no sign-in. To save settings, launch a process, or resume a session, enable `ALLOW_LAUNCH` and leave `JMUNCH_CONSOLE_READ_ONLY` unset.
 
-**Not yet wired.** healthcheck.sh entry (deferred until stable over a few sessions).
+There's no healthcheck.sh entry yet. It's on hold until the console has run reliably for a few sessions.
 
-**Source.** `review/jmunch-console/` (nested git repo; outer tree ignores its contents).
-MIT licensed. Upstream: `github.com/jgravelle/jmunch-console`.
+The MIT-licensed source lives in `review/jmunch-console/`, a separate Git repo inside this one. The outer repo ignores its contents. Upstream is `github.com/jgravelle/jmunch-console`.
 
 ---
 
 ## jCodeMunch (primary code retrieval)
 
-**What it does.** Tree-sitter parse + symbol index + byte-precise
-retrieval for 70+ languages. Replaces "Read the whole file to find one
-function" with "fetch exactly this symbol."
+Ask jCodeMunch for a function and it can return just that function. It uses Tree-sitter, a parser that breaks source code into meaningful parts, to build an index of named parts such as functions and classes. These are called symbols. The index lets it fetch the exact bytes for a symbol in 70+ languages.
 
 **Typical tools.** `search_symbols`, `get_symbol_source`,
 `get_file_outline`, `get_repo_outline`, `find_references`,
@@ -87,66 +62,46 @@ function" with "fetch exactly this symbol."
 `get_hotspots`, `get_dependency_cycles`, `get_pr_risk_profile`,
 `plan_refactoring`, `search_ast`, `winnow_symbols`, `plan_turn`.
 
-**Reported efficiency.** ~95% aggregate reduction vs brute-force reading
-across public benchmark repos (Express, FastAPI, Gin). A/B test on a Vue
-3 production codebase: 80% task success vs 72% native, 10.5% cache-token
-reduction.
+**Reported benchmarks.** Across Express, FastAPI, and Gin, the project reports a ~95% aggregate reduction compared with reading files in full. In a comparison on a Vue 3 production codebase, task success was 80% with jCodeMunch vs 72% with native tools. Cache-token use fell by 10.5%.
 
-**Source here.** `../../jcodemunch-mcp-main/` — full whitepaper at
-`jcodemunch_whitepaper.pdf`.
+The source is in `../../jcodemunch-mcp-main/`. See `jcodemunch_whitepaper.pdf` for the full report.
 
 ---
 
 ## jDataMunch (primary tabular retrieval)
 
-**What it does.** Indexes CSV / tabular files into SQLite once, then
-serves column profiles, filtered rows, server-side aggregations, joins,
-and pairwise correlations.
+jDataMunch loads a CSV or other table into SQLite, a database stored in a file. Once the data is indexed, you can ask for a few matching rows, a summary of a column, or a total by group. You can also join tables by a shared field or check how closely two columns vary together.
 
 **Typical tools.** `describe_dataset`, `get_rows`, `aggregate`,
 `join_datasets`, `search_data`, `get_correlations`.
 
-**Reported efficiency.** 255 MB / 1 M-row LAPD CSV: 111 M tokens paste
-vs ~3,849 tokens via `describe_dataset`. Claimed 25,333x reduction on
-that benchmark.
+**Reported benchmark.** Pasting a 255 MB LAPD CSV with 1 M rows took 111 M tokens. A call to `describe_dataset` used ~3,849 tokens. The benchmark reports a 25,333x reduction.
 
-**When to prefer DuckDB instead.** Parquet, JSON-lines, remote object
-storage (S3/GCS/R2), heavy SQL, cross-source joins.
+Reach for DuckDB when you need heavier SQL, joins across sources, Parquet or JSON-lines files, or files in remote storage (S3/GCS/R2).
 
-**Source here.** `../../jdatamunch-mcp-master/`.
+The source is in `../../jdatamunch-mcp-master/`.
 
 ---
 
 ## jDocMunch (primary docs retrieval — your docs)
 
-**What it does.** Indexes documentation by heading hierarchy, retrieves
-specific sections by byte offset instead of serving whole files.
+jDocMunch uses headings to map your docs. It records where each section starts in its file, so a request for a config section can return just that section.
 
-**Efficiency claim.** Finding a config section drops ~12k tokens to
-~400. Browsing structure: ~40k to ~800.
+The tool reports a drop from ~12k tokens to ~400 for finding a config section. Browsing the heading structure drops from ~40k to ~800.
 
-**Use when** the docs in question are yours — repo READMEs, runbooks,
-onboarding docs, internal wikis exported as markdown.
+Use it for your own READMEs, runbooks, onboarding guides, and internal wikis exported as Markdown. Don't use it for third-party library docs. Use Context7 for those.
 
-**Do NOT use for** third-party library docs — reach for Context7 there.
-
-**Source here.** `../../jdocmunch-mcp-master/` — whitepaper PDF in the
-same folder.
+The source and whitepaper PDF are in `../../jdocmunch-mcp-master/`.
 
 ---
 
 ## memweave (primary long-term memory)
 
-**What it does.** Offline, cross-project memory. Exports your Claude Code
-session corpus and project content into a markdown corpus and indexes it
-for local semantic search. Exposed two ways: an **MCP server**
-(`scripts/memweave/mw_mcp.py`, run by `.venv-memweave`), which gives Claude `memory_search`
-and `memory_read`, and the `mw_search.py` CLI as a fallback. `memory_read` only reads inside
-the store. No external service, no API calls, fully offline.
+Use memweave to search past sessions across all projects. It exports Claude Code sessions and project material as Markdown. Its local search matches by meaning, so you can find an old discussion without remembering its exact words.
 
-**Store location.** `~/.uncle-j-memory` — the markdown corpus and its
-local index. The store is fully rebuildable from the corpus, so a wiped
-index is recoverable with one sync run; there's no separate backup step.
+Claude searches with `memory_search` and opens results with `memory_read`. The MCP server runs `scripts/memweave/mw_mcp.py` using `.venv-memweave`. When the MCP server isn't available, search from the terminal with `mw_search.py`. `memory_read` stays inside the store, and the whole system works offline.
+
+`~/.uncle-j-memory` holds both the Markdown and the search index. If the index is wiped, one sync rebuilds it from the Markdown. The index needs no separate backup.
 
 **Key commands.**
 ```bash
@@ -157,36 +112,31 @@ bash scripts/memweave/sync_memory.sh --all
 .venv-memweave/bin/python scripts/memweave/mw_search.py "why did we switch to GraphQL" --k 5
 ```
 
-**Freshness is automatic.** The `uncle-j-memweave-sync` nightly cron (02:30)
-plus a session-end Stop-hook keep the store current — you don't need to run
-`sync_memory.sh` by hand.
+The `uncle-j-memweave-sync` job runs nightly at 02:30. A hook also updates the store when a session in this repo ends. Other projects catch up at 02:30. You don't need to run `sync_memory.sh` by hand.
 
-**Source here.** `scripts/memweave/` — `sync_memory.sh` (build),
-`mw_search.py` (search CLI), `mw_mcp.py` (MCP server), plus the export/index helpers.
+In `scripts/memweave/`, `sync_memory.sh` builds the store, `mw_search.py` searches it from the terminal, and `mw_mcp.py` serves it to Claude. The folder also contains the export and indexing helpers.
 
 ---
 
 ## delegate (offload work to other models)
 
-`scripts/delegate/server.py`, registered at user scope by `install.sh`. Tools:
-- `ask_agy`: Gemini Flash by default; pass `model=` for another.
-- `ask_heretic`: local, on :8090.
-- `ask_openai`: any OpenAI-compatible API, off until `OPENAI_API_KEY` and
-  `DELEGATE_OPENAI_MODEL` are set.
-- `make_image`, `make_video`, `speak`: these reuse `scripts/local_chat`.
+Use delegate to send a task to another model. `install.sh` registers `scripts/delegate/server.py` for your user account.
+
+- `ask_agy` uses Gemini Flash by default. Pass `model=` to choose another model.
+- `ask_heretic` uses the local model on port 8090.
+- `ask_openai` works with any OpenAI-compatible API. Enable it by setting `OPENAI_API_KEY` and `DELEGATE_OPENAI_MODEL`.
+- `make_image`, `make_video`, and `speak` reuse `scripts/local_chat`.
 - `delegate_status`.
 
-agy and OpenAI calls refuse when the session's directory, or a path named in the prompt, is under
-`config/delegate-local-only.txt` or `DELEGATE_LOCAL_ONLY`. Env: `DELEGATE_AGY_MODEL`,
-`DELEGATE_AGY_TIMEOUT`, `DELEGATE_OPENAI_URL`, `DELEGATE_OPENAI_KEY_ENV`, `DELEGATE_LOG`.
-Each call adds a line to `state/delegate.jsonl` (backend, model, seconds, ok; never content).
+agy and OpenAI calls refuse requests when the session directory or a path in the prompt is a path listed in `config/delegate-local-only.txt` or `DELEGATE_LOCAL_ONLY`, or sits under one.
+
+Settings come from environment variables, which are values passed to the running program. Set `DELEGATE_AGY_MODEL`, `DELEGATE_AGY_TIMEOUT`, `DELEGATE_OPENAI_URL`, `DELEGATE_OPENAI_KEY_ENV`, or `DELEGATE_LOG` as needed. Each call logs the service, model, duration in seconds, and success status to `state/delegate.jsonl`. Prompts and replies stay out of the log.
 
 ---
 
 ## ask_local (local model for bounded grunt work)
 
-**What it does.** An MCP server that hands bounded subtasks to a local model, so Claude stays
-in charge. Tools:
+Claude can hand a small task, such as summarizing a file, to a model running on your machine. Claude stays in charge of the overall task.
 
 | Tool | What it does |
 |---|---|
@@ -195,8 +145,7 @@ in charge. Tools:
 | `ask_local` | Drafts and classification |
 | `local_status` | Reports whether the backend is up |
 
-It has no shell, writes no files, and refuses credential-like paths. Never use it for a final
-answer.
+The server cannot run shell commands or write files. It refuses paths that look like they contain credentials. Keep the final answer with Claude.
 
 **Starting it.**
 ```bash
@@ -206,22 +155,16 @@ just heretic logs        # model logs; `just heretic down` stops it
 curl -s 127.0.0.1:8090/health   # {"status":"ok"} when heretic is up
 ```
 
-**In the chat page.** "Search the web" sends SearXNG's top 5 results plus the text of the top 3
-pages (public addresses only; redirects re-checked). "Think first" turns on Heretic's hidden
-reasoning: better on hard questions, but minutes slower beside Klarheit's 9B (a web answer took
-9 s without it, 375 s with it). "Speak replies" reads each answer aloud through Chatterbox.
-Typed commands: `/image <prompt>` (~1–2 min, starts and stops ComfyUI itself), `/video
-<prompt>` (~8 min), `/speak <text>`. Results show inline; media is served only from
-`/opt/outputs/comfyui` and `/opt/outputs/speech`. Spoken replies (`chat-*.wav`) are deleted
-after 7 days (`CHAT_SPEECH_DAYS`); images, videos and other speech files are kept.
+In the chat page, "Search the web" sends the model SearXNG's top 5 results and the text of the top 3 pages. SearXNG gathers results from other search engines. The chat page fetches only public addresses and checks again after each redirect.
 
-**When search finds nothing.** The page shows an error naming the engines that refused, rather
-than letting the model answer from memory. Google, Brave, DuckDuckGo, Startpage and Qwant all
-block SearXNG after heavy use (CAPTCHA, "too many requests", "access denied"); SearXNG retries
-them later. Mojeek and Yep (independent indexes) were enabled 2026-10-24 in
-`/opt/docker/searnx/searxng/settings.yml` (`disabled: false`, outside any repo) to keep results
-coming; Bing and Yahoo stay off (Microsoft's index). Check with
-`curl -s '127.0.0.1:8086/search?q=test&format=json' | jq '.unresponsive_engines'`.
+"Think first" turns on Heretic's hidden reasoning. It helps with hard questions, but it can be minutes slower when it runs alongside Klarheit's 9B model. One web answer took 9 s without it and 375 s with it. "Speak replies" reads answers aloud through Chatterbox.
+
+Type `/image <prompt>` to make an image (~1–2 min). The command starts and stops ComfyUI for you. Type `/video
+<prompt>` for video (~8 min) or `/speak <text>` for speech. Results appear in the chat. The page serves media only from `/opt/outputs/comfyui` and `/opt/outputs/speech`. Spoken replies (`chat-*.wav`) expire after 7 days (`CHAT_SPEECH_DAYS`). Images, videos, and other speech files stay.
+
+If web search finds nothing, the page shows an error naming the engines that refused. It doesn't let the model answer from memory. Google, Brave, DuckDuckGo, Startpage, and Qwant all block SearXNG after heavy use. You may see a CAPTCHA, "too many requests," or "access denied." SearXNG retries them later.
+
+Mojeek and Yep use independent search indexes. Both were enabled on 2026-10-24 in `/opt/docker/searnx/searxng/settings.yml` (`disabled: false`, outside any repo) to keep results coming. Bing and Yahoo use Microsoft's index and stay off. Check which engines failed with `curl -s '127.0.0.1:8086/search?q=test&format=json' | jq '.unresponsive_engines'`.
 
 **Backend.** Ollama in Docker, from `docker/ollama/compose.yaml` in this repo. A host that
 keeps its own `/opt/docker/ollama/compose.yaml` uses that one instead. It's bound to
@@ -236,15 +179,11 @@ docker exec ollama ollama list                             # models
 docker exec ollama ollama pull <model>                     # add one
 ```
 
-**Speed depends on free VRAM.** With the model fully on an RTX 3060, a warm extraction takes
-about 5 s, a summary about 9 s, and generation runs at about 51 tok/s. When other GPU work
-holds VRAM, part of the model runs on the CPU and calls take about 60 s. A host with no GPU
-runs it entirely on CPU: expect a minute or more per call and about 6 GB of RAM while the model
-is loaded. A stopped container
-is fine: calls return `ollama_unreachable`, and `healthcheck.sh` reports it without failing.
+**Speed depends on free VRAM, the memory on the graphics card.** With the whole model on an RTX 3060 and already loaded, extraction takes about 5 s and a summary takes about 9 s. The model generates text at about 51 tok/s.
 
-**Measuring it.** `state/ask_local.jsonl` gets one line per call, with counts and latency but
-never content. Use it to decide whether ask_local earns its place.
+If other work fills GPU memory, part of the model runs on the CPU and calls take about 60 s. A machine with no GPU runs the whole model on the CPU. Expect a minute or more per call and about 6 GB of RAM while the model is loaded. If the container is stopped, calls return `ollama_unreachable`. `healthcheck.sh` reports that status and still passes.
+
+Each call adds a line to `state/ask_local.jsonl` with counts and elapsed time. The log leaves out the content. Use it to decide whether ask_local is worth keeping.
 
 **Config.** Optional environment variables: `ASK_LOCAL_BACKEND` (`ollama`, the default, or
 `openai` for llama-server), `ASK_LOCAL_URL`, `ASK_LOCAL_MODEL`, `ASK_LOCAL_TIMEOUT` (default
@@ -259,11 +198,9 @@ ASK_LOCAL_MODEL=heretic` from `config/ask_local.env`, so a reinstall keeps them.
 
 ## Image and video generation (ComfyUI)
 
-ComfyUI v0.39.0 in Docker, built locally from `docker/comfyui/Dockerfile` (pinned upstream
-commit, plus city96/ComfyUI-GGUF), bound to `127.0.0.1:8188`. It runs with `--offline`, so
-the frontend can't reach the internet, and the Hugging Face libraries are set offline too.
-Both models are Apache 2.0, so commercial use is allowed (licenses re-checked on Hugging
-Face 2026-10-23):
+ComfyUI makes images and video on this machine. The Docker setup builds v0.39.0 locally from `docker/comfyui/Dockerfile`. It uses a pinned upstream commit and adds city96/ComfyUI-GGUF.
+
+It listens only on `127.0.0.1:8188`. The `--offline` flag keeps the web interface offline, and the Hugging Face libraries run offline too. Both models use the Apache 2.0 license, which allows commercial use. The licenses were rechecked on Hugging Face on 2026-10-23.
 
 | Job | Model | Files in |
 |---|---|---|
@@ -294,23 +231,18 @@ ComfyUI's dynamic VRAM offloads weights to RAM when other processes hold the GPU
 ran beside Heretic without stopping it. Heretic fell asleep partway through the video, which
 gave ComfyUI more room.
 
-**Sharing the GPU.** Leave Ollama alone: Klarheit's trials use it, and each local call
-times out at 120 s. A video overlapping the 16:05 trial pushed its slowest call to 101 s
-(46 s the hour before). So `just image` / `just video` wait while a `klarheit-rv` or
-`klarheit-m12` run is active. They also won't start a job that would still be running at the
-next trial (:05 hourly; 10:35 and 20:35). `--ignore-klarheit` skips the wait. Heretic is parked
-for every job: it auto-fits to free VRAM (9.8 of 12 GB on an idle GPU), which left ComfyUI
-too little and failed `just image` with `VRAM grow failed`. So the job runs `docker stop
-llama-heretic` first and `docker start` after, even on failure or SIGTERM. `ask_local` returns
-errors meanwhile. `--keep-heretic` skips this. If a job is SIGKILLed, run `just heretic up -d`.
+**Sharing the GPU.** Keep Ollama running for Klarheit's trials. Each local call has a 120 s timeout. When a video overlapped the 16:05 trial, the slowest call took 101 s. The hour before, it took 46 s.
+
+`just image` and `just video` wait for an active `klarheit-rv` or `klarheit-m12` run to finish. They also wait if the media job would overlap the next trial (:05 hourly, plus 10:35 and 20:35). Use `--ignore-klarheit` to skip the wait.
+
+Heretic adjusts to the GPU memory it finds. On an idle card it took 9.8 of 12 GB, leaving so little for ComfyUI that `just image` failed with `VRAM grow failed`. Media jobs now run `docker stop
+llama-heretic` before starting and `docker start` afterward, even if the job fails or receives SIGTERM, a request to shut down. During that time, `ask_local` returns errors. Use `--keep-heretic` to leave Heretic running. If SIGKILL force-stops the job before cleanup, run `just heretic up -d`.
 
 ---
 
 ## Speech (whisper.cpp speech-to-text, Chatterbox Nano cloned voices)
 
-**What it does.** Two loopback-only Docker services, both CPU only, so they never touch the
-GPU that Heretic and Ollama share. Lineup items #4 and #5
-(`docs/proposals/2026-10-22-local-model-lineup.md`).
+Whisper turns recordings into text. Chatterbox reads text aloud and can imitate a voice from a recording. Both run in Docker and accept connections only from this machine. They run on the CPU, leaving GPU memory for Heretic and Ollama. See lineup items #4 and #5 in `docs/proposals/2026-10-22-local-model-lineup.md`.
 
 | Service | Port | Model (in `/opt/models`) | License | RAM |
 |---|---|---|---|---|
@@ -332,17 +264,12 @@ clean 5–20 s clip in `/opt/models/chatterbox-voices/<name>.wav` and send `"voi
 `librivox-gettysburg` (a LibriVox reader, public domain) is there as a test voice. The
 built-in voice is `default`.
 
-**Speed (measured 2026-10-23, Ryzen 5 5500, while other jobs loaded the host).** whisper: a
-30 s clip takes 31 s at load ~11 and 42 s at load ~27, and the transcript was word for word.
-That's slower than real time, so it's fine for dictation and files but not live captions.
-Chatterbox: about 5 s per sentence (3 sentences, 11.6 s of audio, took 15.4 s). The first use
-of a voice adds about 3 s. Speaker similarity to the reference clip, by Chatterbox's own voice
-encoder, was 0.87 for the clone and 0.56 for the built-in voice. Samples are in
-`/opt/outputs/speech/`. Under heavy load (~40) whisper took 252 s, so the numbers swing with
-whatever else is running.
+**Speed measured on 2026-10-23.** Other jobs were running on the Ryzen 5 5500 during the tests.
 
-**Not the same as voice-line.** voice-line runs its own whisper-server and Kokoro on the GPU
-(ports 2022 and 8880 in `/opt/proj/.port-registry`). These two services are separate from it.
+- Whisper transcribed a 30 s clip word for word. It took 31 s at a system load of ~11 and 42 s at ~27. Under heavy load (~40), it took 252 s. That makes it useful for dictation and recordings, where the text can arrive after the speaker finishes. Live captions need to keep up as people speak.
+- Chatterbox took about 5 s per sentence. It generated 11.6 s of audio from 3 sentences in 15.4 s. The first use of a voice adds about 3 s. Chatterbox's own voice encoder scored similarity to the reference clip at 0.87 for the clone and 0.56 for the built-in voice. Hear the samples in `/opt/outputs/speech/`.
+
+voice-line runs separately. It uses its own whisper-server and Kokoro on the GPU. See ports 2022 and 8880 in `/opt/proj/.port-registry`.
 
 ---
 
@@ -364,42 +291,27 @@ whatever else is running.
 
 ## Serena (LSP-grade code intelligence — second opinion)
 
-**What it does.** Same niche as jCodeMunch but backed by real Language
-Server Protocol servers, not just AST. Wins on cross-file type
-resolution, generics, interface/trait dispatch in Python, TypeScript,
-Rust, Go, C#.
+Use Serena when the answer depends on how types fit together across files. For example, you can ask for every caller of an interface method across a repo. An interface defines the methods a type must provide.
+
+Serena uses the Language Server Protocol, or LSP, which lets tools ask a language server questions about code. That helps it follow types across files, including generics, which let code work with different types. It can also work out which implementation a call uses through an interface or trait. It's strongest at these questions in Python, TypeScript, Rust, Go, and C#, and in typed languages generally.
 
 **Invocation.** `uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant`
 
-**When to reach for it over jCodeMunch.** "Find every caller of this
-interface method across the repo" type questions, especially in typed
-languages.
-
-**Tradeoff.** Startup is slower (spins up real LSP servers); jCodeMunch
-queries are cheaper per call.
+Serena starts more slowly because it launches real language servers. jCodeMunch queries are cheaper per call.
 
 ---
 
 ## Context7 (third-party library docs)
 
-**What it does.** Up-to-date, version-pinned docs for ~30,000+
-libraries. Fed from llms.txt, OpenAPI specs, and websites.
+Use Context7 whenever a question names a library or framework, such as FastAPI, React, Django, or pandas. It can fetch docs for a specific release, so the answer can use documentation newer than the model's training cutoff. It covers ~30,000+ libraries using llms.txt files, OpenAPI descriptions of web APIs, and websites.
 
-**Invocation.** `npx -y @upstash/context7-mcp` (requires Node 18+).
-
-**API key.** Optional; free key at https://context7.com/dashboard
-lifts rate limits.
-
-**Always use when** the question mentions a named library or framework
-(FastAPI, React, Django, pandas, etc.) — Context7's docs are newer than
-any training cutoff.
+Run `npx -y @upstash/context7-mcp` with Node 18+. An optional free API key lifts rate limits. Get one at https://context7.com/dashboard
 
 ---
 
 ## DuckDB / MotherDuck MCP (heavy data — SQL over anything)
 
-**What it does.** Run DuckDB SQL against CSV / Parquet / JSON / S3 / GCS
-/ R2 / MotherDuck cloud, in-process, no server to manage.
+DuckDB runs SQL, a language for querying data, inside the process that calls it. You can query CSV, Parquet, and JSON files. You can also use S3, GCS, R2, or MotherDuck cloud. There's no separate server to manage.
 
 **Invocation.**
 ```
@@ -413,13 +325,13 @@ uvx mcp-server-motherduck --db-path /absolute/path/to/db.duckdb
 uvx mcp-server-motherduck --db-path md: --motherduck-token $MOTHERDUCK_TOKEN --read-write
 ```
 
-**Use when** the question needs real SQL, joins across files, Parquet,
-remote object storage, or analytics that jDataMunch's fixed verbs can't
-express.
+Reach for DuckDB when you need real SQL, joins across files, Parquet files, remote storage, or a query that jDataMunch's built-in operations can't express.
 
 ---
 
 ## How they fit together
+
+Start with what you need to find. For a function, look in the code index. For a table, start with the data tools. For an old decision, search session memory. The diagram shows the first tool for each kind of question and where Claude goes next: a fallback, or a tool for heavier or third-party cases.
 
 ```
    ┌──────────────────────────────────────────────────────────────┐
@@ -451,37 +363,25 @@ express.
 
 ## Dreaming (scheduled session synthesis)
 
-**What it does.** Runs on a schedule (default: 2 AM daily). Queries Langfuse
-for traces since the last run, invokes the `dream-synthesizer` skill to
-extract recurring mistakes and proven playbooks, and writes the results to
-the memweave store and `~/.claude/CLAUDE.md`.
+Dreaming looks for mistakes that keep coming up and approaches that have worked before. By default it runs daily at 2 AM. It asks Langfuse for traces, which are records of what an assistant did, since the last run. The `dream-synthesizer` skill reviews those traces and saves the results to memweave and `~/.claude/CLAUDE.md`.
 
-**Entry point.** `features/dreaming/dream.sh` (also available as `/dream`
-slash command for on-demand runs inside Claude Code).
+The scheduled job runs `features/dreaming/dream.sh`. Use `/dream` inside Claude Code to run it on demand.
 
 **Install.**
 ```bash
 bash features/dreaming/install.sh
 ```
 
-**When to use.** After a project has accumulated 10+ Langfuse traces. The
-`prior-art-check` skill will automatically surface dreaming output on the
-next non-trivial task because it runs `mw_search.py` (memweave), and the `## Dreaming
-Notes` section in `CLAUDE.md` informs every session directly.
+Use Dreaming after a project has 10+ Langfuse traces. On the next substantial task, the `prior-art-check` skill runs `mw_search.py` to bring relevant findings into the session. Every session also gets the `## Dreaming
+Notes` section from `CLAUDE.md`.
 
-**Key env vars.** `DREAMING_CRON_SCHEDULE` (default: `0 2 * * *`),
-`DREAMING_ENABLED` (default: `1`). Set in `state/dreaming.env`.
+In `state/dreaming.env`, set `DREAMING_CRON_SCHEDULE` for the schedule (default `0 2 * * *`) and `DREAMING_ENABLED` to control whether it runs (default `1`).
 
 ---
 
 ## Orchestrator + Multi-agent (--decompose mode)
 
-**What it does.** When `ralph-harness.sh --decompose` is set, the orchestrator
-skill decomposes the PRD into a JSON task manifest, bash spawns one
-`claude -p` subprocess per task (in parallel where safe), and a synthesis
-agent merges the outputs. Traces are tagged by `role:` in Langfuse.
-
-**Roles and tool mapping:**
+Use `ralph-harness.sh --decompose` to split a product requirements document into tasks. The orchestrator writes the task list as JSON. Bash starts a separate `claude -p` process for each task and runs tasks in parallel where safe. A final agent combines the results. Langfuse groups the recorded activity by `role:`.
 
 | Role | Designated tools |
 |---|---|
@@ -491,41 +391,29 @@ agent merges the outputs. Traces are tagged by `role:` in Langfuse.
 | `memory` | memweave |
 | `general` | all tools |
 
-**AGENT_ROLE env var.** Set by ralph-harness.sh on each sub-agent subprocess.
-Langfuse traces carry `role:<value>` tags so multi-agent runs appear as a
-role-tagged tree rather than an undifferentiated stream.
+ralph-harness.sh sets AGENT_ROLE for each worker process. Langfuse uses the `role:<value>` tags to show which activity belongs to each worker.
 
 **Usage.**
 ```bash
 ./ralph-harness.sh --prd ./PRD.md --decompose --rubric ./.claude/outcomes/rubric.md
 ```
 
-**Composition with Outcomes.** When both `--decompose` and `--rubric` are
-set, the synthesized output is evaluated by the outcomes grader after each
-iteration. The grader runs in a fresh context and checks the rubric. Loop
-exits only when synthesis + rubric both pass.
+With both `--decompose` and `--rubric`, the Outcomes grader reviews the combined result after each round. The grader starts with a fresh context and checks the result against the rubric. The loop ends when both the synthesis and the rubric check pass.
 
-**Guardrail invariants.** Sub-agents inherit `MCP_TIMEOUT=60000` via env.
-jCodeMunch PreToolUse/PostToolUse hooks fire per sub-agent (they are global
-settings, not session-local). The bash-matcher destructive-command blocks
-apply to every subprocess — `--decompose` does not bypass them.
+Every worker inherits `MCP_TIMEOUT=60000`. The global jCodeMunch PreToolUse and PostToolUse hooks run for each worker. The rules that block destructive Bash commands still apply to every subprocess under `--decompose`.
 
 ---
 
 ## Session Stats (weekly efficiency reporter)
 
-**What it does.** Runs on a schedule (default: every Sunday 8 AM). Queries Langfuse
-for the past 7 days of traces, groups them by date + project, and renders a markdown
-table with trace count, tool calls, token usage, and a `⚠ high` flag for sessions
-exceeding 40k tokens.
+Session Stats shows how much each project used Claude's tools. By default it runs every Sunday at 8 AM and pulls the past 7 days of traces from Langfuse. It groups them by date and project. The Markdown table shows trace counts, tool calls, and token use. A `⚠ high` flag marks sessions above 40k tokens.
 
-**Entry point.** `features/session-stats/stats.sh` (also available as `/stats`
-slash command for on-demand runs inside Claude Code).
+The scheduled job runs `features/session-stats/stats.sh`. Use `/stats` inside Claude Code to run it on demand.
 
 **Output (--cron mode).**
-- `~/.claude/dreaming-output/stats-YYYY-MM-DD.md` — picked up automatically
-  by the next dreaming run so weekly stats appear in memweave playbooks.
-- `state/stats-weekly.md` — human reference; symlink-friendly for dashboards.
+
+- `~/.claude/dreaming-output/stats-YYYY-MM-DD.md` goes into the next dreaming run, so weekly stats appear in memweave playbooks.
+- `state/stats-weekly.md` is for readers. A dashboard can point to it with a symlink, a file that points to another file.
 
 **Install.**
 ```bash
@@ -537,21 +425,10 @@ bash features/session-stats/install.sh
 bash features/session-stats/stats.sh [--days N]
 ```
 
-**Key env vars.** `STATS_CRON_SCHEDULE` (default: `0 8 * * 0`),
-`DREAMING_OUTPUT_DIR` (default: `~/.claude/dreaming-output`).
-Set in `state/session-stats.env` (written by install.sh).
+Set `STATS_CRON_SCHEDULE` (default `0 8 * * 0`) and `DREAMING_OUTPUT_DIR` (default `~/.claude/dreaming-output`) in `state/session-stats.env`. install.sh writes this file.
 
 ---
 
-**SubagentStart hook audit (2026-05-14):** A SubagentStart hook IS configured
-in `~/.claude/settings.json`, invoking
-`jcodemunch-mcp hook-subagent-start` on every sub-agent spawn. This hook
-injects a condensed repo orientation into the sub-agent's context (per the
-jcodemunch `--help` description: "SubagentStart hook: inject condensed repo
-orientation"). Tool scoping per role is additionally enforced via the
-sub-agent's task prompt (the `task` field from the orchestrator manifest).
-The routing instructions in the task prompt remain the authoritative
-mechanism for restricting which tools a given role should use; the
-SubagentStart hook supplements orientation but does not selectively disable
-MCP servers (Claude Code's current architecture does not support
-per-session MCP server disable).
+**SubagentStart hook audit (2026-05-14).** When Claude Code starts a worker, the hook in `~/.claude/settings.json` runs `jcodemunch-mcp hook-subagent-start`. It gives the worker a short guide to the repo. The jcodemunch `--help` text describes it as "SubagentStart hook: inject condensed repo orientation".
+
+The worker gets its tool instructions from the `task` field in the orchestrator's task list. That prompt is the only way to limit which tools a worker uses. The hook only adds orientation. It can't turn off MCP servers, because Claude Code has no per-session switch for that.
