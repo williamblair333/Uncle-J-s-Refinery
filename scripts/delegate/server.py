@@ -14,13 +14,18 @@ Backends, one tool each:
                entry named "local:heretic" or "local:ask_local" is a free local model
                (Heretic, the ask_local Ollama model) tried in order; it is skipped for
                edits=True or a prompt naming a path, since it cannot read files or run tools.
+- ask_codex:   OpenAI Codex CLI (`codex exec --json --ephemeral`) on the ChatGPT login in
+               ~/.codex, run inside the agy jail (features/antigravity/agy-jail) with Codex's
+               own read-only or workspace-write sandbox nested in it. CODEX_BIN, DELEGATE_CODEX_MODEL
+               and DELEGATE_CODEX_TIMEOUT (default 600 s) tune it. A usage-limit failure is
+               recorded as "codex" in state/agy-quota.json and skipped until reset.
 - ask_heretic: the local llama-server (Heretic) on :8090. Nothing leaves the machine.
 - ask_openai:  any OpenAI-compatible API. Off until the env var named by
                DELEGATE_OPENAI_KEY_ENV (default OPENAI_API_KEY) holds a key and
                DELEGATE_OPENAI_MODEL names a model; DELEGATE_OPENAI_URL picks the endpoint.
 - make_image / make_video / speak: ComfyUI and Chatterbox, through scripts/local_chat.
 
-Off-machine backends (agy, openai) refuse when the working directory, or any path named in
+Off-machine backends (agy, codex, openai) refuse when the working directory, or any path named in
 the prompt, is under a root listed in config/delegate-local-only.txt or DELEGATE_LOCAL_ONLY
 (os.pathsep separated). Claude Code starts stdio servers in the session's project
 directory, so a session inside a local-only repo can't ship it to Google or OpenAI.
@@ -35,6 +40,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
@@ -59,6 +65,11 @@ CLIENT_IDLE_S = int(os.environ.get("DELEGATE_CLIENT_IDLE_S", "1800"))
 IDLE_MARGIN_S = 120
 PING_S = 60.0
 _AGY_LOCK = threading.Lock()  # one agy job at a time, as when the tools blocked the event loop
+_CODEX_LOCK = threading.Lock()  # one Codex job at a time; it runs alongside agy, not behind it
+CODEX_MODEL = os.environ.get("DELEGATE_CODEX_MODEL", "")  # empty: Codex's own default for the plan
+CODEX_TIMEOUT = int(os.environ.get("DELEGATE_CODEX_TIMEOUT", "600"))
+CODEX_QUOTA_KEY = "codex"  # in state/agy-quota.json, so a spent ChatGPT window is skipped until reset
+_CODEX_LIMIT_RE = re.compile(r"usage limit|rate limit|too many requests|\b429\b", re.I)
 OPENAI_URL = os.environ.get("DELEGATE_OPENAI_URL", "https://api.openai.com/v1").rstrip("/")
 OPENAI_MODEL = os.environ.get("DELEGATE_OPENAI_MODEL", "")
 OPENAI_KEY_ENV = os.environ.get("DELEGATE_OPENAI_KEY_ENV", "OPENAI_API_KEY")
@@ -653,6 +664,142 @@ def run_openai(prompt: str, system: str | None = None, model: str | None = None,
     return out
 
 
+def codex_bin() -> str | None:
+    """CODEX_BIN, else codex on PATH, else npm's user prefix (often not on the server's PATH).
+
+    Must be named codex: the jail picks which login to mount by that name, so a wrapper named
+    anything else would get agy's login and not Codex's."""
+    for c in (os.environ.get("CODEX_BIN"), shutil.which("codex"),
+              str(Path.home() / ".npm-global" / "bin" / "codex")):
+        if c and os.path.basename(c) == "codex" and os.access(c, os.X_OK):
+            return c
+    return None
+
+
+def codex_logged_in() -> bool:
+    return (Path.home() / ".codex" / "auth.json").is_file()
+
+
+def codex_cmd(binary: str, cwd: str, model: str | None, edits: bool) -> list[str]:
+    cmd = [binary, "exec", "--json", "--ephemeral", "--skip-git-repo-check",
+           "--sandbox", "workspace-write" if edits else "read-only", "-C", cwd]
+    if model:
+        cmd += ["-m", model]
+    return cmd + ["-"]  # prompt on stdin: no argv length limit, not visible in ps
+
+
+def parse_codex_events(stdout: str) -> dict:
+    """The answer, usage, thread id and errors from `codex exec --json` lines.
+
+    Unknown or malformed lines are skipped, so a schema change after an upgrade reads as no
+    answer (and fails closed in run_codex), never as a made-up one."""
+    out: dict = {"messages": [], "errors": [], "warnings": [], "commands": 0}
+    for line in stdout.splitlines():
+        try:
+            ev = json.loads(line)
+        except (ValueError, RecursionError):
+            continue
+        if not isinstance(ev, dict):
+            continue
+        kind = ev.get("type", "")
+        item = ev.get("item") if isinstance(ev.get("item"), dict) else {}
+        if kind == "turn.completed":
+            out["completed"] = True
+        if kind == "thread.started":
+            out["thread_id"] = ev.get("thread_id")
+        elif kind == "item.completed" and item.get("type") == "agent_message":
+            if isinstance(item.get("text"), str) and item["text"].strip():
+                out["messages"].append(item["text"].strip())
+        elif kind == "item.completed" and item.get("type") == "command_execution":
+            out["commands"] += 1
+        elif kind == "turn.completed" and isinstance(ev.get("usage"), dict):
+            out["usage"] = ev["usage"]
+        elif kind in ("turn.failed", "error"):
+            err = ev.get("error") if isinstance(ev.get("error"), dict) else ev
+            msg = str((err.get("message") if isinstance(err, dict) else None) or line)[:500]
+            # "error" events include retries Codex recovers from ("Reconnecting... 3/5");
+            # only a failed turn fails the job
+            out["errors" if kind == "turn.failed" else "warnings"].append(msg)
+    return out
+
+
+def run_codex(prompt: str, cwd: str | None = None, model: str | None = None,
+              timeout: int | None = None, edits: bool = False, run=subprocess.run) -> dict:
+    """One `codex exec` job inside the agy jail, on the ChatGPT subscription login."""
+    cwd = os.path.realpath(cwd or os.getcwd())
+    model = model or CODEX_MODEL or None
+    label = model or "codex-default"
+    if refused := _refused(cwd, prompt):
+        return refused
+    binary = codex_bin()
+    if not binary:
+        return {"ok": False, "error": "not_installed",
+                "detail": "npm i -g @openai/codex (or set CODEX_BIN)"}
+    if not codex_logged_in():
+        return {"ok": False, "error": "not_logged_in", "detail": "run `codex login` once on this host"}
+    quota = read_quota()
+    if CODEX_QUOTA_KEY in quota:
+        return {"ok": False, "error": "quota exhausted", "model": label,
+                "detail": f"Codex usage limit; skipped until {_iso(quota[CODEX_QUOTA_KEY])}",
+                "hint": "fall back to ask_agy / ask_heretic, or do it yourself"}
+    cmd = ask_agy.jailed(codex_cmd(binary, cwd, model, edits), cwd)
+    if cmd is None:
+        return {"ok": False, "error": "no jail",
+                "detail": f"needs bubblewrap and {ask_agy.JAIL}; refusing to run Codex outside the jail"}
+    env = {**os.environ, "PATH": f"{Path(binary).parent}{os.pathsep}{os.environ.get('PATH', '')}"}
+    saved, dest, snap_errors = [], None, []
+    if edits:
+        try:
+            ask_agy.BACKUPS.mkdir(parents=True, exist_ok=True)
+            dest = Path(tempfile.mkdtemp(prefix=time.strftime("codex-%Y%m%d-%H%M%S-"), dir=ask_agy.BACKUPS))
+            saved = ask_agy.snapshot_uncommitted(cwd, dest, snap_errors)
+        except (OSError, subprocess.SubprocessError, ValueError) as exc:
+            snap_errors.append(str(exc)[:300])
+    started = time.time()
+    t = timeout or CODEX_TIMEOUT
+    try:
+        proc = run(cmd, input=prompt, cwd=cwd, capture_output=True, text=True, timeout=t, env=env)
+    except subprocess.TimeoutExpired:
+        out = {"ok": False, "error": f"timeout after {t}s", "model": label}
+        proc = None
+    except (OSError, ValueError) as e:  # ValueError: a NUL byte in model or cwd
+        out = {"ok": False, "error": f"codex failed to start: {e}", "model": label}
+        proc = None
+    if proc is not None:
+        ev = parse_codex_events(proc.stdout or "")
+        answer = ev["messages"][-1] if ev["messages"] else ""
+        # a finished turn, not just a message: a run cut off mid-turn can still have said something
+        out = {"ok": proc.returncode == 0 and bool(answer) and not ev["errors"] and bool(ev.get("completed")),
+               "response": answer, "model": label, "usage": ev.get("usage"),
+               "thread_id": ev.get("thread_id"), "commands_run": ev["commands"]}
+        if not out["ok"]:
+            stderr_tail = (proc.stderr or "").strip()[-800:]
+            out["error"] = (ev["errors"][-1] if ev["errors"] else
+                            ev["warnings"][-1] if ev["warnings"] else
+                            f"exit {proc.returncode}" if proc.returncode else "no_answer")
+            if stderr_tail:
+                out["stderr"] = stderr_tail
+            if not ev["messages"] and not ev["errors"] and not ev["warnings"]:
+                out["stdout_tail"] = (proc.stdout or "")[-800:]
+            text = f"{out['error']} {stderr_tail}"
+            if _CODEX_LIMIT_RE.search(text):
+                until = mark_exhausted(CODEX_QUOTA_KEY, text, pools=[])
+                out["hint"] = f"Codex usage limit; skipping Codex until {_iso(until)}"
+        out = {k: v for k, v in out.items() if v is not None and v != ""}
+    if edits:
+        if snap_errors:
+            out["snapshot_error"] = "; ".join(snap_errors)[:600]
+        hits = ask_agy.changed_since(saved) if saved else []
+        if hits:
+            out["overwrote_uncommitted"] = hits
+            out["warning"] = (f"Codex changed {len(hits)} file(s) that already had uncommitted changes; "
+                              "if you didn't ask it to, restore from the backups in overwrote_uncommitted")
+        elif dest:
+            shutil.rmtree(dest, ignore_errors=True)
+    _log("codex", label, started, out, cwd=cwd)
+    return out
+
+
 def run_heretic(prompt: str, system: str | None = None, think: bool = False, cwd: str | None = None) -> dict:
     started = time.time()
     out = _heretic_raw(prompt, system, think)
@@ -723,6 +870,9 @@ def status() -> dict:
                 "model": AGY_MODEL},
         "agy_models": agy_models(),
         "heretic": heretic,
+        "codex": {"installed": bool(codex_bin()), "logged_in": codex_logged_in(),
+                  "model": CODEX_MODEL or "codex-default",
+                  "exhausted_until": _iso(q) if (q := read_quota().get(CODEX_QUOTA_KEY)) else None},
         "openai": "configured" if os.environ.get(OPENAI_KEY_ENV) and OPENAI_MODEL else "not_configured",
         "cwd": cwd,
         "local_only": local_only_block(cwd),
@@ -745,7 +895,7 @@ def clamp_timeout(timeout: int | None, pinging: bool) -> tuple[int, int | None]:
     return (t, None) if pinging or t <= cap else (cap, t)
 
 
-async def keep_alive(ctx, pinging: bool, fn, *args, **kwargs):
+async def keep_alive(ctx, pinging: bool, fn, *args, lock=None, label: str = "agy", **kwargs):
     """Run blocking fn in a worker thread under _AGY_LOCK; while it runs, send a progress
     notification every PING_S so the client's idle timer doesn't abort the call. A failed ping
     (client gone, stream closed) stops the pinging and never costs the result."""
@@ -762,12 +912,12 @@ async def keep_alive(ctx, pinging: bool, fn, *args, **kwargs):
                 return
             n += 1
             try:
-                await ctx.report_progress(n, message=f"agy still running ({round(n * PING_S)} s)")
+                await ctx.report_progress(n, message=f"{label} still running ({round(n * PING_S)} s)")
             except Exception:
                 return
 
     def locked():
-        with _AGY_LOCK:
+        with lock or _AGY_LOCK:
             return fn(*args, **kwargs)
 
     box = {}
@@ -785,10 +935,10 @@ async def keep_alive(ctx, pinging: bool, fn, *args, **kwargs):
     return box["result"]
 
 
-async def _agy_tool(ctx, run, timeout, *args, **kwargs) -> dict:
+async def _agy_tool(ctx, run, timeout, *args, lock=None, label: str = "agy", **kwargs) -> dict:
     pinging = has_progress_token(ctx)
     t, asked = clamp_timeout(timeout, pinging)
-    out = await keep_alive(ctx, pinging, run, *args, timeout=t, **kwargs)
+    out = await keep_alive(ctx, pinging, run, *args, lock=lock, label=label, timeout=t, **kwargs)
     if isinstance(out, dict):
         if not pinging:
             out["no_progress_token"] = True
@@ -802,10 +952,10 @@ def build_server():
 
     mcp = FastMCP("delegate", log_level="WARNING", instructions=(
         "Hand work to a model other than Claude: Gemini via agy (subscription quota, off "
-        "machine), Heretic (local, private, uncensored), an OpenAI-compatible API when "
+        "machine), OpenAI Codex via ask_codex (ChatGPT subscription, off machine), Heretic (local, private, uncensored), an OpenAI-compatible API when "
         "configured, and local image/video/speech. Decide the check before delegating and run "
         "it on what comes back (verifiable-task skill); a helper's own 'done' is not evidence. "
-        "agy/openai refuse inside local-only repos."))
+        "agy/codex/openai refuse inside local-only repos."))
 
     @mcp.tool(name="delegate_status")
     def _status() -> dict:
@@ -839,6 +989,18 @@ def build_server():
         tools. Name files by relative path in the prompt, and keep private details out of it."""
         return await _agy_tool(ctx, run_agy_packet, timeout, prompt, files, base or os.getcwd(),
                                task, model)
+
+    @mcp.tool(name="ask_codex")
+    async def _codex(ctx: Context, prompt: str, cwd: str | None = None, model: str | None = None,
+                     timeout: int | None = None, edits: bool = False) -> dict:
+        """Run one prompt in OpenAI Codex CLI (`codex exec`) on the ChatGPT subscription. Codex reads
+        files and runs shell commands in its own sandbox, inside the same empty-root jail as agy:
+        it sees only cwd's repo. Read-only by default; edits=True lets it write inside the repo
+        (uncommitted files are backed up, overwrote_uncommitted says if it touched them). No stack
+        MCP servers. model: a Codex model id, default the plan's own. Refuses in local-only
+        directories. A spent usage limit is remembered and skipped until reset (default 1 h)."""
+        return await _agy_tool(ctx, run_codex, timeout, prompt, cwd, model, edits=edits,
+                               lock=_CODEX_LOCK, label="codex")
 
     @mcp.tool(name="ask_heretic")
     def _heretic(prompt: str, system: str | None = None, think: bool = False) -> dict:

@@ -179,8 +179,8 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
 **Before changing code** — `get_blast_radius` **and** `check_edit_safe` (complementary);
 `check_rename_safe` before renames, `check_delete_safe` before deletes, `plan_refactoring` for
 multi-file moves, `register_edit` after edits. Verdicts that are **not** green lights:
-- `check_delete_safe`: `name_not_searchable`, `corpus_inadequate`, `dynamic_import_boundary`
-  are refusals — never terminal; each carries a `would_change_verdict` gap to act on.
+- `check_delete_safe`: `name_not_searchable`, `corpus_inadequate`, `dynamic_import_boundary`,
+  `file_import_only` (only a file import blocks it; 1.108.491+) are refusals — never terminal; each carries a `would_change_verdict` gap to act on.
   `dynamic_import_boundary` also replaces `internal_only` and `test_coverage_only`.
 - `check_edit_safe`: `dynamic_import_boundary` replaces `safe_to_edit` (confidence ≤ 0.6).
 - `check_rename_safe.safe` is tri-state — `None` means unresolved (`unresolvable` says why);
@@ -208,6 +208,7 @@ an audit; it validates every evidence ref against what this session retrieved.
 - CSV/TSV: `describe_dataset` → `get_rows` → `aggregate`; never dump the file.
   Rows are arrays (`row_format="objects"` = dicts); profiles: `detail="full"`.
   `plan_query`+`run_sql` for one-dataset SQL; `get_dataset_health` before deep work.
+  Over-budget rows may end in `...` (cut strings): check `_meta.truncation`.
 - Parquet, JSON, remote data, or joins across sources → **duckdb**.
 - `describe_column`/`search_data` follow the absence contract; `channels.index: "stale"`
   = out-of-date profile, re-index. `check_column_drop_safe` before dropping a column;

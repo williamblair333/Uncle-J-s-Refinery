@@ -1,9 +1,17 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-27 — ask_codex: start here
+
+- **Branch `feat/ask-codex`:** `ask_codex` delegate tool plus the jail's Codex mounts (CHANGELOG 11-27). 171 tests pass. The branch also carries main's two unpushed post-upgrade syncs (879b9fe, dc065ee).
+- **Done 11-27:** logged in with the browser flow (device-code sign-in is off on William's ChatGPT account). Two real jailed jobs answered. The write was refused (read-only) and home shows only `.codex` and the tools. The first job also showed `.gemini`, which is now fixed and tested. After merging, restart Claude Code so the delegate server loads `ask_codex`. PR #404: Codex reviewed the diff and found five defects, all fixed with tests (CHANGELOG). Merge on a green Gitea CI run.
+- **Later:** routing (which tier or which kind of job goes to Codex versus agy) and the stack MCP servers for Codex jobs. CLAUDE.md has only about 400 bytes left under agy's cap, so the routing line belongs in `docs/ROUTING-REFERENCE.md`. The subscription ends about 2026-12-27: drop or switch the backend then.
+
 ## 2026-11-25 (late) — CI on Gitea: start here
 
 - **PR #403, not merged:** the first run (826) was red, with 17 failures, all from differences between the runner and GitHub's. The two bwrap tests and the root-only test are fixed on the branch. The rest needs a 24.04 image, because act-22.04's `/usr/bin/python3` is 3.10 with no yaml or tomllib, and its apt Pillow lacks `getbbox(alpha_only=)`. gitea added the runner label `ubuntu-24.04` → `catthehacker/ubuntu:act-24.04` (11-25 16:51Z), and every job now uses it, with `python3-yaml` added to apt (that image's Pillow 10.2.0 has `alpha_only`). Merge only on a green run. Gitea ignores `cancel-in-progress` for pull_request runs (go-gitea #35933, per gitea-c1).
 - **Next:** the Heretic `RssFile` reservation in `scripts/ram_gate.py` (entry below), then the surface-write-guard heredoc gap.
+- **jcodemunch-mcp breaking change**: `check_delete_safe` has a new verdict `file_import_only` (1.108.491, L-348) — a delete blocked only by a file import, which moves nothing toward safe — so anything switching on `safe_to_delete` must treat it as a refusal (CLAUDE.md updated; read from the commit log because `index_dependency` was denied permission).
+- **jdatamunch-mcp breaking change**: over-budget `get_rows`/`sample_rows`/`join_datasets` replies (1.33.4) now keep at least one data column and, if still over, cut long strings to a shared length ending in `...` (listed in `_meta.truncation.details`), so callers must check `_meta.truncation` before acting on a cell value (CLAUDE.md updated; read from installed `budget.py` because `index_dependency` was denied permission).
 
 ## 2026-11-25 (night) — CLAUDE.md trimmed: start here
 
