@@ -277,6 +277,27 @@ else
             ok "ram-gate PreToolUse hook already wired in settings.json"
         fi
 
+        # Wire delete-guard (Bash): blocks deletes outside the repo and temp dirs (rm of ~ paths,
+        # virsh --remove-all-storage, git reset --hard, docker volume rm, just recipes running
+        # those). Exit 2 blocks, so no `|| exit 1`; the wrapper falls back to a regex rather
+        # than failing open. 15 s: it may run `just --show` (5 s cap). Added 2026-11-27 after
+        # `just vm-destroy` deleted the RHEL ISO attached to a lab VM.
+        _delguard_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("delete-guard"))) | length' "$_settings" 2>/dev/null || echo 0)
+        if [ "$_delguard_already" -eq 0 ]; then
+            _tmp=$(mktemp)
+            jq '
+              .hooks.PreToolUse += [
+                {"matcher":"Bash","hooks":[{"type":"command","command":"bash ~/.claude/hooks/discipline/delete-guard.sh","timeout":15}]}
+              ]
+            ' "$_settings" > "$_tmp" \
+              && jq -e '.hooks.PreToolUse | length > 0' "$_tmp" >/dev/null \
+              && mv "$_tmp" "$_settings" \
+              && ok "delete-guard PreToolUse hook wired into settings.json" \
+              || { warn "jq transform failed — settings.json unchanged"; rm -f "$_tmp"; }
+        else
+            ok "delete-guard PreToolUse hook already wired in settings.json"
+        fi
+
         # Wire self-work-budget on its own key, for the same reason as credential-guard.
         # `|| exit 1` keeps a broken script (bash exit 2 = block) from denying every tool.
         _budget_already=$(jq '[.hooks.PreToolUse[]?.hooks[]?.command // ""] | map(select(contains("self-work-budget"))) | length' "$_settings" 2>/dev/null || echo 0)

@@ -106,6 +106,26 @@ claim about runtime behavior is not a CLEAR; it belongs in a finding.
 If you cannot write a CLEAR explanation naming a specific verifiable property — the dimension is
 not CLEAR. Re-examine for a finding.
 
+**Cite what you checked — enforced.** A CLEAR on RECOVERY, DATA INTEGRITY or SECURITY, and any
+CLEAR that says never / always / cannot / impossible / guaranteed, must end with
+`(checked: <command and what it printed | file:line | doc or --help line>)`. The token script
+refuses the analysis otherwise (`hooks/pre-mortem-guard/check_clears.py`). If you haven't
+looked, look now or write it as a finding. Why: on 2026-11-27 a rhcsa-lab pre-mortem cleared
+RECOVERY with "vm-destroy is the rollback; the ISO is never modified". Nobody had checked what
+`virsh undefine --remove-all-storage` deletes. It deleted the 11 GB RHEL ISO in the VM's DVD drive.
+
+**The rollback is an action too.** When the plan names a delete, destroy, reset, wipe or prune as
+its rollback or recovery step, that step gets checked like the main action: before running it,
+list what it removes (`virsh domblklist --details`, `ls -la`, `git status --ignored`,
+`docker volume ls`) and say whether each item can be recreated. Running the rollback "to test the
+fix" is still running it.
+
+**Name the files.** For any deletion, write down every file or volume it will remove, by path,
+from a listing you ran. "The VM and its disks" is a description, not a list; the ISO was hiding
+inside "its disks". The `delete-guard` hook blocks deletes outside the repo and temp dirs until
+the command is prefixed `DELETE_OK="<what; who approved>"`. Use that prefix only after the
+listing, and for anything that can't be recreated in minutes, only after William says yes.
+
 | # | Dimension | Key Questions |
 |---|-----------|---------------|
 | 1 | **Temporal** | Runs on schedule? Machine off? Edge times (midnight, month-end)? |
@@ -418,11 +438,13 @@ LOW/MEDIUM findings logged as advisories when relevant. No transfer record requi
     SCOPE REMINDER: After creating the token, restate the file list as a pinned reminder
     and check it explicitly before each subsequent surface edit in this session.
 
-    Then call the authorized script:
+    Save the full analysis (every dimension block through the STATUS line) to a file in your
+    scratchpad with the Write tool, then call the authorized script with that file:
     ```bash
-    bash /home/bill/.claude/hooks/pre-mortem-guard/write-clearance-token.sh /tmp/premortem-cleared-SESSION_ID
+    bash ~/.claude/hooks/pre-mortem-guard/write-clearance-token.sh /tmp/premortem-cleared-SESSION_ID /path/to/scratchpad/premortem.txt
     ```
-    Replace SESSION_ID with the ID from the blocked edit's error message.
+    Replace SESSION_ID with the ID from the blocked edit's error message. The script refuses
+    (no token) when a CLEAR breaks the citation rule above; fix the CLEAR or make it a finding.
     Token valid 2h. **Do NOT create for minimum-stamp CLEARs. Do NOT create before
     completing conditions (a)–(d). Do NOT reuse for out-of-scope actions.**
 

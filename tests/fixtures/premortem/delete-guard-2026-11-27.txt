@@ -1,0 +1,28 @@
+╔══════════════════════════════════════════════════════════════╗
+║  PRE-MORTEM  ·  delete-guard hook + CLEAR-citation token gate ║
+╚══════════════════════════════════════════════════════════════╝
+SURFACES DETECTED: Hooks (new PreToolUse Bash hook), settings.json wiring (install-reliability.sh), pre-mortem token writer, SKILL.md, merge to main
+CLASSIFICATION: Infrastructure
+DIMENSIONS CHECKED: all 12
+
+[ TEMPORAL ] ✓ CLEAR — runs per Bash call, no schedule or clock logic (checked: delete_guard.py draft has no time calls besides the shell wrapper's log timestamp).
+[ CONCURRENCY ] ✓ CLEAR — stateless per call; only shared write is hook-blocks.log via the existing hook_log_append, which takes a mkdir lock for rotation (checked: pipe-to-shell-guard.sh:36-62).
+[ ENVIRONMENTAL ] ⚠ LOW — python3 or just missing. just missing → OSError caught, recipe not scanned (fails open for recipes only); python3 missing → wrapper regex fallback.
+[ UPGRADE DURABILITY ] ⚠ LOW — imports tokens/split_on from pipe_to_shell_guard.py; a rename there crashes the guard → regex fallback, not open.
+[ CASCADE ] ⚠ MEDIUM
+  Adversarial: The guard blocks routine work — `rm -rf "$tmp"`, `git reset --hard` during recovery.
+  Steelman: MECHANISM: unresolvable `$VAR` targets count as outside. CONDITION: sessions use such one-liners routinely. TIMELINE: first such call after install.
+  → Required: hook-bench replay on real transcripts before merge; DELETE_OK prefix as the release valve.
+[ OBSERVABILITY ] ✓ CLEAR — every block and every DELETE_OK use lands in state/hook-blocks.log (checked: config/hook-bench.json:30 maps patterns to hook names).
+[ DATA INTEGRITY ] ✓ CLEAR — the guard only reads files and runs `just --show` (checked: scratch test, backtick not evaluated, no RAN file); it writes nothing but the log.
+[ SECURITY ] ⚠ MEDIUM
+  Adversarial: The model can self-approve with DELETE_OK.
+  Steelman: MECHANISM: the prefix is plain text. CONDITION: the rhcsa session reasoned past its own check once. TIMELINE: any session.
+  → Recommended: log each DELETE_OK with its reason; hook-bench counts them.
+[ SCALE ] ✓ CLEAR — linear in command length plus at most one `just --show` (5 s timeout) (checked: draft read_text limit, subprocess timeout=5).
+[ HUMAN FACTORS ] ✓ CLEAR — block message lists the three steps and the exact prefix.
+[ RECOVERY ] ✓ CLEAR — rollback = delete the settings entry or revert the commit; the guard deletes nothing (checked: draft has no os.remove/unlink/rmtree; only subprocess is `just --show`, verified read-only).
+[ ECOSYSTEM ] ⚠ LOW — Claude Code "ask" under bypassPermissions is undocumented, so the guard uses exit 2 deny.
+
+SEVERITY SUMMARY: 0 HIGH · 2 MEDIUM · 3 LOW · 7 CLEAR
+STATUS: ⚠ WARNINGS PRESENT
