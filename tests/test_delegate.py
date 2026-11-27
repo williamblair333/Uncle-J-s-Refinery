@@ -708,7 +708,130 @@ def test_agy_tool_marks_clamp_and_missing_token():
 def test_agy_tools_hide_ctx_from_the_schema():
     import asyncio
     tools = {t.name: t for t in asyncio.run(d.build_server().list_tools())}
-    for name in ("ask_agy", "ask_agy_packet"):
+    for name in ("ask_agy", "ask_agy_packet", "ask_codex"):
         props = tools[name].inputSchema["properties"]
         assert "ctx" not in props and "prompt" in props and "timeout" in props
+
+
+# --- ask_codex ---------------------------------------------------------------------------------
+
+CODEX_OK = "\n".join(json.dumps(e) for e in [
+    {"type": "thread.started", "thread_id": "t-1"},
+    {"type": "error", "message": "Reconnecting... 1/5 (stream disconnected)"},
+    {"type": "item.completed", "item": {"id": "i0", "type": "command_execution", "command": "ls"}},
+    {"type": "item.completed", "item": {"id": "i1", "type": "agent_message", "text": "first"}},
+    {"type": "item.completed", "item": {"id": "i2", "type": "agent_message", "text": " answer "}},
+    {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 3}},
+]) + "\nnot json\n"
+
+
+class Proc:
+    def __init__(self, stdout="", stderr="", returncode=0):
+        self.stdout, self.stderr, self.returncode = stdout, stderr, returncode
+
+
+@pytest.fixture
+def codex(tmp_path, monkeypatch):
+    """A codex that exists and is logged in, jailed as a plain prefix; calls recorded."""
+    monkeypatch.setattr(d, "LOCAL_ONLY_FILE", tmp_path / "none.txt")
+    monkeypatch.setenv("DELEGATE_LOCAL_ONLY", "")
+    monkeypatch.setattr(d, "LOG_PATH", tmp_path / "log.jsonl")
+    monkeypatch.setattr(d, "QUOTA_PATH", tmp_path / "quota.json")
+    monkeypatch.setattr(d, "codex_bin", lambda: "/bin/codex")
+    monkeypatch.setattr(d, "codex_logged_in", lambda: True)
+    monkeypatch.setattr(d.ask_agy, "jailed", lambda cmd, cwd=None: ["JAIL", cwd, *cmd])
+    calls = []
+
+    def runner(result):
+        def run(cmd, **kw):
+            calls.append((cmd, kw))
+            if isinstance(result, BaseException):
+                raise result
+            return result
+        return run
+    return calls, runner
+
+
+def test_parse_codex_events_takes_last_message_and_usage():
+    ev = d.parse_codex_events(CODEX_OK)
+    assert ev["messages"][-1] == "answer" and ev["thread_id"] == "t-1"
+    assert ev["usage"]["output_tokens"] == 3 and ev["commands"] == 1 and not ev["errors"]
+
+
+def test_codex_cmd_read_only_by_default_prompt_on_stdin():
+    cmd = d.codex_cmd("/bin/codex", "/w", None, False)
+    assert cmd[:2] == ["/bin/codex", "exec"] and cmd[-1] == "-"
+    assert cmd[cmd.index("--sandbox") + 1] == "read-only" and "--ephemeral" in cmd and "-m" not in cmd
+    cmd = d.codex_cmd("/bin/codex", "/w", "gpt-x", True)
+    assert cmd[cmd.index("--sandbox") + 1] == "workspace-write" and cmd[cmd.index("-m") + 1] == "gpt-x"
+
+
+def test_codex_success_runs_jailed_and_logs_no_content(tmp_path, codex):
+    calls, runner = codex
+    out = d.run_codex("secret prompt", cwd=str(tmp_path), run=runner(Proc(CODEX_OK)))
+    assert out["ok"] and out["response"] == "answer" and out["usage"]["input_tokens"] == 10
+    cmd, kw = calls[0]
+    assert cmd[0] == "JAIL" and kw["input"] == "secret prompt" and "secret prompt" not in cmd
+    rec = json.loads((tmp_path / "log.jsonl").read_text())
+    assert rec["backend"] == "codex" and rec["ok"] and "secret" not in json.dumps(rec)
+
+
+def test_codex_refuses_local_only_without_running(tmp_path, codex, monkeypatch):
+    calls, runner = codex
+    monkeypatch.setenv("DELEGATE_LOCAL_ONLY", str(tmp_path))
+    out = d.run_codex("hi", cwd=str(tmp_path), run=runner(Proc(CODEX_OK)))
+    assert out["error"] == "local_only" and not calls
+
+
+def test_codex_refuses_without_jail(tmp_path, codex, monkeypatch):
+    calls, runner = codex
+    monkeypatch.setattr(d.ask_agy, "jailed", lambda cmd, cwd=None: None)
+    out = d.run_codex("hi", cwd=str(tmp_path), run=runner(Proc(CODEX_OK)))
+    assert out["error"] == "no jail" and not calls
+
+
+@pytest.mark.parametrize("stdout,code", [("", 0), ('{"type": "renamed.event", "text": "x"}', 0),
+                                         (CODEX_OK, 1)])
+def test_codex_fails_closed_without_clean_answer(tmp_path, codex, stdout, code):
+    calls, runner = codex
+    out = d.run_codex("hi", cwd=str(tmp_path), run=runner(Proc(stdout, "boom", code)))
+    assert out["ok"] is False and out["error"] and out["stderr"] == "boom"
+
+
+def test_codex_usage_limit_marks_quota_and_skips_next(tmp_path, codex):
+    calls, runner = codex
+    limit = json.dumps({"type": "turn.failed", "error": {"message": "You've hit your usage limit."}})
+    out = d.run_codex("hi", cwd=str(tmp_path), run=runner(Proc(limit, "", 1)))
+    assert out["ok"] is False and "usage limit" in out["hint"]
+    assert d.CODEX_QUOTA_KEY in d.read_quota()
+    again = d.run_codex("hi", cwd=str(tmp_path), run=runner(Proc(CODEX_OK)))
+    assert again["error"] == "quota exhausted" and len(calls) == 1
+
+
+def test_codex_timeout_and_missing_login(tmp_path, codex, monkeypatch):
+    import subprocess
+    calls, runner = codex
+    out = d.run_codex("hi", cwd=str(tmp_path), timeout=5,
+                      run=runner(subprocess.TimeoutExpired("codex", 5)))
+    assert out["ok"] is False and "timeout" in out["error"]
+    monkeypatch.setattr(d, "codex_logged_in", lambda: False)
+    assert d.run_codex("hi", cwd=str(tmp_path))["error"] == "not_logged_in"
+
+
+def test_status_reports_codex(tmp_path, codex):
+    s = d.status()["codex"]
+    assert s["installed"] and s["logged_in"] and s["exhausted_until"] is None
+
+
+def test_codex_tool_uses_its_own_lock(monkeypatch):
+    import asyncio
+    seen = {}
+
+    async def fake_keep_alive(ctx, pinging, fn, *a, lock=None, label="agy", **kw):
+        seen.update(lock=lock, label=label)
+        return {"ok": True}
+    monkeypatch.setattr(d, "keep_alive", fake_keep_alive)
+    asyncio.run(d._agy_tool(FakeCtx(), d.run_codex, None, "hi", None, None,
+                            lock=d._CODEX_LOCK, label="codex"))
+    assert seen == {"lock": d._CODEX_LOCK, "label": "codex"} and d._CODEX_LOCK is not d._AGY_LOCK
 

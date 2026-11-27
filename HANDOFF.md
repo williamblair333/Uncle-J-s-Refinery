@@ -1,5 +1,11 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-27 — ask_codex: start here
+
+- **Branch `feat/ask-codex`:** `ask_codex` delegate tool plus the jail's Codex mounts (CHANGELOG 11-27). 171 tests pass. The branch also carries main's two unpushed post-upgrade syncs (879b9fe, dc065ee).
+- **Waiting on William:** `~/.npm-global/bin/codex login` (ChatGPT account, one month). Then run a real jailed job, and check that `ls ~` inside it shows only `.codex` and the tools, and that the answer comes back. Open the PR after that, and restart Claude Code so the delegate server loads the tool.
+- **Later:** routing (which tier or which kind of job goes to Codex versus agy) and the stack MCP servers for Codex jobs. CLAUDE.md has only about 400 bytes left under agy's cap, so the routing line belongs in `docs/ROUTING-REFERENCE.md`. The subscription ends about 2026-12-27: drop or switch the backend then.
+
 ## 2026-11-25 (late) — CI on Gitea: start here
 
 - **PR #403, not merged:** the first run (826) was red, with 17 failures, all from differences between the runner and GitHub's. The two bwrap tests and the root-only test are fixed on the branch. The rest needs a 24.04 image, because act-22.04's `/usr/bin/python3` is 3.10 with no yaml or tomllib, and its apt Pillow lacks `getbbox(alpha_only=)`. gitea added the runner label `ubuntu-24.04` → `catthehacker/ubuntu:act-24.04` (11-25 16:51Z), and every job now uses it, with `python3-yaml` added to apt (that image's Pillow 10.2.0 has `alpha_only`). Merge only on a green run. Gitea ignores `cancel-in-progress` for pull_request runs (go-gitea #35933, per gitea-c1).

@@ -91,6 +91,18 @@ a+=(--ro-bind-try "$G" "$G" --bind-try "$G/antigravity-cli" "$G/antigravity-cli"
     --ro-bind-try "$G/antigravity-cli/settings.json" "$G/antigravity-cli/settings.json"
     --ro-bind-try "$HOME/.gitconfig" "$HOME/.gitconfig")
 
+# Codex jobs (ask_codex) get Codex's state and login; nothing else does, so an agy job can't read
+# Codex's token. Its config, global instructions, hooks and rules are read-only, so a job can't add
+# MCP servers or loosen the sandbox for the next `codex` run outside. Created empty first so a job
+# can't create them either.
+if [[ "$(basename -- "$1")" == codex ]]; then
+    X="$HOME/.codex"
+    mkdir -p "$X/rules" "$X/skills"
+    for f in config.toml AGENTS.md hooks.json; do [[ -e "$X/$f" ]] || : > "$X/$f"; done
+    a+=(--bind "$X" "$X")
+    for f in config.toml AGENTS.md hooks.json rules skills; do a+=(--ro-bind "$X/$f" "$X/$f"); done
+fi
+
 # Tools, read-only. The interpreters are shared; everything written is private to jobs.
 a+=(--ro-bind-try "$HOME/.local/bin" "$HOME/.local/bin"
     --ro-bind-try "$HOME/.local/share/pipx" "$HOME/.local/share/pipx"

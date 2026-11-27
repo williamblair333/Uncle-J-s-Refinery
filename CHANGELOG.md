@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-11-27 — Codex joins the delegate server (`ask_codex`)
+
+- **Why:** William has a one-month ChatGPT subscription; Codex is a third off-Claude worker next to agy and the local models.
+- **Added:** `ask_codex` in `scripts/delegate/server.py`. It runs `codex exec --json --ephemeral` (Codex CLI 0.167.2, the newest release at least two weeks old, installed to `~/.npm-global`) inside the agy jail, with Codex's own sandbox nested in it: `read-only` by default, `workspace-write` for `edits=True`. Uncommitted files are backed up before an edits job, the same as agy's. Local-only directories are refused before anything starts. Only a `turn.failed` event fails the job; `error` events are retries Codex recovers from ("Reconnecting... 3/5"). With no agent message the job fails closed, so a changed event schema after an upgrade can't read as success. A usage-limit failure is stored as `codex` in `state/agy-quota.json` and skipped until reset. `delegate_status` reports `codex.installed`/`logged_in`. Codex has its own lock, so it runs alongside agy, not behind it.
+- **Changed:** `features/antigravity/agy-jail` mounts `~/.codex` only when the command is `codex`, so agy jobs can't read Codex's token. Codex's `config.toml`, `AGENTS.md`, `hooks.json`, `rules/` and `skills/` are read-only and created empty first, so a job can't loosen the sandbox or plant instructions for the next interactive `codex`.
+- **Not yet:** Codex jobs get no stack MCP servers. CLAUDE.md routing doesn't mention ask_codex yet; the tool's own description does.
+
 ## 2026-11-25 (late) — CI runs on the Gitea runner
 
 - **Why:** GitHub Actions is off for this repo, so Refinery had no CI at all. Built on the 11-22 draft branch `ci/move-to-gitea`, which never merged.
