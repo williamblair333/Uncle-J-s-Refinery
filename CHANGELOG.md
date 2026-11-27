@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-11-27 — brief_lint: two false positives pinned as strict xfails
+
+- **Why:** in rhcsa-lab, a brief asking agy to *write* a Kickstart file was refused twice. Once for `/etc/fstab` (a path inside the file's content, read as a read target) and once for `subscription-manager config --rhsm.manage_repos=0` (a `%post` line, read as a run request). Claude wrote the file itself instead.
+- **Added:** `test_file_content_path_is_not_a_read_target` and `test_file_content_command_is_not_a_run_request` in `tests/test_brief_lint.py`, both `xfail(strict=True)`. Each reproduces the exact refusal text. No lint change yet: when the lint learns that content quoted for a file is not a request, both tests XPASS and strict mode forces the markers off.
+
 ## 2026-11-27 — Plain-language pass over the docs people read; skill credit fixed
 
 - **Why:** William asked for every reader-facing doc to be clear, fun to read and written for an intelligent reader who knows a little about software and AI. A Gemini résumé suggestion also listed a vendored skill (ux-heuristics) as his, which showed `docs/SKILLS.md` crediting it wrongly.

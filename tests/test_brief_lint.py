@@ -83,6 +83,31 @@ def test_existing_path_outside_roots_is_flagged_inside_is_not(tmp_path):
     assert kinds(p) == {"path"} and outside in p[0]
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="brief_lint reads content agy is told to write into a file as a read/run request (rhcsa-lab, 2026-11-27)",
+)
+def test_file_content_path_is_not_a_read_target(tmp_path, monkeypatch):
+    real_exists = os.path.exists
+    monkeypatch.setattr(bl.os.path, "exists",
+                        lambda p: str(p) == "/etc/fstab" or real_exists(p))
+    brief = ("Write kickstart/rhcsa.ks.in. In its %post section, add this line to /etc/fstab: "
+             "`/dev/sr0 /mnt/dvd iso9660 ro,nofail 0 0`.")
+    problems = bl.lint(brief, str(tmp_path), RULES)
+    assert not any("/etc/fstab" in problem for problem in problems), problems
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="brief_lint reads content agy is told to write into a file as a read/run request (rhcsa-lab, 2026-11-27)",
+)
+def test_file_content_command_is_not_a_run_request(tmp_path):
+    brief = ("Write kickstart/rhcsa.ks.in. Its %post section must run "
+             "`subscription-manager config --rhsm.manage_repos=0`.")
+    problems = bl.lint(brief, str(tmp_path), RULES)
+    assert not any("subscription-manager" in problem for problem in problems), problems
+
+
 def test_bare_top_level_dirs_are_description(tmp_path):
     # brief 3 (11-01): "Build a FAKE /proc and socket dir under tmp_path"
     assert bl.lint("Build a FAKE /proc and a fake /run under tmp_path", str(tmp_path), RULES) == []

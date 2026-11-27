@@ -1,5 +1,10 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-27 — brief_lint false positives (from rhcsa-lab)
+
+- **Branch `test/brief-lint-quoted-content`:** two strict-xfail tests reproduce brief_lint reading file content a brief tells agy to write as read/run requests (CHANGELOG 11-27). 19 pass, 2 xfail.
+- **Next:** teach `lint()` that text quoted as content for a file agy is told to write (e.g. after "add this line to", "its %post section must run") isn't a request; then drop the xfail markers.
+
 ## 2026-11-27 — Docs plain-language pass
 
 - **Branch `docs/feynman-pass`:** 21 reader-facing docs rewritten, the SKILLS.md credit fix, and the README skills section (CHANGELOG 11-27). 16 generator tests pass.
