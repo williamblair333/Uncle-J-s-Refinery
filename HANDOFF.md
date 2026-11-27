@@ -3,7 +3,7 @@
 ## 2026-11-27 — Docs plain-language pass
 
 - **Branch `docs/feynman-pass`:** 21 reader-facing docs rewritten, the SKILLS.md credit fix, and the README skills section (CHANGELOG 11-27). 16 generator tests pass.
-- **Lesson:** delegated prose rewrites pass a fact check yet still change meaning about 6 times per file. Run a separate meaning review by a model that didn't write the text, and budget a second round.
+- **Lesson:** delegated prose rewrites pass a fact check yet still change meaning about 7 times per file (153 across 21). Run a separate meaning review by a model that didn't write the text, and budget a second round.
 - **Open:** research-later.md still doesn't define "Pi" and "(context)" in the 125B entry. The source notes are outside the repo. PORTING section 10 runs `sync_memory.sh` with `python`, and it probably needs `bash` (that was already there before this pass).
 
 ## 2026-11-27 — ask_codex: start here
