@@ -69,7 +69,7 @@ _CODEX_LOCK = threading.Lock()  # one Codex job at a time; it runs alongside agy
 CODEX_MODEL = os.environ.get("DELEGATE_CODEX_MODEL", "")  # empty: Codex's own default for the plan
 CODEX_TIMEOUT = int(os.environ.get("DELEGATE_CODEX_TIMEOUT", "600"))
 CODEX_QUOTA_KEY = "codex"  # in state/agy-quota.json, so a spent ChatGPT window is skipped until reset
-_CODEX_LIMIT_RE = re.compile(r"usage limit|rate limit|quota|too many requests|\b429\b", re.I)
+_CODEX_LIMIT_RE = re.compile(r"usage limit|rate limit|too many requests|\b429\b", re.I)
 OPENAI_URL = os.environ.get("DELEGATE_OPENAI_URL", "https://api.openai.com/v1").rstrip("/")
 OPENAI_MODEL = os.environ.get("DELEGATE_OPENAI_MODEL", "")
 OPENAI_KEY_ENV = os.environ.get("DELEGATE_OPENAI_KEY_ENV", "OPENAI_API_KEY")
@@ -665,10 +665,13 @@ def run_openai(prompt: str, system: str | None = None, model: str | None = None,
 
 
 def codex_bin() -> str | None:
-    """CODEX_BIN, else codex on PATH, else npm's user prefix (often not on the server's PATH)."""
+    """CODEX_BIN, else codex on PATH, else npm's user prefix (often not on the server's PATH).
+
+    Must be named codex: the jail picks which login to mount by that name, so a wrapper named
+    anything else would get agy's login and not Codex's."""
     for c in (os.environ.get("CODEX_BIN"), shutil.which("codex"),
               str(Path.home() / ".npm-global" / "bin" / "codex")):
-        if c and os.access(c, os.X_OK):
+        if c and os.path.basename(c) == "codex" and os.access(c, os.X_OK):
             return c
     return None
 
@@ -694,12 +697,14 @@ def parse_codex_events(stdout: str) -> dict:
     for line in stdout.splitlines():
         try:
             ev = json.loads(line)
-        except ValueError:
+        except (ValueError, RecursionError):
             continue
         if not isinstance(ev, dict):
             continue
         kind = ev.get("type", "")
         item = ev.get("item") if isinstance(ev.get("item"), dict) else {}
+        if kind == "turn.completed":
+            out["completed"] = True
         if kind == "thread.started":
             out["thread_id"] = ev.get("thread_id")
         elif kind == "item.completed" and item.get("type") == "agent_message":
@@ -757,13 +762,14 @@ def run_codex(prompt: str, cwd: str | None = None, model: str | None = None,
     except subprocess.TimeoutExpired:
         out = {"ok": False, "error": f"timeout after {t}s", "model": label}
         proc = None
-    except OSError as e:
+    except (OSError, ValueError) as e:  # ValueError: a NUL byte in model or cwd
         out = {"ok": False, "error": f"codex failed to start: {e}", "model": label}
         proc = None
     if proc is not None:
         ev = parse_codex_events(proc.stdout or "")
         answer = ev["messages"][-1] if ev["messages"] else ""
-        out = {"ok": proc.returncode == 0 and bool(answer) and not ev["errors"],
+        # a finished turn, not just a message: a run cut off mid-turn can still have said something
+        out = {"ok": proc.returncode == 0 and bool(answer) and not ev["errors"] and bool(ev.get("completed")),
                "response": answer, "model": label, "usage": ev.get("usage"),
                "thread_id": ev.get("thread_id"), "commands_run": ev["commands"]}
         if not out["ok"]:

@@ -818,6 +818,38 @@ def test_codex_timeout_and_missing_login(tmp_path, codex, monkeypatch):
     assert d.run_codex("hi", cwd=str(tmp_path))["error"] == "not_logged_in"
 
 
+def test_codex_needs_a_finished_turn(tmp_path, codex):
+    calls, runner = codex
+    cut = "\n".join(l for l in CODEX_OK.splitlines() if "turn.completed" not in l)
+    out = d.run_codex("hi", cwd=str(tmp_path), run=runner(Proc(cut)))
+    assert out["ok"] is False and "Reconnecting" in out["error"]
+
+
+def test_codex_bad_argument_and_deep_json_dont_escape(tmp_path, codex):
+    calls, runner = codex
+    out = d.run_codex("hi", cwd=str(tmp_path), run=runner(ValueError("embedded null byte")))
+    assert out["ok"] is False and "null byte" in out["error"]
+    deep = "[" * 100_000 + "]" * 100_000
+    assert d.parse_codex_events(deep + "\n" + CODEX_OK)["messages"][-1] == "answer"
+
+
+def test_codex_model_named_quota_is_not_a_usage_limit(tmp_path, codex):
+    calls, runner = codex
+    d.run_codex("hi", cwd=str(tmp_path), model="quota-test",
+                run=runner(Proc("", "error: invalid model 'quota-test'", 2)))
+    assert d.CODEX_QUOTA_KEY not in d.read_quota()
+
+
+def test_codex_bin_must_be_named_codex(tmp_path, monkeypatch):
+    wrapper = tmp_path / "codex-wrapper"
+    wrapper.write_text("#!/bin/sh\n")
+    wrapper.chmod(0o755)
+    monkeypatch.setenv("CODEX_BIN", str(wrapper))
+    monkeypatch.setenv("PATH", str(tmp_path / "nothing"))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert d.codex_bin() is None
+
+
 def test_status_reports_codex(tmp_path, codex):
     s = d.status()["codex"]
     assert s["installed"] and s["logged_in"] and s["exhausted_until"] is None
