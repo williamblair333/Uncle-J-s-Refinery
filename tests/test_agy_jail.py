@@ -160,6 +160,43 @@ def test_agy_rules_are_read_only_and_its_state_is_writable(box):
     assert (box["home"] / ".gemini" / "antigravity-cli" / "state").read_text().strip() == "y"
 
 
+def run_codex(box, script):
+    """A job whose command is named codex: a stand-in that runs script with bash."""
+    fake = box["tmp"] / "bin" / "codex"
+    fake.parent.mkdir(exist_ok=True)
+    fake.write_text('#!/bin/bash\nexec bash -c "$1"\n')
+    fake.chmod(0o755)
+    env = {"HOME": str(box["home"]), "PATH": os.environ["PATH"], "DELEGATE_LOCAL_ONLY": "",
+           "AGY_JAIL_EXTRA": ""}
+    return subprocess.run([str(JAIL), str(box["job"]), str(fake), script],
+                          capture_output=True, text=True, env=env, timeout=60)
+
+
+def test_each_cli_sees_only_its_own_login(box):
+    codex = box["home"] / ".codex"
+    codex.mkdir()
+    (codex / "auth.json").write_text("CODEXTOKEN")
+    (box["home"] / ".gemini" / "oauth_creds.json").write_text("GEMINITOKEN")
+    agy = run(box, 'cat "$HOME/.codex/auth.json"; ls -a "$HOME"')
+    assert "CODEXTOKEN" not in agy.stdout and ".codex" not in agy.stdout
+    cx = run_codex(box, 'cat "$HOME/.gemini/oauth_creds.json"; ls -a "$HOME"; cat "$HOME/.codex/auth.json"')
+    assert "GEMINITOKEN" not in cx.stdout and ".gemini" not in cx.stdout
+    assert "CODEXTOKEN" in cx.stdout, cx.stderr
+
+
+def test_codex_config_is_read_only_and_its_state_is_writable(box):
+    codex = box["home"] / ".codex"
+    (codex / "skills").mkdir(parents=True)
+    (codex / "config.toml").write_text('model = "x"\n')
+    r = run_codex(box, 'X="$HOME/.codex"; for f in config.toml AGENTS.md hooks.json rules/r skills/s; do '
+                       'echo evil > "$X/$f" 2>/dev/null && echo "wrote $f"; done; '
+                       'echo y > "$X/state.sqlite" && echo state-ok')
+    assert "wrote" not in r.stdout and "state-ok" in r.stdout, r.stdout + r.stderr
+    assert (codex / "config.toml").read_text() == 'model = "x"\n'
+    assert (codex / "AGENTS.md").read_text() == "" and (codex / "hooks.json").read_text() == ""
+    assert not (codex / "rules" / "r").exists() and not (codex / "skills" / "s").exists()
+
+
 def test_caches_and_indexes_are_private_to_jobs(box):
     r = run(box, 'ls -A "$HOME/.cache/uv" "$HOME/.code-index"; echo poison > "$HOME/.cache/uv/planted"')
     assert r.returncode == 0, r.stderr

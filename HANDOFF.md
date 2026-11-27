@@ -3,7 +3,7 @@
 ## 2026-11-27 — ask_codex: start here
 
 - **Branch `feat/ask-codex`:** `ask_codex` delegate tool plus the jail's Codex mounts (CHANGELOG 11-27). 171 tests pass. The branch also carries main's two unpushed post-upgrade syncs (879b9fe, dc065ee).
-- **Waiting on William:** `~/.npm-global/bin/codex login` (ChatGPT account, one month). Then run a real jailed job, and check that `ls ~` inside it shows only `.codex` and the tools, and that the answer comes back. Open the PR after that, and restart Claude Code so the delegate server loads the tool.
+- **Done 11-27:** logged in with the browser flow (device-code sign-in is off on William's ChatGPT account). Two real jailed jobs answered. The write was refused (read-only) and home shows only `.codex` and the tools. The first job also showed `.gemini`, which is now fixed and tested. After merging, restart Claude Code so the delegate server loads `ask_codex`.
 - **Later:** routing (which tier or which kind of job goes to Codex versus agy) and the stack MCP servers for Codex jobs. CLAUDE.md has only about 400 bytes left under agy's cap, so the routing line belongs in `docs/ROUTING-REFERENCE.md`. The subscription ends about 2026-12-27: drop or switch the backend then.
 
 ## 2026-11-25 (late) — CI on Gitea: start here

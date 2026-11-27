@@ -85,17 +85,18 @@ a=(--unshare-pid --unshare-ipc --unshare-uts --die-with-parent --new-session
    --ro-bind /usr /usr --ro-bind /etc /etc)
 for l in bin sbin lib lib64; do [[ -e "/usr/$l" ]] && a+=(--symlink "usr/$l" "/$l"); done
 
-# agy's state and login are writable; its rules aren't, so a job can't widen them.
-G="$HOME/.gemini"
-a+=(--ro-bind-try "$G" "$G" --bind-try "$G/antigravity-cli" "$G/antigravity-cli" --bind-try "$G/tmp" "$G/tmp"
-    --ro-bind-try "$G/antigravity-cli/settings.json" "$G/antigravity-cli/settings.json"
-    --ro-bind-try "$HOME/.gitconfig" "$HOME/.gitconfig")
+a+=(--ro-bind-try "$HOME/.gitconfig" "$HOME/.gitconfig")
 
-# Codex jobs (ask_codex) get Codex's state and login; nothing else does, so an agy job can't read
-# Codex's token. Its config, global instructions, hooks and rules are read-only, so a job can't add
+# Each CLI sees only its own state and login: a Codex job can't read agy's token, nor an agy job
+# Codex's. agy's state is writable; its rules aren't, so a job can't widen them.
+# Codex's config, global instructions, hooks, rules and skills are read-only, so a job can't add
 # MCP servers or loosen the sandbox for the next `codex` run outside. Created empty first so a job
 # can't create them either.
-if [[ "$(basename -- "$1")" == codex ]]; then
+if [[ "$(basename -- "$1")" != codex ]]; then
+    G="$HOME/.gemini"
+    a+=(--ro-bind-try "$G" "$G" --bind-try "$G/antigravity-cli" "$G/antigravity-cli" --bind-try "$G/tmp" "$G/tmp"
+        --ro-bind-try "$G/antigravity-cli/settings.json" "$G/antigravity-cli/settings.json")
+else
     X="$HOME/.codex"
     mkdir -p "$X/rules" "$X/skills"
     for f in config.toml AGENTS.md hooks.json; do [[ -e "$X/$f" ]] || : > "$X/$f"; done
