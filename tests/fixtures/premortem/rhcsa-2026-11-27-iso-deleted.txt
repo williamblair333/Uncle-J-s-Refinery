@@ -1,0 +1,25 @@
+╔══════════════════════════════════════════════════════════════╗
+║  PRE-MORTEM  ·  vm_build.sh + shared lease lib + vm-destroy    ║
+╚══════════════════════════════════════════════════════════════╝
+SURFACES: scripts/ (new + refactor), justfile, persistent writes (VM disks, ~/.config/rhcsa-lab secrets)
+CLASSIFICATION: Infrastructure — all 12
+
+[ TEMPORAL ] ⚠ MEDIUM
+  Adversarial: an interrupted install leaves a half-built VM, and every later vm-build refuses with "already exists".
+  MECHANISM: virt-install defines the domain and disks first; Ctrl-C or a host reboot mid-install keeps them.
+  CONDITION: the install takes 15–30 min in the foreground, which is a long window.
+  CONSEQUENCE TIMELINE: the next build attempt fails at once; the reader is stuck with no documented exit.
+  → Required: `just vm-destroy <name>` (the name must be typed, so it can't be fat-fingered) removes the domain and its storage, and the refusal message names it.
+[ CONCURRENCY ] ✓ CLEAR: the build refuses if the domain exists, checked right before virt-install; a parallel second build fails in virt-install with "domain already exists" and touches nothing.
+[ ENVIRONMENTAL ] ✓ CLEAR: the ISO glob must match exactly one file (tested); 131 GiB is free for the 30 GiB of disks; home is 755, so qemu can read ~/isos (stat checked above).
+[ UPGRADE DURABILITY ] ✓ CLEAR: the os-variant is a variable (OSINFO, default rhel10.1, confirmed in `virt-install --osinfo list`); ksvalidator -v RHEL10 runs as a recipe.
+[ CASCADE ] ✓ CLEAR: vm.sh moves its lease code into lib.sh unchanged; the 12 existing tests guard that refactor.
+[ OBSERVABILITY ] ✓ CLEAR: virt-install --wait reports a failed install by exit code; the script prints how to watch (`just console`) and where the guest log is (/root/ks-post.log).
+[ DATA INTEGRITY ] ✓ CLEAR: it never overwrites (refuses on an existing domain); the secrets files are created only if missing, and existing ones are never replaced.
+[ SECURITY ] ⚠ LOW: the lab SSH key has no passphrase and the passwords are stored in plain text (mode 600) → acceptable for a NAT-only practice VM; the guide says so; the files sit outside the repo.
+[ SCALE ] ✓ CLEAR: VM_NAME parametrises everything, so the second node for two-node exams uses the same script.
+[ HUMAN FACTORS ] ✓ CLEAR: guide chapter 03 documents every step and where the passwords are.
+[ RECOVERY ] ✓ CLEAR: vm-destroy is the rollback; the ISO is never modified.
+[ ECOSYSTEM ] ✓ CLEAR: virt-install 5.0.0 is stock Debian.
+
+SUMMARY: 0 HIGH · 1 MEDIUM (mitigated: vm-destroy) · 1 LOW · 10 CLEAR — ⚠ WARNINGS PRESENT
