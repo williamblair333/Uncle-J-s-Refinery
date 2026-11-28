@@ -172,6 +172,9 @@ New repos get a justfile: one-line recipes over scripts, never logic in the just
   `find_references` answers only who imports/re-exports it. `find_importers` — which files
   import a file. `get_call_hierarchy` (one hop unless `depth=`), `get_impact_preview`,
   `get_blast_radius`.
+- Long lists arrive capped and say so (1.108.498+): `check_references` 50 importing files
+  per name; `get_call_hierarchy` 100 callers + 100 callees; `get_blast_radius` /
+  `get_endpoint_impact` 100 callers. A capped list isn't the whole set — use serena for all.
 - Type resolution, interface dispatch, "all callers across files" → **serena**.
 - An empty `find_importers` / blast radius carrying `dynamic_import_boundary` or
   `dynamic_imports_unfollowed` is **not** evidence nothing loads the file.

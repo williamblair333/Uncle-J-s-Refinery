@@ -6,6 +6,7 @@
 - **Token call changed:** `write-clearance-token.sh <token> <analysis-file>`. A session still running the old SKILL.md text gets a usage error, not a token. Other hosts (pi, tc-vmh-03) need the pull and the installer run.
 - **Watch:** `grep 'delete-guard' state/hook-blocks.log` weekly for false hits and for `ALLOWED … DELETE_OK` lines whose reason doesn't name William for something that can't be recreated. `token-guard.sh` and `edit-surface-guard.sh` still show the old one-argument writer usage in their messages (the writer's own usage error corrects it).
 - **Lesson:** a pre-mortem is the model grading itself; the rhcsa ISO went because a plausible CLEAR was never checked. Guard the action mechanically; make the CLEAR say what was looked at.
+- **jcodemunch-mcp breaking change**: since 1.108.498 `check_references` lists at most 50 importing files per name, `get_call_hierarchy` at most 100 callers and 100 callees, and `get_blast_radius` / `get_endpoint_impact` at most 100 callers, each flagged as capped, so callers must treat a capped list as partial and use serena when they need every caller.
 
 ## 2026-11-27 — Docs plain-language pass
 
