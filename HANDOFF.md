@@ -1,11 +1,18 @@
 # Handoff — Uncle J's Refinery
 
+## 2026-11-28 — desktop CPU boost off: start here
+
+- **This desktop now boots with CPU boost off** (`/etc/tmpfiles.d/cpu-noboost.conf`, host config, not in the repo). Clocks cap at 3.59 GHz instead of 4.09, so timings and tok/s measured from 11-28 on run ~12% slower than earlier ones. Check `cat /sys/devices/system/cpu/cpufreq/boost` before comparing a bench. Why: Tctl hit 92 °C with the fans at 100% under mtw2 training (8 workers) + 2 VMs; the cooler is the limit. Now 67 °C under the same load at 4 workers (mtw2 PR #761, `~/.config/mtw2/sim-workers`).
+- `/etc/modules-load.d/nct6775.conf` loads the fan sensor driver at boot, so `sensors` shows fan RPM.
+- **delete-guard live since #407:** no false blocks logged yet; one `DELETE_OK` (rhcsa-lab history reset, William-approved). Still open: pi and tc-vmh-03 need the pull + `install-reliability.sh`; William re-downloads the RHEL ISO.
+
 ## 2026-11-27 (late) — delete-guard: start here
 
-- **Branch `feat/delete-guard`:** the delete-guard hook and the pre-mortem citation gate (CHANGELOG 11-27 late). After merge, run `bash install-reliability.sh` (or the jq step in it) to wire `delete-guard.sh` into `~/.claude/settings.json`; new sessions pick it up.
+- **Merged as #407:** the delete-guard hook and the pre-mortem citation gate (CHANGELOG 11-27 late), wired into `~/.claude/settings.json` by `install-reliability.sh`; new sessions pick it up.
 - **Token call changed:** `write-clearance-token.sh <token> <analysis-file>`. A session still running the old SKILL.md text gets a usage error, not a token. Other hosts (pi, tc-vmh-03) need the pull and the installer run.
 - **Watch:** `grep 'delete-guard' state/hook-blocks.log` weekly for false hits and for `ALLOWED … DELETE_OK` lines whose reason doesn't name William for something that can't be recreated. `token-guard.sh` and `edit-surface-guard.sh` still show the old one-argument writer usage in their messages (the writer's own usage error corrects it).
 - **Lesson:** a pre-mortem is the model grading itself; the rhcsa ISO went because a plausible CLEAR was never checked. Guard the action mechanically; make the CLEAR say what was looked at.
+- **jcodemunch-mcp breaking change**: since 1.108.498 `check_references` lists at most 50 importing files per name, `get_call_hierarchy` at most 100 callers and 100 callees, and `get_blast_radius` / `get_endpoint_impact` at most 100 callers, each flagged as capped, so callers must treat a capped list as partial and use serena when they need every caller.
 
 ## 2026-11-27 — Docs plain-language pass
 

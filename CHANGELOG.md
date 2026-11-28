@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-11-28 — desktop overheating traced; session wrap-up
+
+- **Found:** "the graphics card is running hard" was the CPU. The RTX 3060 sat idle (25 W of 170 W). The Ryzen 5 5500 hit Tctl 92 °C with every fan at pwm 255/255: mtw2 `sim.train` ran 8 workers alongside two VMs at full boost (4.09 GHz). Case air was 37 °C, so the cooler is the limit.
+- **Changed (host, outside the repo):** mtw2 caps training at 4 workers on this desktop (mtw2 PR #761), and CPU boost is off at boot (`/etc/tmpfiles.d/cpu-noboost.conf`). The fan sensor driver now loads at boot (`/etc/modules-load.d/nct6775.conf`). Same load afterwards: 67 °C, fans throttling back. Timings from here on run ~12% slower (HANDOFF 11-28).
+- **Fixed:** `hooks/discipline/delete-guard.sh` is committed executable (100755) like the other hooks; #407 had it as 100644.
+
 ## 2026-11-27 (late) — delete-guard hook; pre-mortem CLEARs must cite what was checked
 
 - **Why:** a rhcsa-lab session ran `just vm-destroy rhcsa1`, which ran `virsh undefine --remove-all-storage` and deleted the 11 GB RHEL DVD ISO in the VM's CD drive (no copy anywhere). Its pre-mortem had cleared RECOVERY with "vm-destroy is the rollback; the ISO is never modified", without checking what the flag deletes. SKILL.md already said an unverified runtime claim isn't a CLEAR; nothing enforced it, and no hook stopped the delete.
